@@ -6,7 +6,7 @@
 _start:
     ldr     x30, =LD_STACK_PTR
     mov     sp, x30
-    bl      not_main
+    bl      start_kernel
 
 .equ PSCI_SYSTEM_OFF, 0x84000008
 .globl system_off
