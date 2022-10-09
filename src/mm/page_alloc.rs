@@ -1,33 +1,13 @@
-#[allow(dead_code)]
-#[allow(unused_variables)]
+// FIXME one day...
+#[path = "../arch/aarch64/qemu/config.rs"]
+mod config;
 
-use crate::arch;
+use core::alloc::GlobalAlloc;
+use core::alloc::Layout;
+use buddy_alloc::{BuddyAllocParam, FastAllocParam, NonThreadsafeAlloc};
 
-#[derive(Debug)]
-pub enum PaError {
-    ENOMEM,
-}
-
-pub type Paddr = u64;
-pub type PaResult = Result<Paddr, PaError>;
-
-struct PageAlloc {
-   freelist: *mut u8,
-   pool: [u8; 10], 
-}
-
-pub static mut PageAlloc PageAllocator;
-
-fn mm_set_up_page_allocator(ram_mem: &arch::MemoryRegion)
-{
-
-}
-
-pub fn mm_set_up_memory_layout(memory_layout: &[arch::MemoryRegion]) {
-    for i in memory_layout {
-        match i.tp {
-           arch::MemoryType::MEM => mm_set_up_page_allocator(i),
-           _ => {},
-        }
-    }
-}
+static PAGE_ALLOC: NonThreadsafeAlloc = unsafe {
+    let fast_param = FastAllocParam::new(0 as *mut _, 0);
+    let buddy_param = BuddyAllocParam::new(config::ram_base(), config::ram_size(), 4096);
+    NonThreadsafeAlloc::new(fast_param, buddy_param)
+};

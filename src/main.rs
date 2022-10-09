@@ -1,22 +1,37 @@
 #![no_std]
 #![no_main]
+#![feature(format_args_nl)]
+#![feature(const_trait_impl)]
 
-mod panic;
-mod lib;
 mod drivers;
+#[macro_use]
+mod lib;
+mod panic;
 mod arch;
 mod mm;
 
-use core::arch::global_asm;
-use crate::lib::printf;
-use crate::mm::page_alloc;
+use core::arch::asm;
 
-global_asm!(include_str!("start.S"));
+pub use lib::printf::*;
 
-#[no_mangle]
-pub extern "C" fn start_kernel() {
-    printf::printf(b"Main called\n");
-    page_alloc::mm_set_up_memory_layout(&arch::qemu::config::MemoryLayout);
-    loop {}
+extern "C" {
+    static __STACK_START: usize;
 }
 
+#[no_mangle]
+fn start_kernel() -> ! {
+    println!("Starting kernel....\n");
+//    arch::interrupts::set_up_vbar();
+
+    loop { }
+}
+
+#[no_mangle]
+#[link_section = ".text.boot"]
+pub unsafe extern "C" fn _start() -> ! {
+    unsafe {
+         asm!("mov sp, {}", in(reg) &__STACK_START);
+    }
+
+     start_kernel()
+}
