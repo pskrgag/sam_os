@@ -25,17 +25,23 @@ impl InitialPageTable {
          }
     }
 
-    pub fn populate(&mut self, phys: &MemRange<PhysAddr>, virt: &MemRange<VirtAddr>) {
-         assert_eq!(phys.size(), virt.size());
+    pub fn populate_indential(&mut self, virt: &MemRange<VirtAddr>) {
+        /* Lvl1 addresses 1 GB */
+        for i in (0..virt.size() / (1 << 30)) {
+            self.lvl1[l1_linear_offset(VirtAddr::from(usize::from(virt.start()) + (1 << 30) * i))] = PageBlock::new()
+                .valid()
+                .out_addr(PhysAddr::from((&self.lvl2 as *const _) as usize))
+                .write();
+        }
 
-         self.lvl1[l1_linear_offset(virt.start())] = PageBlock::new()
-             .valid()
-             .out_addr(PhysAddr::from((&self.lvl2 as *const _) as usize))
-             .write();
-         
-        self.lvl2[l2_linear_offset(virt.start())] = PageBlock::new()
-             .valid()
-             .out_addr(phys.start())
-             .write();
+        dbg!("{} {} {} ", virt.start(), l1_linear_offset(virt.start()), l2_linear_offset(virt.start()));
+       
+        /* Lvl2 addresses 2 MB */
+        for i in (0..virt.size() / (2 << 20)) {
+            self.lvl2[l2_linear_offset(VirtAddr::from(usize::from(virt.start()) + (2 << 20) * i))] = PageBlock::new()
+                .valid()
+                .out_addr(usize::from(virt.start()).into())
+                .write();
+        }
     }
 }

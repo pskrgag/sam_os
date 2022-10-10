@@ -22,6 +22,7 @@ extern "C" {
 fn start_kernel() -> ! {
     println!("Starting kernel....\n");
 //    arch::interrupts::set_up_vbar();
+    arch::mm::mmu::init();
 
     loop { }
 }

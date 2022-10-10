@@ -20,7 +20,7 @@ pub fn l1_linear_offset(va: VirtAddr) -> usize {
 
 #[inline]
 pub fn l2_linear_offset(va: VirtAddr) -> usize {
-    (usize::from(va) << 13) >> 30
+    (usize::from(va) << 14) >> (30 + 14)
 }
 
 impl PageBlock {

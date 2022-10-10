@@ -1,3 +1,4 @@
+use core::fmt;
 use crate::arch::*;
 
 #[derive(Clone, Copy)]
@@ -75,5 +76,17 @@ impl VirtAddr {
         } else {
             false
         }
+    }
+}
+
+impl fmt::Display for VirtAddr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl fmt::Display for PhysAddr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
