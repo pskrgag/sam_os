@@ -1,6 +1,7 @@
 RUSTFLAGS =  -C link-arg=--library-path=.
 RUSTFLAGS += -C link-arg=--script=aarch64-qemu.ld
 RUSTFLAGS += -C relocation-model=pic
+RUSTFLAGS += -C opt-level=0
 
 all:
 	RUSTFLAGS="$(RUSTFLAGS)" cargo build --target aarch64-unknown-none-softfloat

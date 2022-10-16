@@ -1,19 +1,3 @@
-/* ENTRY(_start) */
-/* SECTIONS */
-/* { */
-/*    . = 0x40000000; */
-
-/*     .text.boot : { *(.text.boot) } */
-/*     .text : { *(.text) } */
-/*     .data : { *(.data) } */
-/*     .rodata : { *(.rodata) } */
-/*     .bss : { *(.bss) } */
-
-/*     . = . + 0x100000; */
-/*     . = ALIGN(16); */
-/*     LD_STACK_PTR = .; */ 
-/* } */
-
 ENTRY(_start)
 
 PAGE_SIZE = 4096;
@@ -38,7 +22,7 @@ SECTIONS
         KEEP(*(.vectors))
     }
 
-    .rodata ALIGN(4):
+    .rodata ALIGN(16):
     {
         *(.rodata .rodata.*)
         FILL(0x00)
@@ -55,7 +39,7 @@ SECTIONS
 
     /* @todo could insert .data.boot here with proper alignment */
 
-    .bss ALIGN(8) (NOLOAD):
+    .bss ALIGN(4096) (NOLOAD):
     {
         __BSS_START = .;
         *(.bss .bss.*)

@@ -29,7 +29,6 @@ impl<T: Copy> MemRange<T> {
     }
 }
 
-
 impl From<usize> for PhysAddr {
     fn from(addr: usize) -> Self {
         Self(addr)
@@ -55,7 +54,7 @@ impl From<usize> for VirtAddr {
 }
 
 impl PhysAddr {
-    pub fn get(&self) -> usize {
+    pub const fn get(&self) -> usize {
         self.0
     }
 
@@ -65,17 +64,16 @@ impl PhysAddr {
 }
 
 impl VirtAddr {
-    pub fn get(&self) -> usize {
+    pub const fn get(&self) -> usize {
         self.0
     }
 
-    /* D5.2 The VMSAv8-64 address translation system */
-    pub fn is_valid_kernel_addr(&self) -> bool {
-        if self.0 < 0xFFFF_FFFF_FFFF_FFFF && self.0 > 0xFFFF_0000_0000_0000 {
-            true
-        } else {
-            false
-        }
+    pub fn from_raw<T>(ptr: *const T) -> Self {
+        Self(ptr as usize)
+    }
+
+    pub fn to_raw<T>(&self) -> *const T {
+        self.0 as *const T
     }
 }
 

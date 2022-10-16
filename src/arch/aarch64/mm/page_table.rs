@@ -1,26 +1,32 @@
-use crate::mm::types::*;
+use crate::mm::{
+    types::*,
+    page_table::PageTable
+};
 
-const INVALID_TTE: usize = 0;
-const PTE_WRITE: usize = (0x1 << 6);
-const PTE_RO: usize = (0x11 << 6);
-const PTE_VALID: usize = 0x11;
+const INVALID_TTE: u64 = 0;
+const PTE_WRITE: u64 = (0x01 << 6);
+const PTE_RO: u64 = (0x11 << 6);
+const PTE_VALID: u64 = 0x11;
+
+#[inline(always)]
+pub const fn GENMASK(h: usize, l: usize) -> usize {
+	(!0usize - (1usize << (l)) + 1) & (!0usize >> (64 - 1 - (h)))
+}
 
 #[derive(Copy, Clone)]
-pub struct PageBlock(usize);
+pub struct PageBlock(u64);
 
-pub trait PageTable {
-    fn map(&self, p: MemRange<PhysAddr>, v: MemRange<VirtAddr>);
-    fn unmap(&self, v: MemRange<VirtAddr>);
-}
+#[derive(Copy, Clone)]
+pub struct PageTbl(u64);
 
 #[inline]
 pub fn l1_linear_offset(va: VirtAddr) -> usize {
-    (usize::from(va) << 4) >> 39
+    usize::from(va) & GENMASK(38, 30) >> 30
 }
 
 #[inline]
 pub fn l2_linear_offset(va: VirtAddr) -> usize {
-    (usize::from(va) << 14) >> (30 + 14)
+    usize::from(va) & GENMASK(29, 21) >> 21
 }
 
 impl PageBlock {
@@ -30,11 +36,12 @@ impl PageBlock {
 
     pub const fn valid(mut self) -> Self {
         self.0 |= 0x01;
+        self.0 |= (1 << 10);
         self
     }
 
     pub const fn out_addr(mut self, addr: PhysAddr) -> Self {
-        self.0 |= addr.to_pfn() << 21;
+        self.0 |= (addr.get() as u64) << 21;
         self
     }
 
@@ -47,5 +54,38 @@ impl PageBlock {
         self.0 |= !PTE_WRITE;
         self.0 |= PTE_RO;
         self
+    }
+    
+    pub const fn device(mut self) -> Self {
+        self
+    }
+    
+    pub const fn normal(mut self) -> Self {
+        self.0 = (1 << 0x2);
+        self
+    }
+
+    pub fn get(&self) -> u64 {
+        self.0
+    }
+}
+
+impl PageTbl {
+    pub const fn new() -> Self {
+        Self(INVALID_TTE)
+    }
+
+    pub const fn valid(mut self) -> Self {
+        self.0 |= 0b11;
+        self
+    }
+
+    pub const fn next_lvl(mut self, addr: PhysAddr) -> Self {
+        self.0 |= (addr.get() as u64) << 12;
+        self
+    }
+ 
+    pub fn get(&self) -> u64 {
+        self.0
     }
 }

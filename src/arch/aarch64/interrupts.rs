@@ -1,8 +1,12 @@
 use core::arch::{global_asm, asm};
 
-extern "C" {
-    static exteption_vector: usize;
+global_asm!(include_str!("interrupts.S"));
+
+extern "Rust" {
+    static exteption_vector: u64;
 }
+
+struct Esr(u64);
 
 #[inline]
 pub fn set_up_vbar() {
@@ -26,4 +30,3 @@ pub extern "C" fn kern_exception_bug(esr_el1: usize) -> ! {
     panic!();
 }
 
-global_asm!(include_str!("interrupts.S"));

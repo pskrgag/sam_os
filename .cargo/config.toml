@@ -1,6 +1,0 @@
-[target.aarch64-unknown-none]
-
-# use Tlink.c script from the cortex-m-rt crate
-rustflags = [
-    "-C", "link-arg=-Taarch64-qemu.ld",
-]

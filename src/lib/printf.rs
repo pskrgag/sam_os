@@ -25,15 +25,12 @@ macro_rules! println {
     })
 }
 
-#[cfg(debug_assertions)]
+//#[cfg(debug_assertions)]
 macro_rules! dbg {
     () => ($crate::print!("\n"));
     ($($arg:tt)*) => ({
         $crate::lib::printf::_print(format_args_nl!($($arg)*));
     })
 }
-
-#[cfg(not(debug_assertions))]
-macro_rules! dbg { }
 
 pub(crate) use println;

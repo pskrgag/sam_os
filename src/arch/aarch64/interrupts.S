@@ -50,8 +50,8 @@ __exception_bug:
 // Should not reach here
 	b	.
 
-.section ".rodata"
-.balign 0x8000
+.section ".text"
+.align 11
 .global
 exteption_vector:
 curr_el_sp0_sync:		 // The exception handler for a synchronous
@@ -125,3 +125,4 @@ lower_el_aarch32_serror: // The exception handler for a System Error
                          // exception from a lower EL(AArch32).
 	ventry __exception_bug
 
+.previous
