@@ -4,7 +4,7 @@ use crate::mm::{
 };
 
 const INVALID_TTE: u64 = 0;
-const PTE_WRITE: u64 = (0x01 << 6);
+const PTE_WRITE: u64 = (0x00 << 6);
 const PTE_RO: u64 = (0x11 << 6);
 const PTE_VALID: u64 = 0x11;
 
@@ -21,12 +21,12 @@ pub struct PageTbl(u64);
 
 #[inline]
 pub fn l1_linear_offset(va: VirtAddr) -> usize {
-    usize::from(va) & GENMASK(38, 30) >> 30
+    (usize::from(va) >> 30) & (512 - 1)
 }
 
 #[inline]
 pub fn l2_linear_offset(va: VirtAddr) -> usize {
-    usize::from(va) & GENMASK(29, 21) >> 21
+    (usize::from(va) >> 21) & (512 - 1)
 }
 
 impl PageBlock {
@@ -37,11 +37,12 @@ impl PageBlock {
     pub const fn valid(mut self) -> Self {
         self.0 |= 0x01;
         self.0 |= (1 << 10);
+        //self.0 |= (2 << 8);
         self
     }
 
     pub const fn out_addr(mut self, addr: PhysAddr) -> Self {
-        self.0 |= (addr.get() as u64) << 21;
+        self.0 |= (addr.to_pfn() as u64) << 12;
         self
     }
 
@@ -57,6 +58,8 @@ impl PageBlock {
     }
     
     pub const fn device(mut self) -> Self {
+        self.0 |= (0 << 0x2);
+        self.0 |= (1 << 53);
         self
     }
     
@@ -81,7 +84,7 @@ impl PageTbl {
     }
 
     pub const fn next_lvl(mut self, addr: PhysAddr) -> Self {
-        self.0 |= (addr.get() as u64) << 12;
+        self.0 |= addr.get() as u64;
         self
     }
  

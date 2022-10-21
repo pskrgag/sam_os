@@ -24,7 +24,7 @@ fn start_kernel() -> ! {
     arch::interrupts::set_up_vbar();
     arch::mm::mmu::init();
 
-    loop { }
+    loop {  }
 }
 
 #[no_mangle]

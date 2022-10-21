@@ -17,7 +17,8 @@ use crate::mm::{
 #[repr(C)]
 pub struct InitialPageTable {
     lvl1: [PageTbl; config::PT_LVL1_ENTIRES],
-    lvl2: [PageBlock; config::PT_LVL2_ENTIRES],
+    lvl2_normal: [PageBlock; config::PT_LVL2_ENTIRES],
+    lvl2_device: [PageBlock; config::PT_LVL2_ENTIRES],
 }
 
 #[used]
@@ -27,28 +28,49 @@ impl InitialPageTable {
     pub const fn default() -> Self {
          Self {
              lvl1: [PageTbl::new(); config::PT_LVL1_ENTIRES],
-             lvl2: [PageBlock::new(); config::PT_LVL2_ENTIRES],
+             lvl2_normal: [PageBlock::new(); config::PT_LVL2_ENTIRES],
+             lvl2_device: [PageBlock::new(); config::PT_LVL2_ENTIRES],
          }
     }
 
     pub fn populate_indential(&mut self, virt: &MemRange<VirtAddr>, device: bool) {
-        /* Lvl1 addresses 1 GB */
-        for i in (0..virt.size() / (1 << 30)) {
-            self.lvl1[l1_linear_offset(VirtAddr::from(usize::from(virt.start()) + (1 << 30) * i))] = PageTbl::new()
-                .valid()
-                .next_lvl(PhysAddr::from((&self.lvl2 as *const _) as usize));
-        }
+        let mut size_to_map = usize::from(virt.size());
+        let mut curr_addr = usize::from(virt.start());
+        let next_lvl = match device {
+            true => &mut self.lvl2_device,
+            false => &mut self.lvl2_normal,
+        };
 
-        dbg!("{} {} {} ", virt.start(), l1_linear_offset(virt.start()), l2_linear_offset(virt.start()));
-        dbg!("size {}", virt.size());
+        println!("Mapping 0x{:x} with size 0x{:x}", curr_addr, size_to_map);
+
+        /* Lvl1 addresses 1 GB */
+        while {
+            let idx = l1_linear_offset(VirtAddr::from(usize::from(curr_addr)));
+            self.lvl1[idx] = PageTbl::new()
+                .valid()
+                .next_lvl(PhysAddr::from((next_lvl as *const _) as usize));
+       
+            //println!("[0x{:x}] lvl1 entry[{}] = 0x{:x}", VirtAddr::from_raw(&self.lvl1).get(), idx, self.lvl1[idx].get());
+
+            curr_addr += (1 << 30);
+
+            if size_to_map <= (1 << 30) {
+                false
+            } else {
+                size_to_map -= (1 << 30);
+                true
+            }
+        } { }
+        
+        let mut size_to_map = usize::from(virt.size());
+        let mut curr_addr = usize::from(virt.start());
 
         /* Lvl2 addresses 2 MB */
-        for i in (0..virt.size() / (2 << 20)) {
-            let cur_addr = usize::from(virt.start()) + (2 << 20) * i;
-            let idx = l2_linear_offset(VirtAddr::from(cur_addr));
+        while  {
+            let idx = l2_linear_offset(VirtAddr::from(curr_addr));
             let tmp = PageBlock::new()
                 .valid()
-                .out_addr(cur_addr.into())
+                .out_addr(curr_addr.into())
                 .write();
 
             match device {
@@ -56,9 +78,18 @@ impl InitialPageTable {
                 false => tmp.normal(),
             };
             
-            self.lvl2[idx] = tmp;
-            println!("entry[{}] = {:x}", idx, self.lvl2[idx].get());
-        }
+            next_lvl[idx] = tmp;
+            //println!("entry[{}] = 0x{:x}", idx, next_lvl[idx].get());
+
+            curr_addr += (2 << 20);
+
+            if size_to_map <= (2 << 20) {
+                false
+            } else {
+                size_to_map -= (2 << 20);
+                true
+            }
+        } { } 
     }
 }
 
@@ -68,7 +99,7 @@ impl PageTable for InitialPageTable {
     }
     
     fn lvl2(&self) -> Option<VirtAddr> {
-        Some(VirtAddr::from_raw(&self.lvl2))
+        Some(VirtAddr::from_raw(&self.lvl2_normal))
     }
 
     fn entries_per_lvl(&self) -> usize {

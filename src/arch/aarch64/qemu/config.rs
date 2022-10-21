@@ -10,9 +10,9 @@ pub const PT_LVL2_ENTIRES: usize = PAGE_SIZE / mem::size_of::<PageBlock>();
 
 pub const MemoryLayout: [arch::MemoryRegion; 2] = [
     arch::MemoryRegion {
-        start: 0x09000000,
-        size: 0x00001000,
-        tp: arch::MemoryType::UART,
+        start: 0x08000000,
+        size: 0x02000000,
+        tp: arch::MemoryType::DEVICE,
     },  
     arch::MemoryRegion {
         start: 0x40000000,
@@ -39,7 +39,7 @@ const fn mem_region(tp: arch::MemoryType) -> &'static arch::MemoryRegion {
 }
 
 pub const fn uart_base() -> *mut u8 {
-    mem_region(arch::MemoryType::UART).start as *mut u8
+    0x09000000 as *mut u8
 }
 
 pub const fn ram_base() -> *mut u8 {
