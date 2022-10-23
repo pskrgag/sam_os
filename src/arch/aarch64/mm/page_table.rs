@@ -1,17 +1,9 @@
-use crate::mm::{
-    types::*,
-    page_table::PageTable
-};
+use crate::mm::types::*;
 
 const INVALID_TTE: u64 = 0;
-const PTE_WRITE: u64 = (0x00 << 6);
-const PTE_RO: u64 = (0x11 << 6);
+const PTE_WRITE: u64 = 0x00 << 6;
+const PTE_RO: u64 = 0x11 << 6;
 const PTE_VALID: u64 = 0x11;
-
-#[inline(always)]
-pub const fn GENMASK(h: usize, l: usize) -> usize {
-	(!0usize - (1usize << (l)) + 1) & (!0usize >> (64 - 1 - (h)))
-}
 
 #[derive(Copy, Clone)]
 pub struct PageBlock(u64);
@@ -36,8 +28,7 @@ impl PageBlock {
 
     pub const fn valid(mut self) -> Self {
         self.0 |= 0x01;
-        self.0 |= (1 << 10);
-        //self.0 |= (2 << 8);
+        self.0 |= 1 << 10;
         self
     }
 
@@ -53,18 +44,17 @@ impl PageBlock {
     
     pub const fn read_only(mut self) -> Self {
         self.0 |= !PTE_WRITE;
-        self.0 |= PTE_RO;
         self
     }
     
     pub const fn device(mut self) -> Self {
-        self.0 |= (0 << 0x2);
-        self.0 |= (1 << 53);
+        self.0 |= 0 << 0x2;
+        self.0 |= 1 << 53;
         self
     }
     
     pub const fn normal(mut self) -> Self {
-        self.0 = (1 << 0x2);
+        self.0 = 1 << 0x2;
         self
     }
 

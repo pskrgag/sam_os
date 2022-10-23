@@ -1,11 +1,11 @@
 use core::fmt;
-use crate::arch::*;
+use crate::arch;
 
 #[derive(Clone, Copy)]
-pub struct PhysAddr(usize);
+pub struct PhysAddr(u64);
 
 #[derive(Clone, Copy)]
-pub struct VirtAddr(usize);
+pub struct VirtAddr(u64);
 
 pub struct MemRange<T> {
     start: T,
@@ -31,45 +31,69 @@ impl<T: Copy> MemRange<T> {
 
 impl From<usize> for PhysAddr {
     fn from(addr: usize) -> Self {
-        Self(addr)
+        Self(addr as u64)
     }
 }
 
 impl From<PhysAddr> for usize {
     fn from(addr: PhysAddr) -> Self {
-        addr.0
+        addr.0 as usize
     }
 }
 
 impl From<VirtAddr> for usize {
     fn from(addr: VirtAddr) -> Self {
+        addr.0 as usize
+    }
+}
+
+impl From<u64> for PhysAddr {
+    fn from(addr: u64) -> Self {
+        Self(addr)
+    }
+}
+
+impl From<PhysAddr> for u64 {
+    fn from(addr: PhysAddr) -> Self {
         addr.0
+    }
+}
+
+impl From<VirtAddr> for u64 {
+    fn from(addr: VirtAddr) -> Self {
+        addr.0
+    }
+}
+
+impl From<u64> for VirtAddr {
+    fn from(addr: u64) -> Self {
+        Self(addr)
     }
 }
 
 impl From<usize> for VirtAddr {
     fn from(addr: usize) -> Self {
-        Self(addr)
+        Self(addr as u64)
     }
 }
 
 impl PhysAddr {
-    pub const fn get(&self) -> usize {
+    pub const fn get(&self) -> u64 {
         self.0
     }
 
-    pub const fn to_pfn(&self) -> usize {
-        self.0 >> 12/* acrh::PAGE_SHIFT */
+    pub const fn to_pfn(&self) -> u64  {
+        self.0 >> arch::PAGE_SHIFT
     }
 }
 
 impl VirtAddr {
-    pub const fn get(&self) -> usize {
+    pub const fn get(&self) -> u64 {
         self.0
     }
 
     pub fn from_raw<T>(ptr: *const T) -> Self {
-        Self(ptr as usize)
+        Self(ptr as u64)
     }
 
     pub fn to_raw<T>(&self) -> *const T {

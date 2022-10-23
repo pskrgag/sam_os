@@ -1,35 +1,44 @@
 #[path = "../qemu/config.rs"]
 mod config;
 
-use crate::arch::mm::page_table::{
-    PageBlock,
-    PageTbl,
-    l1_linear_offset,
-    l2_linear_offset,
-};
-use core::mem;
-use crate::mm::{
-    types::{PhysAddr, VirtAddr, MemRange},
-    page_table::PageTable,
+use crate::{
+        arch::mm::page_table::{
+        PageBlock,
+        PageTbl,
+        l1_linear_offset,
+        l2_linear_offset,
+    },
+    mm::{
+        types::{PhysAddr, VirtAddr, MemRange},
+        page_table::PageTable,
+    },
+    arch::{
+        PT_LVL1_ENTIRES,
+        PT_LVL2_ENTIRES,
+    },
+    kernel::locking::fake_lock::FakeLock
 };
 
+/* Any idea how to use crate::arch::PAGE_SIZE? */
 #[repr(align(4096))]
 #[repr(C)]
 pub struct InitialPageTable {
-    lvl1: [PageTbl; config::PT_LVL1_ENTIRES],
-    lvl2_normal: [PageBlock; config::PT_LVL2_ENTIRES],
-    lvl2_device: [PageBlock; config::PT_LVL2_ENTIRES],
+    lvl1: [PageTbl; PT_LVL1_ENTIRES],
+    lvl2_normal: [PageBlock; PT_LVL2_ENTIRES],
+    lvl2_device: [PageBlock; PT_LVL2_ENTIRES],
 }
 
-#[used]
-pub static mut initial_tt: InitialPageTable = InitialPageTable::default();
+unsafe impl Sync for InitialPageTable { }
+unsafe impl Send for InitialPageTable { }
+
+pub static INITIAL_TT: FakeLock<InitialPageTable> = FakeLock::new(InitialPageTable::default());
 
 impl InitialPageTable {
     pub const fn default() -> Self {
          Self {
-             lvl1: [PageTbl::new(); config::PT_LVL1_ENTIRES],
-             lvl2_normal: [PageBlock::new(); config::PT_LVL2_ENTIRES],
-             lvl2_device: [PageBlock::new(); config::PT_LVL2_ENTIRES],
+             lvl1: [PageTbl::new(); PT_LVL1_ENTIRES],
+             lvl2_normal: [PageBlock::new(); PT_LVL2_ENTIRES],
+             lvl2_device: [PageBlock::new(); PT_LVL2_ENTIRES],
          }
     }
 
@@ -41,7 +50,7 @@ impl InitialPageTable {
             false => &mut self.lvl2_normal,
         };
 
-        println!("Mapping 0x{:x} with size 0x{:x}", curr_addr, size_to_map);
+        println!("Mapping 0x{:x} -> 0x{:x} as {}", curr_addr, curr_addr, if device { "device" } else { "normal" });
 
         /* Lvl1 addresses 1 GB */
         while {
@@ -50,14 +59,12 @@ impl InitialPageTable {
                 .valid()
                 .next_lvl(PhysAddr::from((next_lvl as *const _) as usize));
        
-            //println!("[0x{:x}] lvl1 entry[{}] = 0x{:x}", VirtAddr::from_raw(&self.lvl1).get(), idx, self.lvl1[idx].get());
+            curr_addr += 1 << 30;
 
-            curr_addr += (1 << 30);
-
-            if size_to_map <= (1 << 30) {
+            if size_to_map <= 1 << 30 {
                 false
             } else {
-                size_to_map -= (1 << 30);
+                size_to_map -= 1 << 30;
                 true
             }
         } { }
@@ -79,14 +86,13 @@ impl InitialPageTable {
             };
             
             next_lvl[idx] = tmp;
-            //println!("entry[{}] = 0x{:x}", idx, next_lvl[idx].get());
 
-            curr_addr += (2 << 20);
+            curr_addr += 2 << 20;
 
-            if size_to_map <= (2 << 20) {
+            if size_to_map <= 2 << 20 {
                 false
             } else {
-                size_to_map -= (2 << 20);
+                size_to_map -= 2 << 20;
                 true
             }
         } { } 
@@ -97,12 +103,8 @@ impl PageTable for InitialPageTable {
     fn lvl1(&self) -> VirtAddr {
         VirtAddr::from_raw(&self.lvl1)
     }
-    
-    fn lvl2(&self) -> Option<VirtAddr> {
-        Some(VirtAddr::from_raw(&self.lvl2_normal))
-    }
 
     fn entries_per_lvl(&self) -> usize {
-        config::PT_LVL1_ENTIRES
+        PT_LVL1_ENTIRES
     }
 }

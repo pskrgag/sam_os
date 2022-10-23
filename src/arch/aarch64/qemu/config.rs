@@ -1,14 +1,6 @@
 use crate::arch;
-use crate::arch::mm::page_table::PageBlock;
-use core::mem;
 
-pub const PAGE_SHIFT: usize = 12;
-pub const PAGE_SIZE: usize = (1 << PAGE_SHIFT);
-pub const UART_BASE: *mut u8 = 0x0900_0000 as *mut u8;
-pub const PT_LVL1_ENTIRES: usize = PAGE_SIZE / mem::size_of::<PageBlock>();
-pub const PT_LVL2_ENTIRES: usize = PAGE_SIZE / mem::size_of::<PageBlock>();
-
-pub const MemoryLayout: [arch::MemoryRegion; 2] = [
+pub const MEMORY_LAYOUT: [arch::MemoryRegion; 2] = [
     arch::MemoryRegion {
         start: 0x08000000,
         size: 0x02000000,
@@ -25,12 +17,12 @@ const fn mem_region(tp: arch::MemoryType) -> &'static arch::MemoryRegion {
     let mut i = 0;
     
     loop {
-        if MemoryLayout[i].tp == tp {
-            return &MemoryLayout[i];
+        if MEMORY_LAYOUT[i].tp == tp {
+            return &MEMORY_LAYOUT[i];
         }
 
         i += 1;
-        if i >= MemoryLayout.len() {
+        if i >= MEMORY_LAYOUT.len() {
             break;
         }
     }

@@ -1,7 +1,5 @@
 #![macro_use]
 
-use crate::drivers::uart;
-
 use core::fmt;
 use core::fmt::Write;
 
@@ -9,7 +7,7 @@ use core::fmt::Write;
 pub fn _print(args: fmt::Arguments) {
     use crate::drivers::uart;
 
-    uart::uart().write_fmt(args);
+    uart::uart().write_fmt(args).unwrap();
 }
 
 #[macro_export]
@@ -32,5 +30,3 @@ macro_rules! dbg {
         $crate::lib::printf::_print(format_args_nl!($($arg)*));
     })
 }
-
-pub(crate) use println;
