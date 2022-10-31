@@ -8,7 +8,7 @@ pub const MEMORY_LAYOUT: [arch::MemoryRegion; 2] = [
     },  
     arch::MemoryRegion {
         start: 0x40000000,
-        size: 0x40000000,
+        size: 0x200000,
         tp: arch::MemoryType::MEM,
     },  
 ];

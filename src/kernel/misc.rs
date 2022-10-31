@@ -3,6 +3,6 @@ extern "C" {
     static end: u64;
 }
 
-pub fn image_size() -> u64 {
-    unsafe { (&end as *const _) as u64  - (&start as *const _) as u64}
+pub fn image_size() -> usize {
+    unsafe { (&end as *const _) as usize - (&start as *const _) as usize}
 }

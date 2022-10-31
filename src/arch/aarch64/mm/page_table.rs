@@ -1,4 +1,7 @@
-use crate::mm::types::*;
+use crate::{
+    mm::types::*,
+    arch::{PT_LVL1_ENTIRES, PT_LVL2_ENTIRES},
+};
 
 const INVALID_TTE: u64 = 0;
 const PTE_WRITE: u64 = 0x00 << 6;
@@ -13,12 +16,12 @@ pub struct PageTbl(u64);
 
 #[inline]
 pub fn l1_linear_offset(va: VirtAddr) -> usize {
-    (usize::from(va) >> 30) & (512 - 1)
+    (usize::from(va) >> 30) & (PT_LVL1_ENTIRES - 1)
 }
 
 #[inline]
 pub fn l2_linear_offset(va: VirtAddr) -> usize {
-    (usize::from(va) >> 21) & (512 - 1)
+    (usize::from(va) >> 21) & (PT_LVL2_ENTIRES - 1)
 }
 
 impl PageBlock {

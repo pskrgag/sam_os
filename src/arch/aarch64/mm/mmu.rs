@@ -13,7 +13,7 @@ use crate::{
         types::MemRange,
     },
 };
-use tock_registers::interfaces::{Writeable, Readable, ReadWriteable};
+use tock_registers::interfaces::{Writeable, ReadWriteable};
 use cortex_a::registers::*;
 use core::arch::asm;
 

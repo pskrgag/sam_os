@@ -3,6 +3,7 @@
 #![feature(format_args_nl)]
 #![feature(const_trait_impl)]
 #![feature(default_alloc_error_handler)]
+#![feature(generic_const_exprs)]
 #![allow(dead_code)]
 #![allow(unused_macros)]
 #![allow(special_module_name)]
@@ -17,8 +18,16 @@ mod arch;
 mod kernel;
 mod mm;
 
+#[cfg(test)]
+#[macro_use]
+extern crate std;
+
 use core::arch::asm;
-use mm::boot_alloc::BOOT_ALLOC;
+use mm::{
+    types::*,
+    boot_alloc::BOOT_ALLOC,
+    page_alloc::{self, PAGE_ALLOC},
+};
 
 pub use lib::printf::*;
 
@@ -32,7 +41,8 @@ fn start_kernel() -> ! {
     arch::interrupts::set_up_vbar();
     arch::mm::mmu::init();
 
-    BOOT_ALLOC.get().init();
+    mm::boot_alloc::init();
+    mm::page_alloc::init();
 
     loop {  }
 }
