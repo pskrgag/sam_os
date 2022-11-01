@@ -26,7 +26,7 @@ impl<T> Spinlock<T> {
     }
 
     pub fn lock(&self) -> SpinlockGuard<T> {
-        let my = self.current.fetch_add(1, Ordering::Acquire);
+        let my = self.next.fetch_add(1, Ordering::Acquire);
 
         while self.current.load(Ordering::Relaxed) != my {
             unsafe { asm!("yield") };
@@ -64,4 +64,3 @@ impl<'a, T> Drop for SpinlockGuard<'a, T> {
 
 unsafe impl<T: Send> Send for Spinlock<T> {}
 unsafe impl<T: Send> Sync for Spinlock<T> {}
-

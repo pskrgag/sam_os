@@ -2,21 +2,15 @@
 mod config;
 
 use crate::{
-        arch::mm::page_table::{
-        PageBlock,
-        PageTbl,
-        l1_linear_offset,
-        l2_linear_offset,
-    },
+    arch::mm::page_table::{l1_linear_offset, l2_linear_offset, PageBlock, PageTbl},
+    arch::{PT_LVL1_ENTIRES, PT_LVL2_ENTIRES},
+    kernel::locking::fake_lock::FakeLock,
     mm::{
-        types::{PhysAddr, VirtAddr, MemRange},
-        page_table::PageTable,
+        page_table::{
+            MappingType, MmError, PageTable, TranslationTableBlock, TranslationTableTable,
+        },
+        types::{MemRange, PhysAddr, VirtAddr},
     },
-    arch::{
-        PT_LVL1_ENTIRES,
-        PT_LVL2_ENTIRES,
-    },
-    kernel::locking::fake_lock::FakeLock
 };
 
 /* Any idea how to use crate::arch::PAGE_SIZE? */
@@ -28,37 +22,63 @@ pub struct InitialPageTable {
     lvl2_device: [PageBlock; PT_LVL2_ENTIRES],
 }
 
-unsafe impl Sync for InitialPageTable { }
-unsafe impl Send for InitialPageTable { }
+unsafe impl Sync for InitialPageTable {}
+unsafe impl Send for InitialPageTable {}
 
 pub static INITIAL_TT: FakeLock<InitialPageTable> = FakeLock::new(InitialPageTable::default());
 
 impl InitialPageTable {
     pub const fn default() -> Self {
-         Self {
-             lvl1: [PageTbl::new(); PT_LVL1_ENTIRES],
-             lvl2_normal: [PageBlock::new(); PT_LVL2_ENTIRES],
-             lvl2_device: [PageBlock::new(); PT_LVL2_ENTIRES],
-         }
+        Self {
+            lvl1: [PageTbl::new(); PT_LVL1_ENTIRES],
+            lvl2_normal: [PageBlock::new(); PT_LVL2_ENTIRES],
+            lvl2_device: [PageBlock::new(); PT_LVL2_ENTIRES],
+        }
+    }
+}
+
+impl PageTable for InitialPageTable {
+    fn base(&self) -> VirtAddr {
+        VirtAddr::from_raw(&self.lvl1)
     }
 
-    pub fn populate_indential(&mut self, virt: &MemRange<VirtAddr>, device: bool) {
+    fn entries_per_lvl(&self) -> usize {
+        PT_LVL1_ENTIRES
+    }
+
+    fn map(
+        &mut self,
+        _phys: MemRange<PhysAddr>,
+        virt: MemRange<VirtAddr>,
+        m_type: MappingType,
+    ) -> Result<(), MmError> {
         let mut size_to_map = usize::from(virt.size());
         let mut curr_addr = usize::from(virt.start());
-        let next_lvl = match device {
-            true => &mut self.lvl2_device,
-            false => &mut self.lvl2_normal,
+        let next_lvl = match m_type {
+            MappingType::KernelDevice => &mut self.lvl2_device,
+            _ => &mut self.lvl2_normal,
         };
 
-        println!("Mapping 0x{:x} -> 0x{:x} as {}", curr_addr, curr_addr, if device { "device" } else { "normal" });
+        println!(
+            "Mapping 0x{:x} -> 0x{:x} as {}",
+            curr_addr,
+            curr_addr,
+            match m_type {
+                MappingType::KernelDevice => "device",
+                _ => "normal",
+            }
+        );
 
         /* Lvl1 addresses 1 GB */
         while {
             let idx = l1_linear_offset(VirtAddr::from(usize::from(curr_addr)));
-            self.lvl1[idx] = PageTbl::new()
-                .valid()
-                .next_lvl(PhysAddr::from((next_lvl as *const _) as usize));
-       
+            let mut new_table = PageTbl::invalid();
+
+            new_table.set_OA(PhysAddr::from((next_lvl as *const _) as u64));
+            new_table.valid();
+
+            self.lvl1[idx] = new_table;
+
             curr_addr += 1 << 30;
 
             if size_to_map <= 1 << 30 {
@@ -67,25 +87,21 @@ impl InitialPageTable {
                 size_to_map -= 1 << 30;
                 true
             }
-        } { }
-        
+        } {}
+
         let mut size_to_map = usize::from(virt.size());
         let mut curr_addr = usize::from(virt.start());
 
         /* Lvl2 addresses 2 MB */
-        while  {
+        while {
             let idx = l2_linear_offset(VirtAddr::from(curr_addr));
-            let tmp = PageBlock::new()
-                .valid()
-                .out_addr(curr_addr.into())
-                .write();
+            let mut new_block = PageBlock::invalid();
 
-            match device {
-                true => tmp.device(),
-                false => tmp.normal(),
-            };
-            
-            next_lvl[idx] = tmp;
+            new_block.set_OA(curr_addr.into());
+            new_block.set_mapping_type(MappingType::KernelRWX);
+            new_block.valid();
+
+            next_lvl[idx] = new_block;
 
             curr_addr += 2 << 20;
 
@@ -95,16 +111,8 @@ impl InitialPageTable {
                 size_to_map -= 2 << 20;
                 true
             }
-        } { } 
-    }
-}
+        } {}
 
-impl PageTable for InitialPageTable {
-    fn lvl1(&self) -> VirtAddr {
-        VirtAddr::from_raw(&self.lvl1)
-    }
-
-    fn entries_per_lvl(&self) -> usize {
-        PT_LVL1_ENTIRES
+        Ok(())
     }
 }

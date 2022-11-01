@@ -1,12 +1,13 @@
 use crate::{
-    mm::types::*,
-    arch::{PT_LVL1_ENTIRES, PT_LVL2_ENTIRES},
+    arch::{
+        mm::{mmu, mmu_flags},
+        PT_LVL1_ENTIRES, PT_LVL2_ENTIRES,
+    },
+    mm::{
+        page_table::{MappingType, TranslationTableBlock, TranslationTableTable},
+        types::*,
+    },
 };
-
-const INVALID_TTE: u64 = 0;
-const PTE_WRITE: u64 = 0x00 << 6;
-const PTE_RO: u64 = 0x11 << 6;
-const PTE_VALID: u64 = 0x11;
 
 #[derive(Copy, Clone)]
 pub struct PageBlock(u64);
@@ -26,62 +27,76 @@ pub fn l2_linear_offset(va: VirtAddr) -> usize {
 
 impl PageBlock {
     pub const fn new() -> Self {
-        Self(INVALID_TTE)
-    }
-
-    pub const fn valid(mut self) -> Self {
-        self.0 |= 0x01;
-        self.0 |= 1 << 10;
-        self
-    }
-
-    pub const fn out_addr(mut self, addr: PhysAddr) -> Self {
-        self.0 |= (addr.to_pfn() as u64) << 12;
-        self
-    }
-
-    pub const fn write(mut self) -> Self {
-        self.0 |= PTE_WRITE;
-        self
-    }
-    
-    pub const fn read_only(mut self) -> Self {
-        self.0 |= !PTE_WRITE;
-        self
-    }
-    
-    pub const fn device(mut self) -> Self {
-        self.0 |= 0 << 0x2;
-        self.0 |= 1 << 53;
-        self
-    }
-    
-    pub const fn normal(mut self) -> Self {
-        self.0 = 1 << 0x2;
-        self
-    }
-
-    pub fn get(&self) -> u64 {
-        self.0
+        Self(0x0)
     }
 }
 
 impl PageTbl {
     pub const fn new() -> Self {
-        Self(INVALID_TTE)
+        Self(0x0)
     }
+}
 
-    pub const fn valid(mut self) -> Self {
-        self.0 |= 0b11;
-        self
-    }
+impl TranslationTableTable for PageTbl {
+    type RawTable = u64;
 
-    pub const fn next_lvl(mut self, addr: PhysAddr) -> Self {
-        self.0 |= addr.get() as u64;
-        self
-    }
- 
-    pub fn get(&self) -> u64 {
+    #[inline]
+    fn get(&self) -> u64 {
         self.0
+    }
+
+    #[inline]
+    fn invalid() -> Self {
+        Self(0)
+    }
+
+    #[inline]
+    fn valid(&mut self) {
+        self.0 |= mmu_flags::TABLE_VALID;
+    }
+
+    #[inline]
+    fn set_OA(&mut self, addr: PhysAddr) {
+        self.0 |= addr.get();
+    }
+
+    #[inline]
+    fn invalidate(&mut self) {
+        self.0 |= !mmu_flags::TABLE_VALID;
+    }
+}
+
+impl TranslationTableBlock for PageBlock {
+    type RawBlock = u64;
+
+    #[inline]
+    fn invalid() -> Self {
+        Self(0)
+    }
+
+    #[inline]
+    fn set_mapping_type(&mut self, tp: MappingType) {
+        self.0 |= mmu::mapping_type_to_flags(tp);
+    }
+
+    #[inline]
+    fn get(&self) -> Self::RawBlock {
+        self.0
+    }
+
+    #[inline]
+    fn invalidate(&mut self) {
+        self.0 |= !mmu_flags::BLOCK_VALID;
+    }
+
+    #[inline]
+    fn set_OA(&mut self, addr: PhysAddr) {
+        self.0 |= u64::from(Pfn::from(addr)) << 12
+    }
+
+    #[inline]
+    fn valid(&mut self) {
+        self.0 |= mmu_flags::BLOCK_VALID;
+        self.0 |= mmu_flags::BLOCK_ACCESS_FLAG;
     }
 }

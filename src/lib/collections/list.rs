@@ -12,9 +12,7 @@ pub struct List<T: Sized> {
 
 impl<T: Sized> List<T> {
     pub const fn new() -> Self {
-        Self {
-            head: None,
-        }
+        Self { head: None }
     }
 }
 

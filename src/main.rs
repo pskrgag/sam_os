@@ -13,21 +13,16 @@ extern crate alloc;
 mod drivers;
 #[macro_use]
 mod lib;
-mod panic;
 mod arch;
 mod kernel;
 mod mm;
+mod panic;
 
 #[cfg(test)]
 #[macro_use]
 extern crate std;
 
 use core::arch::asm;
-use mm::{
-    types::*,
-    boot_alloc::BOOT_ALLOC,
-    page_alloc::{self, PAGE_ALLOC},
-};
 
 pub use lib::printf::*;
 
@@ -37,22 +32,22 @@ extern "C" {
 
 #[no_mangle]
 fn start_kernel() -> ! {
-    println!("Starting kernel....\n");
+    println!("Starting kernel...\n");
     arch::interrupts::set_up_vbar();
     arch::mm::mmu::init();
 
     mm::boot_alloc::init();
     mm::page_alloc::init();
 
-    loop {  }
+    loop {}
 }
 
 #[no_mangle]
 #[link_section = ".text.boot"]
 pub unsafe extern "C" fn _start() -> ! {
     unsafe {
-         asm!("mov sp, {}", in(reg) &__STACK_START);
+        asm!("mov sp, {}", in(reg) &__STACK_START);
     }
 
-     start_kernel()
+    start_kernel()
 }

@@ -2,28 +2,22 @@
 #[path = "../arch/aarch64/qemu/config.rs"]
 mod config;
 
-use bitmaps::Bitmap;
-use core::mem::size_of;
 use crate::{
-    arch,
-    kernel,
+    arch, kernel, kernel::locking::spinlock::Spinlock, lib::collections::vector::Vector,
     mm::types::*,
-    kernel::locking::spinlock::Spinlock,
-    lib::collections::vector::Vector
 };
+use bitmaps::Bitmap;
 
-pub struct PageAlloc
-{
+pub struct PageAlloc {
     pool: Vector<Bitmap<64>>,
     start: Pfn,
 }
 
-unsafe impl Send for PageAlloc { }
+unsafe impl Send for PageAlloc {}
 
 pub static PAGE_ALLOC: Spinlock<PageAlloc> = Spinlock::new(PageAlloc::default());
 
-impl PageAlloc
-{
+impl PageAlloc {
     pub const fn default() -> Self {
         Self {
             start: Pfn::new(0x0),
@@ -56,7 +50,7 @@ impl PageAlloc
         for i in idx1..64 {
             self.pool[bitmap1].set(i, true);
         }
-        
+
         for i in idx2..64 {
             self.pool[bitmap2].set(i, true);
         }
@@ -90,17 +84,19 @@ impl PageAlloc
             match next {
                 Some(next) => {
                     cont_pages += next - start;
-                },
+                }
                 None => {
                     cont_pages += 64 - start;
-                },
+                }
             }
 
             if cont_pages >= num {
                 let next = if next.is_some() { next.unwrap() } else { 63 };
                 self.mark_allocated(bitmap.unwrap(), bitmap_idx, idx.unwrap(), next);
 
-                return Some(PhysAddr::from(self.bitmap_to_pfn(bitmap.unwrap(), idx.unwrap())));
+                return Some(PhysAddr::from(
+                    self.bitmap_to_pfn(bitmap.unwrap(), idx.unwrap()),
+                ));
             }
 
             bitmap_idx += 1;
@@ -113,8 +109,9 @@ impl PageAlloc
         let pfn: Pfn = start.into();
         let (bitmap, idx) = ((pfn - self.start) / 64, (pfn - self.start) % 64);
 
-        for i in 0..num{
-            self.pool[(bitmap + (idx + i as u64) % 64) as usize].set(((idx + i as u64) % 64) as usize, false);
+        for i in 0..num {
+            self.pool[(bitmap + (idx + i as u64) % 64) as usize]
+                .set(((idx + i as u64) % 64) as usize, false);
         }
     }
 }

@@ -1,10 +1,10 @@
-use core::alloc::{GlobalAlloc, Layout};
 use crate::mm::boot_alloc;
+use core::alloc::{GlobalAlloc, Layout};
 
 pub struct Allocator;
 
 #[global_allocator]
-pub static ALLOCATOR: Allocator = Allocator{};
+pub static ALLOCATOR: Allocator = Allocator {};
 
 unsafe impl Sync for Allocator {}
 

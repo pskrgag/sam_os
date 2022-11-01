@@ -18,22 +18,24 @@ use crate::mm::types::PhysAddr;
 impl const PartialEq for MemoryType {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (&MemoryType::MEM, &MemoryType::MEM) |
-            (&MemoryType::DEVICE, &MemoryType::DEVICE) => true,
+            (&MemoryType::MEM, &MemoryType::MEM) | (&MemoryType::DEVICE, &MemoryType::DEVICE) => {
+                true
+            }
             (x, y) => *x as u8 == *y as u8,
-        } 
+        }
     }
 }
 
+#[derive(Clone)]
 pub struct MemoryRegion {
     pub start: usize,
     pub size: usize,
     pub tp: MemoryType,
 }
 
-const fn mem_region(tp: MemoryType) -> &'static MemoryRegion { 
+const fn mem_region(tp: MemoryType) -> &'static MemoryRegion {
     let mut i = 0;
-    
+
     loop {
         if config::MEMORY_LAYOUT[i].tp == tp {
             return &config::MEMORY_LAYOUT[i];
@@ -53,7 +55,7 @@ pub const fn uart_base() -> *mut u8 {
 }
 
 pub const fn ram_base() -> PhysAddr {
-    PhysAddr::new(mem_region(MemoryType::MEM).start as u64) 
+    PhysAddr::new(mem_region(MemoryType::MEM).start as u64)
 }
 
 pub const fn ram_size() -> usize {

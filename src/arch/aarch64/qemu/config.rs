@@ -5,17 +5,17 @@ pub const MEMORY_LAYOUT: [arch::MemoryRegion; 2] = [
         start: 0x08000000,
         size: 0x02000000,
         tp: arch::MemoryType::DEVICE,
-    },  
+    },
     arch::MemoryRegion {
         start: 0x40000000,
         size: 0x200000,
         tp: arch::MemoryType::MEM,
-    },  
+    },
 ];
 
-const fn mem_region(tp: arch::MemoryType) -> &'static arch::MemoryRegion { 
+const fn mem_region(tp: arch::MemoryType) -> &'static arch::MemoryRegion {
     let mut i = 0;
-    
+
     loop {
         if MEMORY_LAYOUT[i].tp == tp {
             return &MEMORY_LAYOUT[i];

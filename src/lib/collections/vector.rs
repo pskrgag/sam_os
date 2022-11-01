@@ -1,4 +1,3 @@
-use crate::mm::allocator::ALLOCATOR;
 use alloc::alloc::{alloc, dealloc, handle_alloc_error, realloc};
 use core::{
     alloc::Layout,

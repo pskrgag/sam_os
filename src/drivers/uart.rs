@@ -2,7 +2,7 @@
 #[path = "../arch/aarch64/qemu/config.rs"]
 mod config;
 
-use core::{ptr, fmt};
+use core::{fmt, ptr};
 
 pub struct Uart;
 
@@ -23,6 +23,5 @@ impl fmt::Write for Uart {
 }
 
 pub fn uart() -> Uart {
-    Uart { }
+    Uart {}
 }
-

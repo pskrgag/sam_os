@@ -1,8 +1,5 @@
-use core::{
-    fmt,
-    ops::Sub,
-};
 use crate::arch;
+use core::{fmt, ops::Sub};
 
 #[derive(Clone, Copy)]
 pub struct PhysAddr(u64);
@@ -15,7 +12,7 @@ pub struct Pfn(u64);
 
 pub struct MemRange<T> {
     start: T,
-    size: usize
+    size: usize,
 }
 
 impl<T: Copy> MemRange<T> {
@@ -29,7 +26,7 @@ impl<T: Copy> MemRange<T> {
     pub const fn start(&self) -> T {
         self.start
     }
-    
+
     pub const fn size(&self) -> usize {
         self.size
     }
@@ -83,6 +80,12 @@ impl From<PhysAddr> for u64 {
     }
 }
 
+impl From<Pfn> for u64 {
+    fn from(addr: Pfn) -> Self {
+        addr.0
+    }
+}
+
 impl From<VirtAddr> for u64 {
     fn from(addr: VirtAddr) -> Self {
         addr.0
@@ -126,7 +129,7 @@ impl PhysAddr {
         self.0
     }
 
-    pub const fn to_pfn(&self) -> u64  {
+    pub const fn to_pfn(&self) -> u64 {
         self.0 >> arch::PAGE_SHIFT
     }
 

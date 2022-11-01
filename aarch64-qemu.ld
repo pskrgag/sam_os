@@ -4,8 +4,8 @@ PAGE_SIZE = 4096;
 
 SECTIONS
 {
-    . = 0x40080000; /* AArch64 boot address is 0x80000, 4K-aligned */
-    __BOOT_START = .;
+    . = 0x40000000; /* AArch64 boot address is 0x80000, 4K-aligned */
+    start = .;
     .text :
     {
         *(.text.boot)
@@ -37,8 +37,6 @@ SECTIONS
         FILL(0x00)
     }
 
-    /* @todo could insert .data.boot here with proper alignment */
-
     .bss ALIGN(4096) (NOLOAD):
     {
         __BSS_START = .;
@@ -52,5 +50,6 @@ SECTIONS
     . = ALIGN(16);
     __STACK_START = .; /* Stack grows from here towards 0x0. */
 
+    end = .;
     /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }

@@ -4,5 +4,5 @@ extern "C" {
 }
 
 pub fn image_size() -> usize {
-    unsafe { (&end as *const _) as usize - (&start as *const _) as usize}
+    unsafe { (&end as *const _) as usize - (&start as *const _) as usize }
 }

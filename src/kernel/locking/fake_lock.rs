@@ -6,7 +6,9 @@ pub struct FakeLock<T> {
 
 impl<T> FakeLock<T> {
     pub const fn new(val: T) -> Self {
-        Self { val: UnsafeCell::new(val) }
+        Self {
+            val: UnsafeCell::new(val),
+        }
     }
 
     pub fn get(&self) -> &mut T {
@@ -14,4 +16,4 @@ impl<T> FakeLock<T> {
     }
 }
 
-unsafe impl<T> Sync for FakeLock<T> { }
+unsafe impl<T> Sync for FakeLock<T> {}

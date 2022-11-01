@@ -19,6 +19,7 @@ macro_rules! print {
 macro_rules! println {
     () => ($crate::print!("\n"));
     ($($arg:tt)*) => ({
+        print!("[{:.10}] ", $crate::arch::time_since_start());
         $crate::lib::printf::_print(format_args_nl!($($arg)*));
     })
 }

@@ -8,7 +8,11 @@ edition = "2021"
 [features]
 qemu = []
 
+[build-dependencies]
+cc = "1.0"
+
 [dependencies]
-buddy-alloc = "0.4.1"
 cortex-a = "7.2"
 tock-registers = "0.7"
+bitmaps = {version = "3.2.0", default-features = false}
+bitflags = "1.3"

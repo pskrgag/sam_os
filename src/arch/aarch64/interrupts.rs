@@ -1,8 +1,8 @@
-use core::arch::{global_asm, asm};
+use core::arch::{asm, global_asm};
 
 global_asm!(include_str!("interrupts.S"));
 
-extern "Rust" {
+extern "C" {
     static exteption_vector: u64;
 }
 
@@ -11,13 +11,16 @@ struct Esr(u64);
 #[inline]
 pub fn set_up_vbar() {
     unsafe {
-         asm!("msr VBAR_EL1, {}", in(reg) &exteption_vector);
+        asm!("msr VBAR_EL1, {}", in(reg) &exteption_vector);
     }
 }
 
 #[no_mangle]
 pub extern "C" fn kern_sync64(esr_el1: usize, far_el1: usize) -> ! {
-    println!("Kernel synch expection\nESR_EL1 0x{:x} FAR_EL1 0x{:x}\n", esr_el1, far_el1);
+    println!(
+        "Kernel synch expection\nESR_EL1 0x{:x} FAR_EL1 0x{:x}\n",
+        esr_el1, far_el1
+    );
 
     panic!();
 }
@@ -29,4 +32,3 @@ pub extern "C" fn kern_exception_bug(esr_el1: usize) -> ! {
 
     panic!();
 }
-
