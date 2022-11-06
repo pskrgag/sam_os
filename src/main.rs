@@ -28,26 +28,17 @@ pub use lib::printf::*;
 
 extern "C" {
     static __STACK_START: usize;
+    fn map();
 }
 
 #[no_mangle]
-fn start_kernel() -> ! {
+extern "C" fn start_kernel() -> ! {
     println!("Starting kernel...\n");
+   // arch::mm::mmu::init();
     arch::interrupts::set_up_vbar();
-    arch::mm::mmu::init();
 
     mm::boot_alloc::init();
     mm::page_alloc::init();
 
     loop {}
-}
-
-#[no_mangle]
-#[link_section = ".text.boot"]
-pub unsafe extern "C" fn _start() -> ! {
-    unsafe {
-        asm!("mov sp, {}", in(reg) &__STACK_START);
-    }
-
-    start_kernel()
 }

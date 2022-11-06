@@ -1,6 +1,7 @@
 use core::arch::{asm, global_asm};
 
 global_asm!(include_str!("interrupts.S"));
+global_asm!(include_str!("boot.s"));
 
 extern "C" {
     static exteption_vector: u64;

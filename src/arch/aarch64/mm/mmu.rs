@@ -69,5 +69,3 @@ pub fn init() {
 
     println!("Initial map is set");
 }
-
-pub fn init_higher_half() {}

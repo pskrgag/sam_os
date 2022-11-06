@@ -10,7 +10,7 @@ pub struct Uart;
 pub fn uart_write(str: &[u8]) {
     for i in str {
         unsafe {
-            ptr::write_volatile(config::uart_base(), *i);
+            ptr::write_volatile(0x09000000 as *mut _, *i);
         }
     }
 }
