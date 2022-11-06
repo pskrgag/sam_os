@@ -5,6 +5,7 @@ pub mod qemu;
 pub use qemu::config::*;
 
 pub mod interrupts;
+pub mod sections;
 pub mod mm;
 
 use core::mem;

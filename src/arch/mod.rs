@@ -54,10 +54,10 @@ pub const fn uart_base() -> *mut u8 {
     0x09000000 as *mut u8
 }
 
-pub const fn ram_base() -> PhysAddr {
-    PhysAddr::new(mem_region(MemoryType::MEM).start as u64)
+pub const fn ram_base() -> u64 {
+    mem_region(MemoryType::MEM).start as u64
 }
 
-pub const fn ram_size() -> usize {
-    mem_region(MemoryType::MEM).size
+pub const fn ram_size() -> u64 {
+    mem_region(MemoryType::MEM).size as u64
 }

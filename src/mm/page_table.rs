@@ -6,6 +6,7 @@ pub enum MmError {
     NotImpl,
 }
 
+#[derive(Clone, Copy)]
 pub enum MappingType {
     KernelData,
     KernelText,
@@ -15,9 +16,10 @@ pub enum MappingType {
 }
 
 pub trait PageTable {
+    /* If p is None then caller want linear mapping */
     fn map(
         &mut self,
-        _p: MemRange<PhysAddr>,
+        _p: Option<MemRange<PhysAddr>>,
         _v: MemRange<VirtAddr>,
         _m_type: MappingType,
     ) -> Result<(), MmError> {
@@ -28,7 +30,7 @@ pub trait PageTable {
         Err(MmError::NotImpl)
     }
 
-    fn base(&self) -> VirtAddr;
+    fn base(&self) -> PhysAddr;
     fn entries_per_lvl(&self) -> usize;
 }
 

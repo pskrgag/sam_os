@@ -1,13 +1,18 @@
-ENTRY(_start)
+ENTRY(__start)
 
 PAGE_SIZE = 4096;
 
+load_addr = 0x40000000;
+mmio_base = 0x08000000;
+kernel_virtual_base = 0xffffffffc0000000;
+
 SECTIONS
 {
-    . = 0x40000000; /* AArch64 boot address is 0x80000, 4K-aligned */
+    . = kernel_virtual_base;
     start = .;
-    .text :
+    .text : AT(load_addr)
     {
+        stext = .;
         *(.text.boot)
         //. = ALIGN(PAGE_SIZE);
         *(.data.boot)
@@ -15,6 +20,7 @@ SECTIONS
         __BOOT_END = .; // __BOOT_END must be 4KiB aligned
         __RO_START = .;
         *(.text .text.*)
+        etext = .;
     }
 
     .vectors ALIGN(2048):
@@ -24,8 +30,10 @@ SECTIONS
 
     .rodata ALIGN(16):
     {
+        srodata = .;
         *(.rodata .rodata.*)
         FILL(0x00)
+	erodata = .;
     }
     . = ALIGN(PAGE_SIZE); /* Fill up to page size */
     __RO_END = .; /* __RO_END must be 4KiB aligned */
@@ -33,17 +41,19 @@ SECTIONS
 
     .data : /* @todo align data to 4K -- it's already aligned up to __RO_END marker now */
     {
+        sdata = .;
         *(.data .data.*)
         FILL(0x00)
+        edata = .;
     }
 
     .bss ALIGN(4096) (NOLOAD):
     {
-        __BSS_START = .;
+        sbss = .;
         *(.bss .bss.*)
         *(COMMON)
         . = ALIGN(PAGE_SIZE); /* Align up to page size */
-        __BSS_END = .;
+        ebss = .;
     }
 
     . = . + 0x100000;
@@ -52,4 +62,8 @@ SECTIONS
 
     end = .;
     /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
+
+    mmio_start = .;
+    . += 0x02000000;
+    mmio_end = .;
 }

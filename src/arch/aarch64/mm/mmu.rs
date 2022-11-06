@@ -1,20 +1,26 @@
-// FIXME one day...
-#[path = "../qemu/config.rs"]
-mod config;
-
 use crate::{
     arch::{
-        mm::{initial_map, mmu_flags::*},
-        MemoryType, TCR_SZ_SHIFT,
+        mm::{
+            kernel_page_table::{KernelPageTable, KERNEL_PAGE_TABLE},
+            mmu_flags::*,
+        },
+        MemoryType,
+        sections::{populate_kernel_sections, KERNEL_SECTIONS},
     },
+    kernel::misc::kernel_offset,
+    linker_var,
     mm::{
         page_table::{MappingType, PageTable},
         types::*,
+        types::MemRange,
     },
 };
-use core::arch::asm;
-use cortex_a::registers::*;
-use tock_registers::interfaces::{ReadWriteable, Writeable};
+
+extern "C" {
+    static stext: u64;
+    static etext: u64;
+    static load_addr: u64;
+}
 
 const KERNEL_DATA: u64 = BLOCK_KERNEL_RW | BLOCK_NORMAL_MEM;
 const KERNEL_TEXT: u64 = BLOCK_KERNEL_RO & !BLOCK_PXN | BLOCK_NORMAL_MEM;
@@ -32,40 +38,22 @@ pub fn mapping_type_to_flags(tp: MappingType) -> u64 {
     }
 }
 
-pub fn init() {
-    let tt = initial_map::INITIAL_TT.get();
+fn remap_kernel(table: &mut impl PageTable) {
+   let array = KERNEL_SECTIONS.get();
 
-    for i in &config::MEMORY_LAYOUT {
-        let v_range = MemRange::new(i.start.into(), i.size);
-        let p_range = MemRange::<PhysAddr>::new(PhysAddr::from(i.start), i.size);
+   for i in &*array {
+       table.map(None, MemRange::new(VirtAddr::from(i.start()), i.size() as usize), i.mapping_type());
+       println!("Mapped {} [0x{:x} -> 0x{:x}]", i.name(), i.start() - kernel_offset(), i.start());
+   }
+}
 
-        tt.map(
-            p_range,
-            v_range,
-            if i.tp != MemoryType::MEM {
-                MappingType::KernelDevice
-            } else {
-                MappingType::KernelRWX
-            },
-        )
-        .unwrap();
-    }
+pub fn set_up_kernel_tt() {
+    let mut table = KERNEL_PAGE_TABLE.lock();
+    let new_table = KernelPageTable::new().expect("Failed to allocate kernel tt base");
 
-    TCR_EL1.write(TCR_EL1::TG0::KiB_4 + TCR_EL1::T0SZ.val(64 - TCR_SZ_SHIFT));
+    *table = new_table;
 
-    MAIR_EL1.write(
-        MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc
-            + MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
-            + MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck,
-    );
+    populate_kernel_sections();
 
-    TTBR0_EL1.set_baddr(u64::from(tt.base()));
-
-    unsafe {
-        asm!("dsb ishst");
-    }
-
-    SCTLR_EL1.modify(SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable + SCTLR_EL1::M::Enable);
-
-    println!("Initial map is set");
+    remap_kernel(&mut *table);
 }

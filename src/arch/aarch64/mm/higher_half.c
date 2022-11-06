@@ -62,7 +62,7 @@ __attribute__((section(".text.boot"))) void map(void)
 	uint64_t mair = (0b00000000 << 8) | 0b01110111;
 	uint64_t ttbr_el1 = ((uint64_t) (void *) &lvl1);
 	uint64_t sctrl;
-	void (*rust_start_higher_half)(void) = (void *) (((char *) &start_kernel));
+	void (*rust_start_higher_half)(void) = (void *) (&start_kernel);
 
 	lvl1[l1_linear_offset(&load_addr)] = _1_v_1_1gb;
 	lvl1[l1_linear_offset(&kernel_virtual_base)] = _1_v_1_1gb;
@@ -75,7 +75,7 @@ __attribute__((section(".text.boot"))) void map(void)
 	asm volatile ("msr TTBR0_EL1, %0"::"r"(ttbr_el1):"memory");
 	asm volatile ("msr TTBR1_EL1, %0"::"r"(ttbr_el1));
 
-	asm volatile("mrs %0, SCTLR_EL1": "=r"(sctrl));
+	asm volatile ("mrs %0, SCTLR_EL1": "=r"(sctrl));
 
 	sctrl |= ((1 << 0) | (1 << 2) | (1 << 12));
 

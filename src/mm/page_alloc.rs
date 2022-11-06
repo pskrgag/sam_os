@@ -26,16 +26,23 @@ impl PageAlloc {
     }
 
     pub fn new(start: PhysAddr, size: usize) -> Option<Self> {
-        let pool = Vector::with_capaicty(size / 64 + 1);
+        let pool_size = size / 64 + 1;
+        let pool = Vector::with_capaicty(pool_size);
 
         if pool.is_none() {
             return None;
         }
 
+        let mut pool = pool.unwrap();
+
+        for _ in 0..pool_size {
+            pool.push(Bitmap::<64>::new());
+        }
+
         println!("Page allocator initialized: phys size {}", size);
 
         Some(Self {
-            pool: pool.unwrap(),
+            pool: pool,
             start: Pfn::from(start),
         })
     }
@@ -64,7 +71,7 @@ impl PageAlloc {
     pub fn alloc_pages(&mut self, num: usize) -> Option<PhysAddr> {
         let mut bitmap_idx: usize = 0;
         let mut cont_pages = 0;
-        let (mut bitmap, mut idx) = (None, None);
+        let (mut bitmap, mut idx) = (Some(bitmap_idx), Some(0));
 
         for i in &self.pool {
             if i.is_full() {
@@ -117,7 +124,7 @@ impl PageAlloc {
 }
 
 pub fn init() {
-    let alloc_start = PhysAddr::from(usize::from(arch::ram_base()) + kernel::misc::image_size());
+    let alloc_start = PhysAddr::from(arch::ram_base() + kernel::misc::image_size());
     let alloc_size = arch::ram_size() - kernel::misc::image_size();
-    *PAGE_ALLOC.lock() = PageAlloc::new(alloc_start, alloc_size).unwrap();
+    *PAGE_ALLOC.lock() = PageAlloc::new(alloc_start, alloc_size as usize).unwrap();
 }

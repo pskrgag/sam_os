@@ -14,6 +14,7 @@ mod drivers;
 #[macro_use]
 mod lib;
 mod arch;
+#[macro_use]
 mod kernel;
 mod mm;
 mod panic;
@@ -31,14 +32,21 @@ extern "C" {
     fn map();
 }
 
+/* At this point we have:
+ *
+ *      1) MMU is turned on
+ *      2) MMMIO is mapped as 1 to 1
+ *      3) 0xffffffffc0000000 and load_addr are mapped to load_addr via 1GB block
+ */
 #[no_mangle]
 extern "C" fn start_kernel() -> ! {
     println!("Starting kernel...\n");
-   // arch::mm::mmu::init();
     arch::interrupts::set_up_vbar();
 
     mm::boot_alloc::init();
     mm::page_alloc::init();
+
+    arch::mm::mmu::set_up_kernel_tt();
 
     loop {}
 }

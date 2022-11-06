@@ -1,7 +1,7 @@
 use crate::{
     arch::{
         mm::{mmu, mmu_flags},
-        PT_LVL1_ENTIRES, PT_LVL2_ENTIRES,
+        PT_LVL1_ENTIRES, PT_LVL2_ENTIRES, PT_LVL3_ENTIRES
     },
     mm::{
         page_table::{MappingType, TranslationTableBlock, TranslationTableTable},
@@ -9,10 +9,10 @@ use crate::{
     },
 };
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct PageBlock(u64);
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct PageTbl(u64);
 
 #[inline]
@@ -23,6 +23,11 @@ pub fn l1_linear_offset(va: VirtAddr) -> usize {
 #[inline]
 pub fn l2_linear_offset(va: VirtAddr) -> usize {
     (usize::from(va) >> 21) & (PT_LVL2_ENTIRES - 1)
+}
+
+#[inline]
+pub fn l3_linear_offset(va: VirtAddr) -> usize {
+    (usize::from(va) >> 12) & (PT_LVL3_ENTIRES - 1)
 }
 
 impl PageBlock {
