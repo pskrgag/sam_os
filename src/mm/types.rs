@@ -1,14 +1,15 @@
 use crate::arch;
+use core::ops::Add;
 use core::{fmt, ops::Sub};
 
 #[derive(Clone, Copy)]
-pub struct PhysAddr(u64);
+pub struct PhysAddr(usize);
 
 #[derive(Clone, Copy)]
-pub struct VirtAddr(u64);
+pub struct VirtAddr(usize);
 
 #[derive(Clone, Copy)]
-pub struct Pfn(u64);
+pub struct Pfn(usize);
 
 pub struct MemRange<T> {
     start: T,
@@ -34,19 +35,19 @@ impl<T: Copy> MemRange<T> {
 
 impl From<usize> for PhysAddr {
     fn from(addr: usize) -> Self {
-        Self(addr as u64)
+        Self(addr)
     }
 }
 
 impl From<PhysAddr> for usize {
     fn from(addr: PhysAddr) -> Self {
-        addr.0 as usize
+        addr.0
     }
 }
 
 impl From<Pfn> for usize {
     fn from(addr: Pfn) -> Self {
-        addr.0 as usize
+        addr.0
     }
 }
 
@@ -64,60 +65,44 @@ impl From<Pfn> for PhysAddr {
 
 impl From<VirtAddr> for usize {
     fn from(addr: VirtAddr) -> Self {
-        addr.0 as usize
-    }
-}
-
-impl From<u64> for PhysAddr {
-    fn from(addr: u64) -> Self {
-        Self(addr)
-    }
-}
-
-impl From<PhysAddr> for u64 {
-    fn from(addr: PhysAddr) -> Self {
         addr.0
-    }
-}
-
-impl From<Pfn> for u64 {
-    fn from(addr: Pfn) -> Self {
-        addr.0
-    }
-}
-
-impl From<VirtAddr> for u64 {
-    fn from(addr: VirtAddr) -> Self {
-        addr.0
-    }
-}
-
-impl From<u64> for Pfn {
-    fn from(addr: u64) -> Self {
-        Pfn(addr)
     }
 }
 
 impl From<usize> for Pfn {
     fn from(addr: usize) -> Self {
-        Pfn(addr as u64)
-    }
-}
-
-impl From<u64> for VirtAddr {
-    fn from(addr: u64) -> Self {
-        Self(addr)
+        Pfn(addr)
     }
 }
 
 impl From<usize> for VirtAddr {
     fn from(addr: usize) -> Self {
-        Self(addr as u64)
+        Self(addr)
+    }
+}
+
+impl From<PhysAddr> for VirtAddr {
+    fn from(addr: PhysAddr) -> Self {
+        Self(addr.get() + arch::PHYS_OFFSET)
+    }
+}
+
+impl From<VirtAddr> for PhysAddr {
+    fn from(addr: VirtAddr) -> Self {
+        Self(addr.get() - arch::PHYS_OFFSET)
+    }
+}
+
+impl Add for PhysAddr {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self(self.0 + other.0)
     }
 }
 
 impl Sub for Pfn {
-    type Output = u64;
+    type Output = usize;
 
     fn sub(self, other: Self) -> Self::Output {
         self.0 - other.0
@@ -125,40 +110,52 @@ impl Sub for Pfn {
 }
 
 impl PhysAddr {
-    pub const fn get(&self) -> u64 {
+    pub const fn get(&self) -> usize {
         self.0
     }
 
-    pub const fn to_pfn(&self) -> u64 {
+    pub const fn to_pfn(&self) -> usize {
         self.0 >> arch::PAGE_SHIFT
     }
 
-    pub const fn new(addr: u64) -> Self {
+    pub const fn new(addr: usize) -> Self {
         Self(addr)
     }
 }
 
 impl Pfn {
-    pub const fn get(&self) -> u64 {
+    pub const fn get(&self) -> usize {
         self.0
     }
 
-    pub const fn new(pfn: u64) -> Self {
+    pub const fn new(pfn: usize) -> Self {
         Self(pfn)
     }
 }
 
 impl VirtAddr {
-    pub const fn get(&self) -> u64 {
+    pub const fn new(ptr: usize) -> Self {
+        Self(ptr)
+    }
+
+    pub const fn get(&self) -> usize {
         self.0
     }
 
     pub fn from_raw<T>(ptr: *const T) -> Self {
-        Self(ptr as u64)
+        Self(ptr as usize)
     }
 
     pub fn to_raw<T>(&self) -> *const T {
         self.0 as *const T
+    }
+
+    pub fn to_raw_mut<T>(&self) -> *mut T {
+        self.0 as *mut T
+    }
+
+    pub fn add(&mut self, add: usize) {
+        self.0 += add;
     }
 }
 

@@ -18,12 +18,10 @@ pub fn set_up_vbar() {
 
 #[no_mangle]
 pub extern "C" fn kern_sync64(esr_el1: usize, far_el1: usize) -> ! {
-    println!(
-        "Kernel synch expection\nESR_EL1 0x{:x} FAR_EL1 0x{:x}\n",
-        esr_el1, far_el1
-    );
+    println!("!!! Kernel sync exception");
+    println!("ESR_EL1 0x{:x} FAR_EL1 0x{:x}", esr_el1, far_el1);
 
-    panic!();
+    panic!("Unhandler kernel sync exception");
 }
 
 #[no_mangle]

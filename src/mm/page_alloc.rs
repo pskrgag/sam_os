@@ -47,20 +47,20 @@ impl PageAlloc {
         })
     }
 
-    fn mark_allocated(&mut self, bitmap1: usize, bitmap2: usize, idx1: usize, idx2: usize) {
-        for i in bitmap1 + 1..bitmap2 {
-            for j in 0..64 {
-                self.pool[i].set(j, true);
-            }
-        }
+    fn mark_allocated(&mut self, mut bitmap: usize, mut idx: usize, mut size: usize) {
+        while {
+            self.pool[bitmap].set(idx, true);
 
-        for i in idx1..64 {
-            self.pool[bitmap1].set(i, true);
-        }
+            idx = if idx == 63 {
+                bitmap += 1;
+                0
+            } else {
+                idx + 1
+            };
+            size -= 1;
 
-        for i in idx2..64 {
-            self.pool[bitmap2].set(i, true);
-        }
+            size != 0
+        } {}
     }
 
     #[inline]
@@ -99,7 +99,7 @@ impl PageAlloc {
 
             if cont_pages >= num {
                 let next = if next.is_some() { next.unwrap() } else { 63 };
-                self.mark_allocated(bitmap.unwrap(), bitmap_idx, idx.unwrap(), next);
+                self.mark_allocated(bitmap.unwrap(), idx.unwrap(), num);
 
                 return Some(PhysAddr::from(
                     self.bitmap_to_pfn(bitmap.unwrap(), idx.unwrap()),
@@ -117,14 +117,13 @@ impl PageAlloc {
         let (bitmap, idx) = ((pfn - self.start) / 64, (pfn - self.start) % 64);
 
         for i in 0..num {
-            self.pool[(bitmap + (idx + i as u64) % 64) as usize]
-                .set(((idx + i as u64) % 64) as usize, false);
+            self.pool[(bitmap + (idx + i) % 64) as usize].set(((idx + i) % 64) as usize, false);
         }
     }
 }
 
 pub fn init() {
-    let alloc_start = PhysAddr::from(arch::ram_base() + kernel::misc::image_size());
-    let alloc_size = arch::ram_size() - kernel::misc::image_size();
+    let alloc_start = PhysAddr::from(arch::ram_base() as usize + kernel::misc::image_size());
+    let alloc_size = arch::ram_size() as usize - kernel::misc::image_size();
     *PAGE_ALLOC.lock() = PageAlloc::new(alloc_start, alloc_size as usize).unwrap();
 }

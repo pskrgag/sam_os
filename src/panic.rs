@@ -2,7 +2,7 @@ use core::panic::PanicInfo;
 
 #[panic_handler]
 fn on_panic(info: &PanicInfo) -> ! {
-    println!("Kernel Panic!\n");
+    println!("Kernel Panic!");
 
     if let Some(location) = info.location() {
         println!(

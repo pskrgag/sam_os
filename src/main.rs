@@ -40,13 +40,14 @@ extern "C" {
  */
 #[no_mangle]
 extern "C" fn start_kernel() -> ! {
-    println!("Starting kernel...\n");
+    println!("Starting kernel...");
     arch::interrupts::set_up_vbar();
 
     mm::boot_alloc::init();
     mm::page_alloc::init();
 
-    arch::mm::mmu::set_up_kernel_tt();
+    mm::paging::kernel_page_table::init();
+    mm::sections::remap_kernel();
 
     loop {}
 }

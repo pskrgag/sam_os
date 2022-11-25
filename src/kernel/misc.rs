@@ -1,23 +1,27 @@
 #![macro_use]
 
 extern "C" {
-    static load_addr: u64;
-    static start: u64;
-    static end: u64;
+    static load_addr: usize;
+    static start: usize;
+    static end: usize;
 }
 
 #[macro_export]
 macro_rules! linker_var {
     ($a:expr) => {{
-        unsafe { &$a as *const u64 as u64 }
+        unsafe { &$a as *const usize as usize }
     }};
 }
 
-pub fn kernel_offset() -> u64 {
+pub const _1GB: usize = 1 << 30;
+pub const _2MB: usize = 2 << 20;
+pub const _4KB: usize = 1 << 12;
+
+pub fn kernel_offset() -> usize {
     linker_var!(start) - linker_var!(load_addr)
 }
 
 #[inline]
-pub fn image_size() -> u64 {
+pub fn image_size() -> usize {
     linker_var!(end) - linker_var!(start)
 }
