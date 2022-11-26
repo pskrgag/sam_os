@@ -25,8 +25,8 @@ pub const BLOCK_NON_GLOBAL: usize = 1 << 11;
 pub const BLOCK_ACCESS_FLAG: usize = 1 << 10;
 
 /* Based on MAIR settings from mm::init() */
-pub const BLOCK_NORMAL_MEM: usize = mair_type(1);
-pub const BLOCK_DEVICE_MEM: usize = mair_type(0);
+pub const BLOCK_NORMAL_MEM: usize = mair_type(0);
+pub const BLOCK_DEVICE_MEM: usize = mair_type(1);
 
 pub const BLOCK_KERNEL_RWX: usize = access_perms(AccesFlags::AP_UN_KRW);
 pub const BLOCK_KERNEL_RW: usize = access_perms(AccesFlags::AP_UN_KRW) | BLOCK_PXN;

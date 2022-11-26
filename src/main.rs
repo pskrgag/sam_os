@@ -3,7 +3,6 @@
 #![feature(format_args_nl)]
 #![feature(const_trait_impl)]
 #![feature(default_alloc_error_handler)]
-#![feature(generic_const_exprs)]
 #![allow(dead_code)]
 #![allow(unused_macros)]
 #![allow(special_module_name)]
@@ -23,8 +22,6 @@ mod panic;
 #[macro_use]
 extern crate std;
 
-use core::arch::asm;
-
 pub use lib::printf::*;
 
 extern "C" {
@@ -43,11 +40,13 @@ extern "C" fn start_kernel() -> ! {
     println!("Starting kernel...");
     arch::interrupts::set_up_vbar();
 
-    mm::boot_alloc::init();
-    mm::page_alloc::init();
+    mm::allocators::boot_alloc::init();
+    mm::allocators::page_alloc::init();
 
     mm::paging::kernel_page_table::init();
     mm::sections::remap_kernel();
+
+    mm::allocators::slab::init_kernel_slabs();
 
     loop {}
 }

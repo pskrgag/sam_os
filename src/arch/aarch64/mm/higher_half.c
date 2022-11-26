@@ -58,7 +58,7 @@ static inline void mmio_1_v_1(void)
 __attribute__((section(".text.boot"))) void map(void)
 {
 	tte_t _1_v_1_1gb = UL(&load_addr) | (1 << 10) |  0b01;
-	uint64_t tcr =(25 << 16) | 25;
+	uint64_t tcr = (25UL << 16) | 25 | (2UL << 30);
 	uint64_t mair = (0b00000000 << 8) | 0b01110111;
 	uint64_t ttbr_el1 = ((uint64_t) (void *) &lvl1);
 	uint64_t sctrl;
@@ -74,10 +74,11 @@ __attribute__((section(".text.boot"))) void map(void)
 
 	asm volatile ("msr TTBR0_EL1, %0"::"r"(ttbr_el1):"memory");
 	asm volatile ("msr TTBR1_EL1, %0"::"r"(ttbr_el1));
+	asm volatile ("tlbi    vmalle1is");
 
 	asm volatile ("mrs %0, SCTLR_EL1": "=r"(sctrl));
 
-	sctrl |= ((1 << 0) | (1 << 2) | (1 << 12));
+	sctrl = ((1 << 0) | (1 << 2) | (1 << 12));
 
 	asm volatile ("msr SCTLR_EL1, %0"::"r"(sctrl));
 

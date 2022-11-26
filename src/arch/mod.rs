@@ -13,8 +13,6 @@ pub enum MemoryType {
     DEVICE,
 }
 
-use crate::mm::types::PhysAddr;
-
 impl const PartialEq for MemoryType {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {

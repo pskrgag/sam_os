@@ -109,6 +109,22 @@ impl Sub for Pfn {
     }
 }
 
+impl Sub for VirtAddr {
+    type Output = usize;
+
+    fn sub(self, other: Self) -> Self::Output {
+        self.0 - other.0
+    }
+}
+
+impl Add<usize> for VirtAddr {
+    type Output = usize;
+
+    fn add(self, other: usize) -> Self::Output {
+        self.0 + other
+    }
+}
+
 impl PhysAddr {
     pub const fn get(&self) -> usize {
         self.0
@@ -120,6 +136,10 @@ impl PhysAddr {
 
     pub const fn new(addr: usize) -> Self {
         Self(addr)
+    }
+
+    pub fn add(&mut self, add: usize) {
+        self.0 += add;
     }
 }
 
@@ -154,8 +174,19 @@ impl VirtAddr {
         self.0 as *mut T
     }
 
-    pub fn add(&mut self, add: usize) {
+    pub fn add(&mut self, add: usize) -> &mut Self {
         self.0 += add;
+        self
+    }
+
+    pub fn round_up(&mut self, to: usize) -> &mut Self {
+        assert!(to.is_power_of_two());
+
+        let round_mask = to - 1;
+        let rounded = (self.0 | round_mask) + 1;
+
+        self.0 = rounded;
+        self
     }
 }
 

@@ -1,8 +1,4 @@
-use crate::{
-    arch::{mm::mmu_flags::*, MemoryType},
-    linker_var,
-    mm::{paging::page_table::MappingType, types::MemRange, types::*},
-};
+use crate::{arch::mm::mmu_flags::*, mm::paging::page_table::MappingType};
 
 extern "C" {
     static stext: u64;

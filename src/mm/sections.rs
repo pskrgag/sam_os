@@ -35,6 +35,10 @@ pub struct KernelSection {
     map_type: MappingType,
 }
 
+#[no_mangle]
+#[used]
+pub static mut RANDOM_VALUE: u64 = u64::MAX;
+
 static KERNEL_SECTIONS: FakeLock<Vector<KernelSection>> = FakeLock::new(Vector::new());
 
 impl KernelSection {
@@ -65,7 +69,6 @@ impl KernelSection {
 }
 
 fn populate_kernel_sections(array: &mut Vector<KernelSection>) {
-    let mut array = KERNEL_SECTIONS.get();
     let text = KernelSection::new(
         linker_var!(stext),
         linker_var!(etext) - linker_var!(stext),
@@ -100,7 +103,7 @@ fn populate_kernel_sections(array: &mut Vector<KernelSection>) {
 }
 
 pub fn remap_kernel() {
-    let mut array = KERNEL_SECTIONS.get();
+    let array = KERNEL_SECTIONS.get();
 
     populate_kernel_sections(&mut *array);
 
@@ -110,23 +113,33 @@ pub fn remap_kernel() {
 
     for i in &*array {
         println!(
-            "{} [0x{:x} -> 0x{:x}]",
+            "{}\t[0x{:x} -> 0x{:x}] (size {})",
             i.name(),
             i.start() - kernel_offset(),
-            i.start()
+            i.start(),
+            i.size()
         );
-        (*tt).map(
-            None,
-            MemRange::new(VirtAddr::from(i.start()), i.size() as usize),
-            i.mapping_type(),
-        );
+
+        (*tt)
+            .map(
+                None,
+                MemRange::new(VirtAddr::from(i.start()), i.size() as usize),
+                i.mapping_type(),
+            )
+            .expect("Failed to map kernel sections");
     }
 
-   unsafe { asm!("msr TTBR1_EL1, {}", in(reg) (*tt).base().get()) }; 
-   unsafe { asm!("isb") };
+    // (*tt).table_walk(VirtAddr::new(0x40142000 + 0xffffffff80000000));
+    // (*tt).table_walk(VirtAddr::new(0x40143000 + 0xffffffff80000000));
+    // (*tt).table_walk(VirtAddr::new(0x40144000 + 0xffffffff80000000));
+    // (*tt).table_walk(VirtAddr::new(0xffffffffc0004a00));
 
-   println!("Fine grained mapping enabled");
+    unsafe { asm!("dsb ishst") };
+    unsafe { asm!("msr TTBR1_EL1, {}", in(reg) (*tt).base().get()) };
+    unsafe { asm!("isb") };
+    unsafe { asm!("tlbi vmalle1") };
+    unsafe { asm!("dsb ishst") };
+    unsafe { asm!("isb") };
 
-   unsafe { (array[0].start as *mut u8).write_volatile(1) };
-   println!("Corrupted text");
+    println!("Fine grained mapping enabled");
 }

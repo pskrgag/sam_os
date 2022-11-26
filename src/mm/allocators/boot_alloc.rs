@@ -41,6 +41,10 @@ impl BootAlloc {
     fn update_header_size(header: &mut NonNull<FfHeader>, size: usize) {
         unsafe { header.as_mut().size = size };
     }
+    
+    fn update_header_free(header: &mut NonNull<FfHeader>, free: bool) {
+        unsafe { header.as_mut().free = free };
+    }
 
     pub fn init(&mut self) {
         let mut tmp_head: NonNull<FfHeader> =
@@ -48,6 +52,7 @@ impl BootAlloc {
 
         Self::update_header_next(&mut tmp_head, None);
         Self::update_header_prev(&mut tmp_head, None);
+        Self::update_header_free(&mut tmp_head, true);
         Self::update_header_size(
             &mut tmp_head,
             size_of_val(&self.pool) - size_of::<FfHeader>(),
@@ -71,7 +76,7 @@ impl BootAlloc {
             let header = iter.unwrap().as_mut() as *mut FfHeader;
             let header_raw = header as *mut u8;
 
-            if (*header).size > size {
+            if (*header).size > size && (*header).free {
                 let next_block = core::mem::transmute::<_, *mut FfHeader>(
                     header_raw.offset((core::mem::size_of::<FfHeader>() + size) as isize),
                 );
@@ -92,6 +97,7 @@ impl BootAlloc {
                 (*header).size = size;
                 (*header).free = false;
 
+        //        println!("Boot alloc {:p} {:p}", &self.pool, header_raw.offset(core::mem::size_of::<FfHeader>() as isize));
                 return header_raw.offset(core::mem::size_of::<FfHeader>() as isize);
             }
 
@@ -102,6 +108,7 @@ impl BootAlloc {
     }
 
     pub unsafe fn free(&mut self, data: *mut u8) {
+        println!("Boot alloc free");
         let mut cur_header = unsafe {
             core::mem::transmute::<_, *mut FfHeader>(
                 data.offset(-(core::mem::size_of::<FfHeader>() as isize)),

@@ -1,12 +1,7 @@
 use crate::{
-    arch::{
-        self,
-        mm::{self, mmu_flags},
-    },
+    arch::{self, mm::mmu_flags},
     mm::types::*,
 };
-
-use core::ptr;
 
 #[derive(Debug)]
 pub enum MmError {
@@ -44,12 +39,20 @@ impl PageTableBlock {
         }
     }
 
+    pub fn addr(&self) -> VirtAddr {
+        self.addr
+    }
+    
+    pub fn lvl(&self) -> u8 {
+        self.lvl
+    }
+
     pub fn is_last(&self) -> bool {
         self.lvl == arch::PAGE_TABLE_LVLS
     }
 
     pub unsafe fn set_tte(&mut self, index: usize, entry: PageTableEntry) {
-        assert!(index < arch::PT_LVL1_ENTIRES);
+        assert!(index < 512);
 
         self.addr
             .to_raw_mut::<usize>()
@@ -58,11 +61,20 @@ impl PageTableBlock {
         // TODO: barriers, please.....
     }
 
+    pub fn tte(&self, index: usize) -> PageTableEntry {
+        unsafe {
+            PageTableEntry::from_bits(self.addr
+                .to_raw_mut::<usize>()
+                .offset(index as isize)
+                .read_volatile())
+        }
+    }
+
     pub fn index_of(&self, addr: VirtAddr) -> usize {
         match self.lvl {
             1 => arch::mm::page_table::l1_linear_offset(addr),
             2 => arch::mm::page_table::l2_linear_offset(addr),
-            3 => arch::mm::page_table::l2_linear_offset(addr),
+            3 => arch::mm::page_table::l3_linear_offset(addr),
             _ => panic!("Wrong page table block index"),
         }
     }
@@ -73,9 +85,9 @@ impl PageTableBlock {
         let entry_next = unsafe {
             PageTableEntry::from_bits(
                 self.addr
-                    .to_raw::<usize>()
+                    .to_raw::<u64>()
                     .offset(index as isize)
-                    .read_volatile(),
+                    .read_volatile() as usize,
             )
         };
 
@@ -88,10 +100,6 @@ impl PageTableBlock {
 }
 
 impl PageFlags {
-    pub fn new_invalid() -> Self {
-        Self::from_bits(0)
-    }
-
     pub fn from_bits(bits: usize) -> Self {
         Self { flags: bits }
     }
@@ -101,7 +109,7 @@ impl PageFlags {
     }
 
     pub fn block() -> Self {
-        Self::from_bits(arch::mm::mmu_flags::BLOCK_VALID)
+        Self::from_bits(arch::mm::mmu_flags::BLOCK_VALID | arch::mm::mmu_flags::BLOCK_ACCESS_FLAG | 0b10)
     }
 
     pub fn bits(&self) -> usize {
@@ -129,8 +137,8 @@ pub trait PageTable {
 }
 
 impl PageTableEntry {
-    fn invalid() -> Self {
-        Self(0)
+    pub fn valid_block() -> Self {
+        Self(mmu_flags::BLOCK_ACCESS_FLAG | mmu_flags::BLOCK_VALID)
     }
 
     pub fn bits(&self) -> usize {
@@ -141,8 +149,9 @@ impl PageTableEntry {
         Self(data)
     }
 
-    pub fn set_addr(&mut self, addr: PhysAddr) {
-        self.0 | addr.get();
+    pub fn and(&mut self, data: usize) -> &mut Self {
+        self.0 |= data;
+        self
     }
 
     pub fn addr(&self) -> PhysAddr {

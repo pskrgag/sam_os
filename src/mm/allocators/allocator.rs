@@ -1,4 +1,4 @@
-use crate::mm::boot_alloc;
+use crate::mm::allocators::boot_alloc;
 use core::alloc::{GlobalAlloc, Layout};
 
 pub struct Allocator;

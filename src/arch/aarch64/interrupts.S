@@ -32,7 +32,7 @@
 	add	sp, sp, #192
 .endmacro
 
-.section ".rodata"
+.section ".text"
 __kern_sync64:
 	SAFE_CTX
 

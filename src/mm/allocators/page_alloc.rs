@@ -1,5 +1,5 @@
 // FIXME one day...
-#[path = "../arch/aarch64/qemu/config.rs"]
+#[path = "../../arch/aarch64/qemu/config.rs"]
 mod config;
 
 use crate::{
@@ -77,6 +77,7 @@ impl PageAlloc {
             if i.is_full() {
                 cont_pages = 0;
                 (bitmap, idx) = (None, None);
+                bitmap_idx += 1;
                 continue;
             }
 
@@ -85,7 +86,11 @@ impl PageAlloc {
             if start != 0 {
                 cont_pages = 0;
                 (bitmap, idx) = (Some(bitmap_idx), Some(start));
+            } else if idx.is_none() {
+                cont_pages = 0;
+                (bitmap, idx) = (Some(bitmap_idx), Some(start));
             }
+            //println!("Dump phys  start {}", start);
 
             let next = i.next_index(start);
             match next {
@@ -98,8 +103,9 @@ impl PageAlloc {
             }
 
             if cont_pages >= num {
-                let next = if next.is_some() { next.unwrap() } else { 63 };
                 self.mark_allocated(bitmap.unwrap(), idx.unwrap(), num);
+
+                //println!("Dump phys 0x{:x}", PhysAddr::from(self.bitmap_to_pfn(bitmap.unwrap(), idx.unwrap())).get());
 
                 return Some(PhysAddr::from(
                     self.bitmap_to_pfn(bitmap.unwrap(), idx.unwrap()),
@@ -125,5 +131,7 @@ impl PageAlloc {
 pub fn init() {
     let alloc_start = PhysAddr::from(arch::ram_base() as usize + kernel::misc::image_size());
     let alloc_size = arch::ram_size() as usize - kernel::misc::image_size();
+
+    println!("Page allocator start {:x} size {:x}", alloc_start.get(), alloc_size);
     *PAGE_ALLOC.lock() = PageAlloc::new(alloc_start, alloc_size as usize).unwrap();
 }
