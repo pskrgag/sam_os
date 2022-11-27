@@ -25,6 +25,13 @@ pub extern "C" fn kern_sync64(esr_el1: usize, far_el1: usize) -> ! {
 }
 
 #[no_mangle]
+pub extern "C" fn kern_irq(esr_el1: usize, far_el1: usize) -> ! {
+    println!("!!! Kernel irq");
+
+    panic!("Unhandler kernel sync exception");
+}
+
+#[no_mangle]
 pub extern "C" fn kern_exception_bug(esr_el1: usize) -> ! {
     println!("Something weird happened");
     println!("No idea how to deal with 0x{:x}", esr_el1);

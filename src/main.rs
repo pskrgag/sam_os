@@ -6,12 +6,14 @@
 #![allow(dead_code)]
 #![allow(unused_macros)]
 #![allow(special_module_name)]
+#![feature(int_roundings)]
 
 extern crate alloc;
 
 mod drivers;
-#[macro_use]
-mod lib;
+
+#[macro_use] mod lib;
+
 mod arch;
 #[macro_use]
 mod kernel;
@@ -22,7 +24,7 @@ mod panic;
 #[macro_use]
 extern crate std;
 
-pub use lib::printf::*;
+pub use lib::printf;
 
 extern "C" {
     static __STACK_START: usize;
@@ -47,6 +49,8 @@ extern "C" fn start_kernel() -> ! {
     mm::sections::remap_kernel();
 
     mm::allocators::slab::init_kernel_slabs();
+
+    drivers::init();
 
     loop {}
 }

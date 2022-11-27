@@ -1,4 +1,5 @@
 use crate::{
+    arch::mm::page_table::set_kernel_page_table,
     kernel::locking::fake_lock::FakeLock,
     kernel::misc::kernel_offset,
     lib::collections::vector::Vector,
@@ -12,8 +13,6 @@ use crate::{
     },
 };
 
-use core::arch::asm;
-
 extern "C" {
     static stext: usize;
     static etext: usize;
@@ -26,6 +25,9 @@ extern "C" {
 
     static sbss: usize;
     static ebss: usize;
+    
+    static mmio_start: usize;
+    static mmio_end: usize;
 }
 
 pub struct KernelSection {
@@ -129,17 +131,6 @@ pub fn remap_kernel() {
             .expect("Failed to map kernel sections");
     }
 
-    // (*tt).table_walk(VirtAddr::new(0x40142000 + 0xffffffff80000000));
-    // (*tt).table_walk(VirtAddr::new(0x40143000 + 0xffffffff80000000));
-    // (*tt).table_walk(VirtAddr::new(0x40144000 + 0xffffffff80000000));
-    // (*tt).table_walk(VirtAddr::new(0xffffffffc0004a00));
-
-    unsafe { asm!("dsb ishst") };
-    unsafe { asm!("msr TTBR1_EL1, {}", in(reg) (*tt).base().get()) };
-    unsafe { asm!("isb") };
-    unsafe { asm!("tlbi vmalle1") };
-    unsafe { asm!("dsb ishst") };
-    unsafe { asm!("isb") };
-
+    unsafe { set_kernel_page_table((*tt).base()) };
     println!("Fine grained mapping enabled");
 }

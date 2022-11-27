@@ -26,3 +26,7 @@ pub const PAGE_TABLE_LVLS: u8 = 3;
 pub fn time_since_start() -> f64 {
     CNTPCT_EL0.get() as f64 / CNTFRQ_EL0.get() as f64
 }
+
+pub fn mmu_on() -> bool {
+    (SCTLR_EL1.get() & (1 << 0)) != 0
+}

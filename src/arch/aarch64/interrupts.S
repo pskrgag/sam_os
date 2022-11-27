@@ -43,6 +43,16 @@ __kern_sync64:
 	RESTORE_CTX
 	eret
 
+__kern_irq:
+	SAFE_CTX
+
+	mrs	x0, ESR_EL1
+	mrs	x1, FAR_EL1
+	bl	kern_irq
+
+	RESTORE_CTX
+	eret
+
 __exception_bug:
 	mrs	x0, ESR_EL1
 	b	kern_exception_bug
@@ -55,19 +65,19 @@ __exception_bug:
 .global
 exteption_vector:
 curr_el_sp0_sync:		 // The exception handler for a synchronous
-	ventry __kern_sync64
+	b __exception_bug
 				// exception from the current EL using SP0
 .balign 0x80
 curr_el_sp0_irq:         // The exception handler for an IRQ exception
-	ventry __kern_sync64
+	b __exception_bug
                          // from the current EL using SP0.
 .balign 0x80
 curr_el_sp0_fiq:         // The exception handler for an FIQ exception
-	ventry __kern_sync64
+	b __exception_bug
                          // from the current EL using SP0.
 .balign 0x80
 curr_el_sp0_serror:      // The exception handler for a System Error
-	ventry __kern_sync64
+	b __exception_bug
                          // exception from the current EL using SP0.
 .balign 0x80
 curr_el_spx_sync:        // The exception handler for a synchrous
@@ -77,18 +87,18 @@ curr_el_spx_sync:        // The exception handler for a synchrous
 .balign 0x80
 curr_el_spx_irq:         // The exception handler for an IRQ exception from
                          // the current EL using the current SP.
-	ventry __kern_sync64
+	ventry __kern_irq
 
 .balign 0x80
 curr_el_spx_fiq:         // The exception handler for an FIQ from
                          // the current EL using the current SP.
-	ventry __kern_sync64
+	b __exception_bug
 
 .balign 0x80
 curr_el_spx_serror:      // The exception handler for a System Error
                          // exception from the current EL using the
                          // current SP.
-	ventry __kern_sync64
+	b __exception_bug
  .balign 0x80
 lower_el_aarch64_sync:   // The exception handler for a synchronous
                          // exception from a lower EL (AArch64).

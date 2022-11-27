@@ -1,10 +1,6 @@
 use crate::{
     arch::PT_LVL1_ENTIRES,
-    arch::{
-        self,
-        mm::{mmu, mmu_flags},
-        PAGE_SIZE,
-    },
+    arch::{self, mm::mmu, PAGE_SIZE},
     kernel::{
         locking::spinlock::{Spinlock, SpinlockGuard},
         misc::*,
@@ -14,12 +10,9 @@ use crate::{
         paging::page_table::{
             MappingType, MmError, PageFlags, PageTable, PageTableBlock, PageTableEntry,
         },
-        phys_to_virt_linear,
         types::{MemRange, PhysAddr, VirtAddr},
     },
 };
-
-use core::arch::asm;
 
 pub struct KernelPageTable {
     base: VirtAddr,
@@ -36,7 +29,9 @@ impl KernelPageTable {
 
     pub fn new() -> Option<Self> {
         let base = PAGE_ALLOC.lock().alloc_pages(1)?;
-        let mut new_table = Self { base: VirtAddr::from(base) };
+        let mut new_table = Self {
+            base: VirtAddr::from(base),
+        };
 
         let base_va = new_table.base;
         println!("Base 0x{:x} 0x{:x}", base.get(), base_va.get());
@@ -125,7 +120,6 @@ impl PageTable for KernelPageTable {
                         let new_entry =
                             PageTableEntry::from_bits(PageFlags::table().bits() | new_page.get());
 
-
                         unsafe { table_block_2.set_tte(lvl2_index, new_entry) };
 
                         self.map(
@@ -147,6 +141,7 @@ impl PageTable for KernelPageTable {
                     } else {
                         PhysAddr::from(va).get()
                     };
+                    println!("Here 0x{:x}", ao);
 
                     assert!(!table_block_3.tte(lvl3_index).valid());
 
@@ -206,14 +201,22 @@ impl KernelPageTable {
         let lvl1_index = table_block_1.index_of(va);
         let lvl2_tte = table_block_1.tte(lvl1_index);
 
-        println!("Lvl1 PA 0x{:x} tte 0x{:x}", lvl2_tte.addr().get(), lvl2_tte.bits());
+        println!(
+            "Lvl1 PA 0x{:x} tte 0x{:x}",
+            lvl2_tte.addr().get(),
+            lvl2_tte.bits()
+        );
 
         let table_block_2 = table_block_1.next(lvl1_index)?;
         let lvl2_index = table_block_2.index_of(va);
         let lvl3_tte = table_block_2.tte(lvl2_index);
 
-        println!("Lvl2 PA 0x{:x} tte 0x{:x}", lvl3_tte.addr().get(), lvl3_tte.bits());
-        
+        println!(
+            "Lvl2 PA 0x{:x} tte 0x{:x}",
+            lvl3_tte.addr().get(),
+            lvl3_tte.bits()
+        );
+
         let table_block_3 = table_block_2.next(lvl2_index)?;
         let lvl3_index = table_block_3.index_of(va);
 

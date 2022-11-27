@@ -42,7 +42,7 @@ impl PageTableBlock {
     pub fn addr(&self) -> VirtAddr {
         self.addr
     }
-    
+
     pub fn lvl(&self) -> u8 {
         self.lvl
     }
@@ -63,10 +63,12 @@ impl PageTableBlock {
 
     pub fn tte(&self, index: usize) -> PageTableEntry {
         unsafe {
-            PageTableEntry::from_bits(self.addr
-                .to_raw_mut::<usize>()
-                .offset(index as isize)
-                .read_volatile())
+            PageTableEntry::from_bits(
+                self.addr
+                    .to_raw_mut::<usize>()
+                    .offset(index as isize)
+                    .read_volatile(),
+            )
         }
     }
 
@@ -85,9 +87,9 @@ impl PageTableBlock {
         let entry_next = unsafe {
             PageTableEntry::from_bits(
                 self.addr
-                    .to_raw::<u64>()
+                    .to_raw::<usize>()
                     .offset(index as isize)
-                    .read_volatile() as usize,
+                    .read_volatile(),
             )
         };
 
@@ -109,7 +111,9 @@ impl PageFlags {
     }
 
     pub fn block() -> Self {
-        Self::from_bits(arch::mm::mmu_flags::BLOCK_VALID | arch::mm::mmu_flags::BLOCK_ACCESS_FLAG | 0b10)
+        Self::from_bits(
+            arch::mm::mmu_flags::BLOCK_VALID | arch::mm::mmu_flags::BLOCK_ACCESS_FLAG | 0b10,
+        )
     }
 
     pub fn bits(&self) -> usize {

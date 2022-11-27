@@ -1,4 +1,5 @@
 use crate::arch;
+use crate::mm::types::PhysAddr;
 
 pub const MEMORY_LAYOUT: [arch::MemoryRegion; 2] = [
     arch::MemoryRegion {
@@ -8,7 +9,7 @@ pub const MEMORY_LAYOUT: [arch::MemoryRegion; 2] = [
     },
     arch::MemoryRegion {
         start: 0x40000000,
-        size: 0x200000,
+        size: 0x0200000,
         tp: arch::MemoryType::MEM,
     },
 ];
@@ -40,4 +41,12 @@ pub const fn ram_base() -> *mut u8 {
 
 pub const fn ram_size() -> usize {
     mem_region(arch::MemoryType::MEM).size
+}
+
+pub const fn gic_dist() -> (PhysAddr, usize) {
+    (PhysAddr::new(0x08000000), 0x1000)
+}
+
+pub const fn gic_cpu() -> (PhysAddr, usize) {
+    (PhysAddr::new(0x08010000), 0x1000)
 }

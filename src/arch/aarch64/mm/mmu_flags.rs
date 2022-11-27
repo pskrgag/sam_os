@@ -30,7 +30,7 @@ pub const BLOCK_DEVICE_MEM: usize = mair_type(1);
 
 pub const BLOCK_KERNEL_RWX: usize = access_perms(AccesFlags::AP_UN_KRW);
 pub const BLOCK_KERNEL_RW: usize = access_perms(AccesFlags::AP_UN_KRW) | BLOCK_PXN;
-pub const BLOCK_KERNEL_RO: usize = access_perms(AccesFlags::AP_UN_KRO) | BLOCK_PXN;
+pub const BLOCK_KERNEL_RO: usize = access_perms(AccesFlags::AP_UN_KRO) | BLOCK_PXN | (1 << 54) | (1 << 51);
 
 /* Page Table */
 pub const TABLE_VALID: usize = 0b11;
