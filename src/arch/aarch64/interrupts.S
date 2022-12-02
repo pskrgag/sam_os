@@ -38,6 +38,7 @@ __kern_sync64:
 
 	mrs	x0, ESR_EL1
 	mrs	x1, FAR_EL1
+	mrs	x2, ELR_EL1
 	bl	kern_sync64
 
 	RESTORE_CTX
@@ -46,8 +47,6 @@ __kern_sync64:
 __kern_irq:
 	SAFE_CTX
 
-	mrs	x0, ESR_EL1
-	mrs	x1, FAR_EL1
 	bl	kern_irq
 
 	RESTORE_CTX

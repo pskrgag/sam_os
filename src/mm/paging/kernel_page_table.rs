@@ -141,7 +141,6 @@ impl PageTable for KernelPageTable {
                     } else {
                         PhysAddr::from(va).get()
                     };
-                    println!("Here 0x{:x}", ao);
 
                     assert!(!table_block_3.tte(lvl3_index).valid());
 

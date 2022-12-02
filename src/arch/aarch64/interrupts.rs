@@ -1,4 +1,5 @@
 use core::arch::{asm, global_asm};
+use crate::drivers::irq::irq_dispatch;
 
 global_asm!(include_str!("interrupts.S"));
 global_asm!(include_str!("boot.s"));
@@ -17,18 +18,20 @@ pub fn set_up_vbar() {
 }
 
 #[no_mangle]
-pub extern "C" fn kern_sync64(esr_el1: usize, far_el1: usize) -> ! {
+pub extern "C" fn kern_sync64(esr_el1: usize, far_el1: usize, elr_el1: usize) -> ! {
     println!("!!! Kernel sync exception");
-    println!("ESR_EL1 0x{:x} FAR_EL1 0x{:x}", esr_el1, far_el1);
+    println!("ESR_EL1 0x{:x} FAR_EL1 0x{:x}, ELR_EL1 0x{:x}", esr_el1, far_el1, elr_el1);
+
+    loop { }
 
     panic!("Unhandler kernel sync exception");
 }
 
 #[no_mangle]
-pub extern "C" fn kern_irq(esr_el1: usize, far_el1: usize) -> ! {
+pub extern "C" fn kern_irq() {
     println!("!!! Kernel irq");
 
-    panic!("Unhandler kernel sync exception");
+    irq_dispatch();
 }
 
 #[no_mangle]

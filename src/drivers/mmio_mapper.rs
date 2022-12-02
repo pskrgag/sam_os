@@ -48,15 +48,12 @@ impl MmioAllocator {
     }
 
     pub fn iomap(&mut self, addr: PhysAddr, pages: usize) -> Option<VirtAddr> {
-        println!("Pages requested {}", pages);
-
         if self.pages < pages {
             return None;
         }
 
         let new_va = VirtAddr::new(self.start + self.offset * arch::PAGE_SIZE);
 
-        println!("Trying to map 0x{:x} -> 0x{:x}", addr.get(), new_va.get());
         kernel_page_table()
             .map(
                 Some(MemRange::new(addr, arch::PAGE_SIZE * pages)),
@@ -65,16 +62,6 @@ impl MmioAllocator {
             )
             .ok()?;
 
-        unsafe { 
-        asm!("dsb ishst");
-        asm!("isb");
-        asm!("tlbi vmalle1");
-        asm!("dsb ishst");
-        asm!("isb")
-        };
-        
-
-        kernel_page_table().table_walk(new_va);
         self.offset += pages;
         self.pages -= pages;
         Some(new_va)
