@@ -130,7 +130,11 @@ impl PageAlloc {
 
 pub fn init() {
     let alloc_start = PhysAddr::from(arch::ram_base() as usize + kernel::misc::image_size());
-    println!("{} {}", arch::ram_size() as usize, kernel::misc::image_size());
+    println!(
+        "{} {}",
+        arch::ram_size() as usize,
+        kernel::misc::image_size()
+    );
     let alloc_size = arch::ram_size() as usize - kernel::misc::image_size();
 
     println!(

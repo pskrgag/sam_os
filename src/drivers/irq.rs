@@ -1,8 +1,4 @@
-use crate::{
-    lib::collections::list::List,
-    kernel::locking::spinlock::Spinlock,
-    drivers::gic::GIC,
-};
+use crate::{drivers::gic::GIC, kernel::locking::spinlock::Spinlock, lib::collections::list::List};
 
 pub struct IrqHandler {
     num: u32,
@@ -13,7 +9,10 @@ pub static IRQS: Spinlock<List<IrqHandler>> = Spinlock::new(List::new());
 
 impl IrqHandler {
     pub fn new(num: u32, func: fn(u32)) -> Self {
-        Self { num: num, dispatcher: func }
+        Self {
+            num: num,
+            dispatcher: func,
+        }
     }
 
     pub fn num(&self) -> u32 {

@@ -1,18 +1,14 @@
 use crate::{
     arch,
-    kernel::{
-        misc::num_pages,
-        locking::fake_lock::FakeLock,
-    },
+    kernel::{locking::fake_lock::FakeLock, misc::num_pages},
     linker_var,
     mm::paging::{
         kernel_page_table::kernel_page_table,
         page_table::{MappingType, PageTable},
     },
     mm::types::*,
-    println, print,
+    print, println,
 };
-
 
 extern "C" {
     static mmio_start: usize;
@@ -26,7 +22,7 @@ pub struct MmioAllocator {
     offset: usize,
 }
 
-pub static MMIO_ALLOCATOR: FakeLock<MmioAllocator> =  FakeLock::new(MmioAllocator::default());
+pub static MMIO_ALLOCATOR: FakeLock<MmioAllocator> = FakeLock::new(MmioAllocator::default());
 
 impl MmioAllocator {
     pub const fn default() -> Self {
@@ -75,5 +71,8 @@ pub fn init() {
 
     *MMIO_ALLOCATOR.get() = new_allocator;
 
-    println!("Intialized mmio allocator {}", MMIO_ALLOCATOR.get().free_pages());
+    println!(
+        "Intialized mmio allocator {}",
+        MMIO_ALLOCATOR.get().free_pages()
+    );
 }

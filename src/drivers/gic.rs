@@ -3,9 +3,7 @@
 mod config;
 
 use crate::{
-    drivers::mmio_mapper::MMIO_ALLOCATOR,
-    kernel::{locking::spinlock::Spinlock},
-    mm::types::*,
+    drivers::mmio_mapper::MMIO_ALLOCATOR, kernel::locking::spinlock::Spinlock, mm::types::*,
 };
 
 use core::arch::asm;
@@ -82,14 +80,14 @@ fn write_to_reg<T>(base: VirtAddr, offset: usize, val: T) {
 }
 
 fn read_from_reg<T>(base: VirtAddr, offset: usize) -> T {
-    unsafe {
-        (base.to_raw_mut::<T>().add(offset) as *const T).read_volatile()
-    }
+    unsafe { (base.to_raw_mut::<T>().add(offset) as *const T).read_volatile() }
 }
 
 impl GICC {
     pub const fn default() -> Self {
-        Self { base: VirtAddr::new(0) }
+        Self {
+            base: VirtAddr::new(0),
+        }
     }
 
     pub fn new(base: PhysAddr) -> Option<Self> {
@@ -106,7 +104,9 @@ impl GICC {
 
 impl GICD {
     pub const fn default() -> Self {
-        Self { base: VirtAddr::new(0) }
+        Self {
+            base: VirtAddr::new(0),
+        }
     }
 
     pub fn new(base: PhysAddr) -> Option<Self> {
@@ -118,45 +118,73 @@ impl GICD {
         write_to_reg::<u32>(self.base, 0, 1);
     }
 
-
     pub fn enable(&mut self, interrupt: u32) {
-        write_to_reg::<u32>(self.base, 0x0100_usize + (interrupt as usize / 32), 1 << (interrupt % 32));
+        write_to_reg::<u32>(
+            self.base,
+            0x0100_usize + (interrupt as usize / 32),
+            1 << (interrupt % 32),
+        );
     }
 
     pub fn set_priotity(&mut self, intnum: u32, prio: u32) {
         let shift = (intnum & IPRIORITYR_INTERRUPT_MASK) << IPRIORITYR_VALUE_SHIFT;
         let offset = intnum >> IPRIORITYR_INTERRUPT_SHIFT;
-        let value = read_from_reg::<u32>(self.base, (IPRIORITYR >> 2) + offset as usize) & !(IPRIORITYR_VALUE_MASK << shift);
-        write_to_reg::<u32>(self.base, (IPRIORITYR >> 2) + offset as usize, value | prio << shift);
+        let value = read_from_reg::<u32>(self.base, (IPRIORITYR >> 2) + offset as usize)
+            & !(IPRIORITYR_VALUE_MASK << shift);
+        write_to_reg::<u32>(
+            self.base,
+            (IPRIORITYR >> 2) + offset as usize,
+            value | prio << shift,
+        );
     }
 
     pub fn set_interrupt_core(&self, intnum: u32, core: u32) {
         let shift = (intnum & ITARGETSR_INTERRUPT_MASK) << ITARGETSR_VALUE_SHIFT;
         let offset = intnum >> ITARGETSR_INTERRUPT_SHIFT;
-        let value = read_from_reg::<u32>(self.base,(ITARGETSR >> 2) + offset as usize) & !(ITARGETSR_VALUE_MASK << shift);
-        write_to_reg::<u32>(self.base, (ITARGETSR >> 2) + offset as usize, value | core << shift);
+        let value = read_from_reg::<u32>(self.base, (ITARGETSR >> 2) + offset as usize)
+            & !(ITARGETSR_VALUE_MASK << shift);
+        write_to_reg::<u32>(
+            self.base,
+            (ITARGETSR >> 2) + offset as usize,
+            value | core << shift,
+        );
     }
 
     pub fn set_interrupt_config(&self, intnum: u32, config: u32) {
         let shift = (intnum & ICFGR_INTERRUPT_MASK) << ICFGR_VALUE_SHIFT;
         let offset = intnum >> ICFGR_INTERRUPT_SHIFT;
-        let value = read_from_reg::<u32>(self.base, (ICFGR >> 2) + offset as usize) & !(ICFGR_VALUE_MASK << shift);
-        write_to_reg::<u32>(self.base, (ICFGR >> 2) + offset as usize, value | config << shift);
+        let value = read_from_reg::<u32>(self.base, (ICFGR >> 2) + offset as usize)
+            & !(ICFGR_VALUE_MASK << shift);
+        write_to_reg::<u32>(
+            self.base,
+            (ICFGR >> 2) + offset as usize,
+            value | config << shift,
+        );
     }
 
     pub fn clear_interrupt(&self, intnum: u32) {
-        write_to_reg::<u32>(self.base, (ICPENDR >> 2) + (intnum as usize >> ICPENDR_SHIFT), 1 << (intnum & ICPENDR_MASK));
+        write_to_reg::<u32>(
+            self.base,
+            (ICPENDR >> 2) + (intnum as usize >> ICPENDR_SHIFT),
+            1 << (intnum & ICPENDR_MASK),
+        );
     }
 
     pub fn set_interrupt(&self, intnum: u32) {
-        write_to_reg::<u32>(self.base, (ISENABLER >> 2) + (intnum as usize >> ISENABLER_SHIFT), 1 << (intnum & ISENABLER_MASK));
+        write_to_reg::<u32>(
+            self.base,
+            (ISENABLER >> 2) + (intnum as usize >> ISENABLER_SHIFT),
+            1 << (intnum & ISENABLER_MASK),
+        );
     }
 
     pub fn is_pending(&self, intnum: u32) -> bool {
-        let value = read_from_reg::<u32>(self.base,(ICPENDR >> 2) + (intnum as usize >> ICPENDR_SHIFT));
+        let value = read_from_reg::<u32>(
+            self.base,
+            (ICPENDR >> 2) + (intnum as usize >> ICPENDR_SHIFT),
+        );
         value & (1 << (intnum & ICPENDR_MASK)) != 0
     }
-
 }
 
 impl Gic {

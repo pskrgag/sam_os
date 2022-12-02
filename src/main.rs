@@ -12,7 +12,8 @@ extern crate alloc;
 
 mod drivers;
 
-#[macro_use] mod lib;
+#[macro_use]
+mod lib;
 
 mod arch;
 #[macro_use]
@@ -52,5 +53,5 @@ extern "C" fn start_kernel() -> ! {
 
     drivers::init();
 
-    loop { }
+    loop {}
 }
