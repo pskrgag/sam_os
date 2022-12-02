@@ -22,8 +22,6 @@ pub extern "C" fn kern_sync64(esr_el1: usize, far_el1: usize, elr_el1: usize) ->
     println!("!!! Kernel sync exception");
     println!("ESR_EL1 0x{:x} FAR_EL1 0x{:x}, ELR_EL1 0x{:x}", esr_el1, far_el1, elr_el1);
 
-    loop { }
-
     panic!("Unhandler kernel sync exception");
 }
 

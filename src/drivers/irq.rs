@@ -27,16 +27,14 @@ impl IrqHandler {
 
 pub fn register_handler(irq: u32, func: fn(u32)) {
     let handler = IrqHandler::new(irq, func);
-    let mut gic = GIC.lock();
 
-    gic.enable_irq(irq);
-
+    GIC.lock().enable_irq(irq);
     IRQS.lock().push(handler);
 }
 
 pub fn irq_dispatch() {
     let mut gic = GIC.lock();
-    let mut irqs = IRQS.lock();
+    let irqs = IRQS.lock();
 
     for i in irqs.iter() {
         if gic.is_pending(i.num()) {

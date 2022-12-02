@@ -26,8 +26,6 @@ pub struct MmioAllocator {
     offset: usize,
 }
 
-use core::arch::asm;
-
 pub static MMIO_ALLOCATOR: FakeLock<MmioAllocator> =  FakeLock::new(MmioAllocator::default());
 
 impl MmioAllocator {

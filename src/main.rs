@@ -52,12 +52,5 @@ extern "C" fn start_kernel() -> ! {
 
     drivers::init();
 
-    loop {
-        let val: usize;
-        let val1: usize;
-
-        unsafe { core::arch::asm!("mrs {}, cntp_cval_el0", out(reg) val) };
-        unsafe { core::arch::asm!("mrs {}, CNTPCT_EL0", out(reg) val1) };
-       // println!("val 0x{:x} val1 0x{:x}", val, val1);
-    }
+    loop { }
 }

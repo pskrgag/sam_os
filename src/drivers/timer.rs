@@ -1,5 +1,5 @@
 use core::arch::asm;
-use crate::drivers::{gic::GIC, irq};
+use crate::drivers::irq;
 
 pub fn init(msec: usize) {
     let mut cur_freq: usize;

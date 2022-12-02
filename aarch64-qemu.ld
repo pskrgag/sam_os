@@ -20,6 +20,7 @@ SECTIONS
         __BOOT_END = .; // __BOOT_END must be 4KiB aligned
         __RO_START = .;
         *(.text .text.*)
+	. = ALIGN(4096);
         etext = .;
     }
 
@@ -33,6 +34,7 @@ SECTIONS
         srodata = .;
         *(.rodata .rodata.*)
         FILL(0x00)
+	. = ALIGN(4096);
 	erodata = .;
     }
     . = ALIGN(PAGE_SIZE); /* Fill up to page size */
@@ -44,6 +46,7 @@ SECTIONS
         sdata = .;
         *(.data .data.*)
         FILL(0x00)
+	. = ALIGN(4096);
         edata = .;
     }
 
@@ -63,7 +66,8 @@ SECTIONS
     end = .;
     /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 
+    . = ALIGN(PAGE_SIZE);
     mmio_start = .;
-    . += 0x02000000;
+    . += 0x00040000;
     mmio_end = .;
 }
