@@ -6,10 +6,12 @@ pub use qemu::config::*;
 
 pub mod interrupts;
 pub mod mm;
+pub mod regs;
 
 use core::mem;
 use cortex_a::registers::*;
 use tock_registers::interfaces::Readable;
+use crate::kernel::misc::genmask;
 
 pub const PAGE_SHIFT: usize = 12;
 pub const PAGE_SIZE: usize = 1 << PAGE_SHIFT;
@@ -18,6 +20,16 @@ pub const PT_LVL2_ENTIRES: usize = PAGE_SIZE / mem::size_of::<u64>();
 pub const PT_LVL3_ENTIRES: usize = PAGE_SIZE / mem::size_of::<u64>();
 
 pub const TCR_SZ_SHIFT: u64 = 39;
+
+pub const KERNEL_AS_END: usize = usize::MAX;
+
+pub fn kernel_as_start() -> usize {
+    genmask(63, 64 - 39)
+}
+
+pub fn kernel_as_size() -> usize {
+    KERNEL_AS_END - kernel_as_start()
+}
 
 pub const PHYS_OFFSET: usize = 0xffffffff80000000;
 

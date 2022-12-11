@@ -13,5 +13,6 @@ pub fn mapping_type_to_flags(tp: MappingType) -> usize {
         MappingType::KernelDataRo => KERNEL_DATA_RO,
         MappingType::KernelRWX => BLOCK_KERNEL_RWX,
         MappingType::KernelDevice => KERNEL_DEVICE,
+        MappingType::KernelNothing => todo!(),
     }
 }

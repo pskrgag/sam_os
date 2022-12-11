@@ -28,3 +28,4 @@ pub unsafe fn set_kernel_page_table(base: PhysAddr) {
     asm!("dsb ishst");
     asm!("isb");
 }
+

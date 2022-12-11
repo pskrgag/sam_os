@@ -9,8 +9,9 @@
 #![feature(int_roundings)]
 
 extern crate alloc;
+#[macro_use]
+extern crate lazy_static;
 
-mod drivers;
 
 #[macro_use]
 mod lib;
@@ -20,6 +21,7 @@ mod arch;
 mod kernel;
 mod mm;
 mod panic;
+mod drivers;
 
 #[cfg(test)]
 #[macro_use]

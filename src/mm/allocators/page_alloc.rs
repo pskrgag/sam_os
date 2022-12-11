@@ -17,6 +17,7 @@ unsafe impl Send for PageAlloc {}
 
 pub static PAGE_ALLOC: Spinlock<PageAlloc> = Spinlock::new(PageAlloc::default());
 
+// TODO: find a way to use BitOps for [u128; $words], which supports {set,clear}_range
 impl PageAlloc {
     pub const fn default() -> Self {
         Self {
@@ -90,7 +91,6 @@ impl PageAlloc {
                 cont_pages = 0;
                 (bitmap, idx) = (Some(bitmap_idx), Some(start));
             }
-            //println!("Dump phys  start {}", start);
 
             let next = i.next_index(start);
             match next {

@@ -1,6 +1,11 @@
 #![macro_use]
 
 use crate::arch;
+use core::{
+    ops::{Add, Shl, Shr, Sub, BitAnd, Not},
+    mem::size_of,
+    fmt::Debug,
+};
 
 extern "C" {
     static load_addr: usize;
@@ -31,4 +36,17 @@ pub fn image_size() -> usize {
 
 pub fn num_pages(size: usize) -> usize {
     size.next_multiple_of(arch::PAGE_SIZE) >> arch::PAGE_SHIFT
+}
+
+#[inline]
+pub fn genmask<T>(h: T, l: T) -> T
+where
+    T: Shl<Output = T> + Add<Output = T> + Shr<Output = T> + Sub<Output = T> + Not<Output = T> + BitAnd<Output = T> + TryFrom<usize> + Copy,
+    <T as TryFrom<usize>>::Error: Debug
+{
+    let bits_per_t: T = T::try_from(size_of::<T>() * 8).unwrap();
+    let one: T = T::try_from(1_usize).unwrap();
+    let zero: T = T::try_from(0_usize).unwrap();
+
+    (!zero - (one << l) + one) & (!zero >> (bits_per_t - one - h))
 }

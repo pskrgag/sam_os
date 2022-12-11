@@ -17,6 +17,7 @@ pub enum MappingType {
     KernelDataRo,
     KernelRWX,
     KernelDevice,
+    KernelNothing,
 }
 
 pub struct PageFlags {

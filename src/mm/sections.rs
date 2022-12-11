@@ -37,10 +37,6 @@ pub struct KernelSection {
     map_type: MappingType,
 }
 
-#[no_mangle]
-#[used]
-pub static mut RANDOM_VALUE: u64 = u64::MAX;
-
 static KERNEL_SECTIONS: FakeLock<Vector<KernelSection>> = FakeLock::new(Vector::new());
 
 impl KernelSection {
