@@ -1,3 +1,5 @@
+use core::mem::zeroed;
+
 #[repr(C, packed)]
 pub struct Context {
     sp: usize,
@@ -15,4 +17,11 @@ pub struct Context {
     x27: usize,
     x28: usize,
     x29: usize,
+}
+
+impl Default for Context {
+    fn default() -> Self {
+        let new: Self = unsafe { zeroed() };
+        new
+    }
 }

@@ -7,6 +7,7 @@ pub use qemu::config::*;
 pub mod interrupts;
 pub mod mm;
 pub mod regs;
+pub mod backtrace;
 
 use core::mem;
 use cortex_a::registers::*;
