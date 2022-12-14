@@ -7,6 +7,7 @@
 #![allow(unused_macros)]
 #![allow(special_module_name)]
 #![feature(int_roundings)]
+#![feature(const_mut_refs)]
 
 extern crate alloc;
 #[macro_use]
