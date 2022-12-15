@@ -34,7 +34,6 @@ impl KernelPageTable {
         };
 
         let base_va = new_table.base;
-        println!("Base 0x{:x} 0x{:x}", base.get(), base_va.get());
 
         // unsafe {
         //     core::slice::from_raw_parts_mut(base_va.to_raw_mut::<u8>(), PAGE_SIZE).fill(0);

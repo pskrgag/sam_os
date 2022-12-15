@@ -1,3 +1,1 @@
-struct Rwlock {
-
-}
+struct Rwlock {}

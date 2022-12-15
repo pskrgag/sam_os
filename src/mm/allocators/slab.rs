@@ -21,7 +21,11 @@ struct FreeList {
     next: Option<&'static mut FreeList>,
 }
 
-static KERNEL_SLABS: [Spinlock<SlabAllocator>; 6] = [
+static KERNEL_SLABS: [Spinlock<SlabAllocator>; 10] = [
+    Spinlock::new(SlabAllocator::default()),
+    Spinlock::new(SlabAllocator::default()),
+    Spinlock::new(SlabAllocator::default()),
+    Spinlock::new(SlabAllocator::default()),
     Spinlock::new(SlabAllocator::default()),
     Spinlock::new(SlabAllocator::default()),
     Spinlock::new(SlabAllocator::default()),
@@ -46,19 +50,26 @@ impl SlabAllocator {
     }
 
     pub fn alloc(&mut self) -> Option<*mut u8> {
-         match self.freelist.alloc().map(|ptr| ptr as *mut FreeList as *mut u8) {
+        match self
+            .freelist
+            .alloc()
+            .map(|ptr| ptr as *mut FreeList as *mut u8)
+        {
             Some(ptr) => Some(ptr),
             None => {
                 let new_list = FreeList::new(self.slab_size)?;
                 self.freelist.add_to_freelist(new_list.next.unwrap());
 
-                self.freelist.alloc().map(|ptr: &mut FreeList| ptr as *mut FreeList as *mut u8)
+                self.freelist
+                    .alloc()
+                    .map(|ptr: &mut FreeList| ptr as *mut FreeList as *mut u8)
             }
-         }
+        }
     }
 
     pub fn free(&mut self, addr: *mut u8) {
-        self.freelist.add_to_freelist(unsafe { &mut *(addr as *mut FreeList) });
+        self.freelist
+            .add_to_freelist(unsafe { &mut *(addr as *mut FreeList) });
     }
 }
 
@@ -72,7 +83,9 @@ impl FreeList {
         let mut va = VirtAddr::from(pa);
         let block_count = PAGE_SIZE / size;
 
-        kernel_page_table().map(None, MemRange::new(va, PAGE_SIZE), MappingType::KernelData).ok()?;
+        kernel_page_table()
+            .map(None, MemRange::new(va, PAGE_SIZE), MappingType::KernelData)
+            .ok()?;
 
         for _ in 0..block_count {
             let new = va.to_raw_mut::<Self>();
@@ -88,7 +101,7 @@ impl FreeList {
             Some(l) => {
                 new.next = Some(l);
                 self.next = Some(new);
-            },
+            }
             None => self.next = Some(new),
         }
     }
@@ -108,10 +121,13 @@ impl FreeList {
 pub fn alloc(mut size: usize) -> Option<*mut u8> {
     size = core::cmp::max(size, MIN_SLAB_SIZE);
 
-    let slab_index = (size.next_power_of_two().ilog2() as usize) - 2;
+    let slab_index = (size.next_power_of_two().ilog2() as usize) - 3;
 
     if slab_index >= KERNEL_SLABS.len() {
-        println!("Too big allocation for kernel slabs! Please, add direct page alloc fallback");
+        println!(
+            "Too big allocation ({}) for kernel slabs! Please, add direct page alloc fallback",
+            size
+        );
         return None;
     }
 
@@ -123,11 +139,12 @@ pub fn init_kernel_slabs() -> Option<()> {
 
     for i in &KERNEL_SLABS {
         (*i.lock()) = SlabAllocator::new(size)?;
+        println!("Kernel slab {} initialized", size);
         size = (size + 1).next_power_of_two();
     }
 
     crate::mm::allocators::allocator::BOOT_ALLOC_IS_DEAD
-        .store(false, core::sync::atomic::Ordering::Relaxed);
+        .store(true, core::sync::atomic::Ordering::Relaxed);
 
     Some(())
 }

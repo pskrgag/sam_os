@@ -4,15 +4,15 @@ pub mod qemu;
 #[cfg(feature = "qemu")]
 pub use qemu::config::*;
 
+pub mod backtrace;
 pub mod interrupts;
 pub mod mm;
 pub mod regs;
-pub mod backtrace;
 
+use crate::kernel::misc::genmask;
 use core::mem;
 use cortex_a::registers::*;
 use tock_registers::interfaces::Readable;
-use crate::kernel::misc::genmask;
 
 pub const PAGE_SHIFT: usize = 12;
 pub const PAGE_SIZE: usize = 1 << PAGE_SHIFT;

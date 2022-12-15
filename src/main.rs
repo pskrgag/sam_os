@@ -13,27 +13,23 @@ extern crate alloc;
 #[macro_use]
 extern crate lazy_static;
 
-
 #[macro_use]
 mod lib;
 
 mod arch;
 #[macro_use]
 mod kernel;
+mod drivers;
 mod mm;
 mod panic;
-mod drivers;
 
 #[cfg(test)]
 #[macro_use]
 extern crate std;
 
+use kernel::threading::thread_ep::idle_thread;
+use kernel::threading::thread_table;
 pub use lib::printf;
-
-extern "C" {
-    static __STACK_START: usize;
-    fn map();
-}
 
 /* At this point we have:
  *
@@ -55,6 +51,15 @@ extern "C" fn start_kernel() -> ! {
     mm::allocators::slab::init_kernel_slabs();
 
     drivers::init();
+
+    let mut table = thread_table::thread_table_mut();
+    let mut kernel_thread = table
+        .new_thread("kernel thread")
+        .expect("Failed to create kernel thread")
+        .write();
+
+    kernel_thread.set_vms(false);
+    kernel_thread.spawn(idle_thread, ());
 
     loop {}
 }
