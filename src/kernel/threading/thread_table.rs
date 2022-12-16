@@ -1,7 +1,11 @@
-use crate::{kernel::threading::thread::Thread, lib::ida::Ida};
+use crate::kernel::sched::run_queue::RUN_QUEUE;
+use crate::{
+    kernel::threading::{thread::Thread, ThreadRef},
+    lib::ida::Ida,
+};
 use qrwlock::qrwlock::{ReadGuard, RwLock, WriteGuard};
 
-use alloc::collections::btree_map::BTreeMap;
+use alloc::{collections::btree_map::BTreeMap, sync::Arc};
 
 lazy_static! {
     static ref THREAD_TABLE: RwLock<ThreadTable> = RwLock::new(ThreadTable::new());
@@ -9,7 +13,7 @@ lazy_static! {
 
 pub struct ThreadTable {
     id_alloc: Ida<1000>,
-    table: BTreeMap<u16, RwLock<Thread>>,
+    table: BTreeMap<u16, Arc<RwLock<Thread>>>,
 }
 
 impl ThreadTable {
@@ -20,16 +24,31 @@ impl ThreadTable {
         }
     }
 
-    pub fn new_thread(&mut self, name: &str) -> Option<&RwLock<Thread>> {
+    pub fn new_kernel_thread<T>(
+        &mut self,
+        name: &str,
+        func: fn(T) -> Option<()>,
+        arg: T,
+    ) -> Option<ThreadRef> {
         let new_id: u16 = self.id_alloc.alloc()?.try_into().unwrap();
-        let new_thread = RwLock::new(Thread::new(name, new_id));
+        assert!(self
+            .table
+            .insert(new_id, Arc::new(RwLock::new(Thread::new(name, new_id))))
+            .is_none());
+        let mut thread = self.thread_by_id(new_id).unwrap();
+        let mut new_thread = thread.write();
 
-        assert!(self.table.insert(new_id, new_thread).is_none());
+        new_thread.set_vms(false);
+        new_thread.spawn(func, arg);
+
+        drop(new_thread);
+        RUN_QUEUE.lock().add(thread);
+
         self.thread_by_id(new_id)
     }
 
-    pub fn thread_by_id(&self, id: u16) -> Option<&RwLock<Thread>> {
-        self.table.get(&id)
+    pub fn thread_by_id(&self, id: u16) -> Option<ThreadRef> {
+        self.table.get(&id).cloned()
     }
 }
 

@@ -1,4 +1,5 @@
 use crate::drivers::irq;
+use crate::kernel::sched;
 use core::arch::asm;
 
 pub fn init(msec: usize) {

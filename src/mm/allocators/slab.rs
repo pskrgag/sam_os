@@ -131,7 +131,12 @@ pub fn alloc(mut size: usize) -> Option<*mut u8> {
         return None;
     }
 
-    (*KERNEL_SLABS[slab_index].lock()).alloc()
+    let a = (*KERNEL_SLABS[slab_index].lock()).alloc();
+    if a.is_some() {
+        println!("Slab returns {:p}", a.unwrap());
+    }
+
+    a
 }
 
 pub fn init_kernel_slabs() -> Option<()> {

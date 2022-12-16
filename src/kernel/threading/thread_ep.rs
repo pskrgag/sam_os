@@ -1,16 +1,27 @@
 use alloc::boxed::Box;
-use core::arch::asm;
+use core::arch::global_asm;
 
-pub unsafe fn kernel_thread_entry_point<T>() {
-    let addr: *mut T;
-
-    asm!("mov   {}, x19", out(reg) addr);
-    asm!("mov   x0, x19");
-    asm!("br    x20");
-
-    drop(Box::from_raw(addr));
-}
+global_asm!(
+    ".globl kernel_thread_entry_point",
+    "kernel_thread_entry_point:",
+    "mov   x0, x19",
+    "br    x20",
+);
 
 pub fn idle_thread(_: ()) -> Option<()> {
-    loop {}
+    loop {
+        println!("Idle loop");
+        for _ in 0..10_000_000 {
+            unsafe { core::arch::asm!("nop") };
+        }
+    }
+}
+
+pub fn idle_thread1(_: ()) -> Option<()> {
+    loop {
+        println!("Idle loop 1");
+        for _ in 0..10_000_000 {
+            unsafe { core::arch::asm!("nop") };
+        }
+    }
 }

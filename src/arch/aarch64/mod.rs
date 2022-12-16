@@ -5,7 +5,9 @@ pub mod qemu;
 pub use qemu::config::*;
 
 pub mod backtrace;
+pub mod context;
 pub mod interrupts;
+pub mod irq;
 pub mod mm;
 pub mod regs;
 

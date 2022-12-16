@@ -1,10 +1,7 @@
 use core::mem::zeroed;
 
-#[repr(C, packed)]
+#[repr(C)]
 pub struct Context {
-    pub sp: usize,
-    pub lr: usize,
-    pub fp: usize,
     // Callee-saved registers
     pub x19: usize,
     pub x20: usize,
@@ -17,6 +14,9 @@ pub struct Context {
     pub x27: usize,
     pub x28: usize,
     pub x29: usize,
+    pub lr: usize, // x30
+    pub sp: usize,
+    pub fp: usize,
 }
 
 impl Default for Context {

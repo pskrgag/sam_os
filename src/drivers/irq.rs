@@ -1,3 +1,4 @@
+use crate::kernel::sched;
 use crate::{drivers::gic::GIC, kernel::locking::spinlock::Spinlock, lib::collections::list::List};
 
 pub struct IrqHandler {

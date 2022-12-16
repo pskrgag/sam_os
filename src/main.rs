@@ -9,6 +9,9 @@
 #![feature(int_roundings)]
 #![feature(const_mut_refs)]
 
+// TODO: debug only
+//#![allow(unaligned_references)]
+
 extern crate alloc;
 #[macro_use]
 extern crate lazy_static;
@@ -27,7 +30,7 @@ mod panic;
 #[macro_use]
 extern crate std;
 
-use kernel::threading::thread_ep::idle_thread;
+use kernel::threading::thread_ep::{idle_thread, idle_thread1};
 use kernel::threading::thread_table;
 pub use lib::printf;
 
@@ -53,13 +56,15 @@ extern "C" fn start_kernel() -> ! {
     drivers::init();
 
     let mut table = thread_table::thread_table_mut();
-    let mut kernel_thread = table
-        .new_thread("kernel thread")
-        .expect("Failed to create kernel thread")
-        .write();
+    table
+        .new_kernel_thread("kernel thread", idle_thread, ())
+        .expect("Failed to create kernel thread");
 
-    kernel_thread.set_vms(false);
-    kernel_thread.spawn(idle_thread, ());
+    table
+        .new_kernel_thread("kernel thread 1", idle_thread1, ())
+        .expect("Failed to create kernel thread");
+
+    drop(table);
 
     loop {}
 }

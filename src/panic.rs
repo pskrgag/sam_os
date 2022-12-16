@@ -1,7 +1,10 @@
+use crate::arch::irq::disable_all;
 use core::panic::PanicInfo;
 
 #[panic_handler]
 fn on_panic(info: &PanicInfo) -> ! {
+    unsafe { disable_all() };
+
     println!("--- cut here ---");
     println!("Kernel Panic!");
 
