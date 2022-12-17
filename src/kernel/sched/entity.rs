@@ -1,5 +1,4 @@
 use crate::kernel::threading::{thread::Thread, ThreadRef};
-use alloc::sync::Arc;
 
 use qrwlock::qrwlock::RwLock;
 

@@ -3,10 +3,7 @@ pub mod run_queue;
 
 use crate::{
     arch::{irq, regs::Context},
-    kernel::{
-        sched::run_queue::RunQueue,
-        threading::{thread_table::thread_table, ThreadRef},
-    },
+    kernel::threading::{thread::ThreadState, thread_table::thread_table, ThreadRef},
 };
 use run_queue::RUN_QUEUE;
 
@@ -14,14 +11,15 @@ extern "C" {
     fn switch_to(from: *mut Context, to: *const Context);
 }
 
-fn current_no_lock(rq: &RunQueue) -> Option<ThreadRef> {
-    let id = rq.current_id()?;
+#[inline]
+pub fn current() -> Option<ThreadRef> {
+    let id = RUN_QUEUE.get().current_id()?;
     thread_table().thread_by_id(id)
 }
 
-pub unsafe fn switch_to_next() {
-    let mut rq = RUN_QUEUE.lock();
-    let cur = current_no_lock(&rq);
+pub unsafe fn run() {
+    let rq = RUN_QUEUE.get();
+    let cur = current();
     let next = rq.pop();
 
     if next.is_none() {
@@ -30,29 +28,32 @@ pub unsafe fn switch_to_next() {
 
     let next = next.unwrap();
 
-    if let Some(cur) = cur {
-        println!("Switching to {:p}", &*next.thread().read() as *const _);
-        let ctx = cur.write().ctx_mut() as *mut _;
-        let mut next = next.thread().write().ctx_mut() as *const _;
-        rq.add(cur);
+    if let Some(c) = cur {
+        let mut cur = c.write();
+        if cur.state() != ThreadState::NeedResched {
+            return;
+        }
 
-        drop(rq);
+        println!(
+            "Switching to {} --> {}",
+            cur.id(),
+            next.thread().read().id()
+        );
+        let ctx = cur.ctx_mut() as *mut _;
+        let next = next.thread().write().ctx_mut() as *const _;
+
+        drop(cur);
+        rq.add(c);
 
         irq::enable_all();
         switch_to(ctx, next);
         irq::disable_all();
     } else {
         let mut ctx = Context::default(); // tmp storage
-        let mut next = next.thread().write().ctx_mut() as *const _;
-
-        drop(rq);
+        let next = next.thread().write().ctx_mut() as *const _;
 
         irq::enable_all();
         switch_to(&mut ctx as *mut _, next);
         irq::disable_all();
     }
-}
-
-pub fn current() -> Option<ThreadRef> {
-    current_no_lock(&*RUN_QUEUE.lock())
 }

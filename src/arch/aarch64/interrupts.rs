@@ -132,7 +132,6 @@ pub extern "C" fn kern_sync64(
         esr_el1, far_el1, elr_el1
     );
 
-    loop {}
     panic!("Unhandler kernel sync exception");
 }
 
@@ -143,7 +142,7 @@ pub extern "C" fn kern_irq() {
     irq_dispatch();
 
     unsafe {
-        sched::switch_to_next();
+        sched::run();
     }
 }
 
@@ -155,8 +154,6 @@ pub extern "C" fn kern_exception_bug(esr_el1: usize, far_el1: usize, elr_el1: us
         esr_el1, far_el1, elr_el1
     );
     println!("No idea how to deal with 0x{:x}", esr_el1);
-
-    loop {}
 
     panic!();
 }

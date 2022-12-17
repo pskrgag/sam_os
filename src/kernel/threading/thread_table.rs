@@ -35,14 +35,14 @@ impl ThreadTable {
             .table
             .insert(new_id, Arc::new(RwLock::new(Thread::new(name, new_id))))
             .is_none());
-        let mut thread = self.thread_by_id(new_id).unwrap();
+        let thread = self.thread_by_id(new_id).unwrap();
         let mut new_thread = thread.write();
 
         new_thread.set_vms(false);
         new_thread.spawn(func, arg);
 
         drop(new_thread);
-        RUN_QUEUE.lock().add(thread);
+        RUN_QUEUE.get().add(thread);
 
         self.thread_by_id(new_id)
     }

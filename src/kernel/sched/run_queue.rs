@@ -1,5 +1,5 @@
 use crate::kernel::{
-    locking::spinlock::Spinlock, sched::entity::SchedEntity, threading::ThreadRef,
+    locking::fake_lock::FakeLock, sched::entity::SchedEntity, threading::ThreadRef,
 };
 use alloc::collections::linked_list::LinkedList;
 
@@ -8,7 +8,7 @@ pub struct RunQueue {
     cur: Option<u16>,
 }
 
-pub static RUN_QUEUE: Spinlock<RunQueue> = Spinlock::new(RunQueue::new());
+pub static RUN_QUEUE: FakeLock<RunQueue> = FakeLock::new(RunQueue::new());
 
 impl RunQueue {
     pub const fn new() -> Self {

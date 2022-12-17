@@ -10,6 +10,8 @@ use crate::{
     },
 };
 
+use core::alloc::Layout;
+
 const MIN_SLAB_SIZE: usize = 8;
 
 pub struct SlabAllocator {
@@ -131,12 +133,18 @@ pub fn alloc(mut size: usize) -> Option<*mut u8> {
         return None;
     }
 
-    let a = (*KERNEL_SLABS[slab_index].lock()).alloc();
-    if a.is_some() {
-        println!("Slab returns {:p}", a.unwrap());
+    KERNEL_SLABS[slab_index].lock().alloc()
+}
+
+pub fn free(ptr: *mut u8, l: Layout) {
+    let size = core::cmp::max(l.size(), MIN_SLAB_SIZE);
+
+    let slab_index = (size.next_power_of_two().ilog2() as usize) - 3;
+    if slab_index >= KERNEL_SLABS.len() {
+        panic!();
     }
 
-    a
+    KERNEL_SLABS[slab_index].lock().free(ptr);
 }
 
 pub fn init_kernel_slabs() -> Option<()> {

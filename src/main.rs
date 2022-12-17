@@ -9,9 +9,6 @@
 #![feature(int_roundings)]
 #![feature(const_mut_refs)]
 
-// TODO: debug only
-//#![allow(unaligned_references)]
-
 extern crate alloc;
 #[macro_use]
 extern crate lazy_static;
