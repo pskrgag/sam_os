@@ -1,22 +1,14 @@
 use crate::{
     arch::{self, regs::Context},
-    mm::allocators::stack_alloc::{alloc_stack, StackLayout},
+    mm::allocators::stack_alloc::StackLayout,
     mm::{types::VirtAddr, vms::Vms},
 };
 use alloc::{boxed::Box, string::String, sync::Arc};
 
 use qrwlock::qrwlock::RwLock;
 
-const KERN_STACK_SIZE: usize = crate::arch::PAGE_SIZE / 2;
-
 extern "C" {
     fn kernel_thread_entry_point();
-}
-
-// Should be aligned to 2 * wordsize
-#[repr(align(16))]
-struct KernelStack {
-    stack: [u8; KERN_STACK_SIZE],
 }
 
 #[derive(PartialEq, Copy, Clone, Debug)]
@@ -36,6 +28,17 @@ pub struct Thread {
     stack: Option<StackLayout>,
 }
 
+lazy_static! {
+    static ref KERNEL_VMS: Arc<RwLock<Vms>> = Arc::new(RwLock::new(
+        Vms::new(
+            VirtAddr::from(arch::kernel_as_start()),
+            arch::kernel_as_size(),
+            false
+        )
+        .expect("Failed to create kernel vms")
+    ));
+}
+
 impl Thread {
     pub fn new(name: &str, id: u16) -> Self {
         Self {
@@ -51,11 +54,7 @@ impl Thread {
     pub fn set_vms(&mut self, user: bool) -> Option<()> {
         match user {
             false => {
-                self.vms = Arc::new(RwLock::new(Vms::new(
-                    VirtAddr::from(arch::kernel_as_start()),
-                    arch::kernel_as_size(),
-                    false,
-                )?))
+                self.vms = KERNEL_VMS.clone();
             }
             true => todo!(),
         };
@@ -79,7 +78,7 @@ impl Thread {
         use crate::kernel::misc::ref_mut_to_usize;
 
         let arg = Box::new(arg);
-        let stack = alloc_stack(3).expect("Failed to allocat stack");
+        let stack = StackLayout::new(3).expect("Failed to allocat stack");
 
         self.arch_ctx.sp = stack.stack_head().into();
         self.arch_ctx.lr = (kernel_thread_entry_point as *const fn()) as usize;
@@ -87,6 +86,7 @@ impl Thread {
         self.arch_ctx.x20 = func as usize;
 
         self.stack = Some(stack);
+
         println!("Thread sp 0x{:x}", self.arch_ctx.sp);
 
         self.state = ThreadState::Running;
@@ -98,13 +98,5 @@ impl Thread {
 
     pub fn state(&self) -> ThreadState {
         self.state
-    }
-}
-
-impl Default for KernelStack {
-    fn default() -> Self {
-        Self {
-            stack: [0; KERN_STACK_SIZE],
-        }
     }
 }

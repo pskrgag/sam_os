@@ -1,12 +1,23 @@
-use crate::arch::irq::disable_all;
+use crate::{
+    arch::{
+        backtrace::backtrace,
+        irq::disable_all,
+    },
+    mm::types::VirtAddr,
+};
 use core::panic::PanicInfo;
 
 #[panic_handler]
 fn on_panic(info: &PanicInfo) -> ! {
-    unsafe { disable_all() };
+    let mut bt = [VirtAddr::from(0); 50];
+    let bt_size: usize;
 
-    println!("--- cut here ---");
-    println!("Kernel Panic!");
+    unsafe {
+        disable_all();
+        println!("--- cut here ---");
+        println!("Kernel Panic!");
+        bt_size = backtrace(&mut bt);
+    };
 
     if let Some(location) = info.location() {
         println!(
@@ -14,6 +25,11 @@ fn on_panic(info: &PanicInfo) -> ! {
             location.file(),
             location.line(),
         );
+    }
+
+    println!("Kernel backtrace");
+    for i in 0..bt_size {
+        println!("#{} [{:p}]", i, bt[i].to_raw::<usize>());
     }
 
     if let Some(s) = info.payload().downcast_ref::<&str>() {

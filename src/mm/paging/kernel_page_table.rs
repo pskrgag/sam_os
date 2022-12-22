@@ -62,7 +62,7 @@ impl PageTable for KernelPageTable {
         PT_LVL1_ENTIRES
     }
 
-    // TODO: Hugetables?
+    // TODO: Hugepages?
     fn map(
         &mut self,
         p: Option<MemRange<PhysAddr>>,
@@ -151,13 +151,6 @@ impl PageTable for KernelPageTable {
                     };
 
                     assert!(table_block_3.lvl() == 3);
-
-                    // println!(
-                    //     "Index 3 {} 0x{:x} 0x{:x}",
-                    //     lvl3_index,
-                    //     va.get(),
-                    //     PhysAddr::from(table_block_3.addr()).get(),
-                    // );
 
                     va.add(arch::PAGE_SIZE);
 

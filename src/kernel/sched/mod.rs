@@ -30,6 +30,7 @@ pub unsafe fn run() {
 
     if let Some(c) = cur {
         let mut cur = c.write();
+
         if cur.state() != ThreadState::NeedResched {
             return;
         }
@@ -39,6 +40,7 @@ pub unsafe fn run() {
             cur.id(),
             next.thread().read().id()
         );
+
         let ctx = cur.ctx_mut() as *mut _;
         let next = next.thread().write().ctx_mut() as *const _;
 

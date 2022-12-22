@@ -13,19 +13,7 @@ pub struct StackLayout {
 }
 
 impl StackLayout {
-    pub fn new(base: VirtAddr, pages: usize) -> Self {
-        Self {
-            base: base,
-            pages: pages,
-        }
-    }
-
-    pub fn stack_head(&self) -> VirtAddr {
-        VirtAddr::from(self.base + self.pages * PAGE_SIZE)
-    }
-}
-
-pub fn alloc_stack(num_pages: usize) -> Option<StackLayout> {
+    pub fn new(num_pages: usize) -> Option<Self> {
     let stack = VirtAddr::from(PAGE_ALLOC.lock().alloc_pages(num_pages + 2)?);
 
     kernel_page_table()
@@ -36,5 +24,24 @@ pub fn alloc_stack(num_pages: usize) -> Option<StackLayout> {
         )
         .ok()?;
 
-    Some(StackLayout::new(stack, num_pages))
+        Some(Self {
+            base: stack,
+            pages: num_pages,
+        })
+    }
+
+    pub fn stack_head(&self) -> VirtAddr {
+        VirtAddr::from(self.base + self.pages * PAGE_SIZE)
+    }
+}
+
+impl Drop for StackLayout {
+    fn drop(&mut self) {
+        kernel_page_table()
+            .unmap(
+                MemRange::new(self.base, self.pages * PAGE_SIZE),
+            ).expect("Failed to unmap stack");
+
+        PAGE_ALLOC.lock().free_pages(PhysAddr::from(self.base), self.pages + 2);
+    }
 }
