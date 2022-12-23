@@ -1,0 +1,12 @@
+[env]
+TARGET = "aarch64-unknown-none-softfloat"
+RUSTFLAGS = "-C link-arg=--library-path=. -C link-arg=--script=aarch64-qemu.ld -C force-frame-pointers"
+
+[tasks.build]
+env = { "RUSTFLAGS" = "${RUSTFLAGS}" }
+command = "cargo"
+args = ["build", "--target=${TARGET}"]
+
+
+[tasks.qemu]
+command = "echo a"
