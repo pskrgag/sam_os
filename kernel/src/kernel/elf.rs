@@ -79,7 +79,7 @@ struct ElfPhdr {
 }
 
 pub struct ElfData {
-    pub regions: Vec<(MemRange<VirtAddr>, MappingType)>,
+    pub regions: Vec<(MemRange<VirtAddr>, MappingType, usize)>,
     pub ep: VirtAddr,
 }
 
@@ -153,7 +153,7 @@ fn flags_to_mt(flags: Elf64_Word) -> MappingType {
 fn parse_program_headers(
     data: &mut &[u8],
     header: &ElfHeader,
-) -> Option<Vec<(MemRange<VirtAddr>, MappingType)>> {
+) -> Option<Vec<(MemRange<VirtAddr>, MappingType, usize)>> {
     let mut vec = Vec::new();
     let mut data = &data[header.e_phoff as usize - core::mem::size_of::<ElfHeader>()..];
 
@@ -179,6 +179,7 @@ fn parse_program_headers(
                 pheader.p_memsz.next_multiple_of(arch::PAGE_SIZE as u64) as usize,
             ),
             flags_to_mt(pheader.p_flags),
+            pheader.p_offset as usize,
         ));
     }
 

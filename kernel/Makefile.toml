@@ -12,6 +12,9 @@ env = { "RUSTFLAGS" = "${RUSTFLAGS}" }
 command = "cargo"
 args = ["build", "--target=${TARGET}"]
 
+[tasks.test]
+command = "echo"
+
 [tasks.my-flow]
 dependencies = [
     "format",

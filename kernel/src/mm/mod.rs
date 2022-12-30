@@ -2,8 +2,8 @@ pub mod allocators;
 pub mod paging;
 pub mod sections;
 pub mod types;
-pub mod vms;
 pub mod vma_list;
+pub mod vms;
 
 use crate::kernel::misc::kernel_offset;
 use types::*;

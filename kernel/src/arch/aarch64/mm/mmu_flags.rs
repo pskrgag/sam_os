@@ -21,6 +21,7 @@ const fn mair_type(idx: u8) -> usize {
 
 pub const BLOCK_VALID: usize = 0b01;
 pub const BLOCK_PXN: usize = 1 << 53;
+pub const BLOCK_UXN: usize = 1 << 54;
 pub const BLOCK_NON_GLOBAL: usize = 1 << 11;
 pub const BLOCK_ACCESS_FLAG: usize = 1 << 10;
 
@@ -33,8 +34,8 @@ pub const BLOCK_KERNEL_RW: usize = access_perms(AccesFlags::AP_UN_KRW) | BLOCK_P
 pub const BLOCK_KERNEL_RO: usize =
     access_perms(AccesFlags::AP_UN_KRO) | BLOCK_PXN | (1 << 54) | (1 << 51);
 
-pub const BLOCK_USER_RW: usize = access_perms(AccesFlags::AP_URW_KRW);
-pub const BLOCK_USER_RO: usize = access_perms(AccesFlags::AP_URO_KRO);
+pub const BLOCK_USER_RW: usize = access_perms(AccesFlags::AP_URW_KRW) | BLOCK_UXN;
+pub const BLOCK_USER_RO: usize = access_perms(AccesFlags::AP_URO_KRO) | BLOCK_UXN;
 
 /* Page Table */
 pub const TABLE_VALID: usize = 0b11;

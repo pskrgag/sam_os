@@ -2,16 +2,13 @@ use crate::arch;
 use core::ops::Add;
 use core::{fmt, ops::Sub};
 
-#[derive(Clone, Copy)]
-#[derive(PartialEq, PartialOrd)]
+#[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub struct PhysAddr(usize);
 
-#[derive(Clone, Copy)]
-#[derive(PartialEq, PartialOrd)]
+#[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub struct VirtAddr(usize);
 
-#[derive(Clone, Copy)]
-#[derive(PartialEq, PartialOrd)]
+#[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub struct Pfn(usize);
 
 #[derive(Clone, Copy)]

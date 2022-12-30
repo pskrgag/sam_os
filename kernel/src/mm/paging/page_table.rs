@@ -3,8 +3,8 @@ use crate::{
     arch::{self, mm::mmu_flags},
     arch::{mm::mmu, PAGE_SIZE},
     kernel::misc::*,
-    mm::{allocators::page_alloc::PAGE_ALLOC, types::*},
     mm::paging::kernel_page_table::kernel_page_table,
+    mm::{allocators::page_alloc::page_allocator, types::*},
 };
 
 #[derive(Debug)]
@@ -144,7 +144,7 @@ impl PageTable {
     }
 
     pub fn new(kernel: bool) -> Option<Self> {
-        let base = PAGE_ALLOC.lock().alloc_pages(1)?;
+        let base: PhysAddr = page_allocator().alloc(1)?.into();
         let mut new_table = Self {
             base: VirtAddr::from(base),
             kernel: kernel,
@@ -156,6 +156,7 @@ impl PageTable {
         //     core::slice::from_raw_parts_mut(base_va.to_raw_mut::<u8>(), PAGE_SIZE).fill(0);
         // }
 
+        println!("PAge table base 0x{:x}", base_va.get());
         if kernel {
             new_table
                 .map(
@@ -200,22 +201,21 @@ impl PageTable {
             let mut table_block_2 = match table_block_1.next(lvl1_index) {
                 Some(e) => e,
                 None => {
-                    let new_page = PAGE_ALLOC
-                        .lock()
-                        .alloc_pages(1)
-                        .expect("Failed to allocate memory");
+                    let new_page: PhysAddr = page_allocator()
+                        .alloc(1)
+                        .expect("Failed to allocate memory")
+                        .into();
                     let new_entry =
                         PageTableEntry::from_bits(PageFlags::table().bits() | new_page.get());
 
                     unsafe { table_block_1.set_tte(lvl1_index, new_entry) };
 
                     if !self.kernel {
-                        kernel_page_table()
-                            .map(
+                        kernel_page_table().map(
                             None,
                             MemRange::new(VirtAddr::from(new_page), PAGE_SIZE),
                             MappingType::KernelData,
-                            )?;
+                        )?;
                     }
 
                     self.map(
@@ -236,22 +236,21 @@ impl PageTable {
                 let mut table_block_3 = match table_block_2.next(lvl2_index) {
                     Some(e) => e,
                     None => {
-                        let new_page = PAGE_ALLOC
-                            .lock()
-                            .alloc_pages(1)
-                            .expect("Failed to allocate memory");
+                        let new_page: PhysAddr = page_allocator()
+                            .alloc(1)
+                            .expect("Failed to allocate memory")
+                            .into();
                         let new_entry =
                             PageTableEntry::from_bits(PageFlags::table().bits() | new_page.get());
 
                         unsafe { table_block_2.set_tte(lvl2_index, new_entry) };
 
                         if !self.kernel {
-                            kernel_page_table()
-                                .map(
+                            kernel_page_table().map(
                                 None,
                                 MemRange::new(VirtAddr::from(new_page), PAGE_SIZE),
                                 MappingType::KernelData,
-                                )?;
+                            )?;
                         }
 
                         self.map(

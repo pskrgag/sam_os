@@ -4,7 +4,11 @@ pub mod run_queue;
 use crate::{
     arch::{irq, regs::Context},
     kernel::elf::{parse_elf, ElfData},
-    kernel::threading::{thread::ThreadState, thread_table::{thread_table, thread_table_mut}, ThreadRef},
+    kernel::threading::{
+        thread::ThreadState,
+        thread_table::{thread_table, thread_table_mut},
+        ThreadRef,
+    },
 };
 use run_queue::RUN_QUEUE;
 
@@ -72,6 +76,6 @@ pub fn init_userspace() {
     let data = parse_elf(INIT).expect("Failed to parse elf");
 
     thread_table_mut()
-        .new_user_thread("init", data)
+        .new_user_thread("init", data, INIT)
         .expect("Failed to run user thread");
 }

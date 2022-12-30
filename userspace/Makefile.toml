@@ -15,8 +15,10 @@ command = "cargo"
 args = ["build", "--target=${TARGET}"]
 dependencies = ["clean"]
 
+[tasks.test]
+command = "echo"
+
 [tasks.my-flow]
 dependencies = [
-    "format",
     "build"
 ]

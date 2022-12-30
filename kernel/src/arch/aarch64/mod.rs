@@ -6,6 +6,7 @@ pub use qemu::config::*;
 
 pub mod backtrace;
 pub mod context;
+pub mod cpuid;
 pub mod interrupts;
 pub mod irq;
 pub mod mm;

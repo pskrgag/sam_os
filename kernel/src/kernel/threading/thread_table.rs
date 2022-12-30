@@ -54,7 +54,7 @@ impl ThreadTable {
         self.table.get(&id).cloned()
     }
 
-    pub fn new_user_thread(&mut self, name: &str, vma: ElfData) -> Option<ThreadRef> {
+    pub fn new_user_thread(&mut self, name: &str, vma: ElfData, elf: &[u8]) -> Option<ThreadRef> {
         let new_id: u16 = self.id_alloc.alloc()?.try_into().unwrap();
         assert!(self
             .table
@@ -68,7 +68,7 @@ impl ThreadTable {
         let mut vms = new_thread.vms().write();
 
         for i in vma.regions {
-            vms.add_vma(i);
+            vms.add_vma((i.0, i.1), Some(&elf[i.2..i.0.size()]));
         }
 
         drop(vms);

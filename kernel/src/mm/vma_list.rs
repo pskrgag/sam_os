@@ -1,8 +1,6 @@
-use crate::{
-    mm::{
-        types::{VirtAddr, MemRange},
-        paging::page_table::MappingType,
-    },
+use crate::mm::{
+    paging::page_table::MappingType,
+    types::{MemRange, VirtAddr},
 };
 use alloc::collections::LinkedList;
 
@@ -17,8 +15,8 @@ pub struct VmaList {
 
 #[inline]
 fn do_intersect(range1: &MemRange<VirtAddr>, range2: &MemRange<VirtAddr>) -> bool {
-    (range1.start() + range1.size()) < range2.start().into() &&
-        (range2.start() + range2.size()) < range1.start().into()
+    (range1.start() + range1.size()) < range2.start().into()
+        && (range2.start() + range2.size()) < range1.start().into()
 }
 
 impl VmaList {
@@ -48,10 +46,18 @@ impl VmaList {
     }
 
     // TODO: redo
-    pub fn free_range(&self, size: usize, start: VirtAddr, vms_size: usize) -> Option<MemRange<VirtAddr>> {
+    pub fn free_range(
+        &self,
+        size: usize,
+        start: VirtAddr,
+        vms_size: usize,
+    ) -> Option<MemRange<VirtAddr>> {
         if let Some(back) = self.list.back() {
-            if back.range.start() + back.range.size() < start.get() + vms_size  - size - 1 {
-                Some(MemRange::new(VirtAddr::from(back.range.start() + back.range.size()), size))
+            if back.range.start() + back.range.size() < start.get() + vms_size - size - 1 {
+                Some(MemRange::new(
+                    VirtAddr::from(back.range.start() + back.range.size()),
+                    size,
+                ))
             } else {
                 todo!();
             }
@@ -68,5 +74,4 @@ impl Vma {
             tp: tp,
         }
     }
-
 }

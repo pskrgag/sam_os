@@ -15,7 +15,6 @@ global_asm!(
     "stp        x4, x5, [x0, #0x60]",
     "mrs        x4, TTBR0_EL1",
     "str        x4, [x0, #0x70]",
-
     // Restore ctx
     "ldp        x19, x20, [x1, #0]",
     "ldp        x21, x22, [x1, #0x10]",

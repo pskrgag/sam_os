@@ -116,9 +116,13 @@ impl Thread {
 
     pub fn spawn_user(&mut self, ep: VirtAddr) {
         let stack = StackLayout::new(3).expect("Failed to allocat stack");
-        let user_stack = self.vms.write().alloc_user_stack().expect("Failed to allocate user stack");
+        let user_stack = self
+            .vms
+            .write()
+            .alloc_user_stack()
+            .expect("Failed to allocate user stack");
 
-        self.arch_ctx.sp = user_stack.get();
+        self.arch_ctx.sp = user_stack.get() + arch::PAGE_SIZE;
         self.arch_ctx.lr = (user_thread_entry_point as *const fn()) as usize;
         self.arch_ctx.x20 = ep.get();
         self.arch_ctx.ttbr0 = self.vms.read().ttbr0().expect("TTBR0 should be set").get();

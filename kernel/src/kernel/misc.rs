@@ -1,6 +1,6 @@
 #![macro_use]
 
-use crate::arch;
+use crate::{arch, mm::types::VirtAddr};
 use core::{
     fmt::Debug,
     mem::size_of,
@@ -36,6 +36,16 @@ pub fn image_size() -> usize {
 
 pub fn num_pages(size: usize) -> usize {
     size.next_multiple_of(arch::PAGE_SIZE) >> arch::PAGE_SHIFT
+}
+
+#[inline]
+pub fn round_down_page(v: VirtAddr) -> VirtAddr {
+    VirtAddr::from(v.get() & !((1_usize << arch::PAGE_SHIFT) - 1))
+}
+
+#[inline]
+pub fn page_offset(v: VirtAddr) -> usize {
+    v.get() & ((1_usize << arch::PAGE_SHIFT) - 1)
 }
 
 #[inline]

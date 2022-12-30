@@ -5,6 +5,8 @@ use core::{
     ptr::NonNull,
 };
 
+const INIT_PAGE_POOL: usize = 50;
+
 #[repr(C)]
 struct FfHeader {
     next: Option<NonNull<FfHeader>>,
@@ -14,7 +16,7 @@ struct FfHeader {
 }
 
 pub struct BootAlloc {
-    pool: [u8; PAGE_SIZE * 40],
+    pool: [u8; PAGE_SIZE * INIT_PAGE_POOL],
     free: usize,
 }
 
@@ -25,7 +27,7 @@ unsafe impl Sync for BootAlloc {}
 impl BootAlloc {
     pub(self) const fn default() -> Self {
         Self {
-            pool: [0; PAGE_SIZE * 40],
+            pool: [0; PAGE_SIZE * INIT_PAGE_POOL],
             free: core::mem::size_of::<Self>() - core::mem::size_of::<FfHeader>(),
         }
     }
@@ -67,6 +69,8 @@ impl BootAlloc {
     pub unsafe fn alloc(&mut self, layout: Layout) -> *mut u8 {
         let mut iter;
         let size = layout.size();
+
+        println!("Alloc {}", size);
 
         iter = NonNull::new(unsafe {
             core::mem::transmute::<_, *mut FfHeader>(self.pool.as_mut_ptr())

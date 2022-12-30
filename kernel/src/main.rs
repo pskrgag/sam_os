@@ -9,6 +9,7 @@
 #![feature(int_roundings)]
 #![feature(const_mut_refs)]
 #![feature(linked_list_cursors)]
+#![feature(allocator_api)]
 
 extern crate alloc;
 #[macro_use]
@@ -23,10 +24,6 @@ mod kernel;
 mod drivers;
 mod mm;
 mod panic;
-
-#[cfg(test)]
-#[macro_use]
-extern crate std;
 
 use kernel::sched;
 use kernel::threading::thread_ep::{idle_thread, idle_thread1};
@@ -53,7 +50,6 @@ extern "C" fn start_kernel() -> ! {
     mm::allocators::slab::init_kernel_slabs();
 
     drivers::init();
-
 
     let mut table = thread_table::thread_table_mut();
     table

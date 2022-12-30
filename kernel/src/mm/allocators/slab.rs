@@ -2,7 +2,7 @@ use crate::{
     arch::PAGE_SIZE,
     kernel::locking::spinlock::Spinlock,
     mm::{
-        allocators::page_alloc::PAGE_ALLOC,
+        allocators::page_alloc::page_allocator,
         paging::kernel_page_table::kernel_page_table,
         paging::page_table::{MappingType, PageTable},
         types::*,
@@ -80,7 +80,7 @@ impl FreeList {
     pub fn new(size: usize) -> Option<Self> {
         assert!(size.is_power_of_two());
 
-        let pa = PAGE_ALLOC.lock().alloc_pages(1)?;
+        let pa: PhysAddr = page_allocator().alloc(1)?.into();
         let mut list = Self::default();
         let mut va = VirtAddr::from(pa);
         let block_count = PAGE_SIZE / size;

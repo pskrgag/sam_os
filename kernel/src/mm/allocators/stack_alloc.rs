@@ -1,7 +1,7 @@
 use crate::{
     arch::PAGE_SIZE,
     mm::{
-        allocators::page_alloc::PAGE_ALLOC,
+        allocators::page_alloc::page_allocator,
         paging::{kernel_page_table::kernel_page_table, page_table::*},
         types::*,
     },
@@ -14,7 +14,7 @@ pub struct StackLayout {
 
 impl StackLayout {
     pub fn new(num_pages: usize) -> Option<Self> {
-        let stack = VirtAddr::from(PAGE_ALLOC.lock().alloc_pages(num_pages + 2)?);
+        let stack = VirtAddr::from(PhysAddr::from(page_allocator().alloc(num_pages + 2)?));
 
         kernel_page_table()
             .map(
@@ -41,8 +41,6 @@ impl Drop for StackLayout {
             .unmap(MemRange::new(self.base, self.pages * PAGE_SIZE))
             .expect("Failed to unmap stack");
 
-        PAGE_ALLOC
-            .lock()
-            .free_pages(PhysAddr::from(self.base), self.pages + 2);
+        page_allocator().free(self.base.into(), self.pages + 2);
     }
 }
