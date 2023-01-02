@@ -2,11 +2,8 @@ use crate::{
     arch::PAGE_SIZE,
     kernel::locking::spinlock::Spinlock,
     mm::{
-        allocators::page_alloc::page_allocator,
-        paging::kernel_page_table::kernel_page_table,
-        paging::page_table::{MappingType, PageTable},
-        types::*,
-        MemRange,
+        allocators::page_alloc::page_allocator, paging::kernel_page_table::kernel_page_table,
+        paging::page_table::MappingType, types::*, MemRange,
     },
 };
 

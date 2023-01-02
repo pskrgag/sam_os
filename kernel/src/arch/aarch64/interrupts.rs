@@ -2,6 +2,7 @@ use crate::drivers::irq::irq_dispatch;
 use crate::kernel::sched;
 use core::arch::{asm, global_asm};
 use core::fmt;
+use crate::kernel::syscalls::do_syscall;
 
 global_asm!(include_str!("interrupts.S"));
 global_asm!(include_str!("boot.s"));
@@ -156,4 +157,21 @@ pub extern "C" fn kern_exception_bug(esr_el1: usize, far_el1: usize, elr_el1: us
     println!("No idea how to deal with 0x{:x}", esr_el1);
 
     panic!();
+}
+
+#[no_mangle]
+pub extern "C" fn user_sync(esr_el1: usize, elr_el1: usize) {
+    println!(
+        "!!! Kernel sync from EL0    ESR_EL1 0x{:x}    ELR_EL1 {:x}",
+        esr_el1, elr_el1
+    );
+
+    panic!("Some user thread has panicked! No idea how to deal with it");
+}
+
+#[no_mangle]
+pub extern "C" fn user_syscall(x0: usize, x1: usize, x2: usize, x3: usize, x4: usize, x5: usize) -> usize {
+    println!("User syscall {}", x0);
+
+    do_syscall(x0, x1, x2, x3, x4, x5)
 }

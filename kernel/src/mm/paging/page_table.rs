@@ -156,7 +156,6 @@ impl PageTable {
         //     core::slice::from_raw_parts_mut(base_va.to_raw_mut::<u8>(), PAGE_SIZE).fill(0);
         // }
 
-        println!("PAge table base 0x{:x}", base_va.get());
         if kernel {
             new_table
                 .map(

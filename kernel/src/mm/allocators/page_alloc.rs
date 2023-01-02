@@ -3,8 +3,7 @@
 mod config;
 
 use crate::{
-    arch, arch::cpuid::Cpu, arch::PAGE_SIZE, kernel, kernel::locking::spinlock::Spinlock,
-    lib::collections::vector::Vector, mm::types::*,
+    arch, arch::cpuid::Cpu, arch::PAGE_SIZE, kernel, lib::collections::vector::Vector, mm::types::*,
 };
 use bitmaps::Bitmap;
 use lock_free_buddy_allocator::buddy_alloc::BuddyAlloc;

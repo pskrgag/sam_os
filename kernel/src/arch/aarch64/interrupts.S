@@ -25,6 +25,9 @@
 
 	stp	x0, x1, [sp, #240]
 	str	x30, [sp, #256]
+
+	// Restore clobbered regs
+	ldp	x0, x1, [sp, #0]
 .endmacro
 
 .macro RESTORE_CTX
@@ -42,8 +45,8 @@
 	ldp	x12, x13, [sp, #96]
 	ldp	x14, x15, [sp, #112]
 	ldp	x16, x17, [sp, #128]
-	ldp	x18, x29, [sp, #144]
-	ldp	x30, xzr, [sp, #160]
+	ldp	x18, x19, [sp, #144]
+	ldp	x20, x21, [sp, #160]
 	ldp	x22, x23, [sp, #176]
 	ldp	x24, x25, [sp, #192]
 	ldp	x26, x27, [sp, #208]
@@ -80,8 +83,26 @@ __exception_bug:
 	mrs	x2, ELR_EL1
 	b	kern_exception_bug
 
-// Should not reach here
-	b	.
+__user_sync64:
+	SAFE_CTX
+
+	// x1-x5 are used for syscalls
+	mrs	x6, ESR_EL1
+	lsr	x6, x6, #26
+	subs	x6, x6, #21		// 0b010101
+	bne	sync
+
+	bl	user_syscall
+	b	user_ret
+
+sync:
+	mrs	x0, ESR_EL1
+	mrs	x1, ELR_EL1
+	bl	user_sync
+
+user_ret:
+	RESTORE_CTX
+	eret
 
 .section ".text"
 .align 11
@@ -126,7 +147,7 @@ curr_el_spx_serror:      // The exception handler for a System Error
  .balign 0x80
 lower_el_aarch64_sync:   // The exception handler for a synchronous
                          // exception from a lower EL (AArch64).
-	ventry __kern_sync64
+	ventry __user_sync64
 .balign 0x80
 lower_el_aarch64_irq:    // The exception handler for an IRQ from a lower EL
                          // (AArch64).

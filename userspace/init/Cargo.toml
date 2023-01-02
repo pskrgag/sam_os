@@ -1,12 +1,13 @@
 [package]
-name = "sam_os_userspace"
+name = "sam_os_init"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+libc = { path = "../libc" }
 
 [[bin]]
 name = "init"
-path = "src/main.rs"
+path = "main.rs"

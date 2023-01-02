@@ -5,7 +5,7 @@ use core::{
     ptr::NonNull,
 };
 
-const INIT_PAGE_POOL: usize = 50;
+const INIT_PAGE_POOL: usize = 10;
 
 #[repr(C)]
 struct FfHeader {
@@ -108,7 +108,7 @@ impl BootAlloc {
             iter = (*header).next;
         }
 
-        panic!();
+        panic!("Built in pool on static excided. Consider increasing INIT_PAGE_POOL");
     }
 
     pub unsafe fn free(&mut self, data: *mut u8) {

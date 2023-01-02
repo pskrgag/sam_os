@@ -5,10 +5,7 @@ use crate::{
     lib::collections::vector::Vector,
     linker_var,
     mm::{
-        paging::{
-            kernel_page_table::kernel_page_table,
-            page_table::{MappingType, PageTable},
-        },
+        paging::{kernel_page_table::kernel_page_table, page_table::MappingType},
         types::*,
     },
 };

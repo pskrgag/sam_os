@@ -3,7 +3,7 @@ pub mod run_queue;
 
 use crate::{
     arch::{irq, regs::Context},
-    kernel::elf::{parse_elf, ElfData},
+    kernel::elf::parse_elf,
     kernel::threading::{
         thread::ThreadState,
         thread_table::{thread_table, thread_table_mut},

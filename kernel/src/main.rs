@@ -2,7 +2,6 @@
 #![no_main]
 #![feature(format_args_nl)]
 #![feature(const_trait_impl)]
-#![feature(default_alloc_error_handler)]
 #![allow(dead_code)]
 #![allow(unused_macros)]
 #![allow(special_module_name)]
@@ -26,7 +25,7 @@ mod mm;
 mod panic;
 
 use kernel::sched;
-use kernel::threading::thread_ep::{idle_thread, idle_thread1};
+use kernel::threading::thread_ep::idle_thread;
 use kernel::threading::thread_table;
 pub use lib::printf;
 

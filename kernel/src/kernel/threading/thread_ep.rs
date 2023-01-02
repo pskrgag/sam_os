@@ -11,8 +11,9 @@ global_asm!(
     ".globl user_thread_entry_point",
     "user_thread_entry_point:",
     "msr    ELR_EL1, x20",
-    "mov    x0, sp",
-    "msr    sp_el0, x0",
+    "msr    SPSel, #1",
+    "mov    sp, x19",
+    "msr    sp_el0, x21",
     "msr    spsr_el1, xzr",
     "eret",
 );

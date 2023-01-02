@@ -2,10 +2,7 @@ use crate::{
     arch,
     kernel::{locking::fake_lock::FakeLock, misc::num_pages},
     linker_var,
-    mm::paging::{
-        kernel_page_table::kernel_page_table,
-        page_table::{MappingType, PageTable},
-    },
+    mm::paging::{kernel_page_table::kernel_page_table, page_table::MappingType},
     mm::types::*,
     print, println,
 };

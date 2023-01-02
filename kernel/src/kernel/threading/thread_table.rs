@@ -3,7 +3,6 @@ use crate::{
     kernel::elf::ElfData,
     kernel::threading::{thread::Thread, ThreadRef},
     lib::ida::Ida,
-    mm::types::{MemRange, VirtAddr},
 };
 
 use qrwlock::{ReadGuard, RwLock, WriteGuard};

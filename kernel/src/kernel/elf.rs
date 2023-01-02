@@ -129,13 +129,13 @@ fn check_header(data: &mut &[u8]) -> Option<ElfHeader> {
         _ => None,
     }?;
 
-    #[allow(unaligned_references)]
-    unsafe {
-        println!(
-            "Entry point 0x{:x}",
-            (&header.e_entry as *const u64).read_unaligned()
-        );
-    }
+    // #[allow(unaligned_references)]
+    // unsafe {
+    //     println!(
+    //         "Entry point 0x{:x}",
+    //         (&header.e_entry as *const u64).read_unaligned()
+    //     );
+    // }
 
     Some(header)
 }
@@ -163,15 +163,6 @@ fn parse_program_headers(
         if pheader.p_type != PT_LOAD {
             continue;
         }
-
-        #[allow(unaligned_references)]
-        unsafe {
-            println!(
-                "Passed 0x{:x} 0x{:x}",
-                (&pheader.p_vaddr as *const u64).read_unaligned(),
-                (&pheader.p_flags as *const u32).read_unaligned()
-            )
-        };
 
         vec.push((
             MemRange::new(

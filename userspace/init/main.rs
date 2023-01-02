@@ -4,11 +4,14 @@
 
 use core::panic::PanicInfo;
 
-#[no_mangle]
-pub extern "C" fn _start(_a: isize, _b: *const *const u8) -> isize {
-    loop {}
+use libc::syscalls::write;
 
-    0
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    write("Hello from userspace");
+
+    loop {
+    }
 }
 
 #[panic_handler]

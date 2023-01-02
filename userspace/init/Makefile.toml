@@ -1,0 +1,17 @@
+[env]
+TARGET = "aarch64-unknown-none-softfloat"
+RUSTFLAGS = "-C force-frame-pointers"
+
+
+[tasks.format]
+install_crate = "rustfmt"
+command = "cargo"
+args = ["fmt", "--", "--emit=files"]
+
+[tasks.build]
+command = "cargo"
+args = ["build", "--target=${TARGET}"]
+dependencies = ["clean", "format"]
+
+[tasks.test]
+command = "echo"

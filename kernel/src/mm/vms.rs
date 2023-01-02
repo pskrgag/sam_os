@@ -1,5 +1,3 @@
-use core::num;
-
 use crate::{
     arch::{self, PAGE_SIZE},
     kernel::misc::num_pages,

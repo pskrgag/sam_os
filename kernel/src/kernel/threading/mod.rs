@@ -7,5 +7,3 @@ use qrwlock::qrwlock::RwLock;
 use thread::Thread;
 
 pub type ThreadRef = Arc<RwLock<Thread>>;
-
-// pub fn current() ->
