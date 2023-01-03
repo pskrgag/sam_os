@@ -10,8 +10,7 @@ use libc::syscalls::write;
 pub extern "C" fn _start() -> ! {
     write("Hello from userspace");
 
-    loop {
-    }
+    loop {}
 }
 
 #[panic_handler]

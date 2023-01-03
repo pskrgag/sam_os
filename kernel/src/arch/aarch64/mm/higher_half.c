@@ -14,11 +14,14 @@ extern uint64_t mmio_end;
 extern uint64_t mmio_base;
 
 extern void __attribute__((noreturn)) start_kernel(void);
+extern void __attribute__((noreturn)) cpu_reset(void);
 
 typedef uint64_t tte_t;
 
 static tte_t lvl1[512] __attribute__((aligned(4096)));
 static tte_t lvl2[512] __attribute__((aligned(4096)));
+
+extern uint64_t PAGE_TABLE_BASE;
 
 static uint64_t l1_linear_offset(void *p)
 {
@@ -89,4 +92,23 @@ __attribute__((section(".text.boot"))) void map(void)
 
 	/* Rust is smart enough to optimze out all rust code if there won't be any references */
 	start_kernel();
+}
+
+void __attribute__((section(".text.boot"))) reset(void)
+{
+	uint64_t tcr = (25UL << 16) | 25 | (2UL << 30);
+	uint64_t mair = (0b00000000 << 8) | 0b01110111;
+	uint64_t sctrl;
+
+	asm volatile ("msr TCR_EL1, %0"::"r"(tcr));
+	asm volatile ("msr MAIR_EL1, %0"::"r"(mair));
+	asm volatile ("tlbi    vmalle1is");
+	asm volatile ("mrs %0, SCTLR_EL1": "=r"(sctrl));
+	asm volatile ("msr TTBR1_EL1, %0"::"r"(PAGE_TABLE_BASE));
+
+	sctrl = ((1 << 0) | (1 << 2) | (1 << 12));
+
+	asm volatile ("msr SCTLR_EL1, %0"::"r"(sctrl));
+
+	cpu_reset();
 }

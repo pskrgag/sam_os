@@ -7,16 +7,17 @@ TARGET = aarch64-unknown-none-softfloat
 BINARY = target/$(TARGET)/debug/sam_os
 
 all:
-	RUSTFLAGS="$(RUSTFLAGS)" cargo build --target $(TARGET)
+	cd userspace/init/; cargo build --target $(TARGET) && \
+		cd ../../kernel; RUSTFLAGS="$(RUSTFLAGS)" cargo build --target $(TARGET) --features qemu
 
 test:
 	RUSTFLAGS="$(RUSTFLAGS)" cargo test --target $(TARGET) -Zbuild-std
 
 qemu:
-	qemu-system-aarch64 -d mmu,guest_errors -D test.txt -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -nographic -kernel $(BINARY)
+	~/Documents/kernel_workspace/qemu/build/qemu-system-aarch64 -d mmu,guest_errors -D test.txt -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel $(BINARY)
 
 qemu_gdb:
-	~/Documents/kernel_workspace/qemu/build/qemu-system-aarch64 -machine virt -m 2048M -cpu cortex-a53 -nographic -kernel $(BINARY) -s -S
+	~/Documents/kernel_workspace/qemu/build/qemu-system-aarch64 -machine virt -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel $(BINARY) -s -S
 
 clean:
 	cargo clean

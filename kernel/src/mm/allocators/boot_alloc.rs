@@ -70,8 +70,6 @@ impl BootAlloc {
         let mut iter;
         let size = layout.size();
 
-        println!("Alloc {}", size);
-
         iter = NonNull::new(unsafe {
             core::mem::transmute::<_, *mut FfHeader>(self.pool.as_mut_ptr())
         });

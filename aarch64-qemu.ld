@@ -59,6 +59,14 @@ SECTIONS
         ebss = .;
     }
 
+    .data.percpu ALIGN(4096):
+    {
+        sdatapercpu = .;
+        *(.percpu.data)
+        . = ALIGN(PAGE_SIZE); /* Align up to page size */
+        edatapercpu = .;
+    }
+
     . = . + 0x100000;
     . = ALIGN(16);
     __STACK_START = .; /* Stack grows from here towards 0x0. */

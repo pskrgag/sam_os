@@ -193,6 +193,10 @@ impl PageTable {
             None
         };
 
+        // if v.size() == 0 {
+        //     return Ok(());
+        // }
+
         /* Lvl1 loop */
         while {
             let mut table_block_1 = self.lvl1();

@@ -1,8 +1,8 @@
 use crate::drivers::irq::irq_dispatch;
 use crate::kernel::sched;
+use crate::kernel::syscalls::do_syscall;
 use core::arch::{asm, global_asm};
 use core::fmt;
-use crate::kernel::syscalls::do_syscall;
 
 global_asm!(include_str!("interrupts.S"));
 global_asm!(include_str!("boot.s"));
@@ -115,7 +115,9 @@ impl fmt::Display for ExceptionCtx {
 #[inline]
 pub fn set_up_vbar() {
     unsafe {
-        asm!("msr VBAR_EL1, {}", in(reg) &exteption_vector);
+        asm!("msr VBAR_EL1, {}",
+             "isb",
+            in(reg) &exteption_vector);
     }
 }
 
@@ -170,7 +172,14 @@ pub extern "C" fn user_sync(esr_el1: usize, elr_el1: usize) {
 }
 
 #[no_mangle]
-pub extern "C" fn user_syscall(x0: usize, x1: usize, x2: usize, x3: usize, x4: usize, x5: usize) -> usize {
+pub extern "C" fn user_syscall(
+    x0: usize,
+    x1: usize,
+    x2: usize,
+    x3: usize,
+    x4: usize,
+    x5: usize,
+) -> usize {
     println!("User syscall {}", x0);
 
     do_syscall(x0, x1, x2, x3, x4, x5)

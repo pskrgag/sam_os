@@ -4,7 +4,6 @@ use crate::{
     linker_var,
     mm::paging::{kernel_page_table::kernel_page_table, page_table::MappingType},
     mm::types::*,
-    print, println,
 };
 
 extern "C" {
@@ -67,9 +66,4 @@ pub fn init() {
     let new_allocator = MmioAllocator::new();
 
     *MMIO_ALLOCATOR.get() = new_allocator;
-
-    println!(
-        "Intialized mmio allocator {}",
-        MMIO_ALLOCATOR.get().free_pages()
-    );
 }

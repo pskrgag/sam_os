@@ -7,6 +7,3 @@ env = { "RUSTFLAGS" = "${RUSTFLAGS}" }
 command = "cargo"
 args = ["build", "--target=${TARGET}"]
 
-
-[tasks.qemu]
-command = "echo a"

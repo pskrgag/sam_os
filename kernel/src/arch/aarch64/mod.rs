@@ -11,6 +11,7 @@ pub mod interrupts;
 pub mod irq;
 pub mod mm;
 pub mod regs;
+pub mod smp;
 
 use crate::kernel::misc::genmask;
 use core::mem;

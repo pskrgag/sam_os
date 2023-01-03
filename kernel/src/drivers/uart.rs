@@ -1,7 +1,3 @@
-// FIXME one day...
-#[path = "../arch/aarch64/qemu/config.rs"]
-mod config;
-
 use crate::drivers::mmio_mapper::MMIO_ALLOCATOR;
 use crate::mm::types::*;
 use core::{fmt, ptr};

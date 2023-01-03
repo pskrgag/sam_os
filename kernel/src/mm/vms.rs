@@ -59,6 +59,7 @@ impl Vms {
                     )
                     .ok()?;
 
+                #[allow(unused_unsafe)]
                 unsafe {
                     use crate::kernel::misc::page_offset;
 

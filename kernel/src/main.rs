@@ -9,6 +9,7 @@
 #![feature(const_mut_refs)]
 #![feature(linked_list_cursors)]
 #![feature(allocator_api)]
+#![feature(naked_functions)]
 
 extern crate alloc;
 #[macro_use]
@@ -24,6 +25,7 @@ mod drivers;
 mod mm;
 mod panic;
 
+use arch::smp::bring_up_cpus;
 use kernel::sched;
 use kernel::threading::thread_ep::idle_thread;
 use kernel::threading::thread_table;
@@ -48,6 +50,8 @@ extern "C" fn start_kernel() -> ! {
 
     mm::allocators::slab::init_kernel_slabs();
 
+    kernel::percpu::init_percpu();
+    println!("Per cpu {}", kernel::percpu::tmp());
     drivers::init();
 
     let mut table = thread_table::thread_table_mut();
@@ -58,6 +62,15 @@ extern "C" fn start_kernel() -> ! {
     drop(table);
 
     sched::init_userspace();
+
+    bring_up_cpus();
+
+    loop {}
+}
+
+#[no_mangle]
+extern "C" fn cpu_reset() -> ! {
+    println!("Cpu {} started!", arch::cpuid::current_cpu());
 
     loop {}
 }

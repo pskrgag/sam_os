@@ -56,7 +56,5 @@ pub fn nop() {
 }
 
 pub fn write(data: &str) -> usize {
-    unsafe {
-        syscall2(0, data.as_ptr() as usize, data.len())
-    }
+    unsafe { syscall2(0, data.as_ptr() as usize, data.len()) }
 }
