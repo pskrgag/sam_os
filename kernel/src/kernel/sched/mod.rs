@@ -2,15 +2,15 @@ pub mod entity;
 pub mod run_queue;
 
 use crate::{
-    arch::{irq, regs::Context, self},
+    arch::{self, irq, regs::Context},
     kernel::elf::parse_elf,
+    kernel::threading::thread_ep::idle_thread,
+    kernel::threading::thread_table,
     kernel::threading::{
         thread::ThreadState,
         thread_table::{thread_table, thread_table_mut},
         ThreadRef,
     },
-    kernel::threading::thread_ep::idle_thread,
-    kernel::threading::thread_table,
 };
 
 use run_queue::RUN_QUEUE;
@@ -26,10 +26,7 @@ static INIT: &[u8] = include_bytes!("../../../../target/aarch64-unknown-none-sof
 // On cpu reset on non-boot cpus we need any sp, so we
 // steal sp from per-cpu idle thread
 #[no_mangle]
-pub static mut IDLE_THREAD_STACK: [usize; 2] = [
-    0,
-    0,
-];
+pub static mut IDLE_THREAD_STACK: [usize; 2] = [0, 0];
 
 #[inline]
 pub fn current() -> Option<ThreadRef> {

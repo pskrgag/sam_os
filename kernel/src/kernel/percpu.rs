@@ -110,13 +110,11 @@ macro_rules! percpu_mut {
 // TODO: preemption
 impl<T> PerCpu<T> {
     pub const fn new(data: T) -> Self {
-        Self {
-            data: data,
-        }
+        Self { data: data }
     }
 
     pub fn per_cpu_var_get(&self) -> &'static T {
-        percpu!(self.data) 
+        percpu!(self.data)
     }
 
     // SAFETY: caller should know what he is doing, percpu vars are expected to be touched

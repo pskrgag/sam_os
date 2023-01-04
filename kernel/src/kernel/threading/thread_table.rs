@@ -54,7 +54,7 @@ impl ThreadTable {
         name: &str,
         func: fn(T) -> Option<()>,
         arg: T,
-        cpu: usize
+        cpu: usize,
     ) -> Option<ThreadRef> {
         let new_id: u16 = self.id_alloc.alloc()?.try_into().unwrap();
         assert!(self

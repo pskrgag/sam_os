@@ -1,8 +1,8 @@
 use crate::kernel::{
     locking::fake_lock::FakeLock, sched::entity::SchedEntity, threading::ThreadRef,
 };
-use alloc::collections::linked_list::LinkedList;
 use crate::percpu_global;
+use alloc::collections::linked_list::LinkedList;
 
 pub struct RunQueue {
     list: LinkedList<SchedEntity>,

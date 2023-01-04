@@ -17,7 +17,9 @@ extern "C" {
 macro_rules! linker_var {
     ($a:expr) => {{
         #[allow(unused_unsafe)]
-        unsafe { &$a as *const usize as usize }
+        unsafe {
+            &$a as *const usize as usize
+        }
     }};
 }
 

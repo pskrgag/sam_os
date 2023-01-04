@@ -6,8 +6,6 @@ use crate::{
     drivers::mmio_mapper::MMIO_ALLOCATOR, kernel::locking::spinlock::Spinlock, mm::types::*,
 };
 
-use core::arch::asm;
-
 const GICD_CTLR: usize = 0x0;
 const GICC_CTLR: usize = 0x0;
 
@@ -54,9 +52,6 @@ const IPRIORITY_BITS: u32 = 8;
 const ICFGR_SIZE: u32 = 16;
 const ICFGR_BITS: u32 = 2;
 
-// FIXME one day...
-use crate::{print, println};
-
 struct GICC {
     base: VirtAddr,
 }
@@ -71,6 +66,7 @@ pub struct Gic {
     dist: GICD,
 }
 
+// TODO: Should it be per-cpu locked?
 pub static GIC: Spinlock<Gic> = Spinlock::new(Gic::new());
 
 fn write_to_reg<T>(base: VirtAddr, offset: usize, val: T) {
@@ -207,10 +203,6 @@ impl Gic {
 
         self.cpu.init();
         self.dist.init();
-
-        unsafe {
-            asm!("msr daifclr, #2");
-        }
 
         Some(())
     }

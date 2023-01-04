@@ -9,6 +9,7 @@ pub fn init(msec: usize) {
     unsafe {
         asm!("mov x0, #1");
         asm!("msr CNTP_CTL_EL0, x0");
+        crate::arch::irq::enable_all();
     }
 
     irq::register_handler(30, timer_dispatch);
