@@ -131,6 +131,7 @@ impl GICD {
         let offset = intnum >> IPRIORITYR_INTERRUPT_SHIFT;
         let value = read_from_reg::<u32>(self.base, (IPRIORITYR >> 2) + offset as usize)
             & !(IPRIORITYR_VALUE_MASK << shift);
+
         write_to_reg::<u32>(
             self.base,
             (IPRIORITYR >> 2) + offset as usize,
@@ -143,10 +144,11 @@ impl GICD {
         let offset = intnum >> ITARGETSR_INTERRUPT_SHIFT;
         let value = read_from_reg::<u32>(self.base, (ITARGETSR >> 2) + offset as usize)
             & !(ITARGETSR_VALUE_MASK << shift);
+
         write_to_reg::<u32>(
             self.base,
             (ITARGETSR >> 2) + offset as usize,
-            value | core << shift,
+            value | (1 << core) << 16,
         );
     }
 
@@ -155,6 +157,7 @@ impl GICD {
         let offset = intnum >> ICFGR_INTERRUPT_SHIFT;
         let value = read_from_reg::<u32>(self.base, (ICFGR >> 2) + offset as usize)
             & !(ICFGR_VALUE_MASK << shift);
+
         write_to_reg::<u32>(
             self.base,
             (ICFGR >> 2) + offset as usize,
@@ -218,6 +221,12 @@ impl Gic {
         self.dist.clear_interrupt(num);
         self.dist.set_interrupt_config(num, 2);
         self.dist.set_interrupt(num);
+    }
+
+    pub fn init_secondary(&mut self, irq: u32, cpu: u32) {
+        self.cpu.init();
+        self.dist.set_interrupt(irq);
+        self.dist.set_interrupt_core(irq, cpu);
     }
 
     pub fn clear_interrupt(&mut self, irq: u32) {

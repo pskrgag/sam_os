@@ -28,6 +28,9 @@ pub const TCR_SZ_SHIFT: u64 = 39;
 
 pub const KERNEL_AS_END: usize = usize::MAX;
 
+// TODO: dtb
+pub const NUM_CPUS: usize = 2;
+
 pub fn kernel_as_start() -> usize {
     genmask(63, 64 - 39)
 }

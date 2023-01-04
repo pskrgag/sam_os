@@ -31,6 +31,12 @@ pub fn register_handler(irq: u32, func: fn(u32)) {
     IRQS.lock().push(handler);
 }
 
+pub fn init_secondary(irq: u32) {
+    use crate::arch::cpuid::current_cpu;
+
+    GIC.lock().init_secondary(irq, current_cpu() as u32);
+}
+
 pub fn irq_dispatch() {
     let mut gic = GIC.lock();
     let irqs = IRQS.lock();

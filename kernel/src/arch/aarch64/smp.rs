@@ -2,7 +2,7 @@ use crate::mm::types::{PhysAddr, VirtAddr};
 use core::arch::asm;
 
 extern "C" {
-    fn reset();
+    fn __reset();
 }
 
 // x1 -- cpu to turn on
@@ -20,10 +20,9 @@ pub unsafe fn boot_cpu(num: usize, ep: usize) {
 pub fn bring_up_cpus() {
     unsafe {
         for i in 1..2 {
-            println!("Booting cpu: 0x{:x}", reset as *const u8 as usize);
             boot_cpu(
                 i,
-                PhysAddr::from(VirtAddr::from(reset as *const u8 as usize)).get(),
+                PhysAddr::from(VirtAddr::from(__reset as *const u8 as usize)).get(),
             );
         }
     }

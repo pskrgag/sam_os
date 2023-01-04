@@ -14,6 +14,17 @@ pub fn init(msec: usize) {
     irq::register_handler(30, timer_dispatch);
 }
 
+pub fn init_secondary(msec: usize) {
+    reprogram(msec);
+
+    unsafe {
+        asm!("mov x0, #1");
+        asm!("msr CNTP_CTL_EL0, x0");
+    }
+
+    irq::init_secondary(30);
+}
+
 pub fn reprogram(msec: usize) {
     let mut cur_freq: usize;
 

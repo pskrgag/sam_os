@@ -21,8 +21,6 @@ typedef uint64_t tte_t;
 static tte_t lvl1[512] __attribute__((aligned(4096)));
 static tte_t lvl2[512] __attribute__((aligned(4096)));
 
-extern uint64_t PAGE_TABLE_BASE;
-
 static uint64_t l1_linear_offset(void *p)
 {
 	uint64_t va = (uint64_t) p;
@@ -99,16 +97,19 @@ void __attribute__((section(".text.boot"))) reset(void)
 	uint64_t tcr = (25UL << 16) | 25 | (2UL << 30);
 	uint64_t mair = (0b00000000 << 8) | 0b01110111;
 	uint64_t sctrl;
+	void (*rust_reset)(void) = (void *) (&cpu_reset);
+	uint64_t ttbr_el1 = ((uint64_t) (void *) &lvl1);
 
+	asm volatile ("msr TTBR0_EL1, %0"::"r"(ttbr_el1));
 	asm volatile ("msr TCR_EL1, %0"::"r"(tcr));
 	asm volatile ("msr MAIR_EL1, %0"::"r"(mair));
 	asm volatile ("tlbi    vmalle1is");
 	asm volatile ("mrs %0, SCTLR_EL1": "=r"(sctrl));
-	asm volatile ("msr TTBR1_EL1, %0"::"r"(PAGE_TABLE_BASE));
 
 	sctrl = ((1 << 0) | (1 << 2) | (1 << 12));
 
 	asm volatile ("msr SCTLR_EL1, %0"::"r"(sctrl));
+	asm volatile ("br	%0"::"r"(rust_reset));
 
 	cpu_reset();
 }

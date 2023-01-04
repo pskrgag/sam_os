@@ -44,7 +44,34 @@ impl ThreadTable {
         new_thread.spawn(func, arg);
 
         drop(new_thread);
-        RUN_QUEUE.get().add(thread);
+        RUN_QUEUE.per_cpu_var_get().get().add(thread);
+
+        self.thread_by_id(new_id)
+    }
+
+    pub fn new_idle_thread<T>(
+        &mut self,
+        name: &str,
+        func: fn(T) -> Option<()>,
+        arg: T,
+        cpu: usize
+    ) -> Option<ThreadRef> {
+        let new_id: u16 = self.id_alloc.alloc()?.try_into().unwrap();
+        assert!(self
+            .table
+            .insert(new_id, Arc::new(RwLock::new(Thread::new(name, new_id))))
+            .is_none());
+        let thread = self.thread_by_id(new_id).unwrap();
+        let mut new_thread = thread.write();
+
+        new_thread.set_vms(false);
+        new_thread.spawn(func, arg);
+
+        drop(new_thread);
+
+        unsafe {
+            RUN_QUEUE.cpu(cpu).get().add(thread);
+        }
 
         self.thread_by_id(new_id)
     }
@@ -75,7 +102,7 @@ impl ThreadTable {
         new_thread.spawn_user(vma.ep);
         drop(new_thread);
 
-        RUN_QUEUE.get().add(thread);
+        RUN_QUEUE.per_cpu_var_get().get().add(thread);
 
         self.thread_by_id(new_id)
     }

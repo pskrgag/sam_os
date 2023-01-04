@@ -25,10 +25,7 @@ mod drivers;
 mod mm;
 mod panic;
 
-use arch::smp::bring_up_cpus;
 use kernel::sched;
-use kernel::threading::thread_ep::idle_thread;
-use kernel::threading::thread_table;
 pub use lib::printf;
 
 /* At this point we have:
@@ -42,28 +39,20 @@ extern "C" fn start_kernel() -> ! {
     println!("Starting kernel...");
     arch::interrupts::set_up_vbar();
 
-    mm::allocators::boot_alloc::init();
-    mm::allocators::page_alloc::init();
+    // allocators + paging
+    mm::init();
 
-    mm::paging::kernel_page_table::init();
-    mm::sections::remap_kernel();
-
-    mm::allocators::slab::init_kernel_slabs();
+    // --- Kernel is fine grained mapped ---
+    // all wild accesses will cause exception
 
     kernel::percpu::init_percpu();
-    println!("Per cpu {}", kernel::percpu::tmp());
+
     drivers::init();
 
-    let mut table = thread_table::thread_table_mut();
-    table
-        .new_kernel_thread("kernel thread", idle_thread, ())
-        .expect("Failed to create kernel thread");
-
-    drop(table);
-
+    sched::init_idle();
     sched::init_userspace();
 
-    bring_up_cpus();
+    arch::smp::bring_up_cpus();
 
     loop {}
 }
@@ -71,6 +60,19 @@ extern "C" fn start_kernel() -> ! {
 #[no_mangle]
 extern "C" fn cpu_reset() -> ! {
     println!("Cpu {} started!", arch::cpuid::current_cpu());
+
+    arch::interrupts::set_up_vbar();
+
+    unsafe {
+        arch::irq::enable_all();
+    }
+
+    drivers::timer::init_secondary(1000);
+
+    /*
+     * Runqueue for current cpu should already contain
+     * idle thread, so just loop until timer irq
+     */
 
     loop {}
 }

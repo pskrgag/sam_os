@@ -61,6 +61,14 @@ impl Thread {
         }
     }
 
+    pub fn stack_head(&self) -> Option<VirtAddr> {
+        if let Some(s) = &self.stack {
+            Some(s.stack_head())
+        } else {
+            None
+        }
+    }
+
     pub fn set_vms(&mut self, user: bool) -> Option<()> {
         match user {
             false => {

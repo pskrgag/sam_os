@@ -17,3 +17,11 @@ pub fn phys_to_virt_linear(phys: PhysAddr) -> VirtAddr {
 pub fn virt_to_phys_linear(virt: VirtAddr) -> PhysAddr {
     PhysAddr::from(virt.get() - kernel_offset())
 }
+
+pub fn init() {
+    allocators::boot_alloc::init();
+    allocators::page_alloc::init();
+    paging::kernel_page_table::init();
+    sections::remap_kernel();
+    allocators::slab::init_kernel_slabs();
+}

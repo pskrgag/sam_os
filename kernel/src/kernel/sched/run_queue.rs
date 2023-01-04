@@ -2,13 +2,16 @@ use crate::kernel::{
     locking::fake_lock::FakeLock, sched::entity::SchedEntity, threading::ThreadRef,
 };
 use alloc::collections::linked_list::LinkedList;
+use crate::percpu_global;
 
 pub struct RunQueue {
     list: LinkedList<SchedEntity>,
     cur: Option<u16>,
 }
 
-pub static RUN_QUEUE: FakeLock<RunQueue> = FakeLock::new(RunQueue::new());
+percpu_global!(
+    pub static RUN_QUEUE: FakeLock<RunQueue> = FakeLock::new(RunQueue::new());
+);
 
 impl RunQueue {
     pub const fn new() -> Self {
