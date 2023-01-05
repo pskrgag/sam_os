@@ -14,6 +14,7 @@ pub struct Spinlock<T> {
 pub struct SpinlockGuard<'a, T: 'a> {
     lock: &'a Spinlock<T>,
     data: &'a mut T,
+    flags: Option<usize>,
 }
 
 impl<T> Spinlock<T> {
@@ -35,11 +36,43 @@ impl<T> Spinlock<T> {
         SpinlockGuard {
             lock: &self,
             data: unsafe { &mut *self.val.get() },
+            flags: None,
+        }
+    }
+
+    pub fn lock_irqsave(&self) -> SpinlockGuard<T> {
+        use crate::arch::irq::{get_flags, disable_all};
+        let my = self.next.fetch_add(1, Ordering::Acquire);
+
+        while self.current.load(Ordering::Relaxed) != my {
+            unsafe { asm!("yield") };
+        }
+
+        let flags = Some(get_flags());
+
+        unsafe {
+            disable_all();
+        }
+
+        SpinlockGuard {
+            lock: &self,
+            data: unsafe { &mut *self.val.get() },
+            flags: flags,
         }
     }
 
     pub fn unlock(&self) {
         self.current.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn unlock_irqrestore(&self, flags: usize) {
+        use crate::arch::irq::set_flags;
+
+        unsafe {
+            set_flags(flags);
+        }
+
+        self.unlock();
     }
 }
 
@@ -58,7 +91,11 @@ impl<'a, T> DerefMut for SpinlockGuard<'a, T> {
 
 impl<'a, T> Drop for SpinlockGuard<'a, T> {
     fn drop(&mut self) {
-        self.lock.unlock();
+        if let Some(f) = self.flags {
+            self.lock.unlock_irqrestore(f);
+        } else {
+            self.lock.unlock();
+        }
     }
 }
 

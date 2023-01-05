@@ -4,6 +4,7 @@ pub mod misc;
 pub mod sched;
 pub mod syscalls;
 pub mod threading;
+pub mod timer;
 
 #[macro_use]
 pub mod percpu;

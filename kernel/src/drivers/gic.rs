@@ -3,7 +3,7 @@
 mod config;
 
 use crate::{
-    drivers::mmio_mapper::MMIO_ALLOCATOR, kernel::locking::spinlock::Spinlock, mm::types::*,
+    drivers::mmio_mapper::MMIO_ALLOCATOR, kernel::locking::fake_lock::FakeLock, mm::types::*,
 };
 
 const GICD_CTLR: usize = 0x0;
@@ -67,7 +67,7 @@ pub struct Gic {
 }
 
 // TODO: Should it be per-cpu locked?
-pub static GIC: Spinlock<Gic> = Spinlock::new(Gic::new());
+pub static GIC: FakeLock<Gic> = FakeLock::new(Gic::new());
 
 fn write_to_reg<T>(base: VirtAddr, offset: usize, val: T) {
     unsafe {
@@ -182,6 +182,7 @@ impl GICD {
             self.base,
             (ICPENDR >> 2) + (intnum as usize >> ICPENDR_SHIFT),
         );
+
         value & (1 << (intnum & ICPENDR_MASK)) != 0
     }
 }
@@ -207,18 +208,27 @@ impl Gic {
         Some(())
     }
 
+    // TODO: figure out tf is going on here
+    //
+    // For record: uncommenting 4 these lines will lead
+    // to weird behaviour:
+    //
+    // CPU0 will be able to clear pending state on CPU1 causing
+    // generic timer stop on CPU1
     pub fn enable_irq(&mut self, num: u32) {
-        self.dist.set_priotity(num, 0);
-        self.dist.set_interrupt_core(num, 0);
-        self.dist.clear_interrupt(num);
-        self.dist.set_interrupt_config(num, 2);
+        // self.dist.set_priotity(num, 0);
+        // self.dist.set_interrupt_core(num, 0);
+        // self.dist.clear_interrupt(num);
+        // self.dist.set_interrupt_config(num, 2);
         self.dist.set_interrupt(num);
     }
 
-    pub fn init_secondary(&mut self, irq: u32, cpu: u32) {
+    pub fn init_secondary(&mut self, irq: u32, _cpu: u32) {
         self.cpu.init();
+        // self.dist.set_priotity(irq, 0);
+        // self.dist.set_interrupt_core(irq, cpu);
+        // self.dist.set_interrupt_config(irq, 2);
         self.dist.set_interrupt(irq);
-        self.dist.set_interrupt_core(irq, cpu);
     }
 
     pub fn clear_interrupt(&mut self, irq: u32) {
@@ -231,7 +241,7 @@ impl Gic {
 }
 
 pub fn init() {
-    GIC.lock().init().expect("Failed to initalize GIC");
+    GIC.get().init().expect("Failed to initalize GIC");
 
     println!("Gic initalized");
 }

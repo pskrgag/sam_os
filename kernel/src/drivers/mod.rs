@@ -8,6 +8,6 @@ pub mod uart;
 pub fn init() {
     mmio_mapper::init();
     gic::init();
-    timer::init(1000);
+    timer::init();
     uart::remap();
 }

@@ -47,10 +47,11 @@ extern "C" fn start_kernel() -> ! {
 
     kernel::percpu::init_percpu();
 
-    drivers::init();
-
     sched::init_idle();
     sched::init_userspace();
+
+    // -- Scheduler must be initialized at that point
+    drivers::init();
 
     arch::smp::bring_up_cpus();
 
@@ -67,7 +68,7 @@ extern "C" fn cpu_reset() -> ! {
         arch::irq::enable_all();
     }
 
-    drivers::timer::init_secondary(1000);
+    drivers::timer::init_secondary();
 
     /*
      * Runqueue for current cpu should already contain

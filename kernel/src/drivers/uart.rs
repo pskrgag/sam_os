@@ -1,12 +1,13 @@
 use crate::drivers::mmio_mapper::MMIO_ALLOCATOR;
 use crate::mm::types::*;
 use core::{fmt, ptr};
+use crate::kernel::locking::spinlock::Spinlock;
 
 pub struct Uart;
 
 static mut UART_PTR: *mut u8 = 0x09000000 as *mut u8;
+pub static UART_LOCK: Spinlock<()> = Spinlock::new(());
 
-/* ToDo add time stamp */
 pub fn uart_write(str: &[u8]) {
     for i in str {
         unsafe {
