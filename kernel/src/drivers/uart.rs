@@ -1,7 +1,7 @@
 use crate::drivers::mmio_mapper::MMIO_ALLOCATOR;
+use crate::kernel::locking::spinlock::Spinlock;
 use crate::mm::types::*;
 use core::{fmt, ptr};
-use crate::kernel::locking::spinlock::Spinlock;
 
 pub struct Uart;
 

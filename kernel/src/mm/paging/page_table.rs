@@ -188,14 +188,18 @@ impl PageTable {
         let mut lvl1_sz = v.size();
         let mut va = v.start();
         let pa = if let Some(range) = p {
+            assert!(range.size() == v.size());
+            assert!(range.start().is_page_aligned());
             Some(range.start())
         } else {
             None
         };
 
-        // if v.size() == 0 {
-        //     return Ok(());
-        // }
+        assert!(v.start().is_page_aligned());
+
+        if v.size() == 0 {
+            return Ok(());
+        }
 
         /* Lvl1 loop */
         while {

@@ -6,8 +6,6 @@ pub struct Timer<'a, T> {
     data: Option<&'a T>,
 }
 
-
-
 impl<'a, T> Timer<'a, T> {
     pub fn new(cb: CallbackFn<T>) -> Self {
         Self {

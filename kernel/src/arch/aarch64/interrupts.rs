@@ -140,7 +140,7 @@ pub extern "C" fn kern_sync64(
 
 #[no_mangle]
 pub extern "C" fn kern_irq() {
-    println!("!!! Kernel irq");
+    //println!("!!! Kernel irq");
 
     irq_dispatch();
 
@@ -164,7 +164,7 @@ pub extern "C" fn kern_exception_bug(esr_el1: usize, far_el1: usize, elr_el1: us
 #[no_mangle]
 pub extern "C" fn user_sync(esr_el1: usize, elr_el1: usize) {
     println!(
-        "!!! Kernel sync from EL0    ESR_EL1 0x{:x}    ELR_EL1 {:x}",
+        "!!! Kernel sync from EL0    ESR_EL1 0x{:x}    ELR_EL1 0x{:x}",
         esr_el1, elr_el1
     );
 

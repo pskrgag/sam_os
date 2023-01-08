@@ -41,7 +41,6 @@ impl Vms {
         let pa: PhysAddr = page_allocator().alloc(num_pages)?.into();
         let range = MemRange::new(*data.0.start().round_down_page(), data.0.size());
 
-
         if let Some(ttbr0) = &mut self.ttbr0 {
             ttbr0
                 .map(

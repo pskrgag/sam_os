@@ -14,7 +14,7 @@ test:
 	RUSTFLAGS="$(RUSTFLAGS)" cargo test --target $(TARGET) -Zbuild-std
 
 qemu:
-	~/Documents/kernel_workspace/qemu/build/qemu-system-aarch64 -d mmu,guest_errors -D test.txt -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel $(BINARY)
+	qemu-system-aarch64 -d mmu,guest_errors -D test.txt -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel $(BINARY)
 
 qemu_gdb:
 	~/Documents/kernel_workspace/qemu/build/qemu-system-aarch64 -machine virt -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel $(BINARY) -s -S

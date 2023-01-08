@@ -1,7 +1,4 @@
-use crate::mm::{
-    paging::page_table::MappingType,
-    types::*,
-};
+use crate::mm::{paging::page_table::MappingType, types::*};
 use alloc::collections::LinkedList;
 
 struct Vma {

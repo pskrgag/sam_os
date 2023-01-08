@@ -1,7 +1,10 @@
 use crate::{
     arch::{self, regs::Context},
     mm::allocators::stack_alloc::StackLayout,
-    mm::{types::{VirtAddr, Address}, vms::Vms},
+    mm::{
+        types::{Address, VirtAddr},
+        vms::Vms,
+    },
 };
 use alloc::{boxed::Box, string::String, sync::Arc};
 
@@ -11,6 +14,8 @@ extern "C" {
     fn kernel_thread_entry_point();
     fn user_thread_entry_point();
 }
+
+const RR_TICKS: usize = 10;
 
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum ThreadState {
@@ -35,6 +40,7 @@ pub struct Thread {
     vms: Arc<RwLock<Vms>>,
     stack: Option<StackLayout>,
     kind: ThreadType,
+    ticks: usize,
 }
 
 lazy_static! {
@@ -58,6 +64,7 @@ impl Thread {
             arch_ctx: Context::default(),
             stack: None,
             kind: ThreadType::Undef,
+            ticks: RR_TICKS,
         }
     }
 
@@ -134,6 +141,15 @@ impl Thread {
         self.stack = Some(stack);
 
         self.state = ThreadState::Running;
+    }
+
+    pub fn tick(&mut self) {
+        self.ticks -= 1;
+
+        if self.ticks == 0 {
+            self.state = ThreadState::NeedResched;
+            self.ticks = RR_TICKS;
+        }
     }
 
     pub fn set_state(&mut self, state: ThreadState) {

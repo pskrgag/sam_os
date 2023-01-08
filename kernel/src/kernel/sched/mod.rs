@@ -36,14 +36,12 @@ pub fn current() -> Option<ThreadRef> {
 
 pub unsafe fn run() {
     let rq = RUN_QUEUE.per_cpu_var_get().get();
-    let cur = current();
-    let next = rq.pop();
 
-    if next.is_none() {
+    if rq.empty() {
         return;
     }
 
-    let next = next.unwrap();
+    let cur = current();
 
     if let Some(c) = cur {
         let mut cur = c.write();
@@ -52,18 +50,19 @@ pub unsafe fn run() {
             return;
         }
 
-        println!(
-            "Switching to {} --> {}",
-            cur.id(),
-            next.thread().read().id()
-        );
+        let next = rq.pop().unwrap();
 
-        let mut next = next.thread().write();
+        println!("Switching to {} --> {}", cur.id(), next.read().id());
+
+        let mut next = next.write();
 
         let ctx = cur.ctx_mut() as *mut _;
         let ctx_next = next.ctx_mut() as *const _;
 
         drop(cur);
+
+        next.set_state(ThreadState::Running);
+
         drop(next);
 
         rq.add(c);
@@ -73,10 +72,17 @@ pub unsafe fn run() {
         irq::disable_all();
     } else {
         let mut ctx = Context::default(); // tmp storage
-        let next = next.thread().write().ctx_mut() as *const _;
+        let next = rq.pop().unwrap();
+        let mut next = next.write();
+
+        next.set_state(ThreadState::Running);
+
+        let next_ctx = next.ctx_mut() as *const _;
+
+        drop(next);
 
         irq::enable_all();
-        switch_to(&mut ctx as *mut _, next);
+        switch_to(&mut ctx as *mut _, next_ctx);
         irq::disable_all();
     }
 }

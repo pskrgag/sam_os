@@ -1,6 +1,5 @@
 use crate::drivers::irq;
 use crate::kernel::sched::current;
-use crate::kernel::threading::thread::ThreadState;
 use core::arch::asm;
 
 pub fn init() {
@@ -40,7 +39,7 @@ pub fn reprogram() {
 
 fn timer_dispatch(_: u32) {
     if let Some(cur) = current() {
-        cur.write().set_state(ThreadState::NeedResched);
+        cur.write().tick();
     }
 
     unsafe {
