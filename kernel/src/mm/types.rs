@@ -90,7 +90,7 @@ impl From<PhysAddr> for VirtAddr {
 
 impl From<VirtAddr> for PhysAddr {
     fn from(addr: VirtAddr) -> Self {
-        Self(addr.get() - arch::PHYS_OFFSET)
+        Self(addr.bits() - arch::PHYS_OFFSET)
     }
 }
 
@@ -127,6 +127,8 @@ impl Add<usize> for VirtAddr {
 }
 
 impl PhysAddr {
+    // We need get() to be const in some cases.
+    // so we can't remove it
     pub const fn get(&self) -> usize {
         self.0
     }
@@ -137,10 +139,6 @@ impl PhysAddr {
 
     pub const fn new(addr: usize) -> Self {
         Self(addr)
-    }
-
-    pub fn add(&mut self, add: usize) {
-        self.0 += add;
     }
 }
 
@@ -159,10 +157,6 @@ impl VirtAddr {
         Self(ptr)
     }
 
-    pub const fn get(&self) -> usize {
-        self.0
-    }
-
     pub fn from_raw<T>(ptr: *const T) -> Self {
         Self(ptr as usize)
     }
@@ -174,20 +168,64 @@ impl VirtAddr {
     pub fn to_raw_mut<T>(&self) -> *mut T {
         self.0 as *mut T
     }
+}
 
-    pub fn add(&mut self, add: usize) -> &mut Self {
-        self.0 += add;
-        self
-    }
+pub trait Address {
+    fn bits(&self) -> usize;
+    fn set_bits(&mut self, bits: usize);
 
-    pub fn round_up(&mut self, to: usize) -> &mut Self {
+    fn round_up(&mut self, to: usize) -> &mut Self {
         assert!(to.is_power_of_two());
 
         let round_mask = to - 1;
-        let rounded = (self.0 | round_mask) + 1;
+        let rounded = (self.bits() | round_mask) + 1;
 
-        self.0 = rounded;
+        self.set_bits(rounded);
         self
+    }
+
+    fn add(&mut self, add: usize) -> &mut Self {
+        self.set_bits(self.bits() + add);
+        self
+    }
+
+    #[inline]
+    fn is_page_aligned(&self) -> bool {
+        self.bits() & ((1 << arch::PAGE_SHIFT) - 1) == 0
+    }
+
+    #[inline]
+    fn round_down_page(&mut self) -> &mut Self {
+        self.set_bits(self.bits() & !((1_usize << arch::PAGE_SHIFT) - 1));
+        self
+    }
+
+    fn page_offset(&self) -> usize {
+        self.bits() & ((1_usize << arch::PAGE_SHIFT) - 1)
+    }
+}
+
+impl Address for VirtAddr {
+    #[inline]
+    fn bits(&self) -> usize {
+        self.0
+    }
+
+    #[inline]
+    fn set_bits(&mut self, bits: usize) {
+        self.0 = bits;
+    }
+}
+
+impl Address for PhysAddr {
+    #[inline]
+    fn bits(&self) -> usize {
+        self.0
+    }
+
+    #[inline]
+    fn set_bits(&mut self, bits: usize) {
+        self.0 = bits;
     }
 }
 

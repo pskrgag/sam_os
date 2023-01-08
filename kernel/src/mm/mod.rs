@@ -15,7 +15,7 @@ pub fn phys_to_virt_linear(phys: PhysAddr) -> VirtAddr {
 
 #[inline]
 pub fn virt_to_phys_linear(virt: VirtAddr) -> PhysAddr {
-    PhysAddr::from(virt.get() - kernel_offset())
+    PhysAddr::from(virt.bits() - kernel_offset())
 }
 
 pub fn init() {

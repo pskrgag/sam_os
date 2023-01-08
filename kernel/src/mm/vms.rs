@@ -39,12 +39,14 @@ impl Vms {
     ) -> Option<()> {
         let num_pages = num_pages(data.0.size());
         let pa: PhysAddr = page_allocator().alloc(num_pages)?.into();
+        let range = MemRange::new(*data.0.start().round_down_page(), data.0.size());
+
 
         if let Some(ttbr0) = &mut self.ttbr0 {
             ttbr0
                 .map(
                     Some(MemRange::new(pa.into(), PAGE_SIZE * num_pages)),
-                    data.0.clone(),
+                    range.clone(),
                     data.1,
                 )
                 .ok()?;
@@ -61,12 +63,10 @@ impl Vms {
 
                 #[allow(unused_unsafe)]
                 unsafe {
-                    use crate::kernel::misc::page_offset;
-
                     core::slice::from_raw_parts_mut(
                         VirtAddr::from(pa)
                             .to_raw_mut::<u8>()
-                            .add(page_offset(data.0.start())),
+                            .add(data.0.start().page_offset()),
                         s.len(),
                     )
                     .copy_from_slice(s);

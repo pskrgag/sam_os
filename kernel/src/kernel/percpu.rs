@@ -5,7 +5,7 @@ use crate::{
     mm::{
         allocators::page_alloc::page_allocator,
         paging::{kernel_page_table::kernel_page_table, page_table::MappingType},
-        types::{MemRange, PhysAddr, VirtAddr},
+        types::*,
     },
 };
 
@@ -68,7 +68,7 @@ macro_rules! percpu {
         unsafe {
             let addr = &$var as *const _ as usize;
             let diff = addr - linker_var!(sdatapercpu);
-            let per_cpu_addr = ((PER_CPU_BASE.get_unchecked().get()
+            let per_cpu_addr = ((PER_CPU_BASE.get_unchecked().bits()
                 + current_cpu() * PER_CPU_SIZE.get_unchecked())
                 + diff) as *const u8;
 
@@ -83,7 +83,7 @@ macro_rules! percpu_n {
         unsafe {
             let addr = &$var as *const _ as usize;
             let diff = addr - linker_var!(sdatapercpu);
-            let per_cpu_addr = ((PER_CPU_BASE.get_unchecked().get()
+            let per_cpu_addr = ((PER_CPU_BASE.get_unchecked().bits()
                 + $n * PER_CPU_SIZE.get_unchecked())
                 + diff) as *const u8;
 

@@ -1,6 +1,6 @@
 use crate::mm::{
     paging::page_table::MappingType,
-    types::{MemRange, VirtAddr},
+    types::*,
 };
 use alloc::collections::LinkedList;
 
@@ -53,7 +53,7 @@ impl VmaList {
         vms_size: usize,
     ) -> Option<MemRange<VirtAddr>> {
         if let Some(back) = self.list.back() {
-            if back.range.start() + back.range.size() < start.get() + vms_size - size - 1 {
+            if back.range.start() + back.range.size() < start.bits() + vms_size - size - 1 {
                 Some(MemRange::new(
                     VirtAddr::from(back.range.start() + back.range.size()),
                     size,
