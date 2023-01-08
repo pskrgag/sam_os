@@ -18,12 +18,20 @@ macro_rules! print {
 #[macro_export]
 macro_rules! println {
     () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ({
-        let guard = crate::drivers::uart::UART_LOCK.lock_irqsave();
-        print!("[{:.10}] ", $crate::arch::time_since_start());
-        print!("[CPU{}] ", $crate::arch::cpuid::current_cpu());
-        $crate::lib::printf::_print(format_args_nl!($($arg)*));
-        drop(guard);
+    ($format:expr) => ({
+        $crate::lib::printf::_print(format_args_nl!(
+                concat!("[{:.10}] [CPU{}] ", $format),
+                $crate::arch::time_since_start(),
+                $crate::arch::cpuid::current_cpu()
+            ));
+    });
+    ($format:expr, $($arg:tt)*) => ({
+        $crate::lib::printf::_print(format_args_nl!(
+                concat!("[{:.10}] [CPU{}] ", $format),
+                $crate::arch::time_since_start(),
+                $crate::arch::cpuid::current_cpu(),
+                $($arg)*
+            ));
     })
 }
 

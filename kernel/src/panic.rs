@@ -30,7 +30,7 @@ fn on_panic(info: &PanicInfo) -> ! {
     }
 
     if let Some(s) = info.payload().downcast_ref::<&str>() {
-        println!("Reason: {s:?}");
+        println!("Reason: {:?}", s);
     }
 
     loop {}

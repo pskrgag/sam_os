@@ -5,13 +5,14 @@ use core::{fmt, ptr};
 
 pub struct Uart;
 
-static mut UART_PTR: *mut u8 = 0x09000000 as *mut u8;
-pub static UART_LOCK: Spinlock<()> = Spinlock::new(());
+static UART_PTR: Spinlock<VirtAddr> = Spinlock::new(VirtAddr::new(0x09000000));
 
 pub fn uart_write(str: &[u8]) {
+    let ptr = UART_PTR.lock_irqsave();
+
     for i in str {
         unsafe {
-            ptr::write_volatile(UART_PTR, *i);
+            ptr::write_volatile(ptr.to_raw_mut::<u8>(), *i);
         }
     }
 }
@@ -24,14 +25,13 @@ impl fmt::Write for Uart {
 }
 
 pub fn remap() {
+    let mut p = UART_PTR.lock();
     let alloc = MMIO_ALLOCATOR.get();
     let ptr = alloc
-        .iomap(PhysAddr::new(unsafe { UART_PTR as usize }), 1)
+        .iomap(PhysAddr::new(p.bits()), 1)
         .expect("Failed to remap uart");
 
-    unsafe {
-        UART_PTR = ptr.to_raw_mut::<u8>();
-    };
+    *p = ptr;
 }
 
 pub fn uart() -> Uart {
