@@ -1,4 +1,3 @@
-pub mod entity;
 pub mod run_queue;
 
 use crate::{
