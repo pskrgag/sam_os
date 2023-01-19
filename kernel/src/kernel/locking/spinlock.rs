@@ -30,7 +30,7 @@ impl<T> Spinlock<T> {
         let my = self.next.fetch_add(1, Ordering::Acquire);
 
         while self.current.load(Ordering::Relaxed) != my {
-            unsafe { asm!("yield") };
+            unsafe { asm!("wfe") };
         }
 
         SpinlockGuard {
@@ -42,16 +42,17 @@ impl<T> Spinlock<T> {
 
     pub fn lock_irqsave(&self) -> SpinlockGuard<T> {
         use crate::arch::irq::{disable_all, get_flags};
-        let my = self.next.fetch_add(1, Ordering::Acquire);
-
-        while self.current.load(Ordering::Relaxed) != my {
-            unsafe { asm!("yield") };
-        }
 
         let flags = Some(get_flags());
 
         unsafe {
             disable_all();
+        }
+
+        let my = self.next.fetch_add(1, Ordering::Acquire);
+
+        while self.current.load(Ordering::Relaxed) != my {
+            unsafe { asm!("wfe") };
         }
 
         SpinlockGuard {
@@ -62,17 +63,18 @@ impl<T> Spinlock<T> {
     }
 
     pub fn unlock(&self) {
-        self.current.fetch_add(1, Ordering::Relaxed);
+        self.current.fetch_add(1, Ordering::Release);
     }
 
     pub fn unlock_irqrestore(&self, flags: usize) {
         use crate::arch::irq::set_flags;
 
+        self.unlock();
+
         unsafe {
             set_flags(flags);
         }
 
-        self.unlock();
     }
 }
 

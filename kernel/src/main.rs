@@ -53,7 +53,9 @@ extern "C" fn start_kernel() -> ! {
     // -- Scheduler must be initialized at that point
     drivers::init();
 
-    arch::smp::bring_up_cpus();
+    kernel::object::init();
+
+    // arch::smp::bring_up_cpus();
 
     loop {}
 }

@@ -32,20 +32,19 @@ pub struct PageFlags {
     flags: usize,
 }
 
-pub struct PageTableBlock {
-    addr: VirtAddr,
-    lvl: u8,
+pub struct PageTableBlock<const LVL: usize, const N: usize> {
+    block: [PageTableEntry; N],
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct PageTableEntry(usize);
 
-pub struct PageTable {
-    base: VirtAddr,
+pub struct PageTable<const N: usize = 512> {
+    dir: PageTableBlock<0, N>,
     kernel: bool,
 }
 
-impl PageTableBlock {
+impl<const LVL: usize> PageTableBlock<LVL> {
     pub fn new(addr: VirtAddr, lvl: u8) -> Self {
         Self {
             addr: addr,

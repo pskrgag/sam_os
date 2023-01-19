@@ -20,6 +20,18 @@ pub struct Context {
     pub ttbr0: usize,
 }
 
+impl Context {
+    pub fn new_thread(ep_u: usize, ep_k: usize, u_stack: usize) -> Self {
+        let mut new: Self = unsafe { zeroed() };
+
+        new.x21 = u_stack;
+        new.lr = ep_k;
+        new.x20 = ep_u;
+
+        new
+    }
+}
+
 impl Default for Context {
     fn default() -> Self {
         let new: Self = unsafe { zeroed() };

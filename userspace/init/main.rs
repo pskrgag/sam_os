@@ -8,9 +8,13 @@ use libc::syscalls::write;
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    write("Hello from userspace");
+    loop {
+        write("Hello from userspace");
 
-    loop {}
+        for _ in 0..10_000_000 {
+            unsafe { core::arch::asm!("nop") };
+        }
+    }
 }
 
 #[panic_handler]

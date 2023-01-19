@@ -21,7 +21,7 @@ pub fn virt_to_phys_linear(virt: VirtAddr) -> PhysAddr {
 pub fn init() {
     allocators::boot_alloc::init();
     allocators::page_alloc::init();
+    allocators::slab::init_kernel_slabs();
     paging::kernel_page_table::init();
     sections::remap_kernel();
-    allocators::slab::init_kernel_slabs();
 }

@@ -6,18 +6,41 @@ use crate::{
         paging::page_table::MappingType, types::*, MemRange,
     },
 };
+use crate::kernel::misc::num_pages;
 
-use core::alloc::Layout;
+use core::{
+    alloc::Layout,
+    marker::PhantomData,
+};
 
 const MIN_SLAB_SIZE: usize = 8;
 
-pub struct SlabAllocator {
+pub trait SlabPolicy {
+    const MAX_SLABS: Option<usize> = None;
+    type ObjectType;
+}
+
+pub struct DefaultPolicy {
+    _unused: (),
+}
+
+impl SlabPolicy for DefaultPolicy {
+    type ObjectType = u8;
+}
+
+pub struct SlabAllocator<P: SlabPolicy = DefaultPolicy> {
     slab_size: usize,
     freelist: FreeList,
+    _p: PhantomData<P>,
 }
 
 struct FreeList {
-    next: Option<&'static mut FreeList>,
+    next: Option<&'static mut Slab>,
+    base: VirtAddr,
+}
+
+struct Slab {
+    next: Option<&'static mut Slab>,
 }
 
 static KERNEL_SLABS: [Spinlock<SlabAllocator>; 10] = [
@@ -33,61 +56,86 @@ static KERNEL_SLABS: [Spinlock<SlabAllocator>; 10] = [
     Spinlock::new(SlabAllocator::default()),
 ];
 
-impl SlabAllocator {
+impl<P: SlabPolicy> SlabAllocator<P> {
     pub const fn default() -> Self {
         Self {
             slab_size: 0,
             freelist: FreeList::default(),
+            _p: PhantomData,
+        }
+    }
+
+    pub fn owns(&self, ptr: *const u8) -> bool {
+        if let Some(max) = P::MAX_SLABS {
+            let va = self.freelist.base.to_raw::<u8>() as usize;
+            let full = va + num_pages(max * self.slab_size) * PAGE_SIZE;
+
+            va >= ptr as usize && (ptr as usize) < full
+        } else {
+            false
         }
     }
 
     pub fn new(size: usize) -> Option<Self> {
         Some(Self {
             slab_size: size,
-            freelist: FreeList::new(size)?,
+            freelist: FreeList::new(size, P::MAX_SLABS)?,
+            _p: PhantomData,
         })
     }
 
-    pub fn alloc(&mut self) -> Option<*mut u8> {
+    pub fn alloc(&mut self) -> Option<*mut P::ObjectType> {
         match self
             .freelist
             .alloc()
-            .map(|ptr| ptr as *mut FreeList as *mut u8)
+            .map(|ptr| ptr as *mut Slab as *mut u8)
         {
-            Some(ptr) => Some(ptr),
+            Some(ptr) => Some(ptr as *mut u8 as *mut P::ObjectType),
             None => {
-                let new_list = FreeList::new(self.slab_size)?;
-                self.freelist.add_to_freelist(new_list.next.unwrap());
+                if P::MAX_SLABS.is_none() {
+                    let new_list = FreeList::new(self.slab_size, None)?;
+                    self.freelist.add_to_freelist(new_list.next.unwrap());
 
-                self.freelist
-                    .alloc()
-                    .map(|ptr: &mut FreeList| ptr as *mut FreeList as *mut u8)
+                    self.freelist
+                        .alloc()
+                        .map(|ptr: &mut Slab| ptr as *mut Slab as *mut u8 as *mut P::ObjectType)
+                } else {
+                    None
+                }
             }
         }
     }
 
-    pub fn free(&mut self, addr: *mut u8) {
+    pub fn free(&mut self, addr: *mut P::ObjectType) {
         self.freelist
-            .add_to_freelist(unsafe { &mut *(addr as *mut FreeList) });
+            .add_to_freelist(unsafe { &mut *(addr as *mut Slab) });
     }
 }
 
 impl FreeList {
     /* Allocate one page for the beggining */
-    pub fn new(size: usize) -> Option<Self> {
-        assert!(size.is_power_of_two());
+    pub fn new(size: usize, max_slabs: Option<usize>) -> Option<Self> {
+        let pages = if let Some(m) = max_slabs {
 
-        let pa: PhysAddr = page_allocator().alloc(1)?.into();
+            let full = m * size;
+            num_pages(full)
+        } else {
+            1_usize
+        };
+
+        let pa: PhysAddr = page_allocator().alloc(pages)?.into();
         let mut list = Self::default();
         let mut va = VirtAddr::from(pa);
         let block_count = PAGE_SIZE / size;
 
         kernel_page_table()
-            .map(None, MemRange::new(va, PAGE_SIZE), MappingType::KernelData)
+            .map(None, MemRange::new(va, pages * PAGE_SIZE), MappingType::KernelData)
             .ok()?;
 
+        list.base = va;
+
         for _ in 0..block_count {
-            let new = va.to_raw_mut::<Self>();
+            let new = va.to_raw_mut::<Slab>();
             list.add_to_freelist(unsafe { &mut *new });
             va.add(size);
         }
@@ -95,7 +143,7 @@ impl FreeList {
         Some(list)
     }
 
-    pub fn add_to_freelist(&mut self, new: &'static mut Self) {
+    pub fn add_to_freelist(&mut self, new: &'static mut Slab) {
         match self.next.take() {
             Some(l) => {
                 new.next = Some(l);
@@ -105,7 +153,7 @@ impl FreeList {
         }
     }
 
-    pub fn alloc(&mut self) -> Option<&mut Self> {
+    pub fn alloc(&mut self) -> Option<&mut Slab> {
         let next = self.next.take()?;
 
         self.next = next.next.take();
@@ -113,7 +161,7 @@ impl FreeList {
     }
 
     pub const fn default() -> Self {
-        Self { next: None }
+        Self { next: None, base: VirtAddr::new(0) }
     }
 }
 

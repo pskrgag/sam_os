@@ -1,6 +1,6 @@
 pub mod thread;
 pub mod thread_ep;
-pub mod thread_table;
+pub mod task;
 
 use alloc::sync::Arc;
 use qrwlock::qrwlock::RwLock;

@@ -4,10 +4,8 @@ use crate::{
     arch::{self, irq, regs::Context},
     kernel::elf::parse_elf,
     kernel::threading::thread_ep::idle_thread,
-    kernel::threading::thread_table,
     kernel::threading::{
         thread::ThreadState,
-        thread_table::{thread_table, thread_table_mut},
         ThreadRef,
     },
 };
@@ -29,8 +27,7 @@ pub static mut IDLE_THREAD_STACK: [usize; 2] = [0, 0];
 
 #[inline]
 pub fn current() -> Option<ThreadRef> {
-    let id = RUN_QUEUE.per_cpu_var_get().get().current_id()?;
-    thread_table().thread_by_id(id)
+    None
 }
 
 pub unsafe fn run() {
@@ -88,27 +85,27 @@ pub unsafe fn run() {
 
 // ToDo: any idea fow to fix it?
 pub fn init_userspace() {
-    let data = parse_elf(INIT).expect("Failed to parse elf");
+    // let data = parse_elf(INIT).expect("Failed to parse elf");
 
-    thread_table_mut()
-        .new_user_thread("init", data, INIT)
-        .expect("Failed to run user thread");
+    // thread_table_mut()
+    //     .new_user_thread("init", data, INIT)
+    //     .expect("Failed to run user thread");
 }
 
 pub fn init_idle() {
-    let mut table = thread_table::thread_table_mut();
+    // let mut table = thread_table::thread_table_mut();
 
-    for i in 0..arch::NUM_CPUS {
-        let head = table
-            .new_idle_thread("idle thread", idle_thread, (), i)
-            .expect("Failed to create kernel thread")
-            .read()
-            .stack_head()
-            .unwrap();
+    // for i in 0..arch::NUM_CPUS {
+    //     let head = table
+    //         .new_idle_thread("idle thread", idle_thread, (), i)
+    //         .expect("Failed to create kernel thread")
+    //         .read()
+    //         .stack_head()
+    //         .unwrap();
 
-        unsafe {
-            use crate::mm::types::PhysAddr;
-            IDLE_THREAD_STACK[i] = PhysAddr::from(head).get();
-        }
-    }
+    //     unsafe {
+    //         use crate::mm::types::PhysAddr;
+    //         IDLE_THREAD_STACK[i] = PhysAddr::from(head).get();
+    //     }
+    // }
 }
