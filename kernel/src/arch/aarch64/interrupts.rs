@@ -140,8 +140,6 @@ pub extern "C" fn kern_sync64(
 
 #[no_mangle]
 pub extern "C" fn kern_irq() {
-    //println!("!!! Kernel irq");
-
     irq_dispatch();
 
     unsafe {

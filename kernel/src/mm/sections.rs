@@ -8,6 +8,7 @@ use crate::{
         paging::{kernel_page_table::kernel_page_table, page_table::MappingType},
         types::*,
     },
+    arch::{ram_base, ram_size},
 };
 
 extern "C" {
@@ -22,9 +23,10 @@ extern "C" {
 
     static sbss: usize;
     static ebss: usize;
+    static end: usize;
 
-    static mmio_start: usize;
-    static mmio_end: usize;
+    static sdatapercpu: usize;
+    static edatapercpu: usize;
 }
 
 pub struct KernelSection {
@@ -88,13 +90,18 @@ fn populate_kernel_sections(array: &mut Vector<KernelSection>) {
         "Kernel bss",
         MappingType::KernelData,
     );
+    let per_cpu = KernelSection::new(
+        linker_var!(sdatapercpu),
+        linker_var!(edatapercpu) - linker_var!(sdatapercpu),
+        "Kernel percpu",
+        MappingType::KernelData,
+    );
 
     (*array).push(text);
     (*array).push(rodata);
     (*array).push(data);
     (*array).push(bss);
-
-    println!("Populated kernel sections");
+    (*array).push(per_cpu);
 }
 
 pub fn remap_kernel() {
@@ -123,6 +130,20 @@ pub fn remap_kernel() {
             )
             .expect("Failed to map kernel sections");
     }
+
+    // For now we assume that kernel is loaded at the start of the RAM (true in case of qemu)
+    // So just all RAM that we have
+    
+    let ram_start = VirtAddr::from(linker_var!(end));
+    let ram_size = ram_base() as usize + ram_size() as usize - PhysAddr::from(ram_start).bits();
+
+    (*tt)
+        .map(
+            None,
+            MemRange::new(ram_start, ram_size),
+            MappingType::KernelData,
+        )
+        .expect("Failed to map ram to kernel");
 
     unsafe { set_kernel_page_table((*tt).base()) };
     println!("Fine grained mapping enabled");

@@ -5,7 +5,7 @@ use core::{
     ptr::NonNull,
 };
 
-const INIT_PAGE_POOL: usize = 10;
+const INIT_PAGE_POOL: usize = 20;
 
 #[repr(C)]
 struct FfHeader {

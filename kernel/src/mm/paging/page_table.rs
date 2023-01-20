@@ -2,10 +2,13 @@ use crate::{
     arch::PT_LVL1_ENTIRES,
     arch::{self, mm::mmu_flags},
     arch::{mm::mmu, PAGE_SIZE},
+    kernel::locking::spinlock::Spinlock,
     kernel::misc::*,
-    mm::paging::kernel_page_table::kernel_page_table,
     mm::{allocators::page_alloc::page_allocator, types::*},
 };
+
+use alloc::boxed::Box;
+use core::pin::Pin;
 
 #[derive(Debug)]
 pub enum MmError {
@@ -22,7 +25,6 @@ pub enum MappingType {
     KernelRWX,
     KernelDevice,
     KernelNothing,
-
     UserData,
     UserText,
     UserDataRo,
@@ -32,61 +34,87 @@ pub struct PageFlags {
     flags: usize,
 }
 
-pub struct PageTableBlock<const LVL: usize, const N: usize> {
+pub struct PageTableBlock<const LVL: u8, const N: usize> {
     block: [PageTableEntry; N],
 }
+
+pub type PDir<const LVL: u8, const N: usize> = Pin<Box<PageTableBlock<LVL, N>, PageBlockAllocator>>;
 
 #[derive(Clone, Copy, Debug)]
 pub struct PageTableEntry(usize);
 
 pub struct PageTable<const N: usize = 512> {
-    dir: PageTableBlock<0, N>,
+    dir: PDir<1, N>,
     kernel: bool,
 }
 
-impl<const LVL: usize> PageTableBlock<LVL> {
-    pub fn new(addr: VirtAddr, lvl: u8) -> Self {
-        Self {
-            addr: addr,
-            lvl: lvl,
-        }
+pub struct PageBlockAllocator;
+
+unsafe impl core::alloc::Allocator for PageBlockAllocator {
+    fn allocate(
+        &self,
+        _layout: core::alloc::Layout,
+    ) -> Result<core::ptr::NonNull<[u8]>, core::alloc::AllocError> {
+        let va = VirtAddr::from(PhysAddr::from(page_allocator().alloc(1).unwrap()));
+
+        Ok(
+            unsafe {
+                core::ptr::NonNull::new(
+                    core::slice::from_raw_parts_mut(va.to_raw_mut::<u8>(), 4096)
+                    )
+                    .unwrap()
+            }
+        )
+    }
+
+    unsafe fn deallocate(&self, _ptr: core::ptr::NonNull<u8>, _layout: core::alloc::Layout) {
+        // Do nothing;
+        // We don't free kernel page table blocks
+    }
+}
+
+impl<const LVL: u8, const N: usize> PageTableBlock<LVL, N> {
+    pub fn new() -> Pin<Box<Self, PageBlockAllocator>> {
+        Box::<Self, PageBlockAllocator>::pin_in(Self {
+            block: [PageTableEntry(0); N],
+        }, PageBlockAllocator{})
+    }
+
+    pub unsafe fn from_raw(addr: VirtAddr) -> PDir<LVL, N> {
+        assert!(addr.is_page_aligned());
+
+        Box::<Self, PageBlockAllocator>::from_raw_in(addr.to_raw_mut::<Self>(), PageBlockAllocator{}).into()
     }
 
     pub fn addr(&self) -> VirtAddr {
-        self.addr
+        VirtAddr::from_raw(&self.block as *const _)
     }
 
-    pub fn lvl(&self) -> u8 {
-        self.lvl
+    pub fn lvl(&self) -> usize {
+        LVL as usize
     }
 
     pub fn is_last(&self) -> bool {
-        self.lvl == arch::PAGE_TABLE_LVLS
+        LVL == arch::PAGE_TABLE_LVLS
     }
 
     pub unsafe fn set_tte(&mut self, index: usize, entry: PageTableEntry) {
         assert!(index < 512);
 
-        self.addr
-            .to_raw_mut::<usize>()
-            .offset(index as isize)
-            .write_volatile(entry.bits());
-        // TODO: barriers, please.....
-    }
+        (&mut self.block[index].0 as *mut usize).write_volatile(entry.bits());
 
-    pub fn tte(&self, index: usize) -> PageTableEntry {
         unsafe {
-            PageTableEntry::from_bits(
-                self.addr
-                    .to_raw_mut::<usize>()
-                    .offset(index as isize)
-                    .read_volatile(),
-            )
+            crate::arch::barriers::wb();
+            crate::arch::barriers::isb();
         }
     }
 
+    pub fn tte(&self, index: usize) -> PageTableEntry {
+        unsafe { PageTableEntry((&self.block[index].0 as *const usize).read_volatile()) }
+    }
+
     pub fn index_of(&self, addr: VirtAddr) -> usize {
-        match self.lvl {
+        match LVL {
             1 => arch::mm::page_table::l1_linear_offset(addr),
             2 => arch::mm::page_table::l2_linear_offset(addr),
             3 => arch::mm::page_table::l3_linear_offset(addr),
@@ -94,20 +122,19 @@ impl<const LVL: usize> PageTableBlock<LVL> {
         }
     }
 
-    pub fn next(&self, index: usize) -> Option<Self> {
+    pub fn next(&self, index: usize) -> Option<PDir<{ LVL + 1 }, N>> {
         assert!(!self.is_last());
 
         let entry_next = unsafe {
-            PageTableEntry::from_bits(
-                self.addr
-                    .to_raw::<usize>()
-                    .offset(index as isize)
-                    .read_volatile(),
-            )
+            PageTableEntry::from_bits((&self.block[index].0 as *const usize).read_volatile())
         };
 
         if entry_next.valid() {
-            Some(Self::new(VirtAddr::from(entry_next.addr()), self.lvl + 1))
+            unsafe {
+                Some(PageTableBlock::<{ LVL + 1 }, N>::from_raw(VirtAddr::from(
+                    entry_next.addr(),
+                )))
+            }
         } else {
             None
         }
@@ -134,46 +161,12 @@ impl PageFlags {
     }
 }
 
-impl PageTable {
-    pub const fn default(kernel: bool) -> Self {
+impl<const N: usize> PageTable<N> {
+    pub fn new() -> Self {
         Self {
-            base: VirtAddr::new(0_usize),
-            kernel: kernel,
+            dir: PageTableBlock::new(),
+            kernel: false,
         }
-    }
-
-    pub fn new(kernel: bool) -> Option<Self> {
-        let base: PhysAddr = page_allocator().alloc(1)?.into();
-        let mut new_table = Self {
-            base: VirtAddr::from(base),
-            kernel: kernel,
-        };
-
-        let base_va = new_table.base;
-
-        // unsafe {
-        //     core::slice::from_raw_parts_mut(base_va.to_raw_mut::<u8>(), PAGE_SIZE).fill(0);
-        // }
-
-        if kernel {
-            new_table
-                .map(
-                    None,
-                    MemRange::new(base_va, PAGE_SIZE),
-                    MappingType::KernelRWX,
-                )
-                .ok()?;
-        } else {
-            kernel_page_table()
-                .map(
-                    None,
-                    MemRange::new(base_va, PAGE_SIZE),
-                    MappingType::KernelRWX,
-                )
-                .ok()?;
-        }
-
-        Some(new_table)
     }
 
     /* If p is None then caller want linear mapping */
@@ -202,35 +195,18 @@ impl PageTable {
 
         /* Lvl1 loop */
         while {
-            let mut table_block_1 = self.lvl1();
+            let table_block_1 = self.lvl1();
             let lvl1_index = table_block_1.index_of(va);
             let mut table_block_2 = match table_block_1.next(lvl1_index) {
                 Some(e) => e,
                 None => {
-                    let new_page: PhysAddr = page_allocator()
-                        .alloc(1)
-                        .expect("Failed to allocate memory")
-                        .into();
-                    let new_entry =
-                        PageTableEntry::from_bits(PageFlags::table().bits() | new_page.get());
-
+                    let new_block = PageTableBlock::<2, N>::new();
+                    let new_entry = PageTableEntry::from_bits(
+                        PageFlags::table().bits() | PhysAddr::from(new_block.addr()).bits(),
+                    );
                     unsafe { table_block_1.set_tte(lvl1_index, new_entry) };
 
-                    if !self.kernel {
-                        kernel_page_table().map(
-                            None,
-                            MemRange::new(VirtAddr::from(new_page), PAGE_SIZE),
-                            MappingType::KernelData,
-                        )?;
-                    }
-
-                    self.map(
-                        None,
-                        MemRange::new(VirtAddr::from(new_page), PAGE_SIZE),
-                        MappingType::KernelData,
-                    )?;
-
-                    PageTableBlock::new(VirtAddr::from(new_page), 2)
+                    new_block
                 }
             };
             let mut lvl2_sz = if lvl1_sz > _1GB { _1GB } else { lvl1_sz };
@@ -242,30 +218,14 @@ impl PageTable {
                 let mut table_block_3 = match table_block_2.next(lvl2_index) {
                     Some(e) => e,
                     None => {
-                        let new_page: PhysAddr = page_allocator()
-                            .alloc(1)
-                            .expect("Failed to allocate memory")
-                            .into();
-                        let new_entry =
-                            PageTableEntry::from_bits(PageFlags::table().bits() | new_page.get());
+                        let new_block = PageTableBlock::<3, N>::new();
+                        let new_entry = PageTableEntry::from_bits(
+                            PageFlags::table().bits() | PhysAddr::from(new_block.addr()).bits(),
+                        );
 
                         unsafe { table_block_2.set_tte(lvl2_index, new_entry) };
 
-                        if !self.kernel {
-                            kernel_page_table().map(
-                                None,
-                                MemRange::new(VirtAddr::from(new_page), PAGE_SIZE),
-                                MappingType::KernelData,
-                            )?;
-                        }
-
-                        self.map(
-                            None,
-                            MemRange::new(VirtAddr::from(new_page), PAGE_SIZE),
-                            MappingType::KernelData,
-                        )?;
-
-                        PageTableBlock::new(VirtAddr::from(new_page), 3)
+                        new_block
                     }
                 };
 
@@ -324,7 +284,7 @@ impl PageTable {
 
     #[inline]
     pub fn base(&self) -> PhysAddr {
-        PhysAddr::from(self.base)
+        PhysAddr::from(self.dir.addr())
     }
 
     #[inline]
@@ -333,8 +293,8 @@ impl PageTable {
     }
 
     #[inline]
-    fn lvl1(&self) -> PageTableBlock {
-        PageTableBlock::new(self.base, 1)
+    fn lvl1(&mut self) -> &mut PDir<1, N> {
+        &mut self.dir
     }
 }
 

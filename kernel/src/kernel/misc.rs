@@ -10,7 +10,7 @@ use core::{
 extern "C" {
     static load_addr: usize;
     static start: usize;
-    static mmio_end: usize;
+    static end: usize;
 }
 
 #[macro_export]
@@ -34,7 +34,7 @@ pub fn kernel_offset() -> usize {
 
 #[inline]
 pub fn image_size() -> usize {
-    linker_var!(mmio_end) - linker_var!(start)
+    linker_var!(end) - linker_var!(start)
 }
 
 #[inline]

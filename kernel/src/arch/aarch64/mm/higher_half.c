@@ -9,8 +9,6 @@ extern uint64_t start;
 extern uint64_t load_addr;
 extern uint64_t kernel_virtual_base;
 
-extern uint64_t mmio_start;
-extern uint64_t mmio_end;
 extern uint64_t mmio_base;
 
 extern void __attribute__((noreturn)) start_kernel(void);
@@ -44,7 +42,7 @@ static inline void tmp_printf(const char *ptr)
 static inline void mmio_1_v_1(void)
 {
 	tte_t device_lvl1 = UL(&lvl2) | 0b11;
-	unsigned long mmio_size = 0x02000000; //UL(&mmio_end - &mmio_start);
+	unsigned long mmio_size = 0x02000000;
 	void *mmio_addr = &mmio_base;
 
 	lvl1[l1_linear_offset(mmio_addr)] = device_lvl1;

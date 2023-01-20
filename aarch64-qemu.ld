@@ -67,15 +67,11 @@ SECTIONS
         edatapercpu = .;
     }
 
-    . = . + 0x100000;
+    . = . + 0x5000;
     . = ALIGN(16);
     __STACK_START = .; /* Stack grows from here towards 0x0. */
 
+    . = ALIGN(PAGE_SIZE); /* Align up to page size */
     end = .;
     /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
-
-    . = ALIGN(PAGE_SIZE);
-    mmio_start = .;
-    . += 0x00040000;
-    mmio_end = .;
 }

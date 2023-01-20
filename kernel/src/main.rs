@@ -10,10 +10,15 @@
 #![feature(linked_list_cursors)]
 #![feature(allocator_api)]
 #![feature(naked_functions)]
+#![feature(generic_const_exprs)]
+#![allow(unused_imports)] // TODO: drop
 
 extern crate alloc;
 #[macro_use]
 extern crate lazy_static;
+
+#[macro_use]
+extern crate static_assertions;
 
 #[macro_use]
 mod lib;
@@ -43,12 +48,14 @@ extern "C" fn start_kernel() -> ! {
     mm::init();
 
     // --- Kernel is fine grained mapped ---
-    // all wild accesses will cause exception
+    // wrong accesses to rodata or text will be punished
+    // All ram is mapped -- no need to call map
 
     kernel::percpu::init_percpu();
 
-    sched::init_idle();
-    sched::init_userspace();
+
+    //sched::init_idle();
+    //sched::init_userspace();
 
     // -- Scheduler must be initialized at that point
     drivers::init();
@@ -57,7 +64,9 @@ extern "C" fn start_kernel() -> ! {
 
     // arch::smp::bring_up_cpus();
 
-    loop {}
+    loop {
+
+    }
 }
 
 #[no_mangle]

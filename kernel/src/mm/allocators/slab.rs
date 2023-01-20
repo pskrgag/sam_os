@@ -128,10 +128,6 @@ impl FreeList {
         let mut va = VirtAddr::from(pa);
         let block_count = PAGE_SIZE / size;
 
-        kernel_page_table()
-            .map(None, MemRange::new(va, pages * PAGE_SIZE), MappingType::KernelData)
-            .ok()?;
-
         list.base = va;
 
         for _ in 0..block_count {
@@ -197,7 +193,6 @@ pub fn init_kernel_slabs() -> Option<()> {
 
     for i in &KERNEL_SLABS {
         (*i.lock()) = SlabAllocator::new(size)?;
-        println!("Kernel slab {} initialized", size);
         size = (size + 1).next_power_of_two();
     }
 

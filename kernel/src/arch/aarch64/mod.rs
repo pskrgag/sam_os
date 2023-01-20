@@ -12,6 +12,7 @@ pub mod irq;
 pub mod mm;
 pub mod regs;
 pub mod smp;
+pub mod barriers;
 
 use crate::kernel::misc::genmask;
 use core::mem;

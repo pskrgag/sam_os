@@ -8,7 +8,7 @@ pub struct Uart;
 static UART_PTR: Spinlock<VirtAddr> = Spinlock::new(VirtAddr::new(0x09000000));
 
 pub fn uart_write(str: &[u8]) {
-    let ptr = UART_PTR.lock_irqsave();
+    let ptr = UART_PTR.lock();
 
     for i in str {
         unsafe {

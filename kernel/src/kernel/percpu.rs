@@ -4,7 +4,6 @@ use crate::{
     linker_var,
     mm::{
         allocators::page_alloc::page_allocator,
-        paging::{kernel_page_table::kernel_page_table, page_table::MappingType},
         types::*,
     },
 };
@@ -141,25 +140,8 @@ pub fn init_percpu() -> Option<()> {
     PER_CPU_BASE.call_once(|| VirtAddr::from(pa));
     PER_CPU_SIZE.call_once(|| per_cpu_size);
 
-    println!("Per cpu size {}", per_cpu_size);
-
-    kernel_page_table()
-        .map(
-            None,
-            MemRange::new(VirtAddr::from(linker_var!(sdatapercpu)), per_cpu_size),
-            MappingType::KernelData,
-        )
-        .ok()?;
-
     for i in 0..NUM_CPUS {
         let p = pa + (per_cpu_size * i).into();
-        kernel_page_table()
-            .map(
-                Some(MemRange::new(p, per_cpu_size)),
-                MemRange::new(VirtAddr::from(p), per_cpu_size),
-                MappingType::KernelData,
-            )
-            .ok()?;
 
         unsafe {
             core::slice::from_raw_parts_mut(VirtAddr::from(p).to_raw_mut::<u8>(), per_cpu_size)
@@ -169,8 +151,6 @@ pub fn init_percpu() -> Option<()> {
                 ));
         }
     }
-
-    // TODO: unmap?
 
     Some(())
 }
