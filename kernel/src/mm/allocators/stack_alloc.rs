@@ -7,40 +7,23 @@ use crate::{
     },
 };
 
-pub struct StackLayout {
-    base: VirtAddr,
-    pages: usize,
-}
+use spin::Once;
 
-impl StackLayout {
-    pub fn new(num_pages: usize) -> Option<Self> {
-        let stack = VirtAddr::from(PhysAddr::from(page_allocator().alloc(num_pages + 2)?));
+const KERNEL_STACK_PAGES: usize = 2;
 
-        kernel_page_table()
-            .map(
-                None,
-                MemRange::new(VirtAddr::from(stack + PAGE_SIZE), num_pages * PAGE_SIZE),
-                MappingType::KernelData,
-            )
-            .ok()?;
+// TODO: NUM_CPUS
+pub static KERNEL_STACKS: Once<[VirtAddr; 2]> = Once::new();
 
-        Some(Self {
-            base: stack,
-            pages: num_pages,
-        })
+pub fn init_kernel_stacks() {
+    let mut stack = VirtAddr::from(PhysAddr::from(
+        page_allocator().alloc((KERNEL_STACK_PAGES + 2) * 2).expect("Failed to allocate kernel stacks"),
+    ));
+    let mut kernel_stacks: [VirtAddr; 2] = [VirtAddr::from(0); 2];
+
+    for i in 0..2 {
+        kernel_stacks[i] = *stack.add(KERNEL_STACK_PAGES + PAGE_SIZE);
+        stack.add(PAGE_SIZE);
     }
 
-    pub fn stack_head(&self) -> VirtAddr {
-        VirtAddr::from(self.base + self.pages * PAGE_SIZE)
-    }
-}
-
-impl Drop for StackLayout {
-    fn drop(&mut self) {
-        kernel_page_table()
-            .unmap(MemRange::new(self.base, self.pages * PAGE_SIZE))
-            .expect("Failed to unmap stack");
-
-        page_allocator().free(self.base.into(), self.pages + 2);
-    }
+    KERNEL_STACKS.call_once(|| kernel_stacks);
 }

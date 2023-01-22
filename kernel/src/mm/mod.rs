@@ -24,4 +24,5 @@ pub fn init() {
     allocators::slab::init_kernel_slabs();
     paging::kernel_page_table::init();
     sections::remap_kernel();
+    allocators::stack_alloc::init_kernel_stacks();
 }

@@ -69,6 +69,7 @@ dependencies = [
  "lock_free_buddy_allocator",
  "qrwlock",
  "spin 0.9.4",
+ "static_assertions",
  "tock-registers",
 ]
 

@@ -1,6 +1,5 @@
 use crate::{
     arch::{self, regs::Context},
-    mm::allocators::stack_alloc::StackLayout,
     mm::{
         types::{Address, VirtAddr},
         vms::Vms,

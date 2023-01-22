@@ -7,6 +7,7 @@ use crate::{
     },
 };
 use crate::kernel::misc::num_pages;
+use core::alloc::Allocator;
 
 use core::{
     alloc::Layout,
