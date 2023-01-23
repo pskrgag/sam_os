@@ -71,7 +71,10 @@ extern "C" fn start_kernel() -> ! {
 
     // arch::smp::bring_up_cpus();
 
-    loop {}
+    // We should not reach here
+    loop {
+
+    }
 }
 
 #[no_mangle]
