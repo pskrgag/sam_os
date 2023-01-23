@@ -1,5 +1,6 @@
 use crate::{
     arch::mm::page_table::set_kernel_page_table,
+    arch::{ram_base, ram_size},
     kernel::locking::fake_lock::FakeLock,
     kernel::misc::kernel_offset,
     lib::collections::vector::Vector,
@@ -8,7 +9,6 @@ use crate::{
         paging::{kernel_page_table::kernel_page_table, page_table::MappingType},
         types::*,
     },
-    arch::{ram_base, ram_size},
 };
 
 extern "C" {
@@ -133,7 +133,7 @@ pub fn remap_kernel() {
 
     // For now we assume that kernel is loaded at the start of the RAM (true in case of qemu)
     // So just all RAM that we have
-    
+
     let ram_start = VirtAddr::from(linker_var!(end));
     let ram_size = ram_base() as usize + ram_size() as usize - PhysAddr::from(ram_start).bits();
 

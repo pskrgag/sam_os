@@ -4,10 +4,7 @@ use crate::{
     arch::{self, irq, regs::Context},
     kernel::elf::parse_elf,
     kernel::threading::thread_ep::idle_thread,
-    kernel::threading::{
-        thread::ThreadState,
-        ThreadRef,
-    },
+    kernel::threading::{thread::{ThreadState, ThreadRef}},
 };
 
 use run_queue::RUN_QUEUE;
@@ -90,22 +87,4 @@ pub fn init_userspace() {
     // thread_table_mut()
     //     .new_user_thread("init", data, INIT)
     //     .expect("Failed to run user thread");
-}
-
-pub fn init_idle() {
-    // let mut table = thread_table::thread_table_mut();
-
-    // for i in 0..arch::NUM_CPUS {
-    //     let head = table
-    //         .new_idle_thread("idle thread", idle_thread, (), i)
-    //         .expect("Failed to create kernel thread")
-    //         .read()
-    //         .stack_head()
-    //         .unwrap();
-
-    //     unsafe {
-    //         use crate::mm::types::PhysAddr;
-    //         IDLE_THREAD_STACK[i] = PhysAddr::from(head).get();
-    //     }
-    // }
 }

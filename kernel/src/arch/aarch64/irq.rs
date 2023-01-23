@@ -25,3 +25,8 @@ pub fn get_flags() -> usize {
 pub unsafe fn set_flags(flags: usize) {
     asm!("msr daif, {}", in(reg) flags);
 }
+
+#[inline]
+pub unsafe fn halt() {
+    asm!("wfi");
+}

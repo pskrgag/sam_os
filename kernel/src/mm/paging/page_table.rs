@@ -57,14 +57,10 @@ unsafe impl core::alloc::Allocator for PageBlockAllocator {
     ) -> Result<core::ptr::NonNull<[u8]>, core::alloc::AllocError> {
         let va = VirtAddr::from(PhysAddr::from(page_allocator().alloc(1).unwrap()));
 
-        Ok(
-            unsafe {
-                core::ptr::NonNull::new(
-                    core::slice::from_raw_parts_mut(va.to_raw_mut::<u8>(), 4096)
-                    )
-                    .unwrap()
-            }
-        )
+        Ok(unsafe {
+            core::ptr::NonNull::new(core::slice::from_raw_parts_mut(va.to_raw_mut::<u8>(), 4096))
+                .unwrap()
+        })
     }
 
     unsafe fn deallocate(&self, _ptr: core::ptr::NonNull<u8>, _layout: core::alloc::Layout) {
@@ -75,15 +71,22 @@ unsafe impl core::alloc::Allocator for PageBlockAllocator {
 
 impl<const LVL: u8, const N: usize> PageTableBlock<LVL, N> {
     pub fn new() -> Pin<Box<Self, PageBlockAllocator>> {
-        Box::<Self, PageBlockAllocator>::pin_in(Self {
-            block: [PageTableEntry(0); N],
-        }, PageBlockAllocator{})
+        Box::<Self, PageBlockAllocator>::pin_in(
+            Self {
+                block: [PageTableEntry(0); N],
+            },
+            PageBlockAllocator {},
+        )
     }
 
     pub unsafe fn from_raw(addr: VirtAddr) -> PDir<LVL, N> {
         assert!(addr.is_page_aligned());
 
-        Box::<Self, PageBlockAllocator>::from_raw_in(addr.to_raw_mut::<Self>(), PageBlockAllocator{}).into()
+        Box::<Self, PageBlockAllocator>::from_raw_in(
+            addr.to_raw_mut::<Self>(),
+            PageBlockAllocator {},
+        )
+        .into()
     }
 
     pub fn addr(&self) -> VirtAddr {

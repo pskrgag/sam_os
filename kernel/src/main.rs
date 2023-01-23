@@ -32,6 +32,8 @@ mod panic;
 
 use kernel::sched;
 pub use lib::printf;
+use alloc::sync::Arc;
+use kernel::threading::thread_ep::idle_thread;
 
 /* At this point we have:
  *
@@ -51,9 +53,6 @@ extern "C" fn start_kernel() -> ! {
     // wrong accesses to rodata or text will be punished
     // All ram is mapped -- no need to call map
 
-    kernel::percpu::init_percpu();
-
-
     //sched::init_idle();
     //sched::init_userspace();
 
@@ -62,11 +61,17 @@ extern "C" fn start_kernel() -> ! {
 
     kernel::object::init();
 
+    let idle = kernel::threading::thread::Thread::kernel_thread(0, idle_thread ).unwrap();
+
+    unsafe {
+        Arc::increment_strong_count(Arc::into_raw(idle.clone()));
+    }
+
+    kernel::threading::thread::Thread::resume(idle.clone());
+
     // arch::smp::bring_up_cpus();
 
-    loop {
-
-    }
+    loop {}
 }
 
 #[no_mangle]

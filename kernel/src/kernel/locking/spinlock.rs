@@ -74,7 +74,6 @@ impl<T> Spinlock<T> {
         unsafe {
             set_flags(flags);
         }
-
     }
 }
 

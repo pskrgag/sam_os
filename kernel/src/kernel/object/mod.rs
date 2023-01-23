@@ -1,8 +1,10 @@
+use alloc::boxed::Box;
+use alloc::sync::Arc;
 use core::any::Any;
 
 pub mod handle;
-pub mod handle_table;
 pub mod handle_allocator;
+pub mod handle_table;
 
 // All exposed kernel objects must be derived from this trait
 pub trait KernelObject {

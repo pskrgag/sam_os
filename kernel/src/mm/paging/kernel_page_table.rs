@@ -21,5 +21,8 @@ pub fn init() {
 }
 
 pub fn kernel_page_table() -> SpinlockGuard<'static, PageTable> {
-    KERNEL_PAGE_TABLE.get().expect("Must be already initialized").lock()
+    KERNEL_PAGE_TABLE
+        .get()
+        .expect("Must be already initialized")
+        .lock()
 }

@@ -30,6 +30,16 @@ impl Context {
 
         new
     }
+
+    pub fn new_kernel_thread(ep_k: usize, ep_t: usize, stack: usize) -> Self {
+        let mut new: Self = unsafe { zeroed() };
+
+        new.x19 = stack;
+        new.lr = ep_k;
+        new.x20 = ep_t;
+
+        new
+    }
 }
 
 impl Default for Context {

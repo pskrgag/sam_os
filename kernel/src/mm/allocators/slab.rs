@@ -1,3 +1,4 @@
+use crate::kernel::misc::num_pages;
 use crate::{
     arch::PAGE_SIZE,
     kernel::locking::spinlock::Spinlock,
@@ -6,13 +7,9 @@ use crate::{
         paging::page_table::MappingType, types::*, MemRange,
     },
 };
-use crate::kernel::misc::num_pages;
 use core::alloc::Allocator;
 
-use core::{
-    alloc::Layout,
-    marker::PhantomData,
-};
+use core::{alloc::Layout, marker::PhantomData};
 
 const MIN_SLAB_SIZE: usize = 8;
 
@@ -42,6 +39,54 @@ struct FreeList {
 
 struct Slab {
     next: Option<&'static mut Slab>,
+}
+
+#[macro_export]
+macro_rules! slab_allocator {
+    ($global:ident, $wrapper:ident, $struct:ty) => {
+        pub struct $wrapper;
+
+        impl $wrapper {
+            pub fn new() -> Self {
+                Self {}
+            }
+        }
+
+        #[allow(non_upper_case_globals)]
+        static $global: spin::Once<
+            crate::kernel::locking::spinlock::Spinlock<crate::mm::allocators::slab::SlabAllocator>,
+        > = spin::Once::new();
+
+        unsafe impl core::alloc::Allocator for $wrapper {
+            fn allocate(
+                &self,
+                _layout: core::alloc::Layout,
+            ) -> Result<core::ptr::NonNull<[u8]>, core::alloc::AllocError> {
+                $global.call_once(|| {
+                    crate::kernel::locking::spinlock::Spinlock::new(
+                        crate::mm::allocators::slab::SlabAllocator::new(core::mem::size_of::<
+                            $struct,
+                        >())
+                        .unwrap(),
+                    )
+                });
+
+                let res = unsafe { $global.get_unchecked().lock().alloc().unwrap() };
+
+                Ok(unsafe {
+                    core::ptr::NonNull::new(core::slice::from_raw_parts_mut(
+                        res as *mut u8,
+                        core::mem::size_of::<$struct>(),
+                    ))
+                    .unwrap()
+                })
+            }
+
+            unsafe fn deallocate(&self, ptr: core::ptr::NonNull<u8>, _layout: core::alloc::Layout) {
+                $global.get_unchecked().lock().free(ptr.as_ptr());
+            }
+        }
+    };
 }
 
 static KERNEL_SLABS: [Spinlock<SlabAllocator>; 10] = [
@@ -86,11 +131,7 @@ impl<P: SlabPolicy> SlabAllocator<P> {
     }
 
     pub fn alloc(&mut self) -> Option<*mut P::ObjectType> {
-        match self
-            .freelist
-            .alloc()
-            .map(|ptr| ptr as *mut Slab as *mut u8)
-        {
+        match self.freelist.alloc().map(|ptr| ptr as *mut Slab as *mut u8) {
             Some(ptr) => Some(ptr as *mut u8 as *mut P::ObjectType),
             None => {
                 if P::MAX_SLABS.is_none() {
@@ -117,7 +158,6 @@ impl FreeList {
     /* Allocate one page for the beggining */
     pub fn new(size: usize, max_slabs: Option<usize>) -> Option<Self> {
         let pages = if let Some(m) = max_slabs {
-
             let full = m * size;
             num_pages(full)
         } else {
@@ -158,7 +198,10 @@ impl FreeList {
     }
 
     pub const fn default() -> Self {
-        Self { next: None, base: VirtAddr::new(0) }
+        Self {
+            next: None,
+            base: VirtAddr::new(0),
+        }
     }
 }
 

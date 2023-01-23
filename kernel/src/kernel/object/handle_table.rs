@@ -1,10 +1,6 @@
-use crate::kernel::object::{
-    handle::Handle,
-};
+use crate::kernel::object::handle::Handle;
 
-use alloc::{
-    collections::LinkedList,
-};
+use alloc::collections::LinkedList;
 
 // Handle Tabled owns handles
 pub struct HandleTable {
@@ -13,8 +9,8 @@ pub struct HandleTable {
 
 impl HandleTable {
     pub fn new() -> Self {
-       Self {
+        Self {
             table: LinkedList::new(),
-       }
+        }
     }
 }

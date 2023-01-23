@@ -7,7 +7,9 @@ use core::fmt::Write;
 pub fn _print(args: fmt::Arguments) {
     use crate::drivers::uart;
 
-    uart::uart().write_fmt(args).expect("Failed to write to UART");
+    uart::uart()
+        .write_fmt(args)
+        .expect("Failed to write to UART");
 }
 
 #[macro_export]

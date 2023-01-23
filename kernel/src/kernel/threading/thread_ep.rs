@@ -3,8 +3,8 @@ use core::arch::global_asm;
 global_asm!(
     ".globl kernel_thread_entry_point",
     "kernel_thread_entry_point:",
-    "mov   x0, x19",
-    "br    x20",
+    "mov    sp, x19",
+    "br     x20",
 );
 
 global_asm!(
@@ -18,7 +18,7 @@ global_asm!(
     "eret",
 );
 
-pub fn idle_thread(_: ()) -> Option<()> {
+pub fn idle_thread() {
     loop {
         println!("Idle loop");
         for _ in 0..10_000_000 {

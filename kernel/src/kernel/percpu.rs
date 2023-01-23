@@ -2,10 +2,7 @@ use crate::{
     arch::cpuid::current_cpu,
     arch::PAGE_SIZE,
     linker_var,
-    mm::{
-        allocators::page_alloc::page_allocator,
-        types::*,
-    },
+    mm::{allocators::page_alloc::page_allocator, types::*},
 };
 
 use spin::Once;

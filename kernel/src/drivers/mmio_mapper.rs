@@ -1,10 +1,10 @@
 use crate::{
     arch,
+    arch::{ram_base, ram_size},
     kernel::{locking::fake_lock::FakeLock, misc::num_pages},
     linker_var,
     mm::paging::{kernel_page_table::kernel_page_table, page_table::MappingType},
     mm::types::*,
-    arch::{ram_base, ram_size},
 };
 
 /* I don't see why couple of kernel drivers would like to unmap their device */
@@ -27,7 +27,9 @@ impl MmioAllocator {
 
     pub fn new() -> Self {
         Self {
-            start: VirtAddr::from(PhysAddr::from(ram_base() as usize + ram_size() as usize + 4096)),
+            start: VirtAddr::from(PhysAddr::from(
+                ram_base() as usize + ram_size() as usize + 4096,
+            )),
             pages: 10,
             offset: 0,
         }
@@ -51,7 +53,7 @@ impl MmioAllocator {
         self.offset += pages;
         self.pages -= pages;
 
-       // println!("Mapped 0x{:x} -> 0x{:x}", addr.bits(), new_va.bits());
+        // println!("Mapped 0x{:x} -> 0x{:x}", addr.bits(), new_va.bits());
 
         Some(new_va)
     }

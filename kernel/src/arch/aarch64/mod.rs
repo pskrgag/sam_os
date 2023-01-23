@@ -5,6 +5,7 @@ pub mod qemu;
 pub use qemu::config::*;
 
 pub mod backtrace;
+pub mod barriers;
 pub mod context;
 pub mod cpuid;
 pub mod interrupts;
@@ -12,7 +13,6 @@ pub mod irq;
 pub mod mm;
 pub mod regs;
 pub mod smp;
-pub mod barriers;
 
 use crate::kernel::misc::genmask;
 use core::mem;
