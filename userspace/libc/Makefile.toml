@@ -13,3 +13,6 @@ dependencies = ["clean", "format"]
 
 [tasks.test]
 command = "echo"
+
+[tasks.qemu]
+disabled = true

@@ -53,8 +53,6 @@ impl MmioAllocator {
         self.offset += pages;
         self.pages -= pages;
 
-        // println!("Mapped 0x{:x} -> 0x{:x}", addr.bits(), new_va.bits());
-
         Some(new_va)
     }
 

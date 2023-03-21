@@ -6,7 +6,7 @@ fn main() {
         .compiler("clang-14")
         .flag("--target=aarch64-unknown-none-softfloat")
         .flag("-fPIC")
-        .flag("-O3")
+        .flag("-O1")
         .flag("-Wall")
         .compile("libfoo.a");
 }

@@ -30,10 +30,9 @@ mod drivers;
 mod mm;
 mod panic;
 
-use kernel::sched;
-pub use lib::printf;
 use alloc::sync::Arc;
 use kernel::threading::thread_ep::idle_thread;
+pub use lib::printf;
 
 /* At this point we have:
  *
@@ -61,20 +60,12 @@ extern "C" fn start_kernel() -> ! {
 
     kernel::object::init();
 
-    let idle = kernel::threading::thread::Thread::kernel_thread(0, idle_thread ).unwrap();
-
-    unsafe {
-        Arc::increment_strong_count(Arc::into_raw(idle.clone()));
-    }
-
+    let idle = kernel::threading::thread::Thread::kernel_thread(0, idle_thread).unwrap();
     kernel::threading::thread::Thread::resume(idle.clone());
 
     // arch::smp::bring_up_cpus();
 
-    // We should not reach here
-    loop {
-
-    }
+    loop {}
 }
 
 #[no_mangle]

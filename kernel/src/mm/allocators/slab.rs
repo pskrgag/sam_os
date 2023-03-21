@@ -164,7 +164,7 @@ impl FreeList {
             1_usize
         };
 
-        let pa: PhysAddr = page_allocator().alloc(pages)?.into();
+        let pa = page_allocator().alloc(pages)?;
         let mut list = Self::default();
         let mut va = VirtAddr::from(pa);
         let block_count = PAGE_SIZE / size;

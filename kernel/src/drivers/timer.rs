@@ -1,5 +1,4 @@
 use crate::drivers::irq;
-use crate::kernel::sched::current;
 use core::arch::asm;
 
 pub fn init() {
@@ -38,10 +37,6 @@ pub fn reprogram() {
 }
 
 fn timer_dispatch(_: u32) {
-    if let Some(cur) = current() {
-        cur.write().tick();
-    }
-
     unsafe {
         let mut t: usize;
         asm!("mrs {}, cntfrq_el0", out(reg) t);

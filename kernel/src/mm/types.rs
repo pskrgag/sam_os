@@ -11,6 +11,9 @@ pub struct VirtAddr(usize);
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub struct Pfn(usize);
 
+/// Just a wrapper around a page
+pub struct Page(VirtAddr);
+
 #[derive(Clone, Copy)]
 pub struct MemRange<T> {
     start: T,
@@ -126,6 +129,18 @@ impl Add<usize> for VirtAddr {
     }
 }
 
+impl Page {
+    pub fn new(v: VirtAddr) -> Self {
+        assert!(v.is_page_aligned());
+
+        Self(v)
+    }
+
+    pub fn va(&self) -> VirtAddr {
+        self.0
+    }
+}
+
 impl PhysAddr {
     // We need get() to be const in some cases.
     // so we can't remove it
@@ -153,20 +168,35 @@ impl Pfn {
 }
 
 impl VirtAddr {
+    #[inline]
     pub const fn new(ptr: usize) -> Self {
         Self(ptr)
     }
 
+    #[inline]
     pub fn from_raw<T>(ptr: *const T) -> Self {
         Self(ptr as usize)
     }
 
+    #[inline]
     pub fn to_raw<T>(&self) -> *const T {
         self.0 as *const T
     }
 
+    #[inline]
     pub fn to_raw_mut<T>(&self) -> *mut T {
         self.0 as *mut T
+    }
+
+    #[inline]
+    pub const fn null() -> Self {
+        Self(0)
+    }
+
+    // We need get() to be const in some cases.
+    // so we can't remove it
+    pub const fn get(&self) -> usize {
+        self.0
     }
 }
 

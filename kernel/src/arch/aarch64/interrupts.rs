@@ -1,5 +1,4 @@
 use crate::drivers::irq::irq_dispatch;
-use crate::kernel::sched;
 use crate::kernel::syscalls::do_syscall;
 use core::arch::{asm, global_asm};
 use core::fmt;
@@ -140,11 +139,8 @@ pub extern "C" fn kern_sync64(
 
 #[no_mangle]
 pub extern "C" fn kern_irq() {
+    println!("Timer works at least");
     irq_dispatch();
-
-    unsafe {
-        sched::run();
-    }
 }
 
 #[no_mangle]

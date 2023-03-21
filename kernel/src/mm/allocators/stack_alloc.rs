@@ -12,17 +12,16 @@ use spin::Once;
 
 const KERNEL_STACK_PAGES: usize = 2;
 
-// TODO: NUM_CPUS
 percpu_global!(
     pub static KERNEL_STACKS: Once<VirtAddr> = Once::new();
 );
 
 pub fn init_kernel_stacks() {
-    let mut stack = VirtAddr::from(PhysAddr::from(
+    let mut stack = VirtAddr::from(
         page_allocator()
             .alloc((KERNEL_STACK_PAGES + 2) * 2)
             .expect("Failed to allocate kernel stacks"),
-    ));
+    );
 
     for i in 0..2 {
         stack.add(KERNEL_STACK_PAGES + PAGE_SIZE);

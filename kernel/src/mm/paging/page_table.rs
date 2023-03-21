@@ -8,7 +8,6 @@ use crate::{
 };
 
 use alloc::boxed::Box;
-use core::pin::Pin;
 
 #[derive(Debug)]
 pub enum MmError {
@@ -38,7 +37,7 @@ pub struct PageTableBlock<const LVL: u8, const N: usize> {
     block: [PageTableEntry; N],
 }
 
-pub type PDir<const LVL: u8, const N: usize> = Pin<Box<PageTableBlock<LVL, N>, PageBlockAllocator>>;
+pub type PDir<const LVL: u8, const N: usize> = Box<PageTableBlock<LVL, N>>;
 
 #[derive(Clone, Copy, Debug)]
 pub struct PageTableEntry(usize);
@@ -48,45 +47,17 @@ pub struct PageTable<const N: usize = 512> {
     kernel: bool,
 }
 
-pub struct PageBlockAllocator;
-
-unsafe impl core::alloc::Allocator for PageBlockAllocator {
-    fn allocate(
-        &self,
-        _layout: core::alloc::Layout,
-    ) -> Result<core::ptr::NonNull<[u8]>, core::alloc::AllocError> {
-        let va = VirtAddr::from(PhysAddr::from(page_allocator().alloc(1).unwrap()));
-
-        Ok(unsafe {
-            core::ptr::NonNull::new(core::slice::from_raw_parts_mut(va.to_raw_mut::<u8>(), 4096))
-                .unwrap()
-        })
-    }
-
-    unsafe fn deallocate(&self, _ptr: core::ptr::NonNull<u8>, _layout: core::alloc::Layout) {
-        // Do nothing;
-        // We don't free kernel page table blocks
-    }
-}
-
 impl<const LVL: u8, const N: usize> PageTableBlock<LVL, N> {
-    pub fn new() -> Pin<Box<Self, PageBlockAllocator>> {
-        Box::<Self, PageBlockAllocator>::pin_in(
-            Self {
-                block: [PageTableEntry(0); N],
-            },
-            PageBlockAllocator {},
-        )
+    /// SAFETY: Caller must take care of thinking about if PA is actuallu valid
+    pub unsafe fn new(addr: PhysAddr) -> Box<Self> {
+        Box::<Self>::from_raw(VirtAddr::from(addr).to_raw_mut::<_>())
     }
 
+    /// SAFETY: Caller must take care of thinking about if VA is actuallu valid
     pub unsafe fn from_raw(addr: VirtAddr) -> PDir<LVL, N> {
         assert!(addr.is_page_aligned());
 
-        Box::<Self, PageBlockAllocator>::from_raw_in(
-            addr.to_raw_mut::<Self>(),
-            PageBlockAllocator {},
-        )
-        .into()
+        Box::<Self>::from_raw(addr.to_raw_mut::<Self>()).into()
     }
 
     pub fn addr(&self) -> VirtAddr {
@@ -165,9 +136,9 @@ impl PageFlags {
 }
 
 impl<const N: usize> PageTable<N> {
-    pub fn new() -> Self {
+    pub fn new(pa: PhysAddr) -> Self {
         Self {
-            dir: PageTableBlock::new(),
+            dir: unsafe { PageTableBlock::new(pa) },
             kernel: false,
         }
     }

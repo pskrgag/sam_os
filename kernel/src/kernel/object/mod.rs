@@ -3,7 +3,6 @@ use alloc::sync::Arc;
 use core::any::Any;
 
 pub mod handle;
-pub mod handle_allocator;
 pub mod handle_table;
 
 // All exposed kernel objects must be derived from this trait
@@ -12,7 +11,5 @@ pub trait KernelObject {
 }
 
 pub fn init() {
-    handle_allocator::init();
-
     println!("Object subsystem initialized");
 }

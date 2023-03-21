@@ -1,5 +1,6 @@
 use crate::{
     kernel::locking::spinlock::{Spinlock, SpinlockGuard},
+    mm::allocators::page_alloc::page_allocator,
     mm::paging::page_table::PageTable,
 };
 
@@ -11,7 +12,11 @@ pub static KERNEL_PAGE_TABLE: Once<Spinlock<PageTable>> = Once::new();
 pub static mut PAGE_TABLE_BASE: usize = 0;
 
 pub fn init() {
-    KERNEL_PAGE_TABLE.call_once(|| Spinlock::new(PageTable::new()));
+    let base = page_allocator()
+        .alloc(1)
+        .expect("Failed to allocate kernel page table base");
+
+    KERNEL_PAGE_TABLE.call_once(|| Spinlock::new(PageTable::new(base)));
 
     println!("Allocated kernel page table base");
 

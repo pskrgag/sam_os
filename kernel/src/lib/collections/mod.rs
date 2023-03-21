@@ -1,2 +1,2 @@
-pub mod list;
+pub mod ertrie;
 pub mod vector;

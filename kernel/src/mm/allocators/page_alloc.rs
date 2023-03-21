@@ -1,23 +1,47 @@
 use crate::{
-    arch, arch::cpuid::CpuLayout, arch::PAGE_SIZE, kernel, lib::collections::vector::Vector,
+    arch::{self, PAGE_SHIFT, PAGE_SIZE},
+    kernel,
+    kernel::locking::fake_lock::FakeLock,
+    lib,
     mm::types::*,
 };
-use bitmaps::Bitmap;
-use lock_free_buddy_allocator::buddy_alloc::BuddyAlloc;
 use spin::once::Once;
 
-pub struct PageAlloc {
-    pool: Vector<Bitmap<64>>,
-    start: Pfn,
+extern "C" {
+    static end: usize;
 }
 
-unsafe impl Send for PageAlloc {}
+/// Purpose of this allocator is to allocate memory at the boot time and never de-allocate it
+pub struct PageAlloc {
+    start: MemRange<PhysAddr>,
+    cursor: usize,
+}
 
-pub static PAGE_ALLOC: Once<BuddyAlloc<{ arch::PAGE_SIZE }, CpuLayout, alloc::alloc::Global>> =
-    spin::Once::new();
+pub static mut PAGE_ALLOC: Once<PageAlloc> = Once::new();
+
+impl PageAlloc {
+    pub fn new(range: MemRange<PhysAddr>) -> Self {
+        Self {
+            start: range,
+            cursor: 0,
+        }
+    }
+
+    pub fn alloc(&mut self, pages: usize) -> Option<PhysAddr> {
+        if self.cursor + pages >= self.start.size() >> PAGE_SHIFT {
+            None
+        } else {
+            let res = self.start.start().get() + self.cursor;
+
+            self.cursor += pages;
+            println!("Addr 0x{:x}", res);
+            Some(PhysAddr::from(res))
+        }
+    }
+}
 
 pub fn init() {
-    let alloc_start = PhysAddr::from(arch::ram_base() as usize + kernel::misc::image_size());
+    let alloc_start = PhysAddr::from(VirtAddr::from(linker_var!(end)));
     let alloc_size = arch::ram_size() as usize - kernel::misc::image_size();
 
     println!(
@@ -26,17 +50,11 @@ pub fn init() {
         alloc_size
     );
 
-    PAGE_ALLOC.call_once(|| {
-        BuddyAlloc::<PAGE_SIZE, CpuLayout, alloc::alloc::Global>::new(
-            alloc_start.into(),
-            alloc_size / arch::PAGE_SIZE,
-            &alloc::alloc::Global,
-        )
-        .unwrap()
-    });
+    unsafe {
+        PAGE_ALLOC.call_once(|| PageAlloc::new(MemRange::new(alloc_start, alloc_size)));
+    }
 }
 
-pub fn page_allocator(
-) -> &'static BuddyAlloc<'static, { arch::PAGE_SIZE }, CpuLayout, alloc::alloc::Global> {
-    &PAGE_ALLOC.get().unwrap()
+pub fn page_allocator() -> &'static mut PageAlloc {
+    unsafe { PAGE_ALLOC.get_mut().unwrap() }
 }

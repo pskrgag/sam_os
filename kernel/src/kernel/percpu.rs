@@ -103,7 +103,6 @@ macro_rules! percpu_mut {
     }};
 }
 
-// TODO: preemption
 impl<T> PerCpu<T> {
     pub const fn new(data: T) -> Self {
         Self { data: data }
@@ -132,7 +131,7 @@ pub fn init_percpu() -> Option<()> {
     assert!(per_cpu_size % PAGE_SIZE == 0);
 
     let pages = (per_cpu_size / PAGE_SIZE) * NUM_CPUS;
-    let pa: PhysAddr = page_allocator().alloc(pages)?.into();
+    let pa = page_allocator().alloc(pages)?;
 
     PER_CPU_BASE.call_once(|| VirtAddr::from(pa));
     PER_CPU_SIZE.call_once(|| per_cpu_size);

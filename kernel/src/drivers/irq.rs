@@ -1,11 +1,12 @@
-use crate::{drivers::gic::GIC, kernel::locking::spinlock::Spinlock, lib::collections::list::List};
+use crate::{drivers::gic::GIC, kernel::locking::spinlock::Spinlock};
+use alloc::collections::LinkedList;
 
 pub struct IrqHandler {
     num: u32,
     dispatcher: fn(u32),
 }
 
-pub static IRQS: Spinlock<List<IrqHandler>> = Spinlock::new(List::new());
+pub static IRQS: Spinlock<LinkedList<IrqHandler>> = Spinlock::new(LinkedList::new());
 
 impl IrqHandler {
     pub fn new(num: u32, func: fn(u32)) -> Self {
@@ -28,7 +29,7 @@ pub fn register_handler(irq: u32, func: fn(u32)) {
     let handler = IrqHandler::new(irq, func);
 
     GIC.get().enable_irq(irq);
-    IRQS.lock().push(handler);
+    IRQS.lock().push_back(handler);
 }
 
 pub fn init_secondary(irq: u32) {

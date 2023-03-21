@@ -8,7 +8,6 @@ use syn;
 
 fn impl_kernel_object_macro(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
-    let global_slab_name = format_ident!("{}_SLAB", name);
     let wrapper_name = format_ident!("{}Alloc", name);
     let ref_name = format_ident!("{}Ref", name);
 
@@ -19,15 +18,11 @@ fn impl_kernel_object_macro(ast: &syn::DeriveInput) -> TokenStream {
             }
         }
 
-        crate::slab_allocator!(#global_slab_name, #wrapper_name, #name);
-        pub type #ref_name = alloc::sync::Arc<alloc::boxed::Box<qrwlock::RwLock<#name>, #wrapper_name>>;
+        pub type #ref_name = alloc::sync::Arc<#name>;
 
         impl #name {
-            fn construct(new: Self) -> #ref_name {
-                use alloc::sync::Arc;
-                use alloc::boxed::Box;
-
-                Arc::new(Box::new_in(qrwlock::RwLock::new(new), #wrapper_name::new()))
+            fn construct(s: Self) -> #ref_name {
+                Arc::new(s)
             }
         }
     };

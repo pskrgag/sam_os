@@ -2,8 +2,6 @@ pub mod allocators;
 pub mod paging;
 pub mod sections;
 pub mod types;
-pub mod vma_list;
-pub mod vms;
 
 use crate::kernel::misc::kernel_offset;
 use types::*;
@@ -21,7 +19,6 @@ pub fn virt_to_phys_linear(virt: VirtAddr) -> PhysAddr {
 pub fn init() {
     allocators::boot_alloc::init();
     allocators::page_alloc::init();
-    allocators::slab::init_kernel_slabs();
     paging::kernel_page_table::init();
     sections::remap_kernel();
     crate::kernel::percpu::init_percpu();

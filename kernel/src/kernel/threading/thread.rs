@@ -1,12 +1,7 @@
 use crate::{
     arch::{self, regs::Context},
     kernel::locking::spinlock::Spinlock,
-    mm::{
-        allocators::slab::SlabAllocator,
-        types::{Address, VirtAddr},
-        vms::{Vms, VmsRef},
-    },
-    kernel::sched::run_queue::RUN_QUEUE,
+    mm::types::{Address, VirtAddr},
 };
 use alloc::boxed::Box;
 use alloc::sync::Arc;
@@ -37,12 +32,11 @@ pub struct Thread {
     arch_ctx: Context,
     state: ThreadState,
     ticks: usize,
-    vms: VmsRef,
 }
 
 impl Thread {
-    pub fn new(id: u16, ep: VirtAddr, stack: VirtAddr, vms: Option<VmsRef>) -> Option<ThreadRef> {
-        Some(Self::construct(Self {
+    pub fn new(id: u16, ep: VirtAddr, stack: VirtAddr) -> Option<ThreadRef> {
+        Some(Arc::new(Self {
             id: id,
             state: ThreadState::Initialized,
             arch_ctx: Context::new_thread(
@@ -51,18 +45,20 @@ impl Thread {
                 stack.bits(),
             ),
             ticks: RR_TICKS,
-            vms: match vms {
-                Some(v) => v,
-                None => Vms::empty()?,
-            },
         }))
+    }
+
+    pub fn get(r: &ThreadRef) {
+        unsafe {
+            Arc::increment_strong_count(Arc::into_raw(r.clone()));
+        }
     }
 
     // idle thread which do nothing but waits for an interrupt
     pub fn kernel_thread(id: u16, f: fn()) -> Option<ThreadRef> {
         let ep = (kernel_thread_entry_point as *const fn()) as usize;
 
-        Some(Self::construct(Self {
+        Some(Arc::new(Self {
             id: id,
             state: ThreadState::Initialized,
             arch_ctx: Context::new_kernel_thread(
@@ -75,7 +71,6 @@ impl Thread {
                     .bits(),
             ),
             ticks: RR_TICKS,
-            vms: Vms::empty()?,
         }))
     }
 
@@ -109,6 +104,6 @@ impl Thread {
     }
 
     pub fn resume(r: ThreadRef) {
-        RUN_QUEUE.per_cpu_var_get().get().add(r);
+        todo!()
     }
 }

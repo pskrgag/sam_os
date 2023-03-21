@@ -19,6 +19,7 @@ global_asm!(
 );
 
 pub fn idle_thread() {
+    // basically wfi
     loop {
         println!("Idle loop");
         for _ in 0..10_000_000 {

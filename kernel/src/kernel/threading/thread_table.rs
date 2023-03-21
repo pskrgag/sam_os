@@ -1,4 +1,3 @@
-use crate::kernel::sched::run_queue::RUN_QUEUE;
 use crate::{
     kernel::elf::ElfData,
     kernel::threading::{thread::Thread, ThreadRef},

@@ -1,19 +1,17 @@
 use crate::kernel::object::KernelObject;
 use alloc::sync::Arc;
-
-pub type HandleBase = u32;
-
-const HANDLE_INVALID: HandleBase = HandleBase::MAX;
+use uapi::handle::HandleType;
 
 pub struct Handle {
-    raw: HandleBase,
+    t: HandleType,      // To not call dynamic_cast for no reason (??)
+                        // Should be reworked maybe
     obj: Option<Arc<dyn KernelObject>>,
 }
 
 impl Handle {
     pub const fn invalid() -> Self {
         Self {
-            raw: HANDLE_INVALID,
+            t: HandleType::Invalid,
             obj: None,
         }
     }
