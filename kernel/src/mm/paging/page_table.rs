@@ -40,9 +40,8 @@ pub struct PageTableBlock {
 #[derive(Clone, Copy, Debug)]
 pub struct PageTableEntry(usize);
 
-pub struct PageTable {
+pub struct PageTable<const KERNEL: bool> {
     base: VirtAddr,
-    kernel: bool,
 }
 
 impl PageTableBlock {
@@ -135,19 +134,17 @@ impl PageFlags {
     }
 }
 
-impl PageTable {
-    pub const fn default(kernel: bool) -> Self {
+impl<const KERNEL: bool> PageTable<KERNEL> {
+    pub const fn default() -> Self {
         Self {
             base: VirtAddr::new(0_usize),
-            kernel: kernel,
         }
     }
 
-    pub fn new(kernel: bool) -> Option<Self> {
+    pub fn new() -> Option<Self> {
         let base: PhysAddr = page_allocator().alloc(1)?.into();
         let mut new_table = Self {
             base: VirtAddr::from(base),
-            kernel: kernel,
         };
 
         let base_va = new_table.base;
@@ -156,7 +153,7 @@ impl PageTable {
         //     core::slice::from_raw_parts_mut(base_va.to_raw_mut::<u8>(), PAGE_SIZE).fill(0);
         // }
 
-        if kernel {
+        if KERNEL {
             new_table
                 .map(
                     None,
@@ -217,7 +214,7 @@ impl PageTable {
 
                     unsafe { table_block_1.set_tte(lvl1_index, new_entry) };
 
-                    if !self.kernel {
+                    if !KERNEL {
                         kernel_page_table().map(
                             None,
                             MemRange::new(VirtAddr::from(new_page), PAGE_SIZE),
@@ -252,7 +249,7 @@ impl PageTable {
 
                         unsafe { table_block_2.set_tte(lvl2_index, new_entry) };
 
-                        if !self.kernel {
+                        if !KERNEL {
                             kernel_page_table().map(
                                 None,
                                 MemRange::new(VirtAddr::from(new_page), PAGE_SIZE),

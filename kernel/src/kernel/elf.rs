@@ -1,6 +1,6 @@
 use crate::arch;
 use crate::mm::paging::page_table::MappingType;
-use crate::mm::types::{MemRange, VirtAddr};
+use crate::mm::types::{Address, MemRange, PhysAddr, VirtAddr};
 use alloc::vec::Vec;
 use core::mem::size_of;
 
@@ -79,7 +79,7 @@ struct ElfPhdr {
 }
 
 pub struct ElfData {
-    pub regions: Vec<(MemRange<VirtAddr>, MappingType, usize)>,
+    pub regions: Vec<(MemRange<VirtAddr>, MemRange<PhysAddr>, MappingType)>,
     pub ep: VirtAddr,
 }
 
@@ -153,9 +153,10 @@ fn flags_to_mt(flags: Elf64_Word) -> MappingType {
 fn parse_program_headers(
     data: &mut &[u8],
     header: &ElfHeader,
-) -> Option<Vec<(MemRange<VirtAddr>, MappingType, usize)>> {
+) -> Option<Vec<(MemRange<VirtAddr>, MemRange<PhysAddr>, MappingType)>> {
     let mut vec = Vec::new();
     let mut data = &data[header.e_phoff as usize - core::mem::size_of::<ElfHeader>()..];
+    let base_pa = PhysAddr::from(VirtAddr::from_raw(data.as_ptr()));
 
     for _ in 0..header.e_phnum {
         let pheader = read_data::<ElfPhdr>(&mut data);
@@ -166,11 +167,15 @@ fn parse_program_headers(
 
         vec.push((
             MemRange::new(
-                (pheader.p_vaddr as usize).into(),
+                *VirtAddr::from(pheader.p_vaddr as usize).round_down_page(),
+                pheader.p_memsz.next_multiple_of(arch::PAGE_SIZE as u64) as usize,
+            ),
+            MemRange::new(
+                base_pa + PhysAddr::from(pheader.p_offset as usize),
                 pheader.p_memsz.next_multiple_of(arch::PAGE_SIZE as u64) as usize,
             ),
             flags_to_mt(pheader.p_flags),
-            pheader.p_offset as usize,
+
         ));
     }
 

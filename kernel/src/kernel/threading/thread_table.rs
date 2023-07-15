@@ -1,10 +1,14 @@
 use crate::kernel::sched::run_queue::RUN_QUEUE;
 use crate::{
+    arch::{PAGE_SHIFT, PAGE_SIZE},
     kernel::elf::ElfData,
     kernel::threading::{thread::Thread, ThreadRef},
     lib::ida::Ida,
+    mm::vma_list::Vma,
+    mm::types::*,
 };
 
+use alloc::vec::Vec;
 use qrwlock::{ReadGuard, RwLock, WriteGuard};
 
 use alloc::{collections::btree_map::BTreeMap, sync::Arc};
@@ -80,7 +84,7 @@ impl ThreadTable {
         self.table.get(&id).cloned()
     }
 
-    pub fn new_user_thread(&mut self, name: &str, vma: ElfData, elf: &[u8]) -> Option<ThreadRef> {
+    pub fn new_user_thread(&mut self, name: &str, vma: ElfData) -> Option<ThreadRef> {
         let new_id: u16 = self.id_alloc.alloc()?.try_into().unwrap();
         assert!(self
             .table
@@ -94,7 +98,16 @@ impl ThreadTable {
         let mut vms = new_thread.vms().write();
 
         for i in vma.regions {
-            vms.add_vma((i.0, i.1), Some(&elf[i.2..i.0.size()]));
+            let vma = Vma::new(i.0, i.2);
+            let mut backing_store = Vec::new();
+            let mut start_pa = i.1.start();
+
+            for _ in 0..i.1.size() >> PAGE_SHIFT {
+                backing_store.push(Pfn::from(start_pa));
+                start_pa.add(PAGE_SIZE);
+            }
+
+            vms.add_vma_backed(vma, backing_store.as_slice());
         }
 
         drop(vms);

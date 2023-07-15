@@ -1,4 +1,4 @@
-use crate::drivers::irq::irq_dispatch;
+use crate::drivers::irq::irq::irq_dispatch;
 use crate::kernel::sched;
 use crate::kernel::syscalls::do_syscall;
 use core::arch::{asm, global_asm};
@@ -162,11 +162,13 @@ pub extern "C" fn kern_exception_bug(esr_el1: usize, far_el1: usize, elr_el1: us
 }
 
 #[no_mangle]
-pub extern "C" fn user_sync(esr_el1: usize, elr_el1: usize) {
+pub extern "C" fn user_sync(esr_el1: usize, elr_el1: usize, far_el1: usize) {
     println!(
-        "!!! Kernel sync from EL0    ESR_EL1 0x{:x}    ELR_EL1 0x{:x}",
-        esr_el1, elr_el1
+        "!!! Kernel sync from EL0    ESR_EL1 0x{:x}    ELR_EL1 0x{:x}    FAR_EL1 0x{:x}",
+        esr_el1, elr_el1, far_el1,
     );
+
+    loop { }
 
     panic!("Some user thread has panicked! No idea how to deal with it");
 }

@@ -5,7 +5,7 @@ use core::{
     ptr::NonNull,
 };
 
-const INIT_PAGE_POOL: usize = 10;
+const INIT_PAGE_POOL: usize = 50;
 
 #[repr(C)]
 struct FfHeader {
@@ -110,7 +110,7 @@ impl BootAlloc {
     }
 
     pub unsafe fn free(&mut self, data: *mut u8) {
-        let mut cur_header = unsafe {
+        let cur_header = unsafe {
             core::mem::transmute::<_, *mut FfHeader>(
                 data.offset(-(core::mem::size_of::<FfHeader>() as isize)),
             )

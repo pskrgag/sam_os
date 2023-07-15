@@ -1,19 +1,17 @@
 use crate::{
     arch::{self, PAGE_SIZE},
-    kernel::misc::num_pages,
     mm::{
         allocators::page_alloc::page_allocator,
-        paging::kernel_page_table::kernel_page_table,
         paging::page_table::{MappingType, PageTable},
         types::*,
-        vma_list::VmaList,
+        vma_list::{VmaList, Vma},
     },
 };
 
 pub struct Vms {
     start: VirtAddr,
     size: usize,
-    ttbr0: Option<PageTable>,
+    ttbr0: Option<PageTable<false>>,
     vmas: VmaList,
 }
 
@@ -23,56 +21,28 @@ impl Vms {
             start: start,
 
             size: size,
-            ttbr0: if !user {
-                None
-            } else {
-                Some(PageTable::new(false)?)
-            },
+            ttbr0: if !user { None } else { Some(PageTable::new()?) },
             vmas: VmaList::new(),
         })
     }
 
-    pub fn add_vma(
-        &mut self,
-        data: (MemRange<VirtAddr>, MappingType),
-        source: Option<&[u8]>,
-    ) -> Option<()> {
-        let num_pages = num_pages(data.0.size());
-        let pa: PhysAddr = page_allocator().alloc(num_pages)?.into();
-        let range = MemRange::new(*data.0.start().round_down_page(), data.0.size());
-
+    pub fn add_vma_backed(&mut self, vma: Vma, backing: &[Pfn]) -> Option<()> {
         if let Some(ttbr0) = &mut self.ttbr0 {
-            ttbr0
-                .map(
-                    Some(MemRange::new(pa.into(), PAGE_SIZE * num_pages)),
-                    range.clone(),
-                    data.1,
-                )
-                .ok()?;
+            let mut va = vma.start();
 
-            // TODO: bad solution
-            if let Some(s) = source {
-                kernel_page_table()
+            for i in backing {
+                ttbr0
                     .map(
-                        None,
-                        MemRange::new(VirtAddr::from(pa), num_pages * PAGE_SIZE),
-                        MappingType::KernelData,
+                        Some(MemRange::new(PhysAddr::from(*i), PAGE_SIZE)),
+                        MemRange::new(va, PAGE_SIZE),
+                        vma.map_flags(),
                     )
                     .ok()?;
 
-                #[allow(unused_unsafe)]
-                unsafe {
-                    core::slice::from_raw_parts_mut(
-                        VirtAddr::from(pa)
-                            .to_raw_mut::<u8>()
-                            .add(data.0.start().page_offset()),
-                        s.len(),
-                    )
-                    .copy_from_slice(s);
-                }
+                va.add(PAGE_SIZE);
             }
 
-            self.vmas.add(data.0, data.1);
+            self.vmas.add(vma);
             Some(())
         } else {
             None

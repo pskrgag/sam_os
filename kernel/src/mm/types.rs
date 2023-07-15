@@ -17,6 +17,41 @@ pub struct MemRange<T> {
     size: usize,
 }
 
+pub trait Address {
+    fn bits(&self) -> usize;
+    fn set_bits(&mut self, bits: usize);
+
+    fn round_up(&mut self, to: usize) -> &mut Self {
+        assert!(to.is_power_of_two());
+
+        let round_mask = to - 1;
+        let rounded = (self.bits() | round_mask) + 1;
+
+        self.set_bits(rounded);
+        self
+    }
+
+    fn add(&mut self, add: usize) -> &mut Self {
+        self.set_bits(self.bits() + add);
+        self
+    }
+
+    #[inline]
+    fn is_page_aligned(&self) -> bool {
+        self.bits() & ((1 << arch::PAGE_SHIFT) - 1) == 0
+    }
+
+    #[inline]
+    fn round_down_page(&mut self) -> &mut Self {
+        self.set_bits(self.bits() & !((1_usize << arch::PAGE_SHIFT) - 1));
+        self
+    }
+
+    fn page_offset(&self) -> usize {
+        self.bits() & ((1_usize << arch::PAGE_SHIFT) - 1)
+    }
+}
+
 impl<T: Copy> MemRange<T> {
     pub const fn new(start: T, size: usize) -> Self {
         Self {
@@ -170,40 +205,6 @@ impl VirtAddr {
     }
 }
 
-pub trait Address {
-    fn bits(&self) -> usize;
-    fn set_bits(&mut self, bits: usize);
-
-    fn round_up(&mut self, to: usize) -> &mut Self {
-        assert!(to.is_power_of_two());
-
-        let round_mask = to - 1;
-        let rounded = (self.bits() | round_mask) + 1;
-
-        self.set_bits(rounded);
-        self
-    }
-
-    fn add(&mut self, add: usize) -> &mut Self {
-        self.set_bits(self.bits() + add);
-        self
-    }
-
-    #[inline]
-    fn is_page_aligned(&self) -> bool {
-        self.bits() & ((1 << arch::PAGE_SHIFT) - 1) == 0
-    }
-
-    #[inline]
-    fn round_down_page(&mut self) -> &mut Self {
-        self.set_bits(self.bits() & !((1_usize << arch::PAGE_SHIFT) - 1));
-        self
-    }
-
-    fn page_offset(&self) -> usize {
-        self.bits() & ((1_usize << arch::PAGE_SHIFT) - 1)
-    }
-}
 
 impl Address for VirtAddr {
     #[inline]

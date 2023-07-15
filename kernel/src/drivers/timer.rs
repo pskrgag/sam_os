@@ -1,4 +1,4 @@
-use crate::drivers::irq;
+use crate::drivers::irq::irq;
 use crate::kernel::sched::current;
 use core::arch::asm;
 

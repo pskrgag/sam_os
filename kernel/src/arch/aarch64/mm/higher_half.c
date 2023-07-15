@@ -1,4 +1,5 @@
-#include <stdint.h>
+typedef unsigned long uint64_t;
+typedef unsigned long uintptr_t;
 
 #define PAGE_SIZE	(1 << 12)
 #define UL(x)		((unsigned long) (x))

@@ -1,9 +1,16 @@
 use crate::mm::{paging::page_table::MappingType, types::*};
 use alloc::collections::LinkedList;
 
-struct Vma {
-    pub range: MemRange<VirtAddr>,
-    pub tp: MappingType,
+pub enum VmaFlags {
+    VmaInvalid,
+    VmaAnon,
+    VmaFileBacked
+}
+
+pub struct Vma {
+    pub(crate) range: MemRange<VirtAddr>,
+    pub(crate) tp: MappingType,
+    pub(crate) flags: VmaFlags,
 }
 
 pub struct VmaList {
@@ -23,8 +30,7 @@ impl VmaList {
         }
     }
 
-    pub fn add(&mut self, range: MemRange<VirtAddr>, tp: MappingType) {
-        let vma = Vma::new(range, tp);
+    pub fn add(&mut self, vma: Vma) {
         let mut cursor = self.list.cursor_front_mut();
 
         while let Some(i) = cursor.current() {
@@ -66,9 +72,20 @@ impl VmaList {
 
 impl Vma {
     pub fn new(range: MemRange<VirtAddr>, tp: MappingType) -> Self {
+        assert!(range.start().is_page_aligned());
+
         Self {
             range: range,
             tp: tp,
+            flags: VmaFlags::VmaInvalid
         }
+    }
+
+    pub fn start(&self) -> VirtAddr {
+        self.range.start()
+    }
+
+    pub fn map_flags(&self) -> MappingType {
+        self.tp
     }
 }

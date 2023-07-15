@@ -14,6 +14,12 @@ pub fn uart_write(str: &[u8]) {
         unsafe {
             ptr::write_volatile(ptr.to_raw_mut::<u8>(), *i);
         }
+
+        if *i == b'\n' {
+            unsafe {
+                ptr::write_volatile(ptr.to_raw_mut::<u8>(), b'\r');
+            }
+        }
     }
 }
 

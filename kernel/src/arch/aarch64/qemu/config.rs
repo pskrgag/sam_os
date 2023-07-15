@@ -14,33 +14,16 @@ pub const MEMORY_LAYOUT: [arch::MemoryRegion; 2] = [
     },
 ];
 
-const fn mem_region(tp: arch::MemoryType) -> &'static arch::MemoryRegion {
-    let mut i = 0;
-
-    loop {
-        if MEMORY_LAYOUT[i].tp == tp {
-            return &MEMORY_LAYOUT[i];
-        }
-
-        i += 1;
-        if i >= MEMORY_LAYOUT.len() {
-            break;
-        }
-    }
-
-    panic!()
-}
-
 pub const fn uart_base() -> *mut u8 {
     0x09000000 as *mut u8
 }
 
 pub const fn ram_base() -> *mut u8 {
-    mem_region(arch::MemoryType::MEM).start as *mut u8
+    0x40000000 as *mut u8
 }
 
 pub const fn ram_size() -> usize {
-    mem_region(arch::MemoryType::MEM).size
+    0x02000000 / 4
 }
 
 pub const fn gic_dist() -> (PhysAddr, usize) {

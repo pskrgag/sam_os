@@ -3,14 +3,14 @@ use crate::{
     mm::paging::page_table::PageTable,
 };
 
-pub static KERNEL_PAGE_TABLE: Spinlock<PageTable> = Spinlock::new(PageTable::default(true));
+pub static KERNEL_PAGE_TABLE: Spinlock<PageTable<true>> = Spinlock::new(PageTable::default());
 
 #[no_mangle]
 pub static mut PAGE_TABLE_BASE: usize = 0;
 
 pub fn init() {
     let mut table = KERNEL_PAGE_TABLE.lock();
-    *table = PageTable::new(true).expect("Failed to allocate tt base");
+    *table = PageTable::new().expect("Failed to allocate tt base");
 
     println!("Allocated kernel page table base");
 
@@ -19,6 +19,6 @@ pub fn init() {
     }
 }
 
-pub fn kernel_page_table() -> SpinlockGuard<'static, PageTable> {
+pub fn kernel_page_table() -> SpinlockGuard<'static, PageTable<true>> {
     KERNEL_PAGE_TABLE.lock()
 }
