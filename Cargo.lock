@@ -41,6 +41,9 @@ dependencies = [
 [[package]]
 name = "libc"
 version = "0.1.0"
+dependencies = [
+ "rustrt",
+]
 
 [[package]]
 name = "lock_free_buddy_allocator"
@@ -49,12 +52,38 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2b8256be05fb9612e0276693020bed985954c9e5c621f4ec6edec822af6b13b"
 
 [[package]]
+name = "proc-macro2"
+version = "1.0.65"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92de25114670a878b1261c79c9f8f729fb97e95bac93f6312f583c60dd6a1dfe"
+dependencies = [
+ "unicode-ident",
+]
+
+[[package]]
 name = "qrwlock"
 version = "0.2.0"
 source = "git+https://github.com/pskrgag/rust-qrwlock.git#24a2aa41932bea0a1ecf45549e2cd13877b2f74d"
 dependencies = [
  "spin 0.9.4",
  "static_assertions",
+]
+
+[[package]]
+name = "quote"
+version = "1.0.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5907a1b7c277254a8b15170f6e7c97cfa60ee7872a3217663bb81151e48184bb"
+dependencies = [
+ "proc-macro2",
+]
+
+[[package]]
+name = "rustrt"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -98,7 +127,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
+name = "syn"
+version = "2.0.26"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "45c3457aacde3c65315de5031ec191ce46604304d2446e803d71ade03308d970"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "unicode-ident",
+]
+
+[[package]]
 name = "tock-registers"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ee8fba06c1f4d0b396ef61a54530bb6b28f0dc61c38bc8bc5a5a48161e6282e"
+
+[[package]]
+name = "unicode-ident"
+version = "1.0.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "301abaae475aa91687eb82514b328ab47a211a533026cb25fc3e519b86adfc3c"

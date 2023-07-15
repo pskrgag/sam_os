@@ -2,13 +2,14 @@ use crate::{
     arch::mm::page_table::set_kernel_page_table,
     kernel::locking::fake_lock::FakeLock,
     kernel::misc::kernel_offset,
-    lib::collections::vector::Vector,
     linker_var,
     mm::{
         paging::{kernel_page_table::kernel_page_table, page_table::MappingType},
         types::*,
     },
 };
+
+use alloc::vec::Vec;
 
 extern "C" {
     static stext: usize;
@@ -34,7 +35,7 @@ pub struct KernelSection {
     map_type: MappingType,
 }
 
-static KERNEL_SECTIONS: FakeLock<Vector<KernelSection>> = FakeLock::new(Vector::new());
+static KERNEL_SECTIONS: FakeLock<Vec<KernelSection>> = FakeLock::new(Vec::new());
 
 impl KernelSection {
     pub fn new(start: usize, size: usize, name: &'static str, tp: MappingType) -> Self {
@@ -63,7 +64,7 @@ impl KernelSection {
     }
 }
 
-fn populate_kernel_sections(array: &mut Vector<KernelSection>) {
+fn populate_kernel_sections(array: &mut Vec<KernelSection>) {
     let text = KernelSection::new(
         linker_var!(stext),
         linker_var!(etext) - linker_var!(stext),

@@ -5,8 +5,6 @@ pub use aarch64::*;
 
 // FIXME one day...
 pub mod board;
-#[path = "aarch64/qemu/config.rs"]
-mod config;
 
 #[derive(Copy, Clone)]
 pub enum MemoryType {

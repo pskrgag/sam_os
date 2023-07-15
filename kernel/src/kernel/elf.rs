@@ -1,6 +1,6 @@
 use crate::arch;
 use crate::mm::paging::page_table::MappingType;
-use crate::mm::types::{Address, MemRange, PhysAddr, VirtAddr};
+use crate::mm::types::{Address, MemRange, Pfn, PhysAddr, VirtAddr};
 use alloc::vec::Vec;
 use core::mem::size_of;
 
@@ -165,17 +165,20 @@ fn parse_program_headers(
             continue;
         }
 
+        /* Carefully calculate size to not miss any pages */
+        let size = (Pfn::from(
+            base_pa + PhysAddr::from(pheader.p_memsz as usize + pheader.p_offset as usize),
+        ) - Pfn::from(base_pa)
+            + 1)
+            * arch::PAGE_SIZE;
+
         vec.push((
             MemRange::new(
                 *VirtAddr::from(pheader.p_vaddr as usize).round_down_page(),
-                pheader.p_memsz.next_multiple_of(arch::PAGE_SIZE as u64) as usize,
+                size,
             ),
-            MemRange::new(
-                base_pa + PhysAddr::from(pheader.p_offset as usize),
-                pheader.p_memsz.next_multiple_of(arch::PAGE_SIZE as u64) as usize,
-            ),
+            MemRange::new(base_pa + PhysAddr::from(pheader.p_offset as usize), size),
             flags_to_mt(pheader.p_flags),
-
         ));
     }
 

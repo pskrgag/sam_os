@@ -14,7 +14,7 @@ pub enum MmError {
     NotImpl,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum MappingType {
     KernelData,
     KernelText,

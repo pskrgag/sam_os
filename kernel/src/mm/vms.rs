@@ -31,6 +31,9 @@ impl Vms {
             let mut va = vma.start();
 
             for i in backing {
+
+                println!("Mappinng 0x{:x} -> 0x{:x} as {:?}", PhysAddr::from(*i).bits(), va.bits(), vma.map_flags());
+
                 ttbr0
                     .map(
                         Some(MemRange::new(PhysAddr::from(*i), PAGE_SIZE)),

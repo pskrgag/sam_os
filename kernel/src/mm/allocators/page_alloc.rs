@@ -1,13 +1,15 @@
 use crate::{
-    arch, arch::cpuid::CpuLayout, arch::PAGE_SIZE, kernel, lib::collections::vector::Vector,
+    arch, arch::cpuid::CpuLayout, arch::PAGE_SIZE, kernel,
     mm::types::*,
 };
 use bitmaps::Bitmap;
 use lock_free_buddy_allocator::buddy_alloc::BuddyAlloc;
 use spin::once::Once;
 
+use alloc::vec::Vec;
+
 pub struct PageAlloc {
-    pool: Vector<Bitmap<64>>,
+    pool: Vec<Bitmap<64>>,
     start: Pfn,
 }
 

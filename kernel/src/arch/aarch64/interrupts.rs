@@ -168,8 +168,6 @@ pub extern "C" fn user_sync(esr_el1: usize, elr_el1: usize, far_el1: usize) {
         esr_el1, elr_el1, far_el1,
     );
 
-    loop { }
-
     panic!("Some user thread has panicked! No idea how to deal with it");
 }
 

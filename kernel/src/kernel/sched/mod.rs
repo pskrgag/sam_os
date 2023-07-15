@@ -76,7 +76,7 @@ pub unsafe fn run() {
 
         let next = rq.pop().unwrap();
 
-        println!("Switching to {} --> {}", cur.id(), next.read().id());
+        // println!("Switching to {} --> {}", cur.id(), next.read().id());
 
         let mut next = next.write();
 
