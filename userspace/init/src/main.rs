@@ -12,5 +12,11 @@ static CPIO: &[u8] = include_bytes!("/tmp/archive.cpio");
 fn main() {
     println!("Init proccess started");
 
-    let cpio = cpio::Cpio::new(CPIO);
+    let cpio = cpio::Cpio::new(CPIO).unwrap();
+
+    for i in cpio.iter() {
+        println!("{:?}", i);
+
+        let elf = i.data();
+    }
 }
