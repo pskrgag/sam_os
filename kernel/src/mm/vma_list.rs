@@ -4,7 +4,7 @@ use alloc::collections::LinkedList;
 pub enum VmaFlags {
     VmaInvalid,
     VmaAnon,
-    VmaFileBacked
+    VmaFileBacked,
 }
 
 pub struct Vma {
@@ -77,7 +77,7 @@ impl Vma {
         Self {
             range: range,
             tp: tp,
-            flags: VmaFlags::VmaInvalid
+            flags: VmaFlags::VmaInvalid,
         }
     }
 

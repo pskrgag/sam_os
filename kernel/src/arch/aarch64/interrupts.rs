@@ -180,7 +180,5 @@ pub extern "C" fn user_syscall(
     x4: usize,
     x5: usize,
 ) -> usize {
-    println!("User syscall {}", x0);
-
     do_syscall(x0, x1, x2, x3, x4, x5)
 }

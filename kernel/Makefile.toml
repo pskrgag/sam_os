@@ -9,14 +9,9 @@ args = ["fmt", "--", "--emit=files"]
 
 [tasks.build]
 env = { "RUSTFLAGS" = "${RUSTFLAGS}" }
-command = "cargo"
-args = ["build", "--target=${TARGET}"]
+command = "pwd"
+args = ["build", "--target=${TARGET}", "--features=qemu"]
 
 [tasks.test]
 command = "echo"
-
-[tasks.my-flow]
-dependencies = [
-    "format",
-    "build"
-]
+args = ["test"]

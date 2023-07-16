@@ -4,10 +4,12 @@ RUSTFLAGS += -C opt-level=0
 RUSTFLAGS += -C force-frame-pointers
 
 TARGET = aarch64-unknown-none-softfloat
-BINARY = target/$(TARGET)/debug/sam_os
+BINARY = target/$(TARGET)/debug/sam_kernel
 
 all:
-	cd userspace/init/; cargo build --target $(TARGET) && \
+	cd userspace/fileserver; cargo build --target $(TARGET) && \
+		find ../../target -name "fileserver" -print0 | cpio -ocv0  > /tmp/archive.cpio && \
+		cd ../init; cargo build --target $(TARGET) && \
 		cd ../../kernel; RUSTFLAGS="$(RUSTFLAGS)" cargo build --target $(TARGET) --features qemu
 
 test:

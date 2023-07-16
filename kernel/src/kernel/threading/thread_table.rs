@@ -4,8 +4,8 @@ use crate::{
     kernel::elf::ElfData,
     kernel::threading::{thread::Thread, ThreadRef},
     lib::ida::Ida,
-    mm::vma_list::Vma,
     mm::types::*,
+    mm::vma_list::Vma,
 };
 
 use alloc::vec::Vec;
@@ -113,6 +113,7 @@ impl ThreadTable {
         drop(vms);
 
         new_thread.spawn_user(vma.ep);
+        new_thread.setup_args(&["TMP"]);
         drop(new_thread);
 
         RUN_QUEUE.per_cpu_var_get().get().add(thread);

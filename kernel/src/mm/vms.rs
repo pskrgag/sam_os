@@ -4,7 +4,7 @@ use crate::{
         allocators::page_alloc::page_allocator,
         paging::page_table::{MappingType, PageTable},
         types::*,
-        vma_list::{VmaList, Vma},
+        vma_list::{Vma, VmaList},
     },
 };
 
@@ -31,9 +31,6 @@ impl Vms {
             let mut va = vma.start();
 
             for i in backing {
-
-                println!("Mappinng 0x{:x} -> 0x{:x} as {:?}", PhysAddr::from(*i).bits(), va.bits(), vma.map_flags());
-
                 ttbr0
                     .map(
                         Some(MemRange::new(PhysAddr::from(*i), PAGE_SIZE)),

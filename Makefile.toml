@@ -1,9 +1,10 @@
 [env]
-TARGET = "aarch64-unknown-none-softfloat"
-RUSTFLAGS = "-C link-arg=--library-path=. -C link-arg=--script=aarch64-qemu.ld -C force-frame-pointers"
+# this tells cargo-make that this directory acts as a workspace root
+CARGO_MAKE_WORKSPACE_EMULATION = true
 
-[tasks.build]
-env = { "RUSTFLAGS" = "${RUSTFLAGS}" }
-command = "cargo"
-args = ["build", "--target=${TARGET}"]
-
+# a list of crate members. since we do not have a Cargo.toml, we will need to specify this in here.
+CARGO_MAKE_CRATE_WORKSPACE_MEMBERS = [
+	"userspace/fileserver",
+	"userspace/init",
+	"kernel"
+]

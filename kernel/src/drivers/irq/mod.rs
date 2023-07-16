@@ -1,2 +1,2 @@
-pub mod irq;
 pub mod gic;
+pub mod irq;

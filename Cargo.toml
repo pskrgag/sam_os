@@ -1,3 +1,7 @@
 [workspace]
-members = ["kernel", "userspace/*"]
-resolver = "2"
+members = [
+	"userspace/fileserver",
+	"userspace/init",
+	"kernel"
+]
+resolver = "1"

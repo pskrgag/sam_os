@@ -1,5 +1,5 @@
-use crate::{kernel::locking::spinlock::Spinlock, lib::collections::list::List};
 use super::gic::GIC;
+use crate::{kernel::locking::spinlock::Spinlock, lib::collections::list::List};
 
 pub struct IrqHandler {
     num: u32,

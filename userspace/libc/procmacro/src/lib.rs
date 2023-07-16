@@ -22,7 +22,11 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
         #input_fn
 
         #[no_mangle]
-        pub extern "C" fn _start() {
+        pub extern "C" fn _start(argc: i32, argv: *const u8) {
+            for i in 0..argc {
+
+            }
+
             main();
 
             loop { }

@@ -1,8 +1,8 @@
 #[macro_use]
 pub mod mmio_mapper;
+pub mod irq;
 pub mod timer;
 pub mod uart;
-pub mod irq;
 
 pub fn init() {
     mmio_mapper::init();

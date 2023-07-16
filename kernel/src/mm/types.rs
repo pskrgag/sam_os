@@ -12,7 +12,7 @@ pub struct VirtAddr(usize);
 pub struct Pfn(usize);
 
 #[derive(Clone, Copy)]
-pub struct MemRange<T> {
+pub struct MemRange<T: Address> {
     start: T,
     size: usize,
 }
@@ -52,7 +52,7 @@ pub trait Address {
     }
 }
 
-impl<T: Copy> MemRange<T> {
+impl<T: Copy + Address> MemRange<T> {
     pub const fn new(start: T, size: usize) -> Self {
         Self {
             start: start,
@@ -66,6 +66,11 @@ impl<T: Copy> MemRange<T> {
 
     pub const fn size(&self) -> usize {
         self.size
+    }
+
+    pub fn truncate(&mut self, size: usize) -> bool {
+        self.start.add(size);
+        self.size.overflowing_sub(size).1
     }
 }
 
@@ -204,7 +209,6 @@ impl VirtAddr {
         self.0 as *mut T
     }
 }
-
 
 impl Address for VirtAddr {
     #[inline]

@@ -109,7 +109,7 @@ pub fn remap_kernel() {
 
     for i in &*array {
         println!(
-            "{}\t[0x{:x} -> 0x{:x}] (size {})",
+            "{}\t[0x{:x} -> 0x{:x}] (size 0x{:x})",
             i.name(),
             i.start() - kernel_offset(),
             i.start(),

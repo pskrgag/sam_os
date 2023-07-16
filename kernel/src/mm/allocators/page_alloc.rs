@@ -1,7 +1,4 @@
-use crate::{
-    arch, arch::cpuid::CpuLayout, arch::PAGE_SIZE, kernel,
-    mm::types::*,
-};
+use crate::{arch, arch::cpuid::CpuLayout, arch::PAGE_SIZE, kernel, mm::types::*};
 use bitmaps::Bitmap;
 use lock_free_buddy_allocator::buddy_alloc::BuddyAlloc;
 use spin::once::Once;

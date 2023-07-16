@@ -136,11 +136,32 @@ impl Thread {
         self.arch_ctx.lr = (user_thread_entry_point as *const fn()) as usize;
         self.arch_ctx.x20 = ep.bits();
         self.arch_ctx.x19 = stack.stack_head().into();
+        self.arch_ctx.x22 = stack.stack_head().into();
         self.arch_ctx.ttbr0 = self.vms.read().ttbr0().expect("TTBR0 should be set").get();
 
         self.stack = Some(stack);
 
         self.state = ThreadState::Running;
+    }
+
+    pub fn setup_args(&mut self, args: &[&str]) {
+        assert!(self.kind == ThreadType::User);
+
+        // SAFETY: thread is not running, so we can assume that user addresses
+        // are mapped
+
+        for i in args {
+            unsafe {
+                core::ptr::copy_nonoverlapping(
+                    i.as_bytes().as_ptr(),
+                    self.arch_ctx.x19 as *mut _,
+                    i.len(),
+                );
+            }
+
+            self.arch_ctx.x19 += i.len();
+            self.arch_ctx.x23 += 1;
+        }
     }
 
     pub fn tick(&mut self) {

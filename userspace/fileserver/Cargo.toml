@@ -1,5 +1,5 @@
 [package]
-name = "sam_os_init"
+name = "fileserver"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,5 +9,5 @@ edition = "2021"
 libc = { path = "../libc" }
 
 [[bin]]
-name = "init"
+name = "fileserver"
 path = "src/main.rs"

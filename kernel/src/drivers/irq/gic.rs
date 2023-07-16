@@ -1,7 +1,5 @@
-
 use crate::{
-    drivers::mmio_mapper::MMIO_ALLOCATOR, kernel::locking::fake_lock::FakeLock, mm::types::*,
-    arch
+    arch, drivers::mmio_mapper::MMIO_ALLOCATOR, kernel::locking::fake_lock::FakeLock, mm::types::*,
 };
 
 const GICD_CTLR: usize = 0x0;
