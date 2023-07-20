@@ -1,10 +1,12 @@
-use crate::kernel::{locking::fake_lock::FakeLock, threading::ThreadRef};
+use crate::kernel::{locking::fake_lock::FakeLock, tasks::thread::{ThreadRef, ThreadWeakRef}};
 use crate::percpu_global;
 use alloc::collections::linked_list::LinkedList;
 
+use alloc::sync::Arc;
+
 pub struct RunQueue {
     list: LinkedList<ThreadRef>,
-    cur: Option<u16>,
+    cur: Option<ThreadWeakRef>,
 }
 
 percpu_global!(
@@ -25,8 +27,7 @@ impl RunQueue {
 
     pub fn pop(&mut self) -> Option<ThreadRef> {
         let next = self.list.pop_front()?;
-        self.cur = Some(next.read().id());
-
+        self.cur = Some(Arc::downgrade(&next));
         Some(next)
     }
 
@@ -34,7 +35,9 @@ impl RunQueue {
         self.list.is_empty()
     }
 
-    pub fn current_id(&self) -> Option<u16> {
-        self.cur
+    pub fn current(&self) -> Option<ThreadRef> {
+        let a = self.cur.as_ref()?;
+
+        a.upgrade()
     }
 }

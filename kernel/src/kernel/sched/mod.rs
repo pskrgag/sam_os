@@ -1,16 +1,17 @@
 pub mod run_queue;
 
 use crate::{
-    arch::{self, irq, regs::Context},
+    arch::{self, irq, regs::Context, PAGE_SHIFT, PAGE_SIZE},
     kernel::elf::parse_elf,
-    kernel::threading::thread_ep::idle_thread,
-    kernel::threading::thread_table,
-    kernel::threading::{
-        thread::ThreadState,
-        thread_table::{thread_table, thread_table_mut},
-        ThreadRef,
+    kernel::tasks::task::{init_task, kernel_task},
+    kernel::tasks::thread_ep::idle_thread,
+    kernel::tasks::{
+        thread::{Thread, ThreadState, ThreadRef},
     },
+    mm::{types::*, vma_list::Vma},
 };
+
+use alloc::vec::Vec;
 
 use run_queue::RUN_QUEUE;
 
@@ -54,8 +55,7 @@ pub static mut IDLE_THREAD_STACK: [usize; 2] = [0, 0];
 
 #[inline]
 pub fn current() -> Option<ThreadRef> {
-    let id = RUN_QUEUE.per_cpu_var_get().get().current_id()?;
-    thread_table().thread_by_id(id)
+    RUN_QUEUE.per_cpu_var_get().get().current()
 }
 
 pub unsafe fn run() {
@@ -74,11 +74,11 @@ pub unsafe fn run() {
             return;
         }
 
-        let next = rq.pop().unwrap();
+        let next_t = rq.pop().unwrap();
 
-        // println!("Switching to {} --> {}", cur.id(), next.read().id());
+        // println!("Switching to {} --> {}", cur.id(), next_t.read().id());
 
-        let mut next = next.write();
+        let mut next = next_t.write();
 
         let ctx = cur.ctx_mut() as *mut _;
         let ctx_next = next.ctx_mut() as *const _;
@@ -91,13 +91,14 @@ pub unsafe fn run() {
 
         rq.add(c);
 
+        crate::arch::current::set_current(next_t);
         irq::enable_all();
         switch_to(ctx, ctx_next);
         irq::disable_all();
     } else {
         let mut ctx = Context::default(); // tmp storage
-        let next = rq.pop().unwrap();
-        let mut next = next.write();
+        let next_t = rq.pop().unwrap();
+        let mut next = next_t.write();
 
         next.set_state(ThreadState::Running);
 
@@ -105,6 +106,7 @@ pub unsafe fn run() {
 
         drop(next);
 
+        crate::arch::current::set_current(next_t);
         irq::enable_all();
         switch_to(&mut ctx as *mut _, next_ctx);
         irq::disable_all();
@@ -114,26 +116,52 @@ pub unsafe fn run() {
 // ToDo: any idea fow to fix it?
 pub fn init_userspace() {
     let data = parse_elf(INIT).expect("Failed to parse elf");
+    let init_task = init_task();
 
-    thread_table_mut()
-        .new_user_thread("init", data)
-        .expect("Failed to run user thread");
+    let init_thread = Thread::new(init_task.clone(), 0);
+
+    let init_task = init_task.write();
+    let init_vms = init_task.vms();
+    let mut init_vms = init_vms.write();
+
+    for i in data.regions {
+        let vma = Vma::new(i.0, i.2);
+        let mut backing_store = Vec::new();
+        let mut start_pa = i.1.start();
+
+        for _ in 0..i.1.size() >> PAGE_SHIFT {
+            backing_store.push(Pfn::from(start_pa));
+            start_pa.add(PAGE_SIZE);
+        }
+
+        init_vms.add_vma_backed(vma, backing_store.as_slice());
+    }
+
+    // Drop vms and task lock, since init_user and
+    // Thread::start need them...
+    drop(init_task);
+    drop(init_vms);
+
+    init_thread.write().init_user(data.ep);
+    Thread::start(init_thread);
+
+    // thread_table_mut()
+    //     .new_user_thread("init", data)
+    //     .expect("Failed to run user thread");
 }
 
 pub fn init_idle() {
-    let mut table = thread_table::thread_table_mut();
-
     for i in 0..arch::NUM_CPUS {
-        let head = table
-            .new_idle_thread("idle thread", idle_thread, (), i)
-            .expect("Failed to create kernel thread")
-            .read()
-            .stack_head()
-            .unwrap();
+        let parent = kernel_task();
+        let idle = Thread::new(parent, i as u16);
+
+        idle.write().init_kernel(idle_thread, ());
 
         unsafe {
-            use crate::mm::types::PhysAddr;
-            IDLE_THREAD_STACK[i] = PhysAddr::from(head).get();
+            IDLE_THREAD_STACK[i] = PhysAddr::from(idle.read().stack_head().unwrap()).get();
         }
+
+        Thread::start(idle);
+
     }
 }

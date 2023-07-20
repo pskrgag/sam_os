@@ -3,12 +3,13 @@ use crate::{
     mm::allocators::stack_alloc::StackLayout,
     mm::{
         types::{Address, VirtAddr},
-        vms::Vms,
     },
 };
-use alloc::{boxed::Box, string::String, sync::Arc};
+use crate::kernel::sched::run_queue::RUN_QUEUE;
+use super::task::TaskObjectRef;
+use alloc::{boxed::Box};
 
-use qrwlock::qrwlock::RwLock;
+use object_lib::object;
 
 extern "C" {
     fn kernel_thread_entry_point();
@@ -32,40 +33,26 @@ pub enum ThreadType {
     User,
 }
 
+#[derive(object)]
 pub struct Thread {
     id: u16,
     arch_ctx: Context,
-    name: Box<str>,
     state: ThreadState,
-    vms: Arc<RwLock<Vms>>,
+    task: TaskObjectRef,
     stack: Option<StackLayout>,
-    kind: ThreadType,
     ticks: usize,
 }
 
-lazy_static! {
-    static ref KERNEL_VMS: Arc<RwLock<Vms>> = Arc::new(RwLock::new(
-        Vms::new(
-            VirtAddr::from(arch::kernel_as_start()),
-            arch::kernel_as_size(),
-            false
-        )
-        .expect("Failed to create kernel vms")
-    ));
-}
-
 impl Thread {
-    pub fn new(name: &str, id: u16) -> Self {
-        Self {
+    pub fn new(task: TaskObjectRef, id: u16) -> ThreadRef {
+        Self::construct(Self {
             id: id,
-            name: String::from(name).into_boxed_str(),
             state: ThreadState::Initialized,
-            vms: Arc::new(RwLock::new(Vms::default())),
             arch_ctx: Context::default(),
             stack: None,
-            kind: ThreadType::Undef,
             ticks: RR_TICKS,
-        }
+            task: task,
+        })
     }
 
     pub fn stack_head(&self) -> Option<VirtAddr> {
@@ -74,26 +61,6 @@ impl Thread {
         } else {
             None
         }
-    }
-
-    pub fn set_vms(&mut self, user: bool) -> Option<()> {
-        match user {
-            false => {
-                self.vms = KERNEL_VMS.clone();
-                self.kind = ThreadType::Kernel;
-            }
-            true => {
-                self.vms = Arc::new(RwLock::new(Vms::new(
-                    arch::user_as_start().into(),
-                    arch::user_as_size(),
-                    true,
-                )?));
-
-                self.kind = ThreadType::User;
-            }
-        };
-
-        Some(())
     }
 
     pub fn id(&self) -> u16 {
@@ -108,7 +75,7 @@ impl Thread {
         &self.arch_ctx
     }
 
-    pub(crate) fn spawn<T>(&mut self, func: fn(T) -> Option<()>, arg: T) {
+    pub(crate) fn init_kernel<T>(&mut self, func: fn(T) -> Option<()>, arg: T) {
         use crate::kernel::misc::ref_mut_to_usize;
 
         let arg = Box::new(arg);
@@ -124,11 +91,11 @@ impl Thread {
         self.state = ThreadState::Running;
     }
 
-    pub fn spawn_user(&mut self, ep: VirtAddr) {
+    pub fn init_user(&mut self, ep: VirtAddr) {
         let stack = StackLayout::new(3).expect("Failed to allocat stack");
-        let user_stack = self
-            .vms
-            .write()
+        let vms = self.task.read().vms();
+        let mut vms = vms.write();
+        let user_stack = vms
             .alloc_user_stack()
             .expect("Failed to allocate user stack");
 
@@ -137,16 +104,24 @@ impl Thread {
         self.arch_ctx.x20 = ep.bits();
         self.arch_ctx.x19 = stack.stack_head().into();
         self.arch_ctx.x22 = stack.stack_head().into();
-        self.arch_ctx.ttbr0 = self.vms.read().ttbr0().expect("TTBR0 should be set").get();
+        self.arch_ctx.ttbr0 = vms.ttbr0().expect("TTBR0 should be set").get();
 
         self.stack = Some(stack);
 
-        self.state = ThreadState::Running;
+        self.state = ThreadState::Initialized;
+    }
+
+    pub fn start(t: ThreadRef) {
+        let mut ta = t.write();
+
+        ta.state = ThreadState::Running;
+        ta.task.write().add_thread(Arc::downgrade(&t));
+
+        drop(ta);
+        RUN_QUEUE.per_cpu_var_get().get().add(t);
     }
 
     pub fn setup_args(&mut self, args: &[&str]) {
-        assert!(self.kind == ThreadType::User);
-
         // SAFETY: thread is not running, so we can assume that user addresses
         // are mapped
 
@@ -179,13 +154,5 @@ impl Thread {
 
     pub fn state(&self) -> ThreadState {
         self.state
-    }
-
-    pub fn vms(&mut self) -> &RwLock<Vms> {
-        &self.vms
-    }
-
-    pub fn kind(&self) -> ThreadType {
-        self.kind
     }
 }

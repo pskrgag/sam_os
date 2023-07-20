@@ -7,7 +7,9 @@ use crate::{
         vma_list::{Vma, VmaList},
     },
 };
+use object_lib::object;
 
+#[derive(object)]
 pub struct Vms {
     start: VirtAddr,
     size: usize,
@@ -16,12 +18,20 @@ pub struct Vms {
 }
 
 impl Vms {
-    pub fn new(start: VirtAddr, size: usize, user: bool) -> Option<Self> {
-        Some(Self {
-            start: start,
+    pub fn new_kernel() -> VmsRef {
+        Self::construct(Self {
+            start: VirtAddr::from(0x0),
+            size: usize::MAX,
+            ttbr0: None,
+            vmas: VmaList::new(),
+        })
+    }
 
-            size: size,
-            ttbr0: if !user { None } else { Some(PageTable::new()?) },
+    pub fn new_user() -> VmsRef {
+        Self::construct(Self {
+            start: VirtAddr::from(0x0),
+            size: usize::MAX,
+            ttbr0: Some(PageTable::new().unwrap()), // ToDo remove unwrap()
             vmas: VmaList::new(),
         })
     }
@@ -79,11 +89,5 @@ impl Vms {
         } else {
             None
         }
-    }
-}
-
-impl Default for Vms {
-    fn default() -> Self {
-        Self::new(VirtAddr::new(0), 0, false).unwrap()
     }
 }

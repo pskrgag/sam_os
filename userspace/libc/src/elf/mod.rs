@@ -3,8 +3,6 @@ use elf::segment::ProgramHeader;
 use elf::endian::LittleEndian;
 use elf::abi::PT_LOAD;
 
-use alloc::vec::Vec;
-
 // ToDo: support any endian?
 pub struct Elf<'a> {
     elf_data: ElfBytes<'a, LittleEndian>,

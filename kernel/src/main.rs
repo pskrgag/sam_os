@@ -12,8 +12,6 @@
 #![feature(naked_functions)]
 
 extern crate alloc;
-#[macro_use]
-extern crate lazy_static;
 
 #[macro_use]
 mod lib;
@@ -27,6 +25,8 @@ mod panic;
 
 use kernel::sched;
 pub use lib::printf;
+
+use crate::kernel::tasks::task;
 
 /* At this point we have:
  *
@@ -47,6 +47,8 @@ extern "C" fn start_kernel() -> ! {
 
     kernel::percpu::init_percpu();
 
+
+    task::init_kernel_task();
     sched::init_idle();
     sched::init_userspace();
 
