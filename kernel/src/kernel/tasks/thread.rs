@@ -4,6 +4,7 @@ use crate::{
     mm::{
         types::{Address, VirtAddr},
     },
+    lib::refcounter::RefCounter,
 };
 use crate::kernel::sched::run_queue::RUN_QUEUE;
 use super::task::TaskObjectRef;
@@ -34,25 +35,30 @@ pub enum ThreadType {
 }
 
 #[derive(object)]
+#[repr(C)]
 pub struct Thread {
+    type_id: core::any::TypeId,
     id: u16,
     arch_ctx: Context,
     state: ThreadState,
     task: TaskObjectRef,
     stack: Option<StackLayout>,
     ticks: usize,
+    refcount: RefCounter,
 }
 
 impl Thread {
-    pub fn new(task: TaskObjectRef, id: u16) -> ThreadRef {
-        Self::construct(Self {
+    pub fn new(task: TaskObjectRef, id: u16) -> Box<RwLock<Thread>> {
+        Box::new(RwLock::new(Self {
+            type_id: core::any::TypeId::of::<Self>(),
             id: id,
             state: ThreadState::Initialized,
             arch_ctx: Context::default(),
             stack: None,
             ticks: RR_TICKS,
             task: task,
-        })
+            refcount: RefCounter::new(),
+        }))
     }
 
     pub fn stack_head(&self) -> Option<VirtAddr> {
@@ -111,7 +117,7 @@ impl Thread {
         self.state = ThreadState::Initialized;
     }
 
-    pub fn start(t: ThreadRef) {
+    pub fn start(t: RefMut<Thread>) {
         let mut ta = t.write();
 
         ta.state = ThreadState::Running;

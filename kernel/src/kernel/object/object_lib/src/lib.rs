@@ -1,15 +1,17 @@
-#![no_std]
-
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn;
+use std::string::ToString;
 
 fn impl_kernel_object_macro(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
     let ref_name = format_ident!("{}Ref", name);
     let weak_ref_name = format_ident!("{}WeakRef", name);
+
+
+    let struct_type = ast.ident.to_string();
 
     let gen = quote! {
         use alloc::sync::Arc;

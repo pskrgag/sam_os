@@ -3,7 +3,6 @@ use bitflags::bitflags;
 bitflags! {
     struct SyscallList: usize {
         const SYS_WRITE = 0;
-        const SYS_TMP = 1;
     }
 }
 

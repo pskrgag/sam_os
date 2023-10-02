@@ -66,6 +66,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2b8256be05fb9612e0276693020bed985954c9e5c621f4ec6edec822af6b13b"
 
 [[package]]
+name = "object_lib"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -97,7 +105,7 @@ name = "rustrt"
 version = "0.1.0"
 dependencies = [
  "quote",
- "syn",
+ "syn 2.0.26",
 ]
 
 [[package]]
@@ -110,6 +118,7 @@ dependencies = [
  "cortex-a",
  "lazy_static",
  "lock_free_buddy_allocator",
+ "object_lib",
  "qrwlock",
  "spin 0.9.4",
  "tock-registers",
@@ -139,6 +148,17 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "syn"
+version = "1.0.109"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72b64191b275b66ffe2469e8af2c1cfe3bafa67b529ead792a6d0160888b4237"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "unicode-ident",
+]
 
 [[package]]
 name = "syn"

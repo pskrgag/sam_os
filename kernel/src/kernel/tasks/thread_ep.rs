@@ -22,7 +22,7 @@ global_asm!(
 
 pub fn idle_thread(_: ()) -> Option<()> {
     loop {
-        println!("Idle loop");
+        println!("Idle loop :)");
         for _ in 0..10_000_000 {
             unsafe { core::arch::asm!("nop") };
         }
