@@ -3,7 +3,7 @@ use crate::make_array;
 
 use super::KernelObject;
 
-const MAX_HANDLES: usize = 1000;
+const MAX_HANDLES: usize = 10;
 
 // This is SHIT! Must be replaced with radix trie-like stuff,
 // but for my own sake, I will leave it as simple array

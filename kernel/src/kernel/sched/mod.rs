@@ -8,12 +8,19 @@ use crate::{
     kernel::tasks::{
         thread::{Thread, ThreadState, ThreadRef},
     },
+    kernel::locking::spinlock::SpinlockGuard,
     mm::{types::*, vma_list::Vma},
+    percpu_global,
 };
 
 use alloc::vec::Vec;
+use alloc::sync::Arc;
 
 use run_queue::RUN_QUEUE;
+
+percpu_global! {
+    static SWITCH_FIXUP: (Option<usize>, Option<usize>) = (None, None);
+}
 
 extern "C" {
     fn switch_to(from: *mut Context, to: *const Context);
@@ -54,7 +61,7 @@ static INIT: &[u8] = include_bytes_align_as!(
 pub static mut IDLE_THREAD_STACK: [usize; 2] = [0, 0];
 
 #[inline]
-pub fn current() -> Option<ThreadRef> {
+pub fn current() -> Option<Arc<Thread>> {
     RUN_QUEUE.per_cpu_var_get().get().current()
 }
 
@@ -68,47 +75,32 @@ pub unsafe fn run() {
     let cur = current();
 
     if let Some(c) = cur {
-        let mut cur = c.write();
-
-        if cur.state() != ThreadState::NeedResched {
+        if c.state() != ThreadState::NeedResched {
             return;
         }
 
-        let next_t = rq.pop().unwrap();
-
-        // println!("Switching to {} --> {}", cur.id(), next_t.read().id());
-
-        let mut next = next_t.write();
-
-        let ctx = cur.ctx_mut() as *mut _;
-        let ctx_next = next.ctx_mut() as *const _;
-
-        drop(cur);
-
+        let mut next = rq.pop();
         next.set_state(ThreadState::Running);
 
-        drop(next);
+        println!("Switching to {} --> {}", c.id(), next.id());
 
-        rq.add(c);
+        let mut ctx = c.ctx_mut();
+        let ctx_next = next.ctx_mut();
 
-        crate::arch::current::set_current(next_t);
+        rq.add(c.clone());
+
         irq::enable_all();
-        switch_to(ctx, ctx_next);
+        switch_to(ctx as _, ctx_next as _);
         irq::disable_all();
     } else {
         let mut ctx = Context::default(); // tmp storage
-        let next_t = rq.pop().unwrap();
-        let mut next = next_t.write();
+        let mut next = rq.pop();
+        let mut next_ctx = next.ctx_mut();
 
         next.set_state(ThreadState::Running);
 
-        let next_ctx = next.ctx_mut() as *const _;
-
-        drop(next);
-
-        crate::arch::current::set_current(next_t);
         irq::enable_all();
-        switch_to(&mut ctx as *mut _, next_ctx);
+        switch_to(&mut ctx as *mut _, next_ctx as *const _);
         irq::disable_all();
     }
 }
@@ -142,9 +134,10 @@ pub fn init_userspace() {
     drop(init_task);
     drop(init_vms);
 
-    init_thread.write().init_user(data.ep);
-    Thread::start(init_thread);
+    init_thread.init_user(data.ep);
+    init_thread.start();
 
+    println!("Added userspace");
     // thread_table_mut()
     //     .new_user_thread("init", data)
     //     .expect("Failed to run user thread");
@@ -155,13 +148,12 @@ pub fn init_idle() {
         let parent = kernel_task();
         let idle = Thread::new(parent, i as u16);
 
-        idle.write().init_kernel(idle_thread, ());
+        idle.init_kernel(idle_thread, ());
 
         unsafe {
-            IDLE_THREAD_STACK[i] = PhysAddr::from(idle.read().stack_head().unwrap()).get();
+            IDLE_THREAD_STACK[i] = 0; //PhysAddr::from(idle.stack_head().unwrap()).get();
         }
 
-        Thread::start(idle);
-
+        idle.start();
     }
 }

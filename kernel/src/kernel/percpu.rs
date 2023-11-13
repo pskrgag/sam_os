@@ -98,11 +98,11 @@ macro_rules! percpu_mut {
         unsafe {
             let addr = &$var as *const _ as usize;
             let diff = addr - linker_var!(sdatapercpu);
-            let per_cpu_addr = ((PER_CPU_BASE.get_unchecked().get()
+            let per_cpu_addr = ((PER_CPU_BASE.get_unchecked().bits()
                 + current_cpu() * PER_CPU_SIZE.get_unchecked())
                 + diff) as *mut u8;
 
-            __cast(&$var, per_cpu_addr).as_mut_ref().unwrap()
+            __cast_mut(&$var, per_cpu_addr).as_mut().unwrap()
         }
     }};
 }
@@ -115,6 +115,10 @@ impl<T> PerCpu<T> {
 
     pub fn per_cpu_var_get(&self) -> &'static T {
         percpu!(self.data)
+    }
+
+    pub fn per_cpu_var_get_mut(&self) -> &'static mut T {
+        percpu_mut!(self.data)
     }
 
     // SAFETY: caller should know what he is doing, percpu vars are expected to be touched

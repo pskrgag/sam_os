@@ -39,7 +39,7 @@ pub fn reprogram() {
 
 fn timer_dispatch(_: u32) {
     if let Some(cur) = current() {
-        cur.write().tick();
+        cur.tick();
     }
 
     unsafe {

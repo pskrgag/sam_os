@@ -2,13 +2,14 @@ use object_lib::object;
 use crate::{
     kernel::{
         object::handle_table::HandleTable,
-        tasks::thread::ThreadWeakRef,
+        tasks::thread::Thread,
     },
     mm::vms::{Vms, VmsRef},
 };
 use alloc::{
     collections::LinkedList,
     string::String,
+    sync::Weak,
 };
 use spin::Once;
 
@@ -17,7 +18,7 @@ pub struct TaskObject {
     name: String,
     id: u32,
     handles: HandleTable,
-    threads: LinkedList<ThreadWeakRef>,
+    threads: LinkedList<Weak<Thread>>,
     vms: VmsRef,
 }
 
@@ -50,7 +51,7 @@ impl TaskObject {
         })
     }
 
-    pub fn add_thread(&mut self, t: ThreadWeakRef) {
+    pub fn add_thread(&mut self, t: Weak<Thread>) {
         self.threads.push_back(t);
     }
 

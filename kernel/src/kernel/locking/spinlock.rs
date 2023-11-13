@@ -5,36 +5,59 @@ use core::{
     sync::atomic::{AtomicU16, Ordering},
 };
 
-pub struct Spinlock<T> {
+pub struct SpinLockInner {
     current: AtomicU16,
     next: AtomicU16,
+}
+
+pub struct Spinlock<T> {
+    inner: SpinLockInner,
     val: UnsafeCell<T>,
 }
 
 pub struct SpinlockGuard<'a, T: 'a> {
-    lock: &'a Spinlock<T>,
+    lock: &'a SpinLockInner,
     data: &'a mut T,
     flags: Option<usize>,
+}
+
+impl<'a, T> SpinlockGuard<'a, T> {
+    pub unsafe fn into<U>(self: Self, data: &'a mut U) -> SpinlockGuard<U> {
+        let res = SpinlockGuard {
+            lock: self.lock,
+            data,
+            flags: self.flags,
+        };
+
+        core::mem::forget(self);
+        res
+    }
+
+    pub unsafe fn force_unlock(&mut self) {
+        self.lock.unlock();
+    }
 }
 
 impl<T> Spinlock<T> {
     pub const fn new(val: T) -> Self {
         Self {
-            current: AtomicU16::new(0),
-            next: AtomicU16::new(0),
+            inner: SpinLockInner {
+                current: AtomicU16::new(0),
+                next: AtomicU16::new(0),
+            },
             val: UnsafeCell::new(val),
         }
     }
 
     pub fn lock(&self) -> SpinlockGuard<T> {
-        let my = self.next.fetch_add(1, Ordering::Acquire);
+        let my = self.inner.next.fetch_add(1, Ordering::Acquire);
 
-        while self.current.load(Ordering::Relaxed) != my {
+        while self.inner.current.load(Ordering::Relaxed) != my {
             unsafe { asm!("yield") };
         }
 
         SpinlockGuard {
-            lock: &self,
+            lock: &self.inner,
             data: unsafe { &mut *self.val.get() },
             flags: None,
         }
@@ -42,9 +65,9 @@ impl<T> Spinlock<T> {
 
     pub fn lock_irqsave(&self) -> SpinlockGuard<T> {
         use crate::arch::irq::{disable_all, get_flags};
-        let my = self.next.fetch_add(1, Ordering::Acquire);
+        let my = self.inner.next.fetch_add(1, Ordering::Acquire);
 
-        while self.current.load(Ordering::Relaxed) != my {
+        while self.inner.current.load(Ordering::Relaxed) != my {
             unsafe { asm!("yield") };
         }
 
@@ -55,14 +78,16 @@ impl<T> Spinlock<T> {
         }
 
         SpinlockGuard {
-            lock: &self,
+            lock: &self.inner,
             data: unsafe { &mut *self.val.get() },
             flags: flags,
         }
     }
+}
 
+impl SpinLockInner {
     pub fn unlock(&self) {
-        self.current.fetch_add(1, Ordering::Relaxed);
+        self.current.fetch_add(1, Ordering::Release);
     }
 
     pub fn unlock_irqrestore(&self, flags: usize) {

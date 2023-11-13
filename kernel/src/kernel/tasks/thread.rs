@@ -1,14 +1,14 @@
+use super::task::TaskObjectRef;
+use crate::kernel::sched::run_queue::RUN_QUEUE;
 use crate::{
     arch::{self, regs::Context},
+    kernel::locking::spinlock::{Spinlock, SpinlockGuard},
     mm::allocators::stack_alloc::StackLayout,
-    mm::{
-        types::{Address, VirtAddr},
-    },
-    lib::refcounter::RefCounter,
+    mm::types::{Address, VirtAddr},
+    percpu_global,
 };
-use crate::kernel::sched::run_queue::RUN_QUEUE;
-use super::task::TaskObjectRef;
-use alloc::{boxed::Box};
+use alloc::boxed::Box;
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 use object_lib::object;
 
@@ -34,62 +34,35 @@ pub enum ThreadType {
     User,
 }
 
+struct ThreadInner {
+    arch_ctx: Context,
+    pub(crate) state: ThreadState,
+    stack: Option<StackLayout>,
+}
+
 #[derive(object)]
 #[repr(C)]
 pub struct Thread {
     type_id: core::any::TypeId,
     id: u16,
-    arch_ctx: Context,
-    state: ThreadState,
     task: TaskObjectRef,
-    stack: Option<StackLayout>,
-    ticks: usize,
-    refcount: RefCounter,
+    ticks: AtomicUsize,
+    inner: Spinlock<ThreadInner>
 }
 
-impl Thread {
-    pub fn new(task: TaskObjectRef, id: u16) -> Box<RwLock<Thread>> {
-        Box::new(RwLock::new(Self {
-            type_id: core::any::TypeId::of::<Self>(),
-            id: id,
+impl ThreadInner {
+    pub fn default() -> Self {
+        Self {
             state: ThreadState::Initialized,
             arch_ctx: Context::default(),
             stack: None,
-            ticks: RR_TICKS,
-            task: task,
-            refcount: RefCounter::new(),
-        }))
-    }
-
-    pub fn stack_head(&self) -> Option<VirtAddr> {
-        if let Some(s) = &self.stack {
-            Some(s.stack_head())
-        } else {
-            None
         }
     }
 
-    pub fn id(&self) -> u16 {
-        self.id
-    }
-
-    pub fn ctx_mut(&mut self) -> &mut Context {
-        &mut self.arch_ctx
-    }
-
-    pub fn ctx(&mut self) -> &Context {
-        &self.arch_ctx
-    }
-
-    pub(crate) fn init_kernel<T>(&mut self, func: fn(T) -> Option<()>, arg: T) {
-        use crate::kernel::misc::ref_mut_to_usize;
-
-        let arg = Box::new(arg);
-        let stack = StackLayout::new(3).expect("Failed to allocat stack");
-
+    pub fn init_kernel(&mut self, stack: StackLayout, func: usize, arg: usize) {
         self.arch_ctx.sp = stack.stack_head().into();
         self.arch_ctx.lr = (kernel_thread_entry_point as *const fn()) as usize;
-        self.arch_ctx.x19 = ref_mut_to_usize(Box::leak(arg));
+        self.arch_ctx.x19 = arg;
         self.arch_ctx.x20 = func as usize;
 
         self.stack = Some(stack);
@@ -97,7 +70,65 @@ impl Thread {
         self.state = ThreadState::Running;
     }
 
-    pub fn init_user(&mut self, ep: VirtAddr) {
+    pub fn init_user(&mut self, stack: StackLayout, func: VirtAddr, user_stack: VirtAddr, ttbr0: usize) {
+        self.arch_ctx.x21 = user_stack.bits() + arch::PAGE_SIZE;
+        self.arch_ctx.lr = (user_thread_entry_point as *const fn()) as usize;
+        self.arch_ctx.x20 = func.bits();
+        self.arch_ctx.x19 = stack.stack_head().into();
+        self.arch_ctx.x22 = stack.stack_head().into();
+        self.arch_ctx.ttbr0 = ttbr0;
+
+        self.stack = Some(stack);
+
+        self.state = ThreadState::Initialized;
+   }
+}
+
+impl Thread {
+    pub fn new(task: TaskObjectRef, id: u16) -> Arc<Thread> {
+        Arc::new(Self {
+            type_id: core::any::TypeId::of::<Self>(),
+            id,
+            inner: Spinlock::new(ThreadInner::default()),
+            ticks: RR_TICKS.into(),
+            task,
+        })
+    }
+
+    pub fn stack_head(self: &Arc<Thread>) -> Option<VirtAddr> {
+        Some(VirtAddr::new(0))
+        // if let Some(s) = &self.stack {
+        //     Some(s.stack_head())
+        // } else {
+        //     None
+        // }
+    }
+
+    pub fn id(&self) -> u16 {
+        self.id
+    }
+
+    pub unsafe fn ctx_mut<'a>(self: &'a Arc<Thread>) -> &'a mut Context {
+        let mut inner = self.inner.lock();
+        let r = &mut inner.arch_ctx as *mut Context;
+
+        // TODO(skripkin): smells like shit
+        &mut *r
+    }
+
+    pub(crate) fn init_kernel<T>(self: &Arc<Thread>, func: fn(T) -> Option<()>, arg: T) {
+        use crate::kernel::misc::ref_mut_to_usize;
+
+        let arg = Box::new(arg);
+        let stack = StackLayout::new(3).expect("Failed to allocat stack");
+
+        let mut inner = self.inner.lock();
+
+        // TODO(skripkin): clean up heap allocation
+        inner.init_kernel(stack, func as usize, ref_mut_to_usize(Box::leak(arg)));
+    }
+
+    pub fn init_user(self: &Arc<Thread>, ep: VirtAddr) {
         let stack = StackLayout::new(3).expect("Failed to allocat stack");
         let vms = self.task.read().vms();
         let mut vms = vms.write();
@@ -105,60 +136,50 @@ impl Thread {
             .alloc_user_stack()
             .expect("Failed to allocate user stack");
 
-        self.arch_ctx.x21 = user_stack.bits() + arch::PAGE_SIZE;
-        self.arch_ctx.lr = (user_thread_entry_point as *const fn()) as usize;
-        self.arch_ctx.x20 = ep.bits();
-        self.arch_ctx.x19 = stack.stack_head().into();
-        self.arch_ctx.x22 = stack.stack_head().into();
-        self.arch_ctx.ttbr0 = vms.ttbr0().expect("TTBR0 should be set").get();
+        let mut inner = self.inner.lock();
 
-        self.stack = Some(stack);
-
-        self.state = ThreadState::Initialized;
+        inner.init_user(stack, ep, user_stack, vms.ttbr0().expect("TTBR0 should be set").get());
     }
 
-    pub fn start(t: RefMut<Thread>) {
-        let mut ta = t.write();
+    pub fn start(self: &Arc<Self>) {
+        self.inner.lock().state = ThreadState::Running;
+        self.task.write().add_thread(Arc::downgrade(self));
 
-        ta.state = ThreadState::Running;
-        ta.task.write().add_thread(Arc::downgrade(&t));
-
-        drop(ta);
-        RUN_QUEUE.per_cpu_var_get().get().add(t);
+        RUN_QUEUE.per_cpu_var_get().get().add(self.clone());
     }
 
     pub fn setup_args(&mut self, args: &[&str]) {
-        // SAFETY: thread is not running, so we can assume that user addresses
-        // are mapped
+        // // SAFETY: thread is not running, so we can assume that user addresses
+        // // are mapped
+        //
+        // for i in args {
+        //     unsafe {
+        //         core::ptr::copy_nonoverlapping(
+        //             i.as_bytes().as_ptr(),
+        //             self.arch_ctx.x19 as *mut _,
+        //             i.len(),
+        //         );
+        //     }
+        //
+        //     self.arch_ctx.x19 += i.len();
+        //     self.arch_ctx.x23 += 1;
+        // }
+    }
 
-        for i in args {
-            unsafe {
-                core::ptr::copy_nonoverlapping(
-                    i.as_bytes().as_ptr(),
-                    self.arch_ctx.x19 as *mut _,
-                    i.len(),
-                );
-            }
+    pub fn tick(self: Arc<Thread>) {
+        let old = self.ticks.fetch_sub(1, Ordering::Relaxed);
 
-            self.arch_ctx.x19 += i.len();
-            self.arch_ctx.x23 += 1;
+        if old == 0 {
+            self.inner.lock().state = ThreadState::NeedResched;
+            self.ticks.store(RR_TICKS, Ordering::Relaxed);
         }
     }
 
-    pub fn tick(&mut self) {
-        self.ticks -= 1;
-
-        if self.ticks == 0 {
-            self.state = ThreadState::NeedResched;
-            self.ticks = RR_TICKS;
-        }
+    pub fn set_state(self: &Arc<Thread>, state: ThreadState) {
+        self.inner.lock().state = state;
     }
 
-    pub fn set_state(&mut self, state: ThreadState) {
-        self.state = state;
-    }
-
-    pub fn state(&self) -> ThreadState {
-        self.state
+    pub fn state(self: &Arc<Thread>) -> ThreadState {
+        self.inner.lock().state
     }
 }

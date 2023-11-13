@@ -16,10 +16,10 @@ pub fn get_current() -> Option<ThreadRef> {
     }
 }
 
-pub fn set_current(cur: ThreadRef) {
-    unsafe {
-        let raw = Arc::into_raw(cur);
-
-        asm!("msr   TPIDR_EL1, {}", in(reg) raw);
-    }
+pub fn set_current(cur: Arc<Thread>) {
+    // unsafe {
+    //     let raw = Arc::into_raw(cur);
+    //
+    //     asm!("msr   TPIDR_EL1, {}", in(reg) raw);
+    // }
 }
