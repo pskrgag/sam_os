@@ -2,6 +2,7 @@ use crate::kernel::object::handle::Handle;
 use crate::make_array;
 
 use super::KernelObject;
+use alloc::sync::Arc;
 
 const MAX_HANDLES: usize = 10;
 
@@ -18,9 +19,22 @@ impl HandleTable {
         }
     }
 
-    pub fn add<T: KernelObject>(&mut self, obj: &mut T) -> &mut Handle {
-        let h = self.table.iter().find(|&x| !x.is_valid()).unwrap();
+    pub fn add(&mut self, obj: Handle) {
+        let key = obj.obj_ptr() % MAX_HANDLES;
+        let mut key_iter = key;
 
-        todo!()
+        while {
+            let h = &mut self.table[key];
+
+            if !h.is_valid() {
+                *h = obj;
+                return;
+            }
+
+            key_iter = (key_iter + 1) % MAX_HANDLES;
+            key_iter != key
+        } { };
+
+        panic!("hehe");
     }
 }

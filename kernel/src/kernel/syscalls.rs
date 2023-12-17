@@ -25,7 +25,7 @@ pub fn do_syscall(
 fn do_write(string: &[u8]) -> usize {
     match core::str::from_utf8(string) {
         Ok(s) => {
-            println!("{}", s);
+            print!("{}", s);
             0
         }
         _ => usize::MAX,

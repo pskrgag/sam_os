@@ -1,4 +1,4 @@
-use crate::arch;
+use crate::arch::{self, PAGE_SIZE};
 use core::ops::Add;
 use core::{fmt, ops::Sub};
 
@@ -52,11 +52,11 @@ pub trait Address {
     }
 }
 
-impl<T: Copy + Address> MemRange<T> {
+impl<T: Copy + Address + From<usize>> MemRange<T> {
     pub const fn new(start: T, size: usize) -> Self {
         Self {
-            start: start,
-            size: size,
+            start,
+            size,
         }
     }
 
@@ -71,6 +71,10 @@ impl<T: Copy + Address> MemRange<T> {
     pub fn truncate(&mut self, size: usize) -> bool {
         self.start.add(size);
         self.size.overflowing_sub(size).1
+    }
+
+    pub fn max_user() -> Self {
+        Self::new(T::from(PAGE_SIZE), (1 << 39) - PAGE_SIZE)
     }
 }
 

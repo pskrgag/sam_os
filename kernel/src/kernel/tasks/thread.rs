@@ -1,11 +1,11 @@
-use super::task::TaskObjectRef;
+use super::task::TaskRef;
 use crate::kernel::sched::run_queue::RUN_QUEUE;
 use crate::{
     arch::{self, regs::Context},
-    kernel::locking::spinlock::{Spinlock, SpinlockGuard},
+    kernel::locking::spinlock::{Spinlock},
     mm::allocators::stack_alloc::StackLayout,
     mm::types::{Address, VirtAddr},
-    percpu_global,
+    kernel::tasks::task::Task,
 };
 use alloc::boxed::Box;
 use core::sync::atomic::{AtomicUsize, Ordering};
@@ -41,11 +41,10 @@ struct ThreadInner {
 }
 
 #[derive(object)]
-#[repr(C)]
 pub struct Thread {
     type_id: core::any::TypeId,
     id: u16,
-    task: TaskObjectRef,
+    task: Arc<Task>,
     ticks: AtomicUsize,
     inner: Spinlock<ThreadInner>
 }
@@ -85,7 +84,7 @@ impl ThreadInner {
 }
 
 impl Thread {
-    pub fn new(task: TaskObjectRef, id: u16) -> Arc<Thread> {
+    pub fn new(task: Arc<Task>, id: u16) -> Arc<Thread> {
         Arc::new(Self {
             type_id: core::any::TypeId::of::<Self>(),
             id,
@@ -93,15 +92,6 @@ impl Thread {
             ticks: RR_TICKS.into(),
             task,
         })
-    }
-
-    pub fn stack_head(self: &Arc<Thread>) -> Option<VirtAddr> {
-        Some(VirtAddr::new(0))
-        // if let Some(s) = &self.stack {
-        //     Some(s.stack_head())
-        // } else {
-        //     None
-        // }
     }
 
     pub fn id(&self) -> u16 {
@@ -130,7 +120,7 @@ impl Thread {
 
     pub fn init_user(self: &Arc<Thread>, ep: VirtAddr) {
         let stack = StackLayout::new(3).expect("Failed to allocat stack");
-        let vms = self.task.read().vms();
+        let vms = self.task.vms();
         let mut vms = vms.write();
         let user_stack = vms
             .alloc_user_stack()
@@ -143,7 +133,7 @@ impl Thread {
 
     pub fn start(self: &Arc<Self>) {
         self.inner.lock().state = ThreadState::Running;
-        self.task.write().add_thread(Arc::downgrade(self));
+        self.task.add_thread(Arc::downgrade(self));
 
         RUN_QUEUE.per_cpu_var_get().get().add(self.clone());
     }

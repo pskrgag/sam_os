@@ -21,5 +21,6 @@ pub fn mapping_type_to_flags(tp: MappingType) -> usize {
         MappingType::UserData => USER_DATA,
         MappingType::UserDataRo => USER_DATA_RO,
         MappingType::UserText => USER_TEXT,
+        _ => panic!(),
     }
 }

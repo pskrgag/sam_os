@@ -26,6 +26,8 @@ pub enum MappingType {
     UserData,
     UserText,
     UserDataRo,
+
+    None,
 }
 
 pub struct PageFlags {

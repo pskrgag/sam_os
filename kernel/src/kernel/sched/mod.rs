@@ -79,12 +79,12 @@ pub unsafe fn run() {
             return;
         }
 
-        let mut next = rq.pop();
+        let next = rq.pop();
         next.set_state(ThreadState::Running);
 
         println!("Switching to {} --> {}", c.id(), next.id());
 
-        let mut ctx = c.ctx_mut();
+        let ctx = c.ctx_mut();
         let ctx_next = next.ctx_mut();
 
         rq.add(c.clone());
@@ -94,14 +94,14 @@ pub unsafe fn run() {
         irq::disable_all();
     } else {
         let mut ctx = Context::default(); // tmp storage
-        let mut next = rq.pop();
-        let mut next_ctx = next.ctx_mut();
+        let next = rq.pop();
+        let next_ctx = next.ctx_mut();
 
         next.set_state(ThreadState::Running);
 
         irq::enable_all();
         switch_to(&mut ctx as *mut _, next_ctx as *const _);
-        irq::disable_all();
+        panic!("Should not reach here");
     }
 }
 
@@ -112,7 +112,6 @@ pub fn init_userspace() {
 
     let init_thread = Thread::new(init_task.clone(), 0);
 
-    let init_task = init_task.write();
     let init_vms = init_task.vms();
     let mut init_vms = init_vms.write();
 
@@ -137,7 +136,6 @@ pub fn init_userspace() {
     init_thread.init_user(data.ep);
     init_thread.start();
 
-    println!("Added userspace");
     // thread_table_mut()
     //     .new_user_thread("init", data)
     //     .expect("Failed to run user thread");

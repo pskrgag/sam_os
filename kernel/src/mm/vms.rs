@@ -65,20 +65,16 @@ impl Vms {
             .free_range(arch::PAGE_SIZE * 3, self.start, self.size)?;
         let pa = page_allocator().alloc(5)?;
 
-        if let Some(ttbr0) = &mut self.ttbr0 {
-            ttbr0
-                .map(
-                    Some(MemRange::new(
-                        PhysAddr::from(pa + arch::PAGE_SIZE),
-                        3 * arch::PAGE_SIZE,
-                    )),
-                    range,
-                    MappingType::UserData,
-                )
-                .ok()?;
-        } else {
-            panic!();
-        }
+        self.ttbr0.as_mut().unwrap()
+            .map(
+                Some(MemRange::new(
+                    PhysAddr::from(pa + arch::PAGE_SIZE),
+                    3 * arch::PAGE_SIZE,
+                )),
+                range,
+                MappingType::UserData,
+            )
+            .ok()?;
 
         Some(range.start())
     }

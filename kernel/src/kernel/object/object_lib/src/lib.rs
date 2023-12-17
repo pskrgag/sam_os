@@ -2,7 +2,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn;
+
 use std::string::ToString;
 
 fn impl_kernel_object_macro(ast: &syn::DeriveInput) -> TokenStream {
@@ -11,7 +11,7 @@ fn impl_kernel_object_macro(ast: &syn::DeriveInput) -> TokenStream {
     let weak_ref_name = format_ident!("{}WeakRef", name);
 
 
-    let struct_type = ast.ident.to_string();
+    let _struct_type = ast.ident.to_string();
 
     let gen = quote! {
         use alloc::sync::Arc;
@@ -31,6 +31,9 @@ fn impl_kernel_object_macro(ast: &syn::DeriveInput) -> TokenStream {
                 alloc::sync::Arc::new(qrwlock::RwLock::new(s))
             }
         }
+
+        unsafe impl Send for #name { }
+        unsafe impl Sync for #name { }
     };
 
     gen.into()
