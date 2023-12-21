@@ -1,4 +1,3 @@
-use super::task::TaskRef;
 use crate::kernel::sched::run_queue::RUN_QUEUE;
 use crate::{
     arch::{self, regs::Context},
@@ -138,7 +137,7 @@ impl Thread {
         RUN_QUEUE.per_cpu_var_get().get().add(self.clone());
     }
 
-    pub fn setup_args(&mut self, args: &[&str]) {
+    pub fn setup_args(&mut self, _args: &[&str]) {
         // // SAFETY: thread is not running, so we can assume that user addresses
         // // are mapped
         //

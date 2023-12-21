@@ -1,20 +1,33 @@
 use crate::arch::{self, PAGE_SIZE};
 use core::ops::Add;
-use core::{fmt, ops::Sub};
+use core::{
+    fmt::{self, Debug},
+    ops::Sub,
+};
 
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug)]
 pub struct PhysAddr(usize);
 
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug)]
 pub struct VirtAddr(usize);
 
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Pfn(usize);
 
-#[derive(Clone, Copy)]
-pub struct MemRange<T: Address> {
+#[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
+pub struct MemRange<T: Address + core::fmt::Debug> {
     start: T,
     size: usize,
+}
+
+impl<T: Address + Debug> core::fmt::Debug for MemRange<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!(
+            "MemRange [ start: {:x}, size: {:x} ]",
+            self.start.bits(),
+            self.size
+        ))
+    }
 }
 
 pub trait Address {
@@ -52,12 +65,9 @@ pub trait Address {
     }
 }
 
-impl<T: Copy + Address + From<usize>> MemRange<T> {
+impl<T: Copy + Address + From<usize> + Ord + core::fmt::Debug> MemRange<T> {
     pub const fn new(start: T, size: usize) -> Self {
-        Self {
-            start,
-            size,
-        }
+        Self { start, size }
     }
 
     pub const fn start(&self) -> T {
@@ -70,11 +80,20 @@ impl<T: Copy + Address + From<usize>> MemRange<T> {
 
     pub fn truncate(&mut self, size: usize) -> bool {
         self.start.add(size);
-        self.size.overflowing_sub(size).1
+        if self.size.overflowing_sub(size).1 == false {
+            self.size -= size;
+            true
+        } else {
+            false
+        }
     }
 
     pub fn max_user() -> Self {
         Self::new(T::from(PAGE_SIZE), (1 << 39) - PAGE_SIZE)
+    }
+
+    pub fn contains(&self, addr: T) -> bool {
+        self.start <= addr && self.start.bits() + self.size > addr.bits()
     }
 }
 

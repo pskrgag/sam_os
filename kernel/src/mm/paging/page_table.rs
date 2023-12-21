@@ -182,8 +182,8 @@ impl<const KERNEL: bool> PageTable<KERNEL> {
         &mut self,
         mut base: PageTableBlock,
         lvl: usize,
-        mut v: MemRange<VirtAddr>,
-        mut p: MemRange<PhysAddr>,
+        v: &mut MemRange<VirtAddr>,
+        p: &mut MemRange<PhysAddr>,
         map: MappingType,
     ) -> Result<(), MmError> {
         let size = match lvl {
@@ -231,19 +231,21 @@ impl<const KERNEL: bool> PageTable<KERNEL> {
 
                 self.map_lvl(next_block, lvl + 1, v, p, map)?;
             } else {
-                    let ao = p.start().bits();
-                    let flags = mmu::mapping_type_to_flags(map);
+                let ao = p.start().bits();
+                let flags = mmu::mapping_type_to_flags(map);
 
-                    unsafe {
-                        base.set_tte(
-                            index,
-                            PageTableEntry::from_bits(PageFlags::block().bits() | flags | ao),
-                        );
-                    };
+                unsafe {
+                    base.set_tte(
+                        index,
+                        PageTableEntry::from_bits(PageFlags::block().bits() | flags | ao),
+                    );
+                };
+
+                p.truncate(size);
+                v.truncate(size);
             }
 
-            p.truncate(size);
-            index < 511 && v.truncate(size) == false && v.size() != 0
+            v.size() != 0 && index != 511
         } {}
 
         Ok(())
@@ -252,16 +254,16 @@ impl<const KERNEL: bool> PageTable<KERNEL> {
     pub fn map(
         &mut self,
         p: Option<MemRange<PhysAddr>>,
-        v: MemRange<VirtAddr>,
+        mut v: MemRange<VirtAddr>,
         m_type: MappingType,
     ) -> Result<(), MmError> {
-        let p_range = if let Some(pr) = p {
+        let mut p_range = if let Some(pr) = p {
             pr
         } else {
             MemRange::new(PhysAddr::from(v.start()), v.size())
         };
 
-        self.map_lvl(self.lvl1(), 1, v, p_range, m_type)
+        self.map_lvl(self.lvl1(), 1, &mut v, &mut p_range, m_type)
     }
 
     pub fn unmap(&mut self, _v: MemRange<VirtAddr>) -> Result<(), MmError> {

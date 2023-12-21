@@ -52,7 +52,7 @@ impl Vms {
                 va.add(PAGE_SIZE);
             }
 
-            self.vmas.add(vma);
+            self.vmas.add_to_tree(vma);
             Some(())
         } else {
             None
@@ -62,8 +62,10 @@ impl Vms {
     pub fn alloc_user_stack(&mut self) -> Option<VirtAddr> {
         let range = self
             .vmas
-            .free_range(arch::PAGE_SIZE * 3, self.start, self.size)?;
+            .free_range(arch::PAGE_SIZE * 3)?;
         let pa = page_allocator().alloc(5)?;
+
+        assert!(range.size() == arch::PAGE_SIZE * 3);
 
         self.ttbr0.as_mut().unwrap()
             .map(
@@ -76,6 +78,7 @@ impl Vms {
             )
             .ok()?;
 
+        self.vmas.add_to_tree(Vma::new(range, MappingType::UserData));
         Some(range.start())
     }
 

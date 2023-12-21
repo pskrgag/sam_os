@@ -17,6 +17,6 @@ fn main() {
     for i in cpio.iter() {
         println!("{:?}", i);
 
-        let elf = i.data();
+        let _elf = i.data();
     }
 }

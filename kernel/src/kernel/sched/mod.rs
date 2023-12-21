@@ -6,9 +6,8 @@ use crate::{
     kernel::tasks::task::{init_task, kernel_task},
     kernel::tasks::thread_ep::idle_thread,
     kernel::tasks::{
-        thread::{Thread, ThreadState, ThreadRef},
+        thread::{Thread, ThreadState},
     },
-    kernel::locking::spinlock::SpinlockGuard,
     mm::{types::*, vma_list::Vma},
     percpu_global,
 };

@@ -32,7 +32,7 @@ static INIT_TASK: Once<Arc<Task>> = Once::new();
 
 impl Task {
     pub fn new(name: String) -> Arc<Task> {
-        let mut s = Arc::new(Self {
+        let s = Arc::new(Self {
             inner: Spinlock::new(TaskObject::new_user()),
             name,
             id: 0,

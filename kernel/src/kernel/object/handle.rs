@@ -1,6 +1,5 @@
 use crate::kernel::object::KernelObject;
 use alloc::sync::Arc;
-use qrwlock::RwLock;
 
 pub type HandleBase = u32;
 

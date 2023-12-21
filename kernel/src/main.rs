@@ -7,9 +7,7 @@
 #![allow(special_module_name)]
 #![feature(int_roundings)]
 #![feature(const_mut_refs)]
-#![feature(linked_list_cursors)]
 #![feature(allocator_api)]
-#![feature(naked_functions)]
 
 extern crate alloc;
 
@@ -46,7 +44,6 @@ extern "C" fn start_kernel() -> ! {
     // all wild accesses will cause exception
 
     kernel::percpu::init_percpu();
-
 
     task::init_kernel_task();
     sched::init_idle();

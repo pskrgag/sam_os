@@ -1,7 +1,7 @@
 use elf::ElfBytes;
 use elf::segment::ProgramHeader;
 use elf::endian::LittleEndian;
-use elf::abi::PT_LOAD;
+// use elf::abi::PT_LOAD;
 
 // ToDo: support any endian?
 pub struct Elf<'a> {

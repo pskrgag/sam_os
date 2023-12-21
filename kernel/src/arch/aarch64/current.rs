@@ -16,7 +16,7 @@ pub fn get_current() -> Option<ThreadRef> {
     }
 }
 
-pub fn set_current(cur: Arc<Thread>) {
+pub fn set_current(_cur: Arc<Thread>) {
     // unsafe {
     //     let raw = Arc::into_raw(cur);
     //

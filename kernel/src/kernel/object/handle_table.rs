@@ -1,9 +1,6 @@
 use crate::kernel::object::handle::Handle;
 use crate::make_array;
 
-use super::KernelObject;
-use alloc::sync::Arc;
-
 const MAX_HANDLES: usize = 10;
 
 // This is SHIT! Must be replaced with radix trie-like stuff,

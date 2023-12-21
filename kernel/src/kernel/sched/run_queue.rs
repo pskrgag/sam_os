@@ -1,4 +1,4 @@
-use crate::kernel::{locking::fake_lock::FakeLock, tasks::thread::{Thread, ThreadRef}};
+use crate::kernel::{locking::fake_lock::FakeLock, tasks::thread::Thread};
 use crate::percpu_global;
 use alloc::collections::linked_list::LinkedList;
 
