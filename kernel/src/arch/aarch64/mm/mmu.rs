@@ -1,4 +1,5 @@
-use crate::{arch::mm::mmu_flags::*, mm::paging::page_table::MappingType};
+use crate::{arch::mm::mmu_flags::*};
+use shared::vmm::MappingType;
 
 const KERNEL_DATA: usize = BLOCK_KERNEL_RW | BLOCK_NORMAL_MEM;
 const KERNEL_TEXT: usize = BLOCK_KERNEL_RO & !BLOCK_PXN | BLOCK_NORMAL_MEM;

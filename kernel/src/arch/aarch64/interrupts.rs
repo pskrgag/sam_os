@@ -49,12 +49,13 @@ impl ExceptionCtx {
         self.x0
     }
 
-    pub fn syscall_arg1(&self) -> usize {
-        self.x1
+    // This should be TryFrom
+    pub fn syscall_arg1<T: From<usize>>(&self) -> T {
+        self.x1.into()
     }
 
-    pub fn syscall_arg2(&self) -> usize {
-        self.x2
+    pub fn syscall_arg2<T: From<usize>>(&self) -> T {
+        self.x2.into()
     }
 }
 

@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 libc = { path = "../libc" }
+shared = { path = "../../shared" }
 
 [[bin]]
 name = "init"

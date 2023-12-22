@@ -4,10 +4,11 @@ use crate::{
     kernel::misc::kernel_offset,
     linker_var,
     mm::{
-        paging::{kernel_page_table::kernel_page_table, page_table::MappingType},
+        paging::{kernel_page_table::kernel_page_table},
         types::*,
     },
 };
+use shared::vmm::MappingType;
 
 use alloc::vec::Vec;
 

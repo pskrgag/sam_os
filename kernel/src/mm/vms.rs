@@ -1,12 +1,13 @@
 use crate::{
-    arch::{self, PAGE_SIZE},
+    arch::{self},
     mm::{
         allocators::page_alloc::page_allocator,
-        paging::page_table::{MappingType, PageTable, MmError},
+        paging::page_table::{PageTable, MmError},
         types::*,
         vma_list::{Vma, VmaList},
     },
 };
+use shared::vmm::MappingType;
 use object_lib::object;
 
 pub struct VmsInner {

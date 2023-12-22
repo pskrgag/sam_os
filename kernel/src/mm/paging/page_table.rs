@@ -7,28 +7,14 @@ use crate::{
     mm::{allocators::page_alloc::page_allocator, types::*},
 };
 
+use shared::vmm::MappingType;
+
 #[derive(Debug)]
 pub enum MmError {
     Generic,
     InvalidAddr,
     NoMem,
     NotImpl,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum MappingType {
-    KernelData,
-    KernelText,
-    KernelDataRo,
-    KernelRWX,
-    KernelDevice,
-    KernelNothing,
-
-    UserData,
-    UserText,
-    UserDataRo,
-
-    None,
 }
 
 impl From<MmError> for () {

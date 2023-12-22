@@ -4,11 +4,12 @@ use crate::{
     linker_var,
     mm::{
         allocators::page_alloc::page_allocator,
-        paging::{kernel_page_table::kernel_page_table, page_table::MappingType},
+        paging::{kernel_page_table::kernel_page_table},
         types::*,
     },
 };
 
+use shared::vmm::MappingType;
 use spin::Once;
 
 // TODO: W/A. it should be read from dtb

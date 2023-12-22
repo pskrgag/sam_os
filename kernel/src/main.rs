@@ -3,6 +3,7 @@
 #![feature(format_args_nl)]
 #![feature(const_trait_impl)]
 #![allow(dead_code)]
+#![allow(non_upper_case_globals)]
 #![allow(unused_macros)]
 #![allow(special_module_name)]
 #![feature(int_roundings)]

@@ -3,10 +3,11 @@ use crate::{
     kernel::locking::spinlock::Spinlock,
     mm::{
         allocators::page_alloc::page_allocator, paging::kernel_page_table::kernel_page_table,
-        paging::page_table::MappingType, types::*, MemRange,
+        types::*, MemRange,
     },
 };
 
+use shared::vmm::MappingType;
 use core::alloc::Layout;
 
 const MIN_SLAB_SIZE: usize = 8;

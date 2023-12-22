@@ -1,5 +1,5 @@
 use crate::arch;
-use crate::mm::paging::page_table::MappingType;
+use shared::vmm::MappingType;
 use crate::mm::types::{Address, MemRange, Pfn, PhysAddr, VirtAddr};
 use alloc::vec::Vec;
 use core::mem::size_of;

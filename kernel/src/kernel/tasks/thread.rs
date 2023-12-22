@@ -4,9 +4,9 @@ use crate::{
     kernel::locking::spinlock::{Spinlock},
     mm::allocators::stack_alloc::StackLayout,
     mm::types::{Address, VirtAddr},
-    mm::paging::page_table::MappingType,
     kernel::tasks::task::Task,
 };
+use shared::vmm::MappingType;
 use alloc::boxed::Box;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
@@ -124,7 +124,7 @@ impl Thread {
 
     pub fn init_user(self: &Arc<Thread>, ep: VirtAddr) {
         let stack = StackLayout::new(3).expect("Failed to allocat stack");
-        let mut vms = self.task.vms();
+        let vms = self.task.vms();
         let user_stack = vms
             .vm_allocate(5 * arch::PAGE_SIZE, MappingType::UserData)
             .expect("Failed to allocate user stack");

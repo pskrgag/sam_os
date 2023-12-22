@@ -2,9 +2,11 @@ use crate::{
     arch,
     kernel::{locking::fake_lock::FakeLock, misc::num_pages},
     linker_var,
-    mm::paging::{kernel_page_table::kernel_page_table, page_table::MappingType},
+    mm::paging::{kernel_page_table::kernel_page_table},
     mm::types::*,
 };
+
+use shared::vmm::MappingType;
 
 extern "C" {
     static mmio_start: usize;

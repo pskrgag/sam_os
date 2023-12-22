@@ -6,6 +6,7 @@ use crate::{
         types::*,
     },
 };
+use shared::vmm::MappingType;
 
 pub struct StackLayout {
     base: VirtAddr,

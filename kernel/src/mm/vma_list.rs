@@ -1,6 +1,7 @@
-use crate::mm::{paging::page_table::MappingType, types::*};
+use crate::mm::types::*;
 use alloc::collections::BTreeSet;
 use alloc::vec::Vec;
+use shared::vmm::MappingType;
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum VmaFlags {

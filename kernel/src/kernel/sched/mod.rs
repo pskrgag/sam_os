@@ -1,18 +1,18 @@
 pub mod run_queue;
 
 use crate::{
-    arch::{self, irq, regs::Context, PAGE_SHIFT, PAGE_SIZE},
+    arch::{self, irq, regs::Context},
     kernel::elf::parse_elf,
     kernel::tasks::task::{init_task, kernel_task},
     kernel::tasks::thread_ep::idle_thread,
     kernel::tasks::{
         thread::{Thread, ThreadState},
     },
-    mm::{types::*, vma_list::Vma},
+    mm::{types::*},
     percpu_global,
 };
 
-use alloc::vec::Vec;
+
 use alloc::sync::Arc;
 
 use run_queue::RUN_QUEUE;
@@ -111,7 +111,7 @@ pub fn init_userspace() {
 
     let init_thread = Thread::new(init_task.clone(), 0);
 
-    let mut init_vms = init_task.vms();
+    let init_vms = init_task.vms();
 
     for i in data.regions {
         init_vms.vm_map(i.0, i.1, i.2).expect("Failed to map");
