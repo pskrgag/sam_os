@@ -2,84 +2,131 @@ use crate::{
     arch::{self, PAGE_SIZE},
     mm::{
         allocators::page_alloc::page_allocator,
-        paging::page_table::{MappingType, PageTable},
+        paging::page_table::{MappingType, PageTable, MmError},
         types::*,
         vma_list::{Vma, VmaList},
     },
 };
 use object_lib::object;
 
-#[derive(object)]
-pub struct Vms {
-    start: VirtAddr,
+pub struct VmsInner {
     size: usize,
+    start: VirtAddr,
     ttbr0: Option<PageTable<false>>,
     vmas: VmaList,
 }
 
+#[derive(object)]
+pub struct Vms {
+    inner: RwLock<VmsInner>,
+}
+
 impl Vms {
-    pub fn new_kernel() -> VmsRef {
-        Self::construct(Self {
+    pub fn new_kernel() -> Arc<Self> {
+        Arc::new(Self {
+            inner: RwLock::new(VmsInner::new_kernel()),
+        })
+    }
+
+    pub fn new_user() -> Arc<Self> {
+        Arc::new(Self {
+            inner: RwLock::new(VmsInner::new_user()),
+        })
+    }
+
+    pub fn vm_map(
+        &self,
+        v: MemRange<VirtAddr>,
+        p: MemRange<PhysAddr>,
+        tp: MappingType,
+    ) -> Result<VirtAddr, MmError> {
+        let mut inner = self.inner.write();
+        inner.vm_map(v, p, tp)
+    }
+
+    pub fn vm_allocate(&self, size: usize, tp: MappingType) -> Result<VirtAddr, ()> {
+        let mut inner = self.inner.write();
+        inner.vm_allocate(size, tp)
+    }
+
+    pub fn base(&self) -> PhysAddr {
+        let inner = self.inner.read();
+        inner.ttbr0().unwrap()
+    }
+}
+
+impl VmsInner {
+    pub fn new_kernel() -> Self {
+        Self {
             start: VirtAddr::from(0x0),
             size: usize::MAX,
             ttbr0: None,
             vmas: VmaList::new(),
-        })
+        }
     }
 
-    pub fn new_user() -> VmsRef {
-        Self::construct(Self {
+    pub fn new_user() -> Self {
+        Self {
             start: VirtAddr::from(0x0),
             size: usize::MAX,
             ttbr0: Some(PageTable::new().unwrap()), // ToDo remove unwrap()
             vmas: VmaList::new(),
-        })
-    }
-
-    pub fn add_vma_backed(&mut self, vma: Vma, backing: &[Pfn]) -> Option<()> {
-        if let Some(ttbr0) = &mut self.ttbr0 {
-            let mut va = vma.start();
-
-            for i in backing {
-                ttbr0
-                    .map(
-                        Some(MemRange::new(PhysAddr::from(*i), PAGE_SIZE)),
-                        MemRange::new(va, PAGE_SIZE),
-                        vma.map_flags(),
-                    )
-                    .ok()?;
-
-                va.add(PAGE_SIZE);
-            }
-
-            self.vmas.add_to_tree(vma);
-            Some(())
-        } else {
-            None
         }
     }
 
-    pub fn alloc_user_stack(&mut self) -> Option<VirtAddr> {
-        let range = self
-            .vmas
-            .free_range(arch::PAGE_SIZE * 3)?;
-        let pa = page_allocator().alloc(5)?;
+    fn free_range(&self, size: usize) -> Option<MemRange<VirtAddr>> {
+        self.vmas.free_range(size)
+    }
 
-        assert!(range.size() == arch::PAGE_SIZE * 3);
+    fn free_range_at(&self, range: MemRange<VirtAddr>) -> Option<MemRange<VirtAddr>> {
+        self.vmas.free_range_at(range)
+    }
 
-        self.ttbr0.as_mut().unwrap()
-            .map(
-                Some(MemRange::new(
-                    PhysAddr::from(pa + arch::PAGE_SIZE),
-                    3 * arch::PAGE_SIZE,
-                )),
-                range,
-                MappingType::UserData,
-            )
-            .ok()?;
+    fn add_to_tree(&mut self, vma: Vma) -> Result<VirtAddr, ()> {
+        self.vmas.add_to_tree(vma)
+    }
 
-        self.vmas.add_to_tree(Vma::new(range, MappingType::UserData));
-        Some(range.start())
+    pub fn vm_map(
+        &mut self,
+        v: MemRange<VirtAddr>,
+        p: MemRange<PhysAddr>,
+        tp: MappingType,
+    ) -> Result<VirtAddr, MmError> {
+        let range = self.free_range_at(v).unwrap();
+
+        self.add_to_tree(Vma::new(range, tp))?;
+
+        self.ttbr0.as_mut().unwrap().map(Some(p), range, tp)?;
+        assert!(v.start().is_page_aligned());
+        Ok(v.start())
+    }
+
+    // ToDo: on-demang allocation of physical memory
+    pub fn vm_allocate(&mut self, size: usize, tp: MappingType) -> Result<VirtAddr, ()> {
+        let range = if let Some(r) = self.free_range(size) {
+            r
+        } else {
+            return Err(());
+        };
+        let va = range.start();
+
+        assert!(size % arch::PAGE_SIZE == 0);
+
+        let p: PhysAddr = if let Some(p) = page_allocator().alloc(size >> arch::PAGE_SHIFT) {
+            p.into()
+        } else {
+            return Err(());
+        };
+
+        self.add_to_tree(Vma::new(range, tp))?;
+
+        // ToDo: clean up in case of an error
+        self.ttbr0
+            .as_mut()
+            .unwrap()
+            .map(Some(MemRange::new(p, size)), range, tp)?;
+
+        Ok(va)
     }
 
     pub fn ttbr0(&self) -> Option<PhysAddr> {

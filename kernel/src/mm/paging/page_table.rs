@@ -9,6 +9,7 @@ use crate::{
 
 #[derive(Debug)]
 pub enum MmError {
+    Generic,
     InvalidAddr,
     NoMem,
     NotImpl,
@@ -28,6 +29,18 @@ pub enum MappingType {
     UserDataRo,
 
     None,
+}
+
+impl From<MmError> for () {
+    fn from(_value: MmError) -> Self {
+        ()
+    }
+}
+
+impl From<()> for MmError {
+    fn from(_value: ()) -> Self {
+        MmError::Generic
+    }
 }
 
 pub struct PageFlags {
@@ -185,13 +198,14 @@ impl<const KERNEL: bool> PageTable<KERNEL> {
         v: &mut MemRange<VirtAddr>,
         p: &mut MemRange<PhysAddr>,
         map: MappingType,
-    ) -> Result<(), MmError> {
+    ) -> Result<VirtAddr, MmError> {
         let size = match lvl {
             1 => _1GB,
             2 => _2MB,
             3 => _4KB,
             _ => unreachable!(),
         };
+        let res = v.start();
 
         assert!(v.size() == p.size());
 
@@ -248,7 +262,7 @@ impl<const KERNEL: bool> PageTable<KERNEL> {
             v.size() != 0 && index != 511
         } {}
 
-        Ok(())
+        Ok(res)
     }
 
     pub fn map(
@@ -256,7 +270,7 @@ impl<const KERNEL: bool> PageTable<KERNEL> {
         p: Option<MemRange<PhysAddr>>,
         mut v: MemRange<VirtAddr>,
         m_type: MappingType,
-    ) -> Result<(), MmError> {
+    ) -> Result<VirtAddr, MmError> {
         let mut p_range = if let Some(pr) = p {
             pr
         } else {

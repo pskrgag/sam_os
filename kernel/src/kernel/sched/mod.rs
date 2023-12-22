@@ -111,20 +111,10 @@ pub fn init_userspace() {
 
     let init_thread = Thread::new(init_task.clone(), 0);
 
-    let init_vms = init_task.vms();
-    let mut init_vms = init_vms.write();
+    let mut init_vms = init_task.vms();
 
     for i in data.regions {
-        let vma = Vma::new(i.0, i.2);
-        let mut backing_store = Vec::new();
-        let mut start_pa = i.1.start();
-
-        for _ in 0..i.1.size() >> PAGE_SHIFT {
-            backing_store.push(Pfn::from(start_pa));
-            start_pa.add(PAGE_SIZE);
-        }
-
-        init_vms.add_vma_backed(vma, backing_store.as_slice());
+        init_vms.vm_map(i.0, i.1, i.2).expect("Failed to map");
     }
 
     // Drop vms and task lock, since init_user and

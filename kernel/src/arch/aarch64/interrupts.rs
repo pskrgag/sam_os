@@ -44,6 +44,20 @@ pub struct ExceptionCtx {
     pub x29: usize,
 }
 
+impl ExceptionCtx {
+    pub fn syscall_number(&self) -> usize {
+        self.x0
+    }
+
+    pub fn syscall_arg1(&self) -> usize {
+        self.x1
+    }
+
+    pub fn syscall_arg2(&self) -> usize {
+        self.x2
+    }
+}
+
 impl fmt::Display for ExceptionCtx {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -172,13 +186,6 @@ pub extern "C" fn user_sync(esr_el1: usize, elr_el1: usize, far_el1: usize) {
 }
 
 #[no_mangle]
-pub extern "C" fn user_syscall(
-    x0: usize,
-    x1: usize,
-    x2: usize,
-    x3: usize,
-    x4: usize,
-    x5: usize,
-) -> usize {
-    do_syscall(x0, x1, x2, x3, x4, x5)
+pub extern "C" fn user_syscall(ctx: &mut ExceptionCtx) {
+    ctx.x0 = do_syscall(ctx)
 }

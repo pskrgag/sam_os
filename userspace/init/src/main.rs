@@ -13,6 +13,10 @@ fn main() {
     println!("Init proccess started");
 
     let cpio = cpio::Cpio::new(CPIO).unwrap();
+    let a: *const u8 = libc::syscalls::allocate("a") as *const u8;
+
+    println!("Allocated {:?}", a);
+    println!("Try {:?}", unsafe { *a });
 
     for i in cpio.iter() {
         println!("{:?}", i);

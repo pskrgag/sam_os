@@ -92,8 +92,13 @@ impl<T: Copy + Address + From<usize> + Ord + core::fmt::Debug> MemRange<T> {
         Self::new(T::from(PAGE_SIZE), (1 << 39) - PAGE_SIZE)
     }
 
-    pub fn contains(&self, addr: T) -> bool {
+    pub fn contains_addr(&self, addr: T) -> bool {
         self.start <= addr && self.start.bits() + self.size > addr.bits()
+    }
+
+    pub fn contains_range(&self, other: MemRange<VirtAddr>) -> bool {
+        self.start().bits() <= other.start().bits()
+            && other.start().bits() + other.size() < self.start().bits() + self.size()
     }
 }
 

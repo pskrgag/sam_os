@@ -4,6 +4,7 @@ use crate::{
     kernel::locking::spinlock::{Spinlock},
     mm::allocators::stack_alloc::StackLayout,
     mm::types::{Address, VirtAddr},
+    mm::paging::page_table::MappingType,
     kernel::tasks::task::Task,
 };
 use alloc::boxed::Box;
@@ -97,6 +98,10 @@ impl Thread {
         self.id
     }
 
+    pub fn task(&self) -> Arc<Task> {
+        self.task.clone()
+    }
+
     pub unsafe fn ctx_mut<'a>(self: &'a Arc<Thread>) -> &'a mut Context {
         let mut inner = self.inner.lock();
         let r = &mut inner.arch_ctx as *mut Context;
@@ -119,15 +124,14 @@ impl Thread {
 
     pub fn init_user(self: &Arc<Thread>, ep: VirtAddr) {
         let stack = StackLayout::new(3).expect("Failed to allocat stack");
-        let vms = self.task.vms();
-        let mut vms = vms.write();
+        let mut vms = self.task.vms();
         let user_stack = vms
-            .alloc_user_stack()
+            .vm_allocate(5 * arch::PAGE_SIZE, MappingType::UserData)
             .expect("Failed to allocate user stack");
 
         let mut inner = self.inner.lock();
 
-        inner.init_user(stack, ep, user_stack, vms.ttbr0().expect("TTBR0 should be set").get());
+        inner.init_user(stack, ep, user_stack, vms.base().bits());
     }
 
     pub fn start(self: &Arc<Self>) {

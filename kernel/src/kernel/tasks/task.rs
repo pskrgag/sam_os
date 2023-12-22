@@ -2,7 +2,7 @@ use crate::{
     kernel::{
         locking::spinlock::Spinlock, object::handle_table::HandleTable, tasks::thread::Thread,
     },
-    mm::vms::{Vms, VmsRef},
+    mm::vms::Vms,
 };
 use alloc::{collections::LinkedList, string::String, sync::Weak};
 use object_lib::object;
@@ -19,7 +19,7 @@ pub struct Task {
     inner: Spinlock<TaskObject>,
     name: String,
     id: u32,
-    vms: VmsRef,
+    vms: Arc<Vms>,
 }
 
 /* ToDo: kernel task is redundant and should be dropped at all,
@@ -42,6 +42,9 @@ impl Task {
         let handle = Handle::new::<Task>(s.clone());
         s.add_handle(handle);
 
+        // let handle = Handle::new::<Vms>(s.vms.clone());
+        // s.add_handle(handle);
+
         s
     }
 
@@ -50,7 +53,7 @@ impl Task {
         i.add_handle(h);
     }
 
-    pub fn vms(&self) -> VmsRef {
+    pub fn vms(&self) -> Arc<Vms> {
         self.vms.clone()
     }
 

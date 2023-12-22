@@ -92,6 +92,7 @@ __user_sync64:
 	subs	x6, x6, #21		// 0b010101
 	bne	sync
 
+	mov	x0, sp
 	bl	user_syscall
 	b	user_ret
 
