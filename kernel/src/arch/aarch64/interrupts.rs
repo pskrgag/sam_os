@@ -188,5 +188,8 @@ pub extern "C" fn user_sync(esr_el1: usize, elr_el1: usize, far_el1: usize) {
 
 #[no_mangle]
 pub extern "C" fn user_syscall(ctx: &mut ExceptionCtx) {
-    ctx.x0 = do_syscall(ctx)
+    match do_syscall(ctx) {
+        Ok(s) => ctx.x0 = s,
+        Err(err) => ctx.x0 = -(err.bits() as isize) as usize,
+    }
 }

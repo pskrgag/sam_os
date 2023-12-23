@@ -2,7 +2,7 @@ use crate::{
     arch::PAGE_SIZE,
     mm::{
         allocators::page_alloc::page_allocator,
-        paging::{kernel_page_table::kernel_page_table, page_table::*},
+        paging::{kernel_page_table::kernel_page_table},
         types::*,
     },
 };

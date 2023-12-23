@@ -1,8 +1,9 @@
 use crate::arch::interrupts::ExceptionCtx;
 use crate::kernel::sched::current;
 use shared::syscalls::SyscallList;
+use shared::error::ErrorType;
 
-pub fn do_syscall(ctx: &ExceptionCtx) -> usize {
+pub fn do_syscall(ctx: &ExceptionCtx) -> Result<usize, ErrorType> {
     match SyscallList::from_bits(ctx.syscall_number()) {
         Some(SyscallList::SYS_WRITE) => unsafe {
             do_write(core::slice::from_raw_parts(
@@ -14,22 +15,24 @@ pub fn do_syscall(ctx: &ExceptionCtx) -> usize {
             let task = current().unwrap().task();
             let vms = task.vms();
 
-            let v = vms
-                .vm_allocate(ctx.syscall_arg1(), ctx.syscall_arg2())
-                .unwrap();
+            let v = match vms
+                .vm_allocate(ctx.syscall_arg1(), ctx.syscall_arg2()) {
+                    Ok(v) => v,
+                    Err(_) => return Err(ErrorType::INVALID_ARGUMENT),
+                };
 
-            v.into()
+            Ok(v.into())
         }
-        _ => usize::MAX,
+        _ => Err(ErrorType::NO_OPERATION),
     }
 }
 
-fn do_write(string: &[u8]) -> usize {
+fn do_write(string: &[u8]) -> Result<usize, ErrorType> {
     match core::str::from_utf8(string) {
         Ok(s) => {
             print!("{}", s);
-            0
+            Ok(0)
         }
-        _ => usize::MAX,
+        _ => { Err(ErrorType::FAULT) }
     }
 }

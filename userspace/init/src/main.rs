@@ -3,6 +3,7 @@
 #![feature(format_args_nl)]
 
 use libc::main;
+use libc::syscalls::Syscall;
 use shared::vmm::MappingType;
 
 mod cpio;
@@ -14,7 +15,6 @@ fn main() {
     println!("Init proccess started");
 
     let cpio = cpio::Cpio::new(CPIO).unwrap();
-    let a = libc::vmm::vm_allocate(0x1000, MappingType::UserData);
 
     for i in cpio.iter() {
         println!("{:?}", i);

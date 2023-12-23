@@ -8,7 +8,6 @@ use crate::{
     kernel::tasks::{
         thread::{Thread, ThreadState},
     },
-    mm::{types::*},
     percpu_global,
 };
 
