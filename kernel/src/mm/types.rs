@@ -60,6 +60,11 @@ pub trait Address {
         self
     }
 
+    #[inline]
+    fn round_up_page(&mut self) -> &mut Self {
+        self.round_up(arch::PAGE_SIZE)
+    }
+
     fn page_offset(&self) -> usize {
         self.bits() & ((1_usize << arch::PAGE_SHIFT) - 1)
     }
@@ -76,6 +81,13 @@ impl<T: Copy + Address + From<usize> + Ord + core::fmt::Debug> MemRange<T> {
 
     pub const fn size(&self) -> usize {
         self.size
+    }
+
+    pub fn align_page(&mut self) {
+        self.size += self.start.bits() & (arch::PAGE_SIZE - 1);
+        self.start.set_bits(self.start().bits() & !(arch::PAGE_SIZE - 1));
+
+        self.size.round_up(arch::PAGE_SIZE);
     }
 
     pub fn truncate(&mut self, size: usize) -> bool {
@@ -250,6 +262,17 @@ impl Address for VirtAddr {
     }
 }
 
+impl Address for usize {
+    #[inline]
+    fn bits(&self) -> usize {
+        *self
+    }
+
+    #[inline]
+    fn set_bits(&mut self, bits: usize) {
+        *self = bits;
+    }
+}
 impl Address for PhysAddr {
     #[inline]
     fn bits(&self) -> usize {

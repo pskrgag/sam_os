@@ -13,15 +13,14 @@ const USER_TEXT: usize = BLOCK_USER_RO & !BLOCK_UXN | BLOCK_NORMAL_MEM;
 
 pub fn mapping_type_to_flags(tp: MappingType) -> usize {
     match tp {
-        MappingType::KernelData => KERNEL_DATA,
-        MappingType::KernelText => KERNEL_TEXT,
-        MappingType::KernelDataRo => KERNEL_DATA_RO,
-        MappingType::KernelRWX => BLOCK_KERNEL_RWX,
-        MappingType::KernelDevice => KERNEL_DEVICE,
-        MappingType::KernelNothing => todo!(),
-        MappingType::UserData => USER_DATA,
-        MappingType::UserDataRo => USER_DATA_RO,
-        MappingType::UserText => USER_TEXT,
+        MappingType::KERNEL_DATA => KERNEL_DATA,
+        MappingType::KERNEL_TEXT => KERNEL_TEXT,
+        MappingType::KERNEL_DATA_RO => KERNEL_DATA_RO,
+        MappingType::KERNEL_RWX => BLOCK_KERNEL_RWX,
+        MappingType::KERNEL_DEVICE => KERNEL_DEVICE,
+        MappingType::USER_DATA => USER_DATA,
+        MappingType::USER_DATA_RO => USER_DATA_RO,
+        MappingType::USER_TEXT => USER_TEXT,
         _ => panic!(),
     }
 }

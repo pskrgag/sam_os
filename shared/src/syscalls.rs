@@ -1,5 +1,4 @@
 use bitflags::bitflags;
-use crate::vmm::MappingType;
 
 bitflags! {
     pub struct SyscallList: usize {

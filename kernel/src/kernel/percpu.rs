@@ -152,7 +152,7 @@ pub fn init_percpu() -> Option<()> {
         .map(
             None,
             MemRange::new(VirtAddr::from(linker_var!(sdatapercpu)), per_cpu_size),
-            MappingType::KernelData,
+            MappingType::KERNEL_DATA,
         )
         .ok()?;
 
@@ -162,7 +162,7 @@ pub fn init_percpu() -> Option<()> {
             .map(
                 Some(MemRange::new(p, per_cpu_size)),
                 MemRange::new(VirtAddr::from(p), per_cpu_size),
-                MappingType::KernelData,
+                MappingType::KERNEL_DATA,
             )
             .ok()?;
 

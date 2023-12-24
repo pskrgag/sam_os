@@ -142,11 +142,11 @@ fn check_header(data: &mut &[u8]) -> Option<ElfHeader> {
 
 fn flags_to_mt(flags: Elf64_Word) -> MappingType {
     if flags & PF_W != 0 {
-        MappingType::UserData
+        MappingType::USER_DATA
     } else if flags & PF_X != 0 {
-        MappingType::UserText
+        MappingType::USER_TEXT
     } else {
-        MappingType::UserDataRo
+        MappingType::USER_DATA_RO
     }
 }
 

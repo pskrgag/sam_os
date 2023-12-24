@@ -22,3 +22,4 @@ lock_free_buddy_allocator = "0.1.0"
 spin = {version = "0.9.4", default-features = false, features = ["once"] }
 object_lib = { path = "src/kernel/object/object_lib" }
 shared = { path = "../shared" }
+intrusive-collections = "*"

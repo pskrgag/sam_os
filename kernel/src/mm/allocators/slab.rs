@@ -84,7 +84,7 @@ impl FreeList {
         let block_count = PAGE_SIZE / size;
 
         kernel_page_table()
-            .map(None, MemRange::new(va, PAGE_SIZE), MappingType::KernelData)
+            .map(None, MemRange::new(va, PAGE_SIZE), MappingType::KERNEL_DATA)
             .ok()?;
 
         for _ in 0..block_count {

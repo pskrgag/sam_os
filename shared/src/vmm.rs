@@ -2,17 +2,16 @@ use bitflags::bitflags;
 
 bitflags! {
 pub struct MappingType: usize {
-    const KernelData = 1;
-    const KernelText = 2;
-    const KernelDataRo = 3;
-    const KernelRWX = 4;
-    const KernelDevice = 5;
-    const KernelNothing = 6;
+    const KERNEL_DATA = 1;
+    const KERNEL_TEXT = 2;
+    const KERNEL_DATA_RO = 3;
+    const KERNEL_RWX = 4;
+    const KERNEL_DEVICE = 5;
 
-    const UserData = 7;
-    const UserText = 8;
-    const UserDataRo = 9;
-    const None = 10;
+    const USER_DATA = 7;
+    const USER_TEXT = 8;
+    const USER_DATA_RO = 9;
+    const NONE = 10;
 }
 }
 

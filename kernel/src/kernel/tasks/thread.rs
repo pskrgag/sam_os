@@ -126,7 +126,7 @@ impl Thread {
         let stack = StackLayout::new(3).expect("Failed to allocat stack");
         let vms = self.task.vms();
         let user_stack = vms
-            .vm_allocate(5 * arch::PAGE_SIZE, MappingType::UserData)
+            .vm_allocate(5 * arch::PAGE_SIZE, MappingType::USER_DATA)
             .expect("Failed to allocate user stack");
 
         let mut inner = self.inner.lock();

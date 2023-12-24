@@ -1,5 +1,4 @@
 use core::arch::asm;
-use shared::syscalls::*;
 use shared::error::ErrorType;
 
 #[inline]

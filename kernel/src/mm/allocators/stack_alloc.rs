@@ -21,7 +21,7 @@ impl StackLayout {
             .map(
                 None,
                 MemRange::new(VirtAddr::from(stack + PAGE_SIZE), num_pages * PAGE_SIZE),
-                MappingType::KernelData,
+                MappingType::KERNEL_DATA,
             )
             .ok()?;
 

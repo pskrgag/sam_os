@@ -70,25 +70,25 @@ fn populate_kernel_sections(array: &mut Vec<KernelSection>) {
         linker_var!(stext),
         linker_var!(etext) - linker_var!(stext),
         "Kernel text",
-        MappingType::KernelText,
+        MappingType::KERNEL_TEXT,
     );
     let rodata = KernelSection::new(
         linker_var!(srodata),
         linker_var!(erodata) - linker_var!(srodata),
         "Kernel rodata",
-        MappingType::KernelDataRo,
+        MappingType::KERNEL_DATA_RO,
     );
     let data = KernelSection::new(
         linker_var!(sdata),
         linker_var!(edata) - linker_var!(sdata),
         "Kernel data",
-        MappingType::KernelData,
+        MappingType::KERNEL_DATA,
     );
     let bss = KernelSection::new(
         linker_var!(sbss),
         linker_var!(ebss) - linker_var!(sbss),
         "Kernel bss",
-        MappingType::KernelData,
+        MappingType::KERNEL_DATA,
     );
 
     (*array).push(text);

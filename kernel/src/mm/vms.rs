@@ -42,12 +42,21 @@ impl Vms {
         tp: MappingType,
     ) -> Result<VirtAddr, MmError> {
         let mut inner = self.inner.write();
+
+        assert!(v.start().is_page_aligned());
+        assert!(p.start().is_page_aligned());
+        assert!(p.size().is_page_aligned());
+        assert!(v.size().is_page_aligned());
+
         inner.vm_map(v, p, tp)
     }
 
     pub fn vm_allocate(&self, size: usize, tp: MappingType) -> Result<VirtAddr, ()> {
         let mut inner = self.inner.write();
-        inner.vm_allocate(size, tp)
+        let res = inner.vm_allocate(size, tp)?;
+
+        assert!(res.is_page_aligned());
+        Ok(res)
     }
 
     pub fn base(&self) -> PhysAddr {
@@ -111,7 +120,7 @@ impl VmsInner {
         };
         let va = range.start();
 
-        assert!(size % arch::PAGE_SIZE == 0);
+        assert!(size.is_page_aligned());
 
         let p: PhysAddr = if let Some(p) = page_allocator().alloc(size >> arch::PAGE_SHIFT) {
             p.into()

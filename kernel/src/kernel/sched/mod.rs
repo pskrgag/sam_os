@@ -112,21 +112,14 @@ pub fn init_userspace() {
 
     let init_vms = init_task.vms();
 
-    for i in data.regions {
+    for mut i in data.regions {
+        i.0.align_page();
+        i.1.align_page();
         init_vms.vm_map(i.0, i.1, i.2).expect("Failed to map");
     }
 
-    // Drop vms and task lock, since init_user and
-    // Thread::start need them...
-    drop(init_task);
-    drop(init_vms);
-
     init_thread.init_user(data.ep);
     init_thread.start();
-
-    // thread_table_mut()
-    //     .new_user_thread("init", data)
-    //     .expect("Failed to run user thread");
 }
 
 pub fn init_idle() {

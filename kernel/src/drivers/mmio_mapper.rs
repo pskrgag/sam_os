@@ -50,7 +50,7 @@ impl MmioAllocator {
             .map(
                 Some(MemRange::new(addr, arch::PAGE_SIZE * pages)),
                 MemRange::new(new_va, arch::PAGE_SIZE * pages),
-                MappingType::KernelDevice,
+                MappingType::KERNEL_DEVICE,
             )
             .ok()?;
 

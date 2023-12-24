@@ -161,7 +161,7 @@ impl<const KERNEL: bool> PageTable<KERNEL> {
                 .map(
                     None,
                     MemRange::new(base_va, PAGE_SIZE),
-                    MappingType::KernelRWX,
+                    MappingType::KERNEL_RWX,
                 )
                 .ok()?;
         } else {
@@ -169,7 +169,7 @@ impl<const KERNEL: bool> PageTable<KERNEL> {
                 .map(
                     None,
                     MemRange::new(base_va, PAGE_SIZE),
-                    MappingType::KernelRWX,
+                    MappingType::KERNEL_RWX,
                 )
                 .ok()?;
         }
@@ -215,14 +215,14 @@ impl<const KERNEL: bool> PageTable<KERNEL> {
                             kernel_page_table().map(
                                 None,
                                 MemRange::new(VirtAddr::from(new_page), PAGE_SIZE),
-                                MappingType::KernelData,
+                                MappingType::KERNEL_DATA,
                             )?;
                         }
 
                         self.map(
                             None,
                             MemRange::new(VirtAddr::from(new_page), PAGE_SIZE),
-                            MappingType::KernelData,
+                            MappingType::KERNEL_DATA,
                         )?;
 
                         PageTableBlock::new(VirtAddr::from(new_page), lvl as u8 + 1)
