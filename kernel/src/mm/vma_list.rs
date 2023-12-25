@@ -5,8 +5,8 @@ use intrusive_collections::{
     rbtree::CursorMut,
     KeyAdapter, RBTree, RBTreeLink,
 };
-use shared::vmm::MappingType;
-use shared::vmm::types::*;
+use rtl::vmm::MappingType;
+use rtl::vmm::types::*;
 
 #[derive(Debug, Eq, Clone, Copy)]
 pub(crate) struct MemRangeVma(MemRange<VirtAddr>);

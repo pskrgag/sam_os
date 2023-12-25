@@ -71,8 +71,8 @@ name = "libc"
 version = "0.1.0"
 dependencies = [
  "elf",
+ "rtl",
  "rustrt",
- "shared",
 ]
 
 [[package]]
@@ -126,6 +126,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rtl"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+]
+
+[[package]]
 name = "rustrt"
 version = "0.1.0"
 dependencies = [
@@ -146,7 +153,7 @@ dependencies = [
  "lock_free_buddy_allocator",
  "object_lib",
  "qrwlock",
- "shared",
+ "rtl",
  "spin 0.9.4",
  "tock-registers",
 ]
@@ -156,14 +163,7 @@ name = "sam_os_init"
 version = "0.1.0"
 dependencies = [
  "libc",
- "shared",
-]
-
-[[package]]
-name = "shared"
-version = "0.1.0"
-dependencies = [
- "bitflags",
+ "rtl",
 ]
 
 [[package]]

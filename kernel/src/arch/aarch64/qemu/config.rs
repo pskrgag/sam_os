@@ -1,5 +1,5 @@
 use crate::arch;
-use shared::vmm::types::PhysAddr;
+use rtl::vmm::types::PhysAddr;
 
 pub const MEMORY_LAYOUT: [arch::MemoryRegion; 2] = [
     arch::MemoryRegion {

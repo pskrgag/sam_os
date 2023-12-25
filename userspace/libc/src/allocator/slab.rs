@@ -1,6 +1,6 @@
 use super::backend::{SyscallBackend, SyscallBackendImpl};
-use shared::locking::fake_lock::FakeLock;
-use shared::vmm::slab::SlabAllocator;
+use rtl::locking::fake_lock::FakeLock;
+use rtl::vmm::slab::SlabAllocator;
 
 const MIN_SLAB_SIZE: usize = 8;
 

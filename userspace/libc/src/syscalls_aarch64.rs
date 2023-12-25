@@ -1,5 +1,5 @@
 use core::arch::asm;
-use shared::error::ErrorType;
+use rtl::error::ErrorType;
 
 #[inline]
 pub unsafe fn syscall(args: [usize; 8]) -> Result<usize, ErrorType> {

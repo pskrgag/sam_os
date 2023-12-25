@@ -1,4 +1,4 @@
-use shared::vmm::types::VirtAddr;
+use rtl::vmm::types::VirtAddr;
 use core::arch::asm;
 
 #[repr(C)]

@@ -4,8 +4,8 @@ use crate::mm::{
     vma_list::{Vma, VmaList},
 };
 use object_lib::object;
-use shared::arch::*;
-use shared::vmm::{types::*, MappingType};
+use rtl::arch::*;
+use rtl::vmm::{types::*, MappingType};
 
 pub struct VmsInner {
     size: usize,

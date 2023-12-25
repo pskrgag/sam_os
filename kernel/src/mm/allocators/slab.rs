@@ -4,11 +4,11 @@ use crate::{
 };
 
 use core::alloc::Layout;
-use shared::arch::PAGE_SIZE;
-use shared::vmm::alloc::BackendAllocator;
-use shared::vmm::slab::SlabAllocator;
-use shared::vmm::types::*;
-use shared::vmm::MappingType;
+use rtl::arch::PAGE_SIZE;
+use rtl::vmm::alloc::BackendAllocator;
+use rtl::vmm::slab::SlabAllocator;
+use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 
 const MIN_SLAB_SIZE: usize = 8;
 

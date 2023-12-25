@@ -7,9 +7,9 @@ use crate::{
     mm::paging::kernel_page_table::kernel_page_table,
 };
 
-use shared::vmm::types::*;
-use shared::vmm::MappingType;
-use shared::arch::PAGE_SIZE;
+use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
+use rtl::arch::PAGE_SIZE;
 
 #[derive(Debug)]
 pub enum MmError {

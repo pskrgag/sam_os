@@ -1,7 +1,7 @@
 use crate::arch::interrupts::ExceptionCtx;
 use crate::kernel::sched::current;
-use shared::syscalls::SyscallList;
-use shared::error::ErrorType;
+use rtl::syscalls::SyscallList;
+use rtl::error::ErrorType;
 
 pub fn do_syscall(ctx: &ExceptionCtx) -> Result<usize, ErrorType> {
     match SyscallList::from_bits(ctx.syscall_number()) {

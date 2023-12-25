@@ -1,7 +1,7 @@
 use crate::{
     arch::{PT_LVL1_ENTIRES, PT_LVL2_ENTIRES, PT_LVL3_ENTIRES},
 };
-use shared::vmm::types::*;
+use rtl::vmm::types::*;
 
 use core::arch::asm;
 

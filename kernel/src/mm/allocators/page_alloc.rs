@@ -4,8 +4,8 @@ use lock_free_buddy_allocator::buddy_alloc::BuddyAlloc;
 use spin::once::Once;
 
 use alloc::vec::Vec;
-use shared::vmm::types::*;
-use shared::arch::PAGE_SIZE;
+use rtl::vmm::types::*;
+use rtl::arch::PAGE_SIZE;
 
 pub struct PageAlloc {
     pool: Vec<Bitmap<64>>,

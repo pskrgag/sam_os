@@ -7,9 +7,9 @@ use crate::{
     },
 };
 
-use shared::vmm::MappingType;
-use shared::vmm::types::*;
-use shared::arch::PAGE_SIZE;
+use rtl::vmm::MappingType;
+use rtl::vmm::types::*;
+use rtl::arch::PAGE_SIZE;
 use spin::Once;
 
 // TODO: W/A. it should be read from dtb

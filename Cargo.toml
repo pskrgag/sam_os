@@ -3,5 +3,5 @@ members = [
 	"userspace/fileserver",
 	"userspace/init",
 	"kernel"
-, "shared"]
+, "rtl"]
 resolver = "1"

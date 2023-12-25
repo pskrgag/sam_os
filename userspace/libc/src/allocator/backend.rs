@@ -1,7 +1,7 @@
 use crate::syscalls::Syscall;
-use shared::vmm::alloc::BackendAllocator;
-use shared::arch::PAGE_SIZE;
-use shared::vmm::MappingType;
+use rtl::vmm::alloc::BackendAllocator;
+use rtl::arch::PAGE_SIZE;
+use rtl::vmm::MappingType;
 
 pub struct SyscallBackend;
 pub const SyscallBackendImpl: SyscallBackend = SyscallBackend{};

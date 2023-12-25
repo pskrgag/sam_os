@@ -1,9 +1,9 @@
 #[cfg(target_arch = "aarch64")]
 use crate::syscalls_aarch64::*;
 
-use shared::syscalls::SyscallList;
-use shared::vmm::MappingType;
-use shared::error::ErrorType;
+use rtl::syscalls::SyscallList;
+use rtl::vmm::MappingType;
+use rtl::error::ErrorType;
 
 pub enum Syscall<'a> {
     Write(&'a str, usize),

@@ -5,9 +5,9 @@ use crate::{
 };
 use alloc::boxed::Box;
 use core::sync::atomic::{AtomicUsize, Ordering};
-use shared::arch::PAGE_SIZE;
-use shared::vmm::types::*;
-use shared::vmm::MappingType;
+use rtl::arch::PAGE_SIZE;
+use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 
 use object_lib::object;
 

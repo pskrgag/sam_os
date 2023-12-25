@@ -4,7 +4,7 @@ use core::{
     fmt::{self, Debug},
     ops::Sub,
 };
-use shared::vmm::types::*;
+use rtl::vmm::types::*;
 
 impl From<PhysAddr> for VirtAddr {
     fn from(addr: PhysAddr) -> Self {

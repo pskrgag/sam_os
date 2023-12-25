@@ -4,7 +4,7 @@
 
 use libc::main;
 use libc::syscalls::Syscall;
-use shared::vmm::MappingType;
+use rtl::vmm::MappingType;
 
 mod cpio;
 

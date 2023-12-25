@@ -3,7 +3,7 @@ use crate::percpu_global;
 use alloc::collections::linked_list::LinkedList;
 
 use alloc::sync::{Arc, Weak};
-use shared::locking::fake_lock::FakeLock;
+use rtl::locking::fake_lock::FakeLock;
 
 pub struct RunQueue {
     list: LinkedList<Arc<Thread>>,

@@ -5,7 +5,7 @@ pub mod vma_list;
 pub mod vms;
 
 use crate::kernel::misc::kernel_offset;
-use shared::vmm::types::*;
+use rtl::vmm::types::*;
 
 #[inline]
 pub fn phys_to_virt_linear(phys: PhysAddr) -> VirtAddr {

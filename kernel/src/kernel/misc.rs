@@ -6,7 +6,7 @@ use core::{
     ops::{Add, BitAnd, Not, Shl, Shr, Sub},
 };
 
-use shared::arch::{PAGE_SIZE, PAGE_SHIFT};
+use rtl::arch::{PAGE_SIZE, PAGE_SHIFT};
 
 extern "C" {
     static load_addr: usize;

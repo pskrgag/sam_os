@@ -1,8 +1,8 @@
-use shared::vmm::MappingType;
+use rtl::vmm::MappingType;
 use alloc::vec::Vec;
 use core::mem::size_of;
-use shared::vmm::types::*;
-use shared::arch::PAGE_SIZE;
+use rtl::vmm::types::*;
+use rtl::arch::PAGE_SIZE;
 
 const EI_NIDENT: usize = 16;
 const ELF_MAGIC: [u8; 4] = [0x7f, 'E' as u8, 'L' as u8, 'F' as u8];

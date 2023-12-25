@@ -6,9 +6,9 @@ use crate::{
         paging::{kernel_page_table::kernel_page_table},
     },
 };
-use shared::vmm::MappingType;
-use shared::vmm::types::*;
-use shared::locking::fake_lock::FakeLock;
+use rtl::vmm::MappingType;
+use rtl::vmm::types::*;
+use rtl::locking::fake_lock::FakeLock;
 
 use alloc::vec::Vec;
 

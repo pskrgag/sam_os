@@ -1,5 +1,5 @@
 use crate::{arch::mm::mmu_flags::*};
-use shared::vmm::MappingType;
+use rtl::vmm::MappingType;
 
 const KERNEL_DATA: usize = BLOCK_KERNEL_RW | BLOCK_NORMAL_MEM;
 const KERNEL_TEXT: usize = BLOCK_KERNEL_RO & !BLOCK_PXN | BLOCK_NORMAL_MEM;

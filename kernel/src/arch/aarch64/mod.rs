@@ -19,7 +19,7 @@ use core::mem;
 use cortex_a::registers::*;
 use tock_registers::interfaces::Readable;
 
-use shared::arch::PAGE_SIZE;
+use rtl::arch::PAGE_SIZE;
 
 pub const PT_LVL1_ENTIRES: usize = PAGE_SIZE / mem::size_of::<u64>();
 pub const PT_LVL2_ENTIRES: usize = PAGE_SIZE / mem::size_of::<u64>();
