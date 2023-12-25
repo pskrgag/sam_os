@@ -1,4 +1,4 @@
-use crate::arch::{self, PAGE_SIZE};
+use crate::arch::{self, USER_AS_START, USER_AS_SIZE};
 use core::ops::Add;
 use core::{
     fmt::{self, Debug},
@@ -50,8 +50,13 @@ pub trait Address {
     }
 
     #[inline]
+    fn is_aligned(&self, order: usize) -> bool {
+        self.bits() & ((1 << order) - 1) == 0
+    }
+
+    #[inline]
     fn is_page_aligned(&self) -> bool {
-        self.bits() & ((1 << arch::PAGE_SHIFT) - 1) == 0
+        self.is_aligned(arch::PAGE_SHIFT)
     }
 
     #[inline]
@@ -101,7 +106,7 @@ impl<T: Copy + Address + From<usize> + Ord + core::fmt::Debug> MemRange<T> {
     }
 
     pub fn max_user() -> Self {
-        Self::new(T::from(PAGE_SIZE), (1 << 39) - PAGE_SIZE)
+        Self::new(T::from(USER_AS_START), USER_AS_SIZE)
     }
 
     pub fn contains_addr(&self, addr: T) -> bool {

@@ -4,6 +4,8 @@ use rtl::arch::PAGE_SIZE;
 use rtl::vmm::MappingType;
 
 pub struct SyscallBackend;
+
+#[allow(non_upper_case_globals)]
 pub const SyscallBackendImpl: SyscallBackend = SyscallBackend{};
 
 unsafe impl Sync for SyscallBackend { }
@@ -13,7 +15,7 @@ impl BackendAllocator for SyscallBackend {
         Syscall::vm_allocate(num_pages * PAGE_SIZE, MappingType::USER_DATA).ok()
     }
 
-    fn free(&self, p: *const u8, num_pages: usize) -> *mut u8 {
+    fn free(&self, _p: *const u8, _num_pages: usize) {
         todo!()
     }
 }

@@ -130,6 +130,7 @@ name = "rtl"
 version = "0.1.0"
 dependencies = [
  "bitflags",
+ "static_assertions",
 ]
 
 [[package]]

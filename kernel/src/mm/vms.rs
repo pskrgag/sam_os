@@ -10,7 +10,7 @@ use rtl::vmm::{types::*, MappingType};
 pub struct VmsInner {
     size: usize,
     start: VirtAddr,
-    ttbr0: Option<PageTable<false>>,
+    ttbr0: Option<PageTable>,
     vmas: VmaList,
 }
 

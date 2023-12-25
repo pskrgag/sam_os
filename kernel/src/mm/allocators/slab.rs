@@ -1,14 +1,10 @@
-use crate::{
-    kernel::locking::spinlock::Spinlock,
-    mm::{allocators::page_alloc::page_allocator, paging::kernel_page_table::kernel_page_table},
-};
+use crate::{kernel::locking::spinlock::Spinlock, mm::allocators::page_alloc::page_allocator};
 
 use core::alloc::Layout;
 use rtl::arch::PAGE_SIZE;
 use rtl::vmm::alloc::BackendAllocator;
 use rtl::vmm::slab::SlabAllocator;
 use rtl::vmm::types::*;
-use rtl::vmm::MappingType;
 
 const MIN_SLAB_SIZE: usize = 8;
 
@@ -34,16 +30,13 @@ impl BackendAllocator for PMMBackend {
     fn allocate(&self, num_pages: usize) -> Option<*mut u8> {
         let pa: PhysAddr = page_allocator().alloc(num_pages)?.into();
         let va = VirtAddr::from(pa);
-        
-        kernel_page_table()
-            .map(None, MemRange::new(va, num_pages * PAGE_SIZE), MappingType::KERNEL_DATA)
-            .ok()?;
 
         Some(va.to_raw_mut::<u8>())
     }
 
-    fn free(&self, p: *const u8, num_pages: usize) -> *mut u8 {
-        todo!()
+    fn free(&self, p: *const u8, num_pages: usize) {
+        let pa: PhysAddr = PhysAddr::from(VirtAddr::from_raw(p));
+        page_allocator().free(pa, num_pages);
     }
 }
 

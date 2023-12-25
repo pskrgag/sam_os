@@ -6,6 +6,7 @@ use rtl::arch::PAGE_SIZE;
 use rtl::locking::fake_lock::FakeLock;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
+use crate::arch::KERNEL_MMIO_BASE;
 
 extern "C" {
     static mmio_start: usize;
@@ -32,7 +33,7 @@ impl MmioAllocator {
 
     pub fn new() -> Self {
         Self {
-            start: VirtAddr::new(linker_var!(mmio_start)),
+            start: KERNEL_MMIO_BASE.into(),
             pages: num_pages(linker_var!(mmio_end) - linker_var!(mmio_start)),
             offset: 0,
         }

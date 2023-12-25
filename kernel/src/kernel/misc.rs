@@ -7,11 +7,13 @@ use core::{
 };
 
 use rtl::arch::{PAGE_SIZE, PAGE_SHIFT};
+use rtl::vmm::types::*;
 
 extern "C" {
     static load_addr: usize;
     static start: usize;
     static mmio_end: usize;
+    static end: usize;
 }
 
 #[macro_export]
@@ -30,12 +32,18 @@ pub const _4KB: usize = 1 << 12;
 
 #[inline]
 pub fn kernel_offset() -> usize {
-    linker_var!(start) - linker_var!(load_addr)
+    rtl::arch::PHYS_OFFSET
+    // linker_var!(start) - linker_var!(load_addr)
 }
 
 #[inline]
 pub fn image_size() -> usize {
     linker_var!(mmio_end) - linker_var!(start)
+}
+
+#[inline]
+pub fn image_end_rounded() -> VirtAddr {
+    unsafe { *VirtAddr::from_raw(&end as *const _).round_up_page() }
 }
 
 #[inline]

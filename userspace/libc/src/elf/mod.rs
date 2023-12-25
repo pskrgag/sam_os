@@ -1,7 +1,9 @@
-use elf::ElfBytes;
-use elf::segment::ProgramHeader;
+use elf::abi::PT_LOAD;
 use elf::endian::LittleEndian;
-// use elf::abi::PT_LOAD;
+use elf::segment::ProgramHeader;
+use elf::ElfBytes;
+
+use alloc::vec::Vec;
 
 // ToDo: support any endian?
 pub struct Elf<'a> {
@@ -15,12 +17,11 @@ impl<'a> Elf<'a> {
         })
     }
 
-    pub fn program_headers(&self) -> Option<ProgramHeader> {
-        // let a: Vec<_> = self.elf_data.segments().unwrap()
-        //         .iter()
-        //         .filter(|phdr|{phdr.p_type == PT_LOAD})
-        //         .collect();
-
-        todo!();
+    pub fn program_headers(&self) -> Option<Vec<ProgramHeader>> {
+        Some(self.elf_data
+            .segments()?
+            .iter()
+            .filter(|phdr| phdr.p_type == PT_LOAD)
+            .collect())
     }
 }

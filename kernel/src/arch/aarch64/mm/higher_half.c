@@ -4,8 +4,6 @@ typedef unsigned long uintptr_t;
 #define PAGE_SIZE	(1 << 12)
 #define UL(x)		((unsigned long) (x))
 
-#define KERNEL_OFFSET	UL(&kernel_virtual_base - &load_addr)
-
 extern uint64_t start;
 extern uint64_t load_addr;
 extern uint64_t kernel_virtual_base;

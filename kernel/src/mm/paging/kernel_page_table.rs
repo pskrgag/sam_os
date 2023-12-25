@@ -3,7 +3,7 @@ use crate::{
     mm::paging::page_table::PageTable,
 };
 
-pub static KERNEL_PAGE_TABLE: Spinlock<PageTable<true>> = Spinlock::new(PageTable::default());
+pub static KERNEL_PAGE_TABLE: Spinlock<PageTable> = Spinlock::new(PageTable::default());
 
 #[no_mangle]
 pub static mut PAGE_TABLE_BASE: usize = 0;
@@ -19,6 +19,6 @@ pub fn init() {
     }
 }
 
-pub fn kernel_page_table() -> SpinlockGuard<'static, PageTable<true>> {
+pub fn kernel_page_table() -> SpinlockGuard<'static, PageTable> {
     KERNEL_PAGE_TABLE.lock()
 }

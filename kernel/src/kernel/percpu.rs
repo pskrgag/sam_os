@@ -158,13 +158,6 @@ pub fn init_percpu() -> Option<()> {
 
     for i in 0..NUM_CPUS {
         let p = pa + (per_cpu_size * i).into();
-        kernel_page_table()
-            .map(
-                Some(MemRange::new(p, per_cpu_size)),
-                MemRange::new(VirtAddr::from(p), per_cpu_size),
-                MappingType::KERNEL_DATA,
-            )
-            .ok()?;
 
         unsafe {
             core::slice::from_raw_parts_mut(VirtAddr::from(p).to_raw_mut::<u8>(), per_cpu_size)

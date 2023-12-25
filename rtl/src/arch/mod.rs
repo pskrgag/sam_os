@@ -3,3 +3,8 @@ pub mod aarch64;
 
 #[cfg(target_arch = "aarch64")]
 pub use aarch64::*;
+
+pub const USER_AS_START: usize = crate::arch::PAGE_SIZE;
+pub const USER_AS_SIZE: usize = USER_AS_END - USER_AS_START + 1;
+
+static_assertions::const_assert!(USER_AS_SIZE % PAGE_SIZE == 0);

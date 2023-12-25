@@ -1,14 +1,10 @@
 use crate::{
-    arch::mm::page_table::set_kernel_page_table,
-    kernel::misc::kernel_offset,
-    linker_var,
-    mm::{
-        paging::{kernel_page_table::kernel_page_table},
-    },
+    kernel::misc::kernel_offset, linker_var,
+    mm::paging::kernel_page_table::kernel_page_table,
 };
-use rtl::vmm::MappingType;
-use rtl::vmm::types::*;
 use rtl::locking::fake_lock::FakeLock;
+use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 
 use alloc::vec::Vec;
 
@@ -126,6 +122,5 @@ pub fn remap_kernel() {
             .expect("Failed to map kernel sections");
     }
 
-    unsafe { set_kernel_page_table((*tt).base()) };
     println!("Fine grained mapping enabled");
 }

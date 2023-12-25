@@ -41,3 +41,5 @@ pub const BLOCK_USER_RO: usize = access_perms(AccesFlags::AP_URO_KRO) | BLOCK_UX
 pub const TABLE_VALID: usize = 0b11;
 
 pub const PAGE_ENTRY_FLAGS_MASK: usize = 0xFFF0_0000_0000_0FFF;
+
+pub const PAGE_VALID: usize = 0b11;

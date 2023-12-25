@@ -2,14 +2,11 @@ use crate::{
     arch::mm::mmu,
     arch::PT_LVL1_ENTIRES,
     arch::{self, mm::mmu_flags},
-    kernel::misc::*,
     mm::allocators::page_alloc::page_allocator,
-    mm::paging::kernel_page_table::kernel_page_table,
 };
 
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
-use rtl::arch::PAGE_SIZE;
 
 #[derive(Debug)]
 pub enum MmError {
@@ -43,16 +40,13 @@ pub struct PageTableBlock {
 #[derive(Clone, Copy, Debug)]
 pub struct PageTableEntry(usize);
 
-pub struct PageTable<const KERNEL: bool> {
+pub struct PageTable {
     base: VirtAddr,
 }
 
 impl PageTableBlock {
     pub fn new(addr: VirtAddr, lvl: u8) -> Self {
-        Self {
-            addr: addr,
-            lvl: lvl,
-        }
+        Self { addr, lvl }
     }
 
     pub fn addr(&self) -> VirtAddr {
@@ -77,17 +71,6 @@ impl PageTableBlock {
             .offset(index as isize)
             .write_volatile(entry.bits());
         // TODO: barriers, please.....
-    }
-
-    pub fn tte(&self, index: usize) -> PageTableEntry {
-        unsafe {
-            PageTableEntry::from_bits(
-                self.addr
-                    .to_raw_mut::<usize>()
-                    .offset(index as isize)
-                    .read_volatile(),
-            )
-        }
     }
 
     pub fn index_of(&self, addr: VirtAddr) -> usize {
@@ -130,7 +113,13 @@ impl PageFlags {
 
     pub fn block() -> Self {
         Self::from_bits(
-            arch::mm::mmu_flags::BLOCK_VALID | arch::mm::mmu_flags::BLOCK_ACCESS_FLAG | 0b10,
+            arch::mm::mmu_flags::BLOCK_VALID | arch::mm::mmu_flags::BLOCK_ACCESS_FLAG,
+        )
+    }
+
+    pub fn page() -> Self {
+        Self::from_bits(
+            arch::mm::mmu_flags::PAGE_VALID | arch::mm::mmu_flags::BLOCK_ACCESS_FLAG,
         )
     }
 
@@ -139,7 +128,7 @@ impl PageFlags {
     }
 }
 
-impl<const KERNEL: bool> PageTable<KERNEL> {
+impl PageTable {
     pub const fn default() -> Self {
         Self {
             base: VirtAddr::new(0_usize),
@@ -148,51 +137,52 @@ impl<const KERNEL: bool> PageTable<KERNEL> {
 
     pub fn new() -> Option<Self> {
         let base: PhysAddr = page_allocator().alloc(1)?.into();
-        let mut new_table = Self {
+        let new_table = Self {
             base: VirtAddr::from(base),
         };
 
-        let base_va = new_table.base;
+        // let base_va = new_table.base;
 
         // unsafe {
         //     core::slice::from_raw_parts_mut(base_va.to_raw_mut::<u8>(), PAGE_SIZE).fill(0);
         // }
 
-        if KERNEL {
-            new_table
-                .map(
-                    None,
-                    MemRange::new(base_va, PAGE_SIZE),
-                    MappingType::KERNEL_RWX,
-                )
-                .ok()?;
-        } else {
-            kernel_page_table()
-                .map(
-                    None,
-                    MemRange::new(base_va, PAGE_SIZE),
-                    MappingType::KERNEL_RWX,
-                )
-                .ok()?;
-        }
-
         Some(new_table)
     }
 
-    fn map_lvl(
+    fn set_leaf_tte(b: &mut PageTableBlock, index: usize, pa: PhysAddr, tp: MappingType, lvl: usize) {
+        let flags = mmu::mapping_type_to_flags(tp);
+        let control = if lvl != 3 {
+            PageFlags::block().bits()
+        } else {
+            PageFlags::page().bits()
+        };
+
+        unsafe {
+            b.set_tte(
+                index,
+                PageTableEntry::from_bits(control | flags | pa.bits()),
+            );
+        };
+    }
+
+    fn op_lvl<F: FnMut(&mut PageTableBlock, usize, PhysAddr, MappingType, usize) + Copy>(
         &mut self,
         mut base: PageTableBlock,
         lvl: usize,
         v: &mut MemRange<VirtAddr>,
         p: &mut MemRange<PhysAddr>,
         map: MappingType,
+        mut cb: F,
+        use_huge_pages: bool,
     ) -> Result<VirtAddr, MmError> {
-        let size = match lvl {
-            1 => _1GB,
-            2 => _2MB,
-            3 => _4KB,
-            _ => unreachable!(),
+        let order = match lvl {
+            1 => 30,
+            2 => 20,
+            3 => 12,
+            _ => panic!("Kernel supports 3 lvl page table"),
         };
+        let size = 1 << order;
         let res = v.start();
 
         assert!(v.size() == p.size());
@@ -200,7 +190,9 @@ impl<const KERNEL: bool> PageTable<KERNEL> {
         while {
             let index = base.index_of(v.start());
 
-            if lvl < 3 {
+            if lvl < 3
+                && !(use_huge_pages && v.start().is_aligned(order) && v.size().is_aligned(order))
+            {
                 let next_block = match base.next(index) {
                     Some(e) => e,
                     None => {
@@ -213,35 +205,17 @@ impl<const KERNEL: bool> PageTable<KERNEL> {
 
                         unsafe { base.set_tte(index, new_entry) };
 
-                        if !KERNEL {
-                            kernel_page_table().map(
-                                None,
-                                MemRange::new(VirtAddr::from(new_page), PAGE_SIZE),
-                                MappingType::KERNEL_DATA,
-                            )?;
-                        }
-
-                        self.map(
-                            None,
-                            MemRange::new(VirtAddr::from(new_page), PAGE_SIZE),
-                            MappingType::KERNEL_DATA,
-                        )?;
-
                         PageTableBlock::new(VirtAddr::from(new_page), lvl as u8 + 1)
                     }
                 };
 
-                self.map_lvl(next_block, lvl + 1, v, p, map)?;
+                // println!("New block {:?}", next_block);
+                self.op_lvl(next_block, lvl + 1, v, p, map, cb, use_huge_pages)?;
             } else {
-                let ao = p.start().bits();
-                let flags = mmu::mapping_type_to_flags(map);
+                assert!(p.start().is_aligned(order));
 
-                unsafe {
-                    base.set_tte(
-                        index,
-                        PageTableEntry::from_bits(PageFlags::block().bits() | flags | ao),
-                    );
-                };
+                // println!("set {}", lvl);
+                cb(&mut base, index, p.start(), map, lvl);
 
                 p.truncate(size);
                 v.truncate(size);
@@ -251,6 +225,29 @@ impl<const KERNEL: bool> PageTable<KERNEL> {
         } {}
 
         Ok(res)
+    }
+
+    pub fn map_hugepages(
+        &mut self,
+        p: Option<MemRange<PhysAddr>>,
+        mut v: MemRange<VirtAddr>,
+        m_type: MappingType,
+    ) -> Result<VirtAddr, MmError> {
+        let mut p_range = if let Some(pr) = p {
+            pr
+        } else {
+            MemRange::new(PhysAddr::from(v.start()), v.size())
+        };
+
+        self.op_lvl(
+            self.lvl1(),
+            1,
+            &mut v,
+            &mut p_range,
+            m_type,
+            Self::set_leaf_tte,
+            true,
+        )
     }
 
     pub fn map(
@@ -265,7 +262,15 @@ impl<const KERNEL: bool> PageTable<KERNEL> {
             MemRange::new(PhysAddr::from(v.start()), v.size())
         };
 
-        self.map_lvl(self.lvl1(), 1, &mut v, &mut p_range, m_type)
+        self.op_lvl(
+            self.lvl1(),
+            1,
+            &mut v,
+            &mut p_range,
+            m_type,
+            Self::set_leaf_tte,
+            false,
+        )
     }
 
     pub fn unmap(&mut self, _v: MemRange<VirtAddr>) -> Result<(), MmError> {
@@ -316,5 +321,14 @@ impl PageTableEntry {
 
     pub fn valid(&self) -> bool {
         self.0 & 0b11 != 0
+    }
+}
+
+impl core::fmt::Debug for PageTableBlock {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_fmt(format_args!(
+            "PageTableBlock [ base: 0x{:x} ]",
+            self.addr.bits()
+        ))
     }
 }
