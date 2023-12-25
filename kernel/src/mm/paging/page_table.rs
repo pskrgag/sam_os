@@ -1,13 +1,15 @@
 use crate::{
+    arch::mm::mmu,
     arch::PT_LVL1_ENTIRES,
     arch::{self, mm::mmu_flags},
-    arch::{mm::mmu, PAGE_SIZE},
     kernel::misc::*,
+    mm::allocators::page_alloc::page_allocator,
     mm::paging::kernel_page_table::kernel_page_table,
-    mm::{allocators::page_alloc::page_allocator, types::*},
 };
 
+use shared::vmm::types::*;
 use shared::vmm::MappingType;
+use shared::arch::PAGE_SIZE;
 
 #[derive(Debug)]
 pub enum MmError {

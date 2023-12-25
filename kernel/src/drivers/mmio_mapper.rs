@@ -1,11 +1,10 @@
 use crate::{
-    arch,
-    kernel::{locking::fake_lock::FakeLock, misc::num_pages},
-    linker_var,
-    mm::paging::{kernel_page_table::kernel_page_table},
-    mm::types::*,
+    kernel::misc::num_pages, linker_var, mm::paging::kernel_page_table::kernel_page_table,
 };
 
+use shared::arch::PAGE_SIZE;
+use shared::locking::fake_lock::FakeLock;
+use shared::vmm::types::*;
 use shared::vmm::MappingType;
 
 extern "C" {
@@ -44,12 +43,12 @@ impl MmioAllocator {
             return None;
         }
 
-        let new_va = VirtAddr::new(self.start + self.offset * arch::PAGE_SIZE);
+        let new_va = VirtAddr::new(self.start + self.offset * PAGE_SIZE);
 
         kernel_page_table()
             .map(
-                Some(MemRange::new(addr, arch::PAGE_SIZE * pages)),
-                MemRange::new(new_va, arch::PAGE_SIZE * pages),
+                Some(MemRange::new(addr, PAGE_SIZE * pages)),
+                MemRange::new(new_va, PAGE_SIZE * pages),
                 MappingType::KERNEL_DEVICE,
             )
             .ok()?;

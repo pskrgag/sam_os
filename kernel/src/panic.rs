@@ -1,7 +1,7 @@
 use crate::{
     arch::{backtrace::backtrace, irq::disable_all},
-    mm::types::VirtAddr,
 };
+use shared::vmm::types::*;
 use core::panic::PanicInfo;
 
 #[panic_handler]

@@ -1,8 +1,9 @@
-use crate::kernel::{locking::fake_lock::FakeLock, tasks::thread::Thread};
+use crate::kernel::tasks::thread::Thread;
 use crate::percpu_global;
 use alloc::collections::linked_list::LinkedList;
 
 use alloc::sync::{Arc, Weak};
+use shared::locking::fake_lock::FakeLock;
 
 pub struct RunQueue {
     list: LinkedList<Arc<Thread>>,
@@ -26,7 +27,10 @@ impl RunQueue {
     }
 
     pub fn pop(&mut self) -> Arc<Thread> {
-        let next = self.list.pop_front().expect("Calling pop on empty queue is a bug");
+        let next = self
+            .list
+            .pop_front()
+            .expect("Calling pop on empty queue is a bug");
         self.cur = Some(Arc::downgrade(&next));
         next
     }

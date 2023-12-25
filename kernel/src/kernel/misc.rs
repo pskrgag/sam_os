@@ -1,11 +1,12 @@
 #![macro_use]
 
-use crate::arch;
 use core::{
     fmt::Debug,
     mem::size_of,
     ops::{Add, BitAnd, Not, Shl, Shr, Sub},
 };
+
+use shared::arch::{PAGE_SIZE, PAGE_SHIFT};
 
 extern "C" {
     static load_addr: usize;
@@ -39,7 +40,7 @@ pub fn image_size() -> usize {
 
 #[inline]
 pub fn num_pages(size: usize) -> usize {
-    size.next_multiple_of(arch::PAGE_SIZE) >> arch::PAGE_SHIFT
+    size.next_multiple_of(PAGE_SIZE) >> PAGE_SHIFT
 }
 
 #[inline]

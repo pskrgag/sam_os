@@ -1,17 +1,21 @@
 use bitflags::bitflags;
 
+pub mod types;
+pub mod alloc;
+pub mod slab;
+
 bitflags! {
 pub struct MappingType: usize {
     const KERNEL_DATA = 1;
     const KERNEL_TEXT = 2;
-    const KERNEL_DATA_RO = 3;
-    const KERNEL_RWX = 4;
-    const KERNEL_DEVICE = 5;
+    const KERNEL_DATA_RO = 4;
+    const KERNEL_RWX = 8;
+    const KERNEL_DEVICE = 16;
 
-    const USER_DATA = 7;
-    const USER_TEXT = 8;
-    const USER_DATA_RO = 9;
-    const NONE = 10;
+    const USER_DATA = 32;
+    const USER_TEXT = 64;
+    const USER_DATA_RO = 128;
+    const NONE = 256;
 }
 }
 

@@ -1,9 +1,10 @@
-use crate::{arch::PAGE_SIZE, kernel::locking::fake_lock::FakeLock};
 use core::{
     alloc::Layout,
     mem::{size_of, size_of_val, transmute},
     ptr::NonNull,
 };
+use shared::arch::PAGE_SIZE;
+use shared::locking::fake_lock::FakeLock;
 
 const INIT_PAGE_POOL: usize = 50;
 

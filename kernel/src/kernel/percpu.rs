@@ -1,15 +1,15 @@
 use crate::{
     arch::cpuid::current_cpu,
-    arch::PAGE_SIZE,
     linker_var,
     mm::{
         allocators::page_alloc::page_allocator,
         paging::{kernel_page_table::kernel_page_table},
-        types::*,
     },
 };
 
 use shared::vmm::MappingType;
+use shared::vmm::types::*;
+use shared::arch::PAGE_SIZE;
 use spin::Once;
 
 // TODO: W/A. it should be read from dtb

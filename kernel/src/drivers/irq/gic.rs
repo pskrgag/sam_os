@@ -1,6 +1,6 @@
-use crate::{
-    arch, drivers::mmio_mapper::MMIO_ALLOCATOR, kernel::locking::fake_lock::FakeLock, mm::types::*,
-};
+use crate::{arch, drivers::mmio_mapper::MMIO_ALLOCATOR};
+use shared::vmm::types::*;
+use shared::locking::fake_lock::FakeLock;
 
 const GICD_CTLR: usize = 0x0;
 const GICC_CTLR: usize = 0x0;

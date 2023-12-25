@@ -1,8 +1,8 @@
-use crate::arch;
 use shared::vmm::MappingType;
-use crate::mm::types::{Address, MemRange, Pfn, PhysAddr, VirtAddr};
 use alloc::vec::Vec;
 use core::mem::size_of;
+use shared::vmm::types::*;
+use shared::arch::PAGE_SIZE;
 
 const EI_NIDENT: usize = 16;
 const ELF_MAGIC: [u8; 4] = [0x7f, 'E' as u8, 'L' as u8, 'F' as u8];
@@ -165,21 +165,17 @@ fn parse_program_headers(
             continue;
         }
 
-        /* Carefully calculate size to not miss any pages */
-        let size = (Pfn::from(
-            base_pa + PhysAddr::from(pheader.p_memsz as usize + pheader.p_offset as usize),
-        ) - Pfn::from(base_pa)
-            + 1)
-            * arch::PAGE_SIZE;
+        let size = *(pheader.p_memsz as usize).round_up_page();
 
         vec.push((
             MemRange::new(
                 *VirtAddr::from(pheader.p_vaddr as usize).round_down_page(),
                 size,
             ),
-            MemRange::new(base_pa + PhysAddr::from(pheader.p_offset as usize), size),
+            MemRange::new(*(base_pa + PhysAddr::from(pheader.p_offset as usize)).round_down_page(), size),
             flags_to_mt(pheader.p_flags),
         ));
+
     }
 
     Some(vec)

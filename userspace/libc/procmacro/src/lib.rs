@@ -23,6 +23,8 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
         #[no_mangle]
         pub extern "C" fn _start(argc: i32, argv: *const u8) {
+            libc::init().unwrap();
+
             for i in 0..argc {
 
             }
@@ -43,4 +45,5 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     // Hand the output tokens back to the compiler
-    TokenStream::from(expanded)}
+    TokenStream::from(expanded)
+}

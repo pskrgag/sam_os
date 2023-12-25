@@ -1,5 +1,5 @@
-use crate::mm::types::{PhysAddr, VirtAddr};
 use core::arch::asm;
+use shared::vmm::types::*;
 
 extern "C" {
     fn __reset();

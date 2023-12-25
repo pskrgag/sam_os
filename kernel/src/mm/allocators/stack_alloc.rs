@@ -1,11 +1,8 @@
-use crate::{
-    arch::PAGE_SIZE,
-    mm::{
-        allocators::page_alloc::page_allocator,
-        paging::{kernel_page_table::kernel_page_table},
-        types::*,
-    },
+use crate::mm::{
+    allocators::page_alloc::page_allocator, paging::kernel_page_table::kernel_page_table,
 };
+use shared::arch::PAGE_SIZE;
+use shared::vmm::types::*;
 use shared::vmm::MappingType;
 
 pub struct StackLayout {

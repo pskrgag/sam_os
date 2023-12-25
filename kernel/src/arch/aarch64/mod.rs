@@ -19,8 +19,8 @@ use core::mem;
 use cortex_a::registers::*;
 use tock_registers::interfaces::Readable;
 
-pub const PAGE_SHIFT: usize = 12;
-pub const PAGE_SIZE: usize = 1 << PAGE_SHIFT;
+use shared::arch::PAGE_SIZE;
+
 pub const PT_LVL1_ENTIRES: usize = PAGE_SIZE / mem::size_of::<u64>();
 pub const PT_LVL2_ENTIRES: usize = PAGE_SIZE / mem::size_of::<u64>();
 pub const PT_LVL3_ENTIRES: usize = PAGE_SIZE / mem::size_of::<u64>();

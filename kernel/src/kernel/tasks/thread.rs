@@ -1,14 +1,13 @@
 use crate::kernel::sched::run_queue::RUN_QUEUE;
 use crate::{
-    arch::{self, regs::Context},
-    kernel::locking::spinlock::{Spinlock},
+    arch::regs::Context, kernel::locking::spinlock::Spinlock, kernel::tasks::task::Task,
     mm::allocators::stack_alloc::StackLayout,
-    mm::types::{Address, VirtAddr},
-    kernel::tasks::task::Task,
 };
-use shared::vmm::MappingType;
 use alloc::boxed::Box;
 use core::sync::atomic::{AtomicUsize, Ordering};
+use shared::arch::PAGE_SIZE;
+use shared::vmm::types::*;
+use shared::vmm::MappingType;
 
 use object_lib::object;
 
@@ -46,7 +45,7 @@ pub struct Thread {
     id: u16,
     task: Arc<Task>,
     ticks: AtomicUsize,
-    inner: Spinlock<ThreadInner>
+    inner: Spinlock<ThreadInner>,
 }
 
 impl ThreadInner {
@@ -69,8 +68,14 @@ impl ThreadInner {
         self.state = ThreadState::Running;
     }
 
-    pub fn init_user(&mut self, stack: StackLayout, func: VirtAddr, user_stack: VirtAddr, ttbr0: usize) {
-        self.arch_ctx.x21 = user_stack.bits() + arch::PAGE_SIZE;
+    pub fn init_user(
+        &mut self,
+        stack: StackLayout,
+        func: VirtAddr,
+        user_stack: VirtAddr,
+        ttbr0: usize,
+    ) {
+        self.arch_ctx.x21 = user_stack.bits() + PAGE_SIZE;
         self.arch_ctx.lr = (user_thread_entry_point as *const fn()) as usize;
         self.arch_ctx.x20 = func.bits();
         self.arch_ctx.x19 = stack.stack_head().into();
@@ -80,7 +85,7 @@ impl ThreadInner {
         self.stack = Some(stack);
 
         self.state = ThreadState::Initialized;
-   }
+    }
 }
 
 impl Thread {
@@ -126,7 +131,7 @@ impl Thread {
         let stack = StackLayout::new(3).expect("Failed to allocat stack");
         let vms = self.task.vms();
         let user_stack = vms
-            .vm_allocate(5 * arch::PAGE_SIZE, MappingType::USER_DATA)
+            .vm_allocate(5 * PAGE_SIZE, MappingType::USER_DATA)
             .expect("Failed to allocate user stack");
 
         let mut inner = self.inner.lock();

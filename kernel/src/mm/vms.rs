@@ -1,14 +1,11 @@
-use crate::{
-    arch::{self},
-    mm::{
-        allocators::page_alloc::page_allocator,
-        paging::page_table::{PageTable, MmError},
-        types::*,
-        vma_list::{Vma, VmaList},
-    },
+use crate::mm::{
+    allocators::page_alloc::page_allocator,
+    paging::page_table::{MmError, PageTable},
+    vma_list::{Vma, VmaList},
 };
-use shared::vmm::MappingType;
 use object_lib::object;
+use shared::arch::*;
+use shared::vmm::{types::*, MappingType};
 
 pub struct VmsInner {
     size: usize,
@@ -122,7 +119,7 @@ impl VmsInner {
 
         assert!(size.is_page_aligned());
 
-        let p: PhysAddr = if let Some(p) = page_allocator().alloc(size >> arch::PAGE_SHIFT) {
+        let p: PhysAddr = if let Some(p) = page_allocator().alloc(size >> PAGE_SHIFT) {
             p.into()
         } else {
             return Err(());

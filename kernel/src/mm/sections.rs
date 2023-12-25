@@ -1,14 +1,14 @@
 use crate::{
     arch::mm::page_table::set_kernel_page_table,
-    kernel::locking::fake_lock::FakeLock,
     kernel::misc::kernel_offset,
     linker_var,
     mm::{
         paging::{kernel_page_table::kernel_page_table},
-        types::*,
     },
 };
 use shared::vmm::MappingType;
+use shared::vmm::types::*;
+use shared::locking::fake_lock::FakeLock;
 
 use alloc::vec::Vec;
 

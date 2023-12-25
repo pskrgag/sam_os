@@ -1,9 +1,11 @@
-use crate::{arch, arch::cpuid::CpuLayout, arch::PAGE_SIZE, kernel, mm::types::*};
+use crate::{arch, arch::cpuid::CpuLayout, kernel};
 use bitmaps::Bitmap;
 use lock_free_buddy_allocator::buddy_alloc::BuddyAlloc;
 use spin::once::Once;
 
 use alloc::vec::Vec;
+use shared::vmm::types::*;
+use shared::arch::PAGE_SIZE;
 
 pub struct PageAlloc {
     pool: Vec<Bitmap<64>>,
@@ -12,7 +14,7 @@ pub struct PageAlloc {
 
 unsafe impl Send for PageAlloc {}
 
-pub static PAGE_ALLOC: Once<BuddyAlloc<{ arch::PAGE_SIZE }, CpuLayout, alloc::alloc::Global>> =
+pub static PAGE_ALLOC: Once<BuddyAlloc<{ PAGE_SIZE }, CpuLayout, alloc::alloc::Global>> =
     spin::Once::new();
 
 pub fn init() {
@@ -28,7 +30,7 @@ pub fn init() {
     PAGE_ALLOC.call_once(|| {
         BuddyAlloc::<PAGE_SIZE, CpuLayout, alloc::alloc::Global>::new(
             alloc_start.into(),
-            alloc_size / arch::PAGE_SIZE,
+            alloc_size / PAGE_SIZE,
             &alloc::alloc::Global,
         )
         .unwrap()
@@ -36,6 +38,6 @@ pub fn init() {
 }
 
 pub fn page_allocator(
-) -> &'static BuddyAlloc<'static, { arch::PAGE_SIZE }, CpuLayout, alloc::alloc::Global> {
+) -> &'static BuddyAlloc<'static, { PAGE_SIZE }, CpuLayout, alloc::alloc::Global> {
     &PAGE_ALLOC.get().unwrap()
 }

@@ -1,4 +1,3 @@
-use crate::mm::types::*;
 use alloc::rc::Rc;
 use core::cmp::Ordering;
 use intrusive_collections::{
@@ -7,6 +6,7 @@ use intrusive_collections::{
     KeyAdapter, RBTree, RBTreeLink,
 };
 use shared::vmm::MappingType;
+use shared::vmm::types::*;
 
 #[derive(Debug, Eq, Clone, Copy)]
 pub(crate) struct MemRangeVma(MemRange<VirtAddr>);

@@ -1,12 +1,11 @@
 pub mod allocators;
 pub mod paging;
 pub mod sections;
-pub mod types;
 pub mod vma_list;
 pub mod vms;
 
 use crate::kernel::misc::kernel_offset;
-use types::*;
+use shared::vmm::types::*;
 
 #[inline]
 pub fn phys_to_virt_linear(phys: PhysAddr) -> VirtAddr {
