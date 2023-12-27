@@ -245,6 +245,10 @@ impl VirtAddr {
     pub unsafe fn as_slice_mut<T>(&self, count: usize) -> &mut [T] {
         core::slice::from_raw_parts_mut(self.0 as *mut T, count)
     }
+
+    pub unsafe fn as_slice_at_offset_mut<T>(&self, count: usize, offset: usize) -> &mut [T] {
+        core::slice::from_raw_parts_mut((self.0 as usize + offset) as *mut T, count)
+    }
 }
 
 impl Address for VirtAddr {

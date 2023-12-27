@@ -19,7 +19,6 @@ fn impl_kernel_object_macro(ast: &syn::DeriveInput) -> TokenStream {
 
         impl crate::kernel::object::KernelObject for #name {
             fn as_any(&self) -> &dyn core::any::Any {
-                println!("As any {}", core::stringify!(#name));
                 self
             }
         }

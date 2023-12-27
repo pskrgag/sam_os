@@ -2,9 +2,9 @@ use crate::kernel::locking::spinlock::Spinlock;
 use crate::kernel::misc::num_pages;
 use crate::mm::allocators::page_alloc::page_allocator;
 use object_lib::object;
+use rtl::arch::{PAGE_SHIFT, PAGE_SIZE};
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
-use rtl::arch::PAGE_SIZE;
 
 #[derive(Debug)]
 struct VmObjectInner {
@@ -21,11 +21,13 @@ pub struct VmObject {
 
 impl VmObjectInner {
     pub fn from_buffer(b: &[u8], tp: MappingType, mut load_addr: VirtAddr) -> Option<Self> {
-        let pages = num_pages(b.len());
+        let pages = ((load_addr.bits() + b.len()) >> PAGE_SHIFT)
+            - ((load_addr.bits() as usize) >> PAGE_SHIFT)
+            + 1;
 
         let p: PhysAddr = page_allocator().alloc(pages)?;
         let va = VirtAddr::from(p);
-        let range = unsafe { va.as_slice_mut::<u8>(b.len()) };
+        let range = unsafe { va.as_slice_at_offset_mut::<u8>(b.len(), load_addr.page_offset()) };
 
         range.copy_from_slice(b);
 

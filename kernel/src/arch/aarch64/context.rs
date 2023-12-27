@@ -27,5 +27,6 @@ global_asm!(
     "mov        fp, x5",
     "ldr        x4, [x1, #0x70]",
     "msr        TTBR0_EL1, x4",
+    "tlbi       vmalle1",   // TODO: ASID support
     "ret",
 );

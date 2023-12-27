@@ -37,7 +37,6 @@ impl HandleTable {
         let h = &self.table[key as usize];
 
         if !h.is_valid() {
-            panic!("You are dumb");
             None
         } else {
             h.obj::<T>()

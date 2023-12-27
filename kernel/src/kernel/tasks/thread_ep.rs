@@ -17,6 +17,7 @@ global_asm!(
     "msr    spsr_el1, xzr",
     "mov    x1, x22", // argv
     "mov    x0, x23", // argc
+    "eor    x30, x30, x30",
     "eret",
 );
 
