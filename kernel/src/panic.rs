@@ -10,10 +10,15 @@ fn on_panic(info: &PanicInfo) -> ! {
     let bt_size: usize;
 
     unsafe {
+        let fp: usize;
+
         disable_all();
         println!("--- cut here ---");
         println!("Kernel Panic!");
-        bt_size = backtrace(&mut bt);
+
+        core::arch::asm!("mov {}, fp", out(reg) fp);
+
+        bt_size = backtrace(&mut bt, VirtAddr::from(fp));
     };
 
     if let Some(location) = info.location() {

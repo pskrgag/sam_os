@@ -12,3 +12,6 @@ rtl = {path = "../../rtl" }
 
 [lib]
 name = "libc"
+
+[features]
+verbose = []

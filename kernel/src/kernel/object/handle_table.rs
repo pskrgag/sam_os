@@ -1,7 +1,10 @@
 use crate::kernel::object::handle::Handle;
 use crate::make_array;
+use rtl::handle::HandleBase;
+use crate::kernel::object::KernelObject;
+use alloc::sync::Arc;
 
-const MAX_HANDLES: usize = 10;
+const MAX_HANDLES: usize = 100;
 
 // This is SHIT! Must be replaced with radix trie-like stuff,
 // but for my own sake, I will leave it as simple array
@@ -17,21 +20,27 @@ impl HandleTable {
     }
 
     pub fn add(&mut self, obj: Handle) {
-        let key = obj.obj_ptr() % MAX_HANDLES;
-        let mut key_iter = key;
+        let key = obj.as_raw() as usize % MAX_HANDLES;
 
-        while {
-            let h = &mut self.table[key];
+        let h = &mut self.table[key];
 
-            if !h.is_valid() {
-                *h = obj;
-                return;
-            }
+        if !h.is_valid() {
+            *h = obj;
+            return;
+        } else {
+            panic!("Please refactor me....");
+        }
+    }
 
-            key_iter = (key_iter + 1) % MAX_HANDLES;
-            key_iter != key
-        } { };
+    pub fn find<T: KernelObject + Sized + 'static>(&self, hdl: HandleBase) -> Option<Arc<T>> {
+        let key = hdl % MAX_HANDLES;
+        let h = &self.table[key as usize];
 
-        panic!("hehe");
+        if !h.is_valid() {
+            panic!("You are dumb");
+            None
+        } else {
+            h.obj::<T>()
+        }
     }
 }

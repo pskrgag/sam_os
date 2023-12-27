@@ -14,7 +14,7 @@ unsafe impl GlobalAlloc for Allocator {
         slab::alloc(layout.size()).unwrap()
     }
 
-    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        todo!()
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        slab::free(ptr, layout)
     }
 }

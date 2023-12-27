@@ -1,8 +1,7 @@
-use rtl::vmm::MappingType;
 use alloc::vec::Vec;
 use core::mem::size_of;
 use rtl::vmm::types::*;
-use rtl::arch::PAGE_SIZE;
+use rtl::vmm::MappingType;
 
 const EI_NIDENT: usize = 16;
 const ELF_MAGIC: [u8; 4] = [0x7f, 'E' as u8, 'L' as u8, 'F' as u8];
@@ -165,17 +164,21 @@ fn parse_program_headers(
             continue;
         }
 
-        let size = *(pheader.p_memsz as usize).round_up_page();
+        let size = *(pheader.p_memsz as usize + pheader.p_vaddr as usize
+            - *(pheader.p_vaddr as usize).round_down_page())
+        .round_up_page();
 
         vec.push((
             MemRange::new(
                 *VirtAddr::from(pheader.p_vaddr as usize).round_down_page(),
                 size,
             ),
-            MemRange::new(*(base_pa + PhysAddr::from(pheader.p_offset as usize)).round_down_page(), size),
+            MemRange::new(
+                *(base_pa + PhysAddr::from(pheader.p_offset as usize)).round_down_page(),
+                size,
+            ),
             flags_to_mt(pheader.p_flags),
         ));
-
     }
 
     Some(vec)

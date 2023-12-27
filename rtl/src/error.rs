@@ -6,6 +6,7 @@ bitflags! {
         const INVALID_ARGUMENT = 1;
         const NO_OPERATION = 2;
         const FAULT = 3;
+        const NO_MEMORY = 4;
     }
 }
 

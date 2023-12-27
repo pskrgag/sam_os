@@ -29,6 +29,17 @@ pub fn alloc(mut size: usize) -> Option<*mut u8> {
     }
 }
 
+pub fn free(ptr: *mut u8, l: alloc::alloc::Layout) {
+    let size = core::cmp::max(l.size(), MIN_SLAB_SIZE);
+
+    let slab_index = (size.next_power_of_two().ilog2() as usize) - 3;
+    if slab_index >= SLABS.len() {
+        panic!();
+    }
+
+    SLABS[slab_index].get().free(ptr);
+}
+
 pub fn init() -> Option<()> {
     let mut size = MIN_SLAB_SIZE;
 

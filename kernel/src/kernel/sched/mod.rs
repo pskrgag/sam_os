@@ -119,7 +119,9 @@ pub fn init_userspace() {
     }
 
     init_thread.init_user(data.ep);
-    init_thread.start();
+
+    init_task.add_thread(init_thread);
+    init_task.start();
 }
 
 pub fn init_idle() {

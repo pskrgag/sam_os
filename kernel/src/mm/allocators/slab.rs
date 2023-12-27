@@ -1,7 +1,6 @@
 use crate::{kernel::locking::spinlock::Spinlock, mm::allocators::page_alloc::page_allocator};
 
 use core::alloc::Layout;
-use rtl::arch::PAGE_SIZE;
 use rtl::vmm::alloc::BackendAllocator;
 use rtl::vmm::slab::SlabAllocator;
 use rtl::vmm::types::*;

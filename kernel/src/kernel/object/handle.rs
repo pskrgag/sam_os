@@ -1,9 +1,7 @@
 use crate::kernel::object::KernelObject;
 use alloc::sync::Arc;
-
-pub type HandleBase = u32;
-
-const HANDLE_INVALID: HandleBase = HandleBase::MAX;
+use core::any::TypeId;
+use rtl::handle::HandleBase;
 
 // ToDo: rigths
 pub struct Handle {
@@ -12,9 +10,7 @@ pub struct Handle {
 
 impl Handle {
     pub const fn invalid() -> Self {
-        Self {
-            obj: None,
-        }
+        Self { obj: None }
     }
 
     pub fn new<T: KernelObject>(o: Arc<dyn KernelObject>) -> Self {
@@ -25,15 +21,25 @@ impl Handle {
         self.obj.is_some()
     }
 
-    pub fn obj_ptr(&self) -> usize {
+    pub fn as_raw(&self) -> HandleBase {
         assert!(self.is_valid());
 
-        &*self.obj.as_ref().unwrap() as *const _ as usize
+        ((Arc::as_ptr(self.obj.as_ref().unwrap()) as *const u8 as usize) & ((1 << 63) - 1))
+            as HandleBase
     }
 
-    pub fn obj<T: KernelObject + Sized + 'static>(&self) -> Option<&T> {
+    pub fn obj<T: KernelObject + Sized + 'static>(&self) -> Option<Arc<T>> {
         if let Some(o) = &self.obj {
-            o.as_ref().as_any().downcast_ref::<T>()
+            if o.as_any().type_id() == TypeId::of::<T>() {
+                Some(unsafe {
+                    ((o as *const _ as *const u8 as *const Arc<T>)
+                        .as_ref()
+                        .unwrap())
+                    .clone()
+                })
+            } else {
+                None
+            }
         } else {
             None
         }

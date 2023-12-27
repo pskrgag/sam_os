@@ -97,9 +97,10 @@ __user_sync64:
 	b	user_ret
 
 sync:
-	mrs	x0, ESR_EL1
-	mrs	x1, ELR_EL1
-	mrs	x2, FAR_EL1
+	mov	x0, sp
+	mrs	x1, ESR_EL1
+	mrs	x2, ELR_EL1
+	mrs	x3, FAR_EL1
 	bl	user_sync
 
 user_ret:

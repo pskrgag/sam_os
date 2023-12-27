@@ -26,3 +26,24 @@ macro_rules! println {
         libc::stdio::_print(format_args_nl!($($arg)*));
     })
 }
+
+macro_rules! println_libc {
+    () => (print!("\n"));
+    ($($arg:tt)*) => ({
+        crate::stdio::_print(format_args_nl!($($arg)*));
+    })
+}
+
+#[cfg(feature = "verbose")]
+macro_rules! println_libc_verbose {
+    () => (print!("\n"));
+    ($($arg:tt)*) => ({
+        crate::stdio::_print(format_args_nl!($($arg)*));
+    })
+}
+
+#[cfg(not(feature = "verbose"))]
+macro_rules! println_libc_verbose {
+    () => (print!("\n"));
+    ($($arg:tt)*) => ({ })
+}

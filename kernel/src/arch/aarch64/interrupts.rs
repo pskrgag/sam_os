@@ -57,6 +57,22 @@ impl ExceptionCtx {
     pub fn syscall_arg2<T: From<usize>>(&self) -> T {
         self.x2.into()
     }
+
+    pub fn syscall_arg3<T: From<usize>>(&self) -> T {
+        self.x3.into()
+    }
+
+    pub fn syscall_arg4<T: From<usize>>(&self) -> T {
+        self.x4.into()
+    }
+
+    pub fn syscall_arg5<T: From<usize>>(&self) -> T {
+        self.x5.into()
+    }
+
+    pub fn fp(&self) -> usize {
+        self.x29
+    }
 }
 
 impl fmt::Display for ExceptionCtx {
@@ -177,7 +193,7 @@ pub extern "C" fn kern_exception_bug(esr_el1: usize, far_el1: usize, elr_el1: us
 }
 
 #[no_mangle]
-pub extern "C" fn user_sync(esr_el1: usize, elr_el1: usize, far_el1: usize) {
+pub extern "C" fn user_sync(_ctx: &ExceptionCtx, esr_el1: usize, elr_el1: usize, far_el1: usize) {
     println!(
         "!!! Kernel sync from EL0    ESR_EL1 0x{:x}    ELR_EL1 0x{:x}    FAR_EL1 0x{:x}",
         esr_el1, elr_el1, far_el1,
@@ -190,6 +206,9 @@ pub extern "C" fn user_sync(esr_el1: usize, elr_el1: usize, far_el1: usize) {
 pub extern "C" fn user_syscall(ctx: &mut ExceptionCtx) {
     match do_syscall(ctx) {
         Ok(s) => ctx.x0 = s,
-        Err(err) => ctx.x0 = -(err.bits() as isize) as usize,
-    }
+        Err(err) => { 
+            println!("err {:?}", err);
+            ctx.x0 = -(err.bits() as isize) as usize;
+        }
+    };
 }

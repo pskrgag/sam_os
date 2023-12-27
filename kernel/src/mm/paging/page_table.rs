@@ -262,6 +262,8 @@ impl PageTable {
             MemRange::new(PhysAddr::from(v.start()), v.size())
         };
 
+        assert!(v.size() == p_range.size());
+
         self.op_lvl(
             self.lvl1(),
             1,

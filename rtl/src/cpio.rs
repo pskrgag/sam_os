@@ -4,6 +4,7 @@ use core::slice;
 
 // Using new ASCII format
 const CPIO_MAGIC: [u8; 6] = *b"070701";
+const CPIO_END: &str = "TRAILER!!!\0";
 
 #[repr(C)]
 struct CpioHeader {
@@ -43,7 +44,7 @@ impl<'a> Cpio<'a> {
             return None;
         }
 
-        Some(Self { data: data })
+        Some(Self { data })
     }
 
     pub fn iter(&'a self) -> Iter<'a> {
@@ -102,16 +103,22 @@ impl<'a> Iterator for Iter<'a> {
         }
 
         let name = unsafe { header.filename() };
+
+        if name == CPIO_END {
+            return None;
+        }
+
         let file_size = header.filesize();
+        let offset = self.offset + size_of::<CpioHeader>() + name.len() + 1;
 
         let ret = Some(File {
-            name: name,
-            data: &self.archive.data[self.offset + size_of::<CpioHeader>()..file_size],
+            name,
+            data: &self.archive.data[offset..offset + file_size],
         });
 
-        self.offset += file_size + size_of::<CpioHeader>();
+        self.offset = offset + file_size;
 
-        return ret;
+        ret
     }
 }
 

@@ -1,17 +1,18 @@
+use crate::kernel::object::handle::Handle;
 use crate::{
     kernel::{
-        locking::spinlock::Spinlock, object::handle_table::HandleTable, tasks::thread::Thread,
+        locking::spinlock::{Spinlock, SpinlockGuard},
+        object::handle_table::HandleTable,
+        tasks::thread::Thread,
     },
     mm::vms::Vms,
 };
-use alloc::{collections::LinkedList, string::String, sync::Weak};
+use alloc::{collections::LinkedList, string::String};
 use object_lib::object;
 use spin::Once;
-use crate::kernel::object::handle::Handle;
 
 pub struct TaskObject {
-    handles: HandleTable,
-    threads: LinkedList<Weak<Thread>>,
+    threads: LinkedList<Arc<Thread>>,
 }
 
 #[derive(object)]
@@ -20,6 +21,7 @@ pub struct Task {
     name: String,
     id: u32,
     vms: Arc<Vms>,
+    handles: Spinlock<HandleTable>,
 }
 
 /* ToDo: kernel task is redundant and should be dropped at all,
@@ -37,10 +39,11 @@ impl Task {
             name,
             id: 0,
             vms: Vms::new_user(),
+            handles: Spinlock::new(HandleTable::new()),
         });
 
         let handle = Handle::new::<Task>(s.clone());
-        s.add_handle(handle);
+        s.handle_table().add(handle);
 
         // let handle = Handle::new::<Vms>(s.vms.clone());
         // s.add_handle(handle);
@@ -48,41 +51,43 @@ impl Task {
         s
     }
 
-    pub fn add_handle(&self, h: Handle) {
-        let mut i = self.inner.lock();
-        i.add_handle(h);
+    pub fn handle_table(&self) -> SpinlockGuard<HandleTable> {
+        self.handles.lock()
     }
 
     pub fn vms(&self) -> Arc<Vms> {
         self.vms.clone()
     }
 
-    pub fn add_thread(&self, t: Weak<Thread>) {
+    pub fn add_thread(&self, t: Arc<Thread>) {
         self.inner.lock().add_thread(t);
+    }
+
+    pub fn start(&self) {
+        self.inner.lock().start()
     }
 }
 
 impl TaskObject {
     pub fn new_kernel() -> Self {
         Self {
-            handles: HandleTable::new(),
             threads: LinkedList::new(),
         }
     }
 
     pub fn new_user() -> Self {
         Self {
-            handles: HandleTable::new(),
             threads: LinkedList::new(),
         }
     }
 
-    pub fn add_handle(&mut self, h: Handle) {
-        self.handles.add(h);
+    pub fn add_thread(&mut self, t: Arc<Thread>) {
+        self.threads.push_back(t);
     }
 
-    pub fn add_thread(&mut self, t: Weak<Thread>) {
-        self.threads.push_back(t);
+    pub fn start(&mut self) {
+        let t = self.threads.front().unwrap();
+        t.start();
     }
 }
 

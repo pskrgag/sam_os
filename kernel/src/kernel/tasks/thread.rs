@@ -8,6 +8,7 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 use rtl::arch::PAGE_SIZE;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
+use alloc::sync::Weak;
 
 use object_lib::object;
 
@@ -16,6 +17,7 @@ extern "C" {
     fn user_thread_entry_point();
 }
 
+const USER_THREAD_STACK_PAGES: usize = 15;
 const RR_TICKS: usize = 10;
 
 #[derive(PartialEq, Copy, Clone, Debug)]
@@ -43,7 +45,7 @@ struct ThreadInner {
 pub struct Thread {
     type_id: core::any::TypeId,
     id: u16,
-    task: Arc<Task>,
+    task: Weak<Task>,
     ticks: AtomicUsize,
     inner: Spinlock<ThreadInner>,
 }
@@ -75,7 +77,7 @@ impl ThreadInner {
         user_stack: VirtAddr,
         ttbr0: usize,
     ) {
-        self.arch_ctx.x21 = user_stack.bits() + PAGE_SIZE;
+        self.arch_ctx.x21 = user_stack.bits() + USER_THREAD_STACK_PAGES * PAGE_SIZE;
         self.arch_ctx.lr = (user_thread_entry_point as *const fn()) as usize;
         self.arch_ctx.x20 = func.bits();
         self.arch_ctx.x19 = stack.stack_head().into();
@@ -95,7 +97,7 @@ impl Thread {
             id,
             inner: Spinlock::new(ThreadInner::default()),
             ticks: RR_TICKS.into(),
-            task,
+            task: Arc::downgrade(&task),
         })
     }
 
@@ -104,7 +106,7 @@ impl Thread {
     }
 
     pub fn task(&self) -> Arc<Task> {
-        self.task.clone()
+        self.task.upgrade().unwrap()
     }
 
     pub unsafe fn ctx_mut<'a>(self: &'a Arc<Thread>) -> &'a mut Context {
@@ -128,40 +130,26 @@ impl Thread {
     }
 
     pub fn init_user(self: &Arc<Thread>, ep: VirtAddr) {
-        let stack = StackLayout::new(3).expect("Failed to allocat stack");
-        let vms = self.task.vms();
+        let kernel_stack = StackLayout::new(3).expect("Failed to allocate kernel stack");
+        let vms = self.task.upgrade().unwrap().vms();
         let user_stack = vms
-            .vm_allocate(5 * PAGE_SIZE, MappingType::USER_DATA)
+            .vm_allocate(USER_THREAD_STACK_PAGES * PAGE_SIZE, MappingType::USER_DATA)
             .expect("Failed to allocate user stack");
 
         let mut inner = self.inner.lock();
 
-        inner.init_user(stack, ep, user_stack, vms.base().bits());
+        inner.init_user(
+            kernel_stack,
+            ep,
+            user_stack,
+            vms.base().bits(),
+        );
     }
 
     pub fn start(self: &Arc<Self>) {
         self.inner.lock().state = ThreadState::Running;
-        self.task.add_thread(Arc::downgrade(self));
 
         RUN_QUEUE.per_cpu_var_get().get().add(self.clone());
-    }
-
-    pub fn setup_args(&mut self, _args: &[&str]) {
-        // // SAFETY: thread is not running, so we can assume that user addresses
-        // // are mapped
-        //
-        // for i in args {
-        //     unsafe {
-        //         core::ptr::copy_nonoverlapping(
-        //             i.as_bytes().as_ptr(),
-        //             self.arch_ctx.x19 as *mut _,
-        //             i.len(),
-        //         );
-        //     }
-        //
-        //     self.arch_ctx.x19 += i.len();
-        //     self.arch_ctx.x23 += 1;
-        // }
     }
 
     pub fn tick(self: Arc<Thread>) {
