@@ -9,6 +9,7 @@
 #![feature(int_roundings)]
 #![feature(const_mut_refs)]
 #![feature(allocator_api)]
+#![feature(get_mut_unchecked)]
 
 extern crate alloc;
 
@@ -24,8 +25,6 @@ mod panic;
 
 use kernel::sched;
 pub use lib::printf;
-
-use crate::kernel::tasks::task;
 
 /* At this point we have:
  *
@@ -46,8 +45,8 @@ extern "C" fn start_kernel() -> ! {
 
     kernel::percpu::init_percpu();
 
-    task::init_kernel_task();
-    sched::init_idle();
+    // task::init_kernel_task();
+    // sched::init_idle();
     sched::init_userspace();
 
     // -- Scheduler must be initialized at that point

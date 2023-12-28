@@ -5,14 +5,11 @@ use rtl::error::ErrorType;
 use rtl::handle::Handle;
 use rtl::syscalls::SyscallList;
 use rtl::vmm::types::VirtAddr;
-use rtl::vmm::MappingType;
 
 pub enum Syscall<'a> {
     Write(&'a str),
-    VmAllocate(usize, MappingType),
-    VmObjectCreate(&'a [u8], MappingType, VirtAddr),
     TaskCreateFromVmo(&'a str, &'a [Handle], VirtAddr),
-    TaskStart(Handle),
+    Invoke(Handle, usize, &'a [usize]),
 }
 
 impl<'a> Syscall<'a> {
@@ -24,26 +21,13 @@ impl<'a> Syscall<'a> {
         unsafe { Ok(syscall(Self::TaskCreateFromVmo(name, vmos, ep).as_args())? as Handle) }
     }
 
-    pub fn vm_allocate(size: usize, mt: MappingType) -> Result<*mut u8, ErrorType> {
-        unsafe { Ok(syscall(Self::VmAllocate(size, mt).as_args())? as *mut u8) }
-    }
-
     pub fn debug_write(s: &'a str) -> Result<(), ErrorType> {
         unsafe { syscall(Self::Write(s).as_args())? };
         Ok(())
     }
 
-    pub fn task_start(h: Handle) -> Result<(), ErrorType> {
-        unsafe { syscall(Self::TaskStart(h).as_args())? };
-        Ok(())
-    }
-
-    pub fn create_vm_object(
-        b: &'a [u8],
-        tp: MappingType,
-        load_addr: VirtAddr,
-    ) -> Result<Handle, ErrorType> {
-        unsafe { Ok(syscall(Self::VmObjectCreate(b, tp, load_addr).as_args())? as Handle) }
+    pub fn invoke(h: Handle, op: usize, args: &'a [usize]) -> Result<usize, ErrorType> {
+        unsafe { syscall(Self::Invoke(h, op, args).as_args()) }
     }
 
     pub fn as_args(self) -> [usize; 8] {
@@ -58,26 +42,6 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
-            Syscall::VmAllocate(size, tp) => [
-                SyscallList::SYS_VM_ALLOCATE.into(),
-                size,
-                tp.into(),
-                0,
-                0,
-                0,
-                0,
-                0,
-            ],
-            Syscall::VmObjectCreate(buf, tp, load_addr) => [
-                SyscallList::SYS_VM_CREATE_VM_OBJECT.into(),
-                buf.as_ptr() as usize,
-                buf.len(),
-                tp.into(),
-                load_addr.into(),
-                0,
-                0,
-                0,
-            ],
             Syscall::TaskCreateFromVmo(name, handles, ep) => [
                 SyscallList::SYS_TASK_CREATE_FROM_VMO.into(),
                 name.as_ptr() as usize,
@@ -88,16 +52,18 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
-            Syscall::TaskStart(handle) => [
-                SyscallList::SYS_TASK_START.into(),
-                handle,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-            ],
+            Syscall::Invoke(handle, op, args) => {
+                let mut a = [0usize; 8];
+                a[0] = SyscallList::SYS_INVOKE.into();
+                a[1] = handle;
+                a[2] = op;
+
+                for i in 0..args.len() {
+                    a[i + 3] = args[i];
+                }
+
+                a
+            }
         }
     }
 }

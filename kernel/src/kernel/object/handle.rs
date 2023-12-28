@@ -44,4 +44,12 @@ impl Handle {
             None
         }
     }
+
+    pub fn obj_poly(&self) -> Option<Arc<dyn KernelObject>> {
+        if let Some(o) = &self.obj {
+            Some(o.clone())
+        } else {
+            None
+        }
+    }
 }

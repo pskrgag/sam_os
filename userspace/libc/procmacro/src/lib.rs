@@ -21,13 +21,14 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let expanded = quote! {
         #input_fn
 
+        extern crate alloc;
+
         #[no_mangle]
-        pub extern "C" fn _start(argc: i32, argv: *const u8) {
+        pub extern "C" fn _start(vms_handle: rtl::handle::HandleBase, self_handle: rtl::handle::HandleBase,
+                                 factory_handle: rtl::handle::HandleBase) {
+            libc::vmm::vms::init_self_vms(vms_handle);
+            libc::factory::init_self_factory(factory_handle);
             libc::init().unwrap();
-
-            for i in 0..argc {
-
-            }
 
             main();
 

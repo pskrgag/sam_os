@@ -4,6 +4,7 @@
 
 use libc::main;
 use libc::task::Task;
+use alloc::string::ToString;
 
 use rtl::cpio::Cpio;
 
@@ -19,7 +20,10 @@ fn main() {
         println!("{:?}", i);
 
         let elf = i.data();
-        let mut task = Task::create_from_elf(elf).expect("Failed to create task");
+        let mut task =
+            Task::create_from_elf1(elf, "test task".to_string()).expect("Failed to create task");
         task.start().unwrap();
+
+        println!("Spawned '{}'", task.name())
     }
 }

@@ -1,8 +1,7 @@
-use crate::arch::interrupts::ExceptionCtx;
 use crate::kernel::object::handle::Handle;
 use crate::kernel::sched::current;
-use crate::kernel::tasks::task::Task;
-use crate::kernel::tasks::thread::Thread;
+use crate::kernel::object::task_object::Task;
+use crate::kernel::object::thread_object::Thread;
 use alloc::string::ToString;
 use alloc::vec::Vec;
 use rtl::error::ErrorType;
@@ -10,64 +9,57 @@ use rtl::handle::HandleBase;
 use rtl::syscalls::SyscallList;
 use rtl::vmm::types::VirtAddr;
 
-pub fn do_syscall(ctx: &ExceptionCtx) -> Result<usize, ErrorType> {
-    match SyscallList::from_bits(ctx.syscall_number()) {
-        Some(SyscallList::SYS_WRITE) => unsafe {
+pub struct SyscallArgs {
+    number: SyscallList,
+    args: [usize; 7],
+}
+
+impl SyscallArgs {
+    pub fn new(number: usize, args: [usize; 7]) -> Option<Self> {
+        Some(Self {
+            number: SyscallList::from_bits(number)?,
+            args,
+        })
+    }
+
+    pub fn number(&self) -> SyscallList {
+        self.number
+    }
+
+    pub fn arg<T: From<usize>>(&self, n: usize) -> T {
+        self.args[n].into()
+    }
+
+    pub fn args(&self) -> [usize; 7] {
+        self.args
+    }
+}
+
+pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
+    match args.number() {
+        SyscallList::SYS_WRITE => unsafe {
             do_write(core::slice::from_raw_parts(
-                ctx.syscall_arg1::<usize>() as *const u8,
-                ctx.syscall_arg2(),
+                args.arg::<usize>(0) as *const u8,
+                args.arg(1),
             ))
         },
-        Some(SyscallList::SYS_VM_ALLOCATE) => {
-            let task = current().unwrap().task();
-            let vms = task.vms();
-
-            let v = match vms.vm_allocate(ctx.syscall_arg1(), ctx.syscall_arg2()) {
-                Ok(v) => v,
-                Err(_) => return Err(ErrorType::INVALID_ARGUMENT),
-            };
-
-            Ok(v.into())
-        }
-        Some(SyscallList::SYS_VM_CREATE_VM_OBJECT) => {
-            use crate::kernel::object::vm_object::VmObject;
-
-            let range = unsafe {
-                core::slice::from_raw_parts(
-                    ctx.syscall_arg1::<usize>() as *const u8,
-                    ctx.syscall_arg2(),
-                )
-            };
-
-            let vmo = VmObject::from_buffer(range, ctx.syscall_arg3(), ctx.syscall_arg4())
-                .ok_or(ErrorType::NO_MEMORY)?;
-            let handle = Handle::new::<VmObject>(vmo.clone());
-            let ret = handle.as_raw();
-
-            let task = current().unwrap().task();
-            let mut table = task.handle_table();
-
-            table.add(handle);
-
-            Ok(ret)
-        }
-        Some(SyscallList::SYS_TASK_CREATE_FROM_VMO) => {
+        SyscallList::SYS_TASK_CREATE_FROM_VMO => {
             use crate::kernel::object::vm_object::VmObject;
 
             let name_range = unsafe {
                 core::slice::from_raw_parts(
-                    ctx.syscall_arg1::<usize>() as *const u8,
-                    ctx.syscall_arg2(),
+                    args.arg::<usize>(0) as *const u8,
+                    args.arg(1),
                 )
             };
             let name = core::str::from_utf8(name_range).map_err(|_| ErrorType::FAULT)?;
             let handles = unsafe {
                 core::slice::from_raw_parts(
-                    ctx.syscall_arg3::<usize>() as *const HandleBase,
-                    ctx.syscall_arg4(),
+                    args.arg::<usize>(2) as *const HandleBase,
+                    args.arg(3),
                 )
             };
-            let ep = ctx.syscall_arg5::<VirtAddr>();
+            let ep = args.arg::<VirtAddr>(4);
 
             let task = current().unwrap().task();
             let mut table = task.handle_table();
@@ -92,7 +84,7 @@ pub fn do_syscall(ctx: &ExceptionCtx) -> Result<usize, ErrorType> {
             }
 
             init_thread.init_user(ep);
-            new_task.add_thread(init_thread);
+            new_task.add_initial_thread(init_thread);
 
             let handle = Handle::new::<Task>(new_task.clone());
             let ret = handle.as_raw();
@@ -101,16 +93,19 @@ pub fn do_syscall(ctx: &ExceptionCtx) -> Result<usize, ErrorType> {
 
             Ok(ret)
         }
-        Some(SyscallList::SYS_TASK_START) => {
+        SyscallList::SYS_INVOKE => {
             let task = current().unwrap().task();
             let table = task.handle_table();
 
             let req_t = table
-                .find::<Task>(ctx.syscall_arg1())
+                .find_poly(args.arg(0))
                 .ok_or(ErrorType::INVALID_ARGUMENT)?;
 
-            req_t.start();
-            Ok(ErrorType::OK.into())
+            // Drop locks
+            drop(table);
+            drop(task);
+
+            req_t.invoke(&args.args()[1..])
         }
         _ => Err(ErrorType::NO_OPERATION),
     }

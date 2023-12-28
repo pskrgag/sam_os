@@ -5,7 +5,7 @@ use elf::ElfBytes;
 use rtl::vmm::MappingType;
 use rtl::vmm::types::VirtAddr;
 
-const PF_R: u32 = 0x4;
+// const PF_R: u32 = 0x4;
 const PF_W: u32 = 0x2;
 const PF_X: u32 = 0x1;
 

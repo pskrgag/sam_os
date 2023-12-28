@@ -1,24 +1,15 @@
 pub mod run_queue;
 
+use crate::kernel::object::thread_object::Thread;
 use crate::{
     arch::{self, irq, regs::Context},
     kernel::elf::parse_elf,
     kernel::tasks::task::{init_task, kernel_task},
+    kernel::tasks::thread::ThreadState,
     kernel::tasks::thread_ep::idle_thread,
-    kernel::tasks::{
-        thread::{Thread, ThreadState},
-    },
-    percpu_global,
 };
-
-
 use alloc::sync::Arc;
-
 use run_queue::RUN_QUEUE;
-
-percpu_global! {
-    static SWITCH_FIXUP: (Option<usize>, Option<usize>) = (None, None);
-}
 
 extern "C" {
     fn switch_to(from: *mut Context, to: *const Context);
@@ -120,7 +111,7 @@ pub fn init_userspace() {
 
     init_thread.init_user(data.ep);
 
-    init_task.add_thread(init_thread);
+    init_task.add_initial_thread(init_thread);
     init_task.start();
 }
 

@@ -1,27 +1,12 @@
-use crate::kernel::object::handle::Handle;
-use crate::{
-    kernel::{
-        locking::spinlock::{Spinlock, SpinlockGuard},
-        object::handle_table::HandleTable,
-        tasks::thread::Thread,
-    },
-    mm::vms::Vms,
-};
-use alloc::{collections::LinkedList, string::String};
-use object_lib::object;
+use crate::kernel::object::task_object::Task;
+use crate::kernel::object::thread_object::Thread;
+use alloc::collections::LinkedList;
 use spin::Once;
 
-pub struct TaskObject {
-    threads: LinkedList<Arc<Thread>>,
-}
+use alloc::sync::Arc;
 
-#[derive(object)]
-pub struct Task {
-    inner: Spinlock<TaskObject>,
-    name: String,
-    id: u32,
-    vms: Arc<Vms>,
-    handles: Spinlock<HandleTable>,
+pub struct TaskInner {
+    threads: LinkedList<Arc<Thread>>,
 }
 
 /* ToDo: kernel task is redundant and should be dropped at all,
@@ -32,43 +17,7 @@ pub struct Task {
 static KERNEL_TASK: Once<Arc<Task>> = Once::new();
 static INIT_TASK: Once<Arc<Task>> = Once::new();
 
-impl Task {
-    pub fn new(name: String) -> Arc<Task> {
-        let s = Arc::new(Self {
-            inner: Spinlock::new(TaskObject::new_user()),
-            name,
-            id: 0,
-            vms: Vms::new_user(),
-            handles: Spinlock::new(HandleTable::new()),
-        });
-
-        let handle = Handle::new::<Task>(s.clone());
-        s.handle_table().add(handle);
-
-        // let handle = Handle::new::<Vms>(s.vms.clone());
-        // s.add_handle(handle);
-
-        s
-    }
-
-    pub fn handle_table(&self) -> SpinlockGuard<HandleTable> {
-        self.handles.lock()
-    }
-
-    pub fn vms(&self) -> Arc<Vms> {
-        self.vms.clone()
-    }
-
-    pub fn add_thread(&self, t: Arc<Thread>) {
-        self.inner.lock().add_thread(t);
-    }
-
-    pub fn start(&self) {
-        self.inner.lock().start()
-    }
-}
-
-impl TaskObject {
+impl TaskInner {
     pub fn new_kernel() -> Self {
         Self {
             threads: LinkedList::new(),
@@ -93,7 +42,6 @@ impl TaskObject {
 
 pub fn init_kernel_task() {
     KERNEL_TASK.call_once(|| Task::new("kernel task".into()));
-    INIT_TASK.call_once(|| Task::new("init task".into()));
 }
 
 /// NOTE: init_kernel_task() should be called before this
@@ -109,5 +57,6 @@ pub fn kernel_task() -> Arc<Task> {
 ///
 /// .get_unchecked() is too error-prone, IMO
 pub fn init_task() -> Arc<Task> {
+    INIT_TASK.call_once(|| Task::new("init task".into()));
     INIT_TASK.get().unwrap().clone()
 }

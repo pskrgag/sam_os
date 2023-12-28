@@ -35,7 +35,8 @@ pub const KERNEL_LINEAR_SPACE_SIZE: usize = 128 << 30;
 pub const KERNEL_LINEAR_SPACE_BEGIN: usize = PHYS_OFFSET;
 pub const KERNEL_LINEAR_SPACE_END: usize  = KERNEL_LINEAR_SPACE_BEGIN + KERNEL_LINEAR_SPACE_SIZE;
 
-pub const KERNEL_MMIO_BASE: usize = KERNEL_LINEAR_SPACE_END + PAGE_SIZE;
+// TODO: There is memory corruption somewhere. Fix it please
+pub const KERNEL_MMIO_BASE: usize = KERNEL_LINEAR_SPACE_END + PAGE_SIZE * 1000;
 
 // TODO: dtb
 pub const NUM_CPUS: usize = 2;

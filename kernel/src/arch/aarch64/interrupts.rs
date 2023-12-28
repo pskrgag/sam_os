@@ -45,31 +45,6 @@ pub struct ExceptionCtx {
 }
 
 impl ExceptionCtx {
-    pub fn syscall_number(&self) -> usize {
-        self.x0
-    }
-
-    // This should be TryFrom
-    pub fn syscall_arg1<T: From<usize>>(&self) -> T {
-        self.x1.into()
-    }
-
-    pub fn syscall_arg2<T: From<usize>>(&self) -> T {
-        self.x2.into()
-    }
-
-    pub fn syscall_arg3<T: From<usize>>(&self) -> T {
-        self.x3.into()
-    }
-
-    pub fn syscall_arg4<T: From<usize>>(&self) -> T {
-        self.x4.into()
-    }
-
-    pub fn syscall_arg5<T: From<usize>>(&self) -> T {
-        self.x5.into()
-    }
-
     pub fn fp(&self) -> usize {
         self.x29
     }
@@ -204,11 +179,21 @@ pub extern "C" fn user_sync(_ctx: &ExceptionCtx, esr_el1: usize, elr_el1: usize,
 
 #[no_mangle]
 pub extern "C" fn user_syscall(ctx: &mut ExceptionCtx) {
-    match do_syscall(ctx) {
-        Ok(s) => ctx.x0 = s,
-        Err(err) => { 
-            println!("err {:?}", err);
-            ctx.x0 = -(err.bits() as isize) as usize;
-        }
-    };
+    use crate::kernel::syscalls::SyscallArgs;
+
+    if let Some(a) = SyscallArgs::new(
+        ctx.x0,
+        [ctx.x1, ctx.x2, ctx.x3, ctx.x4, ctx.x5, ctx.x6, ctx.x7],
+    ) {
+        match do_syscall(a) {
+            Ok(s) => ctx.x0 = s,
+            Err(err) => {
+                println!("err {:?}", err);
+                ctx.x0 = -(err.bits() as isize) as usize;
+            }
+        };
+    } else {
+        use rtl::error::ErrorType;
+        ctx.x0 = (-(ErrorType::NO_OPERATION.bits() as isize)) as usize;
+    }
 }

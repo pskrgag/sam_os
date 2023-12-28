@@ -1,10 +1,10 @@
 use crate::kernel::locking::spinlock::Spinlock;
-use crate::kernel::misc::num_pages;
 use crate::mm::allocators::page_alloc::page_allocator;
 use object_lib::object;
 use rtl::arch::{PAGE_SHIFT, PAGE_SIZE};
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
+use rtl::error::ErrorType;
 
 #[derive(Debug)]
 struct VmObjectInner {
@@ -60,6 +60,10 @@ impl VmObject {
         let inner = self.inner.lock();
 
         inner.mt
+    }
+
+    fn do_invoke(&self, args: &[usize]) -> Result<usize, ErrorType> {
+        todo!()
     }
 }
 

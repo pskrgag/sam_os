@@ -4,7 +4,7 @@ use rtl::handle::HandleBase;
 use crate::kernel::object::KernelObject;
 use alloc::sync::Arc;
 
-const MAX_HANDLES: usize = 100;
+const MAX_HANDLES: usize = 140;
 
 // This is SHIT! Must be replaced with radix trie-like stuff,
 // but for my own sake, I will leave it as simple array
@@ -40,6 +40,17 @@ impl HandleTable {
             None
         } else {
             h.obj::<T>()
+        }
+    }
+
+    pub fn find_poly(&self, hdl: HandleBase) -> Option<Arc<dyn KernelObject>> {
+        let key = hdl % MAX_HANDLES;
+        let h = &self.table[key as usize];
+
+        if !h.is_valid() {
+            None
+        } else {
+            h.obj_poly()
         }
     }
 }

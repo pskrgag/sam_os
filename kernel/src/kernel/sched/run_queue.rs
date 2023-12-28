@@ -1,4 +1,4 @@
-use crate::kernel::tasks::thread::Thread;
+use crate::kernel::object::thread_object::Thread;
 use crate::percpu_global;
 use alloc::collections::linked_list::LinkedList;
 

@@ -3,7 +3,6 @@ use crate::mm::{
     paging::page_table::{MmError, PageTable},
     vma_list::{Vma, VmaList},
 };
-use object_lib::object;
 use rtl::arch::*;
 use rtl::vmm::{types::*, MappingType};
 
@@ -12,54 +11,6 @@ pub struct VmsInner {
     start: VirtAddr,
     ttbr0: Option<PageTable>,
     vmas: VmaList,
-}
-
-#[derive(object)]
-pub struct Vms {
-    inner: RwLock<VmsInner>,
-}
-
-impl Vms {
-    pub fn new_kernel() -> Arc<Self> {
-        Arc::new(Self {
-            inner: RwLock::new(VmsInner::new_kernel()),
-        })
-    }
-
-    pub fn new_user() -> Arc<Self> {
-        Arc::new(Self {
-            inner: RwLock::new(VmsInner::new_user()),
-        })
-    }
-
-    pub fn vm_map(
-        &self,
-        v: MemRange<VirtAddr>,
-        p: MemRange<PhysAddr>,
-        tp: MappingType,
-    ) -> Result<VirtAddr, MmError> {
-        let mut inner = self.inner.write();
-
-        assert!(v.start().is_page_aligned());
-        assert!(p.start().is_page_aligned());
-        assert!(p.size().is_page_aligned());
-        assert!(v.size().is_page_aligned());
-
-        inner.vm_map(v, p, tp)
-    }
-
-    pub fn vm_allocate(&self, size: usize, tp: MappingType) -> Result<VirtAddr, ()> {
-        let mut inner = self.inner.write();
-        let res = inner.vm_allocate(size, tp)?;
-
-        assert!(res.is_page_aligned());
-        Ok(res)
-    }
-
-    pub fn base(&self) -> PhysAddr {
-        let inner = self.inner.read();
-        inner.ttbr0().unwrap()
-    }
 }
 
 impl VmsInner {

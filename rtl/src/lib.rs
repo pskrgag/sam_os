@@ -12,3 +12,5 @@ pub mod arch;
 pub mod locking;
 pub mod handle;
 pub mod cpio;
+
+pub mod objects;
