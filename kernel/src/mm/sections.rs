@@ -20,9 +20,6 @@ extern "C" {
 
     static sbss: usize;
     static ebss: usize;
-
-    static mmio_start: usize;
-    static mmio_end: usize;
 }
 
 pub struct KernelSection {

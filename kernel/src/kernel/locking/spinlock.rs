@@ -80,7 +80,7 @@ impl<T> Spinlock<T> {
         SpinlockGuard {
             lock: &self.inner,
             data: unsafe { &mut *self.val.get() },
-            flags: flags,
+            flags,
         }
     }
 }

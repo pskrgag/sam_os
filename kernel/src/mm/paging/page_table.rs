@@ -61,6 +61,18 @@ impl PageTableBlock {
         self.lvl == arch::PAGE_TABLE_LVLS
     }
 
+    pub fn is_valid_tte(&self, index: usize) -> bool {
+        assert!(index < 512);
+        
+        PageTableEntry::from_bits(unsafe {
+            self.addr
+                .to_raw_mut::<usize>()
+                .offset(index as isize)
+                .read_volatile()
+        })
+        .valid()
+    }
+
     pub unsafe fn set_tte(&mut self, index: usize, entry: PageTableEntry) {
         assert!(index < 512);
 
@@ -112,15 +124,11 @@ impl PageFlags {
     }
 
     pub fn block() -> Self {
-        Self::from_bits(
-            arch::mm::mmu_flags::BLOCK_VALID | arch::mm::mmu_flags::BLOCK_ACCESS_FLAG,
-        )
+        Self::from_bits(arch::mm::mmu_flags::BLOCK_VALID | arch::mm::mmu_flags::BLOCK_ACCESS_FLAG)
     }
 
     pub fn page() -> Self {
-        Self::from_bits(
-            arch::mm::mmu_flags::PAGE_VALID | arch::mm::mmu_flags::BLOCK_ACCESS_FLAG,
-        )
+        Self::from_bits(arch::mm::mmu_flags::PAGE_VALID | arch::mm::mmu_flags::BLOCK_ACCESS_FLAG)
     }
 
     pub fn bits(&self) -> usize {
@@ -150,13 +158,22 @@ impl PageTable {
         Some(new_table)
     }
 
-    fn set_leaf_tte(b: &mut PageTableBlock, index: usize, pa: PhysAddr, tp: MappingType, lvl: usize) {
+    fn set_leaf_tte(
+        b: &mut PageTableBlock,
+        index: usize,
+        pa: PhysAddr,
+        tp: MappingType,
+        lvl: usize,
+    ) {
         let flags = mmu::mapping_type_to_flags(tp);
         let control = if lvl != 3 {
             PageFlags::block().bits()
         } else {
             PageFlags::page().bits()
         };
+
+        // println!("lvl {} index {}", lvl, index);
+        assert!(!b.is_valid_tte(index));
 
         unsafe {
             b.set_tte(
@@ -178,7 +195,7 @@ impl PageTable {
     ) -> Result<VirtAddr, MmError> {
         let order = match lvl {
             1 => 30,
-            2 => 20,
+            2 => 21,
             3 => 12,
             _ => panic!("Kernel supports 3 lvl page table"),
         };

@@ -43,7 +43,6 @@ impl Task {
         let vms = new_task.vms()?;
 
         for i in h {
-            println_libc!("Mapping...");
             vms.map_vm_object(&i)?;
         }
 

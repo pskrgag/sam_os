@@ -4,23 +4,13 @@ use crate::syscalls_aarch64::*;
 use rtl::error::ErrorType;
 use rtl::handle::Handle;
 use rtl::syscalls::SyscallList;
-use rtl::vmm::types::VirtAddr;
 
 pub enum Syscall<'a> {
     Write(&'a str),
-    TaskCreateFromVmo(&'a str, &'a [Handle], VirtAddr),
     Invoke(Handle, usize, &'a [usize]),
 }
 
 impl<'a> Syscall<'a> {
-    pub fn task_create_from_vmo(
-        name: &'a str,
-        vmos: &'a [Handle],
-        ep: VirtAddr,
-    ) -> Result<Handle, ErrorType> {
-        unsafe { Ok(syscall(Self::TaskCreateFromVmo(name, vmos, ep).as_args())? as Handle) }
-    }
-
     pub fn debug_write(s: &'a str) -> Result<(), ErrorType> {
         unsafe { syscall(Self::Write(s).as_args())? };
         Ok(())
@@ -39,16 +29,6 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
                 0,
-                0,
-                0,
-            ],
-            Syscall::TaskCreateFromVmo(name, handles, ep) => [
-                SyscallList::SYS_TASK_CREATE_FROM_VMO.into(),
-                name.as_ptr() as usize,
-                name.len(),
-                handles.as_ptr() as usize,
-                handles.len(),
-                ep.into(),
                 0,
                 0,
             ],

@@ -3,9 +3,6 @@ use bitflags::bitflags;
 bitflags! {
     pub struct SyscallList: usize {
         const SYS_WRITE = 0;
-
-        /// Task
-        const SYS_TASK_CREATE_FROM_VMO = 3;
         const SYS_INVOKE = 1;
     }
 }
