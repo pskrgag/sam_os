@@ -14,15 +14,6 @@ pub struct VmsInner {
 }
 
 impl VmsInner {
-    pub fn new_kernel() -> Self {
-        Self {
-            start: VirtAddr::from(0x0),
-            size: usize::MAX,
-            ttbr0: None,
-            vmas: VmaList::new(),
-        }
-    }
-
     pub fn new_user() -> Self {
         Self {
             start: VirtAddr::from(0x0),

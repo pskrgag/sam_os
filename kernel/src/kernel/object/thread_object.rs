@@ -16,6 +16,7 @@ use rtl::vmm::MappingType;
 use rtl::error::ErrorType;
 
 const USER_THREAD_STACK_PAGES: usize = 15;
+const KERNEL_STACK_PAGES: usize = 5;
 const RR_TICKS: usize = 10;
 
 #[derive(object)]
@@ -67,7 +68,7 @@ impl Thread {
     }
 
     pub fn init_user(self: &Arc<Thread>, ep: VirtAddr) {
-        let kernel_stack = StackLayout::new(5).expect("Failed to allocate kernel stack");
+        let kernel_stack = StackLayout::new(KERNEL_STACK_PAGES).expect("Failed to allocate kernel stack");
         let vms = self.task.upgrade().unwrap().vms();
         let user_stack = vms
             .vm_allocate(USER_THREAD_STACK_PAGES * PAGE_SIZE, MappingType::USER_DATA)
