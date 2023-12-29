@@ -7,6 +7,7 @@ use crate::{
 };
 use alloc::boxed::Box;
 use alloc::sync::Weak;
+use alloc::sync::Arc;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use object_lib::object;
 use rtl::arch::PAGE_SIZE;
@@ -101,6 +102,11 @@ impl Thread {
             self.inner.lock().state = ThreadState::NeedResched;
             self.ticks.store(RR_TICKS, Ordering::Relaxed);
         }
+    }
+
+    pub fn self_yield(self: Arc<Thread>) {
+        self.ticks.store(RR_TICKS, Ordering::Relaxed);
+        self.set_state(ThreadState::NeedResched);
     }
 
     pub fn set_state(self: &Arc<Thread>, state: ThreadState) {

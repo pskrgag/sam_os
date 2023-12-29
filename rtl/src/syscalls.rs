@@ -4,6 +4,7 @@ bitflags! {
     pub struct SyscallList: usize {
         const SYS_WRITE = 0;
         const SYS_INVOKE = 1;
+        const SYS_YIELD = 2;
     }
 }
 

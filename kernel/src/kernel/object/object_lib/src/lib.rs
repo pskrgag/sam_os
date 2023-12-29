@@ -11,7 +11,6 @@ fn impl_kernel_object_macro(ast: &syn::DeriveInput) -> TokenStream {
     let _struct_type = ast.ident.to_string();
 
     let gen = quote! {
-        use alloc::sync::Arc;
         use qrwlock::RwLock;
 
         impl crate::kernel::object::KernelObject for #name {
@@ -26,6 +25,12 @@ fn impl_kernel_object_macro(ast: &syn::DeriveInput) -> TokenStream {
 
         unsafe impl Send for #name { }
         unsafe impl Sync for #name { }
+
+        impl Drop for #name {
+            fn drop(&mut self) {
+                panic!();
+            }
+        }
     };
 
     gen.into()

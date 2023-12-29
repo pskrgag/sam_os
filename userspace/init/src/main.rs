@@ -21,9 +21,16 @@ fn main() {
 
         let elf = i.data();
         let mut task =
-            Task::create_from_elf1(elf, "test task".to_string()).expect("Failed to create task");
+            Task::create_from_elf(elf, "test task".to_string()).expect("Failed to create task");
         task.start().unwrap();
 
         println!("Spawned '{}'", task.name())
+    }
+
+    loop {
+        for _ in 0..100000 {
+            println!("YAy! 1");
+            libc::syscalls::Syscall::sys_yield();
+        }
     }
 }

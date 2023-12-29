@@ -24,7 +24,7 @@ impl Task {
         self.ep = ep;
     }
 
-    pub fn create_from_elf1(elf_data: &[u8], name: String) -> Option<Self> {
+    pub fn create_from_elf(elf_data: &[u8], name: String) -> Option<Self> {
         let elf = Elf::new(elf_data)?;
         let ph = elf.program_headers()?;
         let mut h = Vec::with_capacity(ph.len());

@@ -22,19 +22,23 @@
 
 	mrs	x0, ELR_EL1
 	mrs	x1, SPSR_EL1
+	mrs	x2, SP_EL0
 
 	stp	x0, x1, [sp, #240]
-	str	x30, [sp, #256]
+	stp	x2, x30, [sp, #256]
 
 	// Restore clobbered regs
 	ldp	x0, x1, [sp, #0]
+	ldr	x2, [sp, #16]
 .endmacro
 
 .macro RESTORE_CTX
 	ldp	x0, x1, [sp, #240]
+	ldr	x2, [sp, #256]
 
 	msr	ELR_EL1, x0
 	msr	SPSR_EL1, x1
+	msr	SP_EL0, x2
 
 	ldp	x0, x1, [sp, #0]
 	ldp	x2, x3, [sp, #16]
@@ -51,7 +55,7 @@
 	ldp	x24, x25, [sp, #192]
 	ldp	x26, x27, [sp, #208]
 	ldp	x28, x29, [sp, #224]
-	ldr	x30, [sp, #256]
+	ldr	x30, [sp, #264]
 
 	add	sp, sp, #264
 .endmacro

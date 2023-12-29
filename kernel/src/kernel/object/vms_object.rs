@@ -6,6 +6,7 @@ use crate::mm::vms::VmsInner;
 use object_lib::object;
 use rtl::error::ErrorType;
 use rtl::vmm::{types::*, MappingType};
+use alloc::sync::Arc;
 
 #[derive(object)]
 pub struct Vms {

@@ -6,6 +6,7 @@ use alloc::string::ToString;
 use object_lib::object;
 use rtl::error::ErrorType;
 use rtl::objects::factory::FactroryInvoke;
+use alloc::sync::Arc;
 
 #[derive(object)]
 pub struct Factory {

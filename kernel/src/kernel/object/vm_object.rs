@@ -5,6 +5,7 @@ use rtl::arch::{PAGE_SHIFT, PAGE_SIZE};
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
 use rtl::error::ErrorType;
+use alloc::sync::Arc;
 
 #[derive(Debug)]
 struct VmObjectInner {

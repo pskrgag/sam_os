@@ -11,6 +11,7 @@ extern "C" {
     static exteption_vector: u64;
 }
 
+#[repr(C)]
 pub struct ExceptionCtx {
     pub x0: usize,
     pub x1: usize,
@@ -42,6 +43,10 @@ pub struct ExceptionCtx {
     pub x27: usize,
     pub x28: usize,
     pub x29: usize,
+    pub elr: usize,
+    pub spsr: usize,
+    pub sp_el0: usize,
+    pub x30: usize,
 }
 
 impl ExceptionCtx {

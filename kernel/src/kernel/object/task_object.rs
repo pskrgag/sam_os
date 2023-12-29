@@ -11,6 +11,7 @@ use rtl::handle::HandleBase;
 use rtl::vmm::types::VirtAddr;
 
 use alloc::string::String;
+use alloc::sync::Arc;
 
 use object_lib::object;
 

@@ -8,6 +8,7 @@ use rtl::syscalls::SyscallList;
 pub enum Syscall<'a> {
     Write(&'a str),
     Invoke(Handle, usize, &'a [usize]),
+    Yield,
 }
 
 impl<'a> Syscall<'a> {
@@ -18,6 +19,10 @@ impl<'a> Syscall<'a> {
 
     pub fn invoke(h: Handle, op: usize, args: &'a [usize]) -> Result<usize, ErrorType> {
         unsafe { syscall(Self::Invoke(h, op, args).as_args()) }
+    }
+
+    pub fn sys_yield() {
+        unsafe { syscall(Self::Yield.as_args()).unwrap() };
     }
 
     pub fn as_args(self) -> [usize; 8] {
@@ -44,6 +49,16 @@ impl<'a> Syscall<'a> {
 
                 a
             }
+            Syscall::Yield => [
+                SyscallList::SYS_YIELD.into(),
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+            ],
         }
     }
 }

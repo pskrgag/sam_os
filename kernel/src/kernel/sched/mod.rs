@@ -1,15 +1,12 @@
-pub mod run_queue;
-
 use crate::kernel::object::thread_object::Thread;
 use crate::{
-    arch::{self, irq, regs::Context},
-    kernel::elf::parse_elf,
-    kernel::tasks::task::{init_task, kernel_task},
+    arch::irq, arch::regs::Context, kernel::elf::parse_elf, kernel::tasks::task::init_task,
     kernel::tasks::thread::ThreadState,
-    kernel::tasks::thread_ep::idle_thread,
 };
 use alloc::sync::Arc;
 use run_queue::RUN_QUEUE;
+
+pub mod run_queue;
 
 extern "C" {
     fn switch_to(from: *mut Context, to: *const Context);
@@ -51,7 +48,7 @@ pub static mut IDLE_THREAD_STACK: [usize; 2] = [0, 0];
 
 #[inline]
 pub fn current() -> Option<Arc<Thread>> {
-    RUN_QUEUE.per_cpu_var_get().get().current()
+    crate::arch::current::get_current()
 }
 
 pub unsafe fn run() {
@@ -78,9 +75,9 @@ pub unsafe fn run() {
 
         rq.add(c.clone());
 
-        irq::enable_all();
+        crate::arch::current::set_current(next.clone());
+
         switch_to(ctx as _, ctx_next as _);
-        irq::disable_all();
     } else {
         let mut ctx = Context::default(); // tmp storage
         let next = rq.pop();
@@ -88,13 +85,15 @@ pub unsafe fn run() {
 
         next.set_state(ThreadState::Running);
 
+        crate::arch::current::set_current(next.clone());
+
+        // We come here only for 1st process, so we need to turn on irqs
         irq::enable_all();
         switch_to(&mut ctx as *mut _, next_ctx as *const _);
         panic!("Should not reach here");
     }
 }
 
-// ToDo: any idea fow to fix it?
 pub fn init_userspace() {
     let data = parse_elf(INIT).expect("Failed to parse elf");
     let init_task = init_task();
@@ -115,17 +114,17 @@ pub fn init_userspace() {
     init_task.start();
 }
 
-pub fn init_idle() {
-    for i in 0..arch::NUM_CPUS {
-        let parent = kernel_task();
-        let idle = Thread::new(parent, i as u16);
-
-        idle.init_kernel(idle_thread, ());
-
-        unsafe {
-            IDLE_THREAD_STACK[i] = 0; //PhysAddr::from(idle.stack_head().unwrap()).get();
-        }
-
-        idle.start();
-    }
-}
+// pub fn init_idle() {
+//     for i in 0..arch::NUM_CPUS {
+//         let parent = kernel_task();
+//         let idle = Thread::new(parent, i as u16);
+//
+//         idle.init_kernel(idle_thread, ());
+//
+//         unsafe {
+//             IDLE_THREAD_STACK[i] = 0; //PhysAddr::from(idle.stack_head().unwrap()).get();
+//         }
+//
+//         idle.start();
+//     }
+// }
