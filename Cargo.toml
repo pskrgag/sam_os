@@ -1,7 +1,8 @@
 [workspace]
 members = [
+	"rtl",
 	"userspace/fileserver",
 	"userspace/init",
-	"kernel"
-, "rtl"]
+	"kernel",
+]
 resolver = "1"

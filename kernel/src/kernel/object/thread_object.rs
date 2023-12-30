@@ -6,14 +6,14 @@ use crate::{
     mm::allocators::stack_alloc::StackLayout,
 };
 use alloc::boxed::Box;
-use alloc::sync::Weak;
 use alloc::sync::Arc;
+use alloc::sync::Weak;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use object_lib::object;
 use rtl::arch::PAGE_SIZE;
+use rtl::error::ErrorType;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
-use rtl::error::ErrorType;
 
 const USER_THREAD_STACK_PAGES: usize = 15;
 const KERNEL_STACK_PAGES: usize = 5;
@@ -68,7 +68,8 @@ impl Thread {
     }
 
     pub fn init_user(self: &Arc<Thread>, ep: VirtAddr) {
-        let kernel_stack = StackLayout::new(KERNEL_STACK_PAGES).expect("Failed to allocate kernel stack");
+        let kernel_stack =
+            StackLayout::new(KERNEL_STACK_PAGES).expect("Failed to allocate kernel stack");
         let vms = self.task.upgrade().unwrap().vms();
         let user_stack = vms
             .vm_allocate(USER_THREAD_STACK_PAGES * PAGE_SIZE, MappingType::USER_DATA)

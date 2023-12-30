@@ -1,4 +1,4 @@
-use crate::arch::{self, USER_AS_START, USER_AS_SIZE};
+use crate::arch::{self, USER_AS_SIZE, USER_AS_START};
 use core::ops::Add;
 use core::{
     fmt::{self, Debug},
@@ -38,7 +38,7 @@ pub trait Address {
         assert!(to.is_power_of_two());
 
         let round_mask = to - 1;
-        let rounded = ((self.bits() - 1)| round_mask) + 1;
+        let rounded = ((self.bits() - 1) | round_mask) + 1;
 
         self.set_bits(rounded);
         self
@@ -90,7 +90,8 @@ impl<T: Copy + Address + From<usize> + Ord + core::fmt::Debug> MemRange<T> {
 
     pub fn align_page(&mut self) {
         self.size += self.start.bits() & (arch::PAGE_SIZE - 1);
-        self.start.set_bits(self.start().bits() & !(arch::PAGE_SIZE - 1));
+        self.start
+            .set_bits(self.start().bits() & !(arch::PAGE_SIZE - 1));
 
         self.size.round_up(arch::PAGE_SIZE);
     }

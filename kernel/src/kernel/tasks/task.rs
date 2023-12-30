@@ -28,10 +28,6 @@ impl TaskInner {
     }
 }
 
-/// NOTE: init_kernel_task() should be called before this
-/// Anyway, the only thing caller may do in case of failure is panic
-///
-/// .get_unchecked() is too error-prone, IMO
 pub fn init_task() -> Arc<Task> {
     INIT_TASK.call_once(|| Task::new("init task".into()));
     INIT_TASK.get().unwrap().clone()

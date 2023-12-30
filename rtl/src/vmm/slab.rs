@@ -1,6 +1,6 @@
 use crate::arch::PAGE_SIZE;
-use crate::vmm::types::*;
 use crate::vmm::alloc::BackendAllocator;
+use crate::vmm::types::*;
 
 pub struct SlabAllocator<B: BackendAllocator + 'static> {
     slab_size: usize,
@@ -58,9 +58,7 @@ impl FreeList {
     pub fn new<B: BackendAllocator>(size: usize, backend: &B) -> Option<Self> {
         assert!(size.is_power_of_two());
 
-        let mut va = VirtAddr::from_raw(
-            backend.allocate(1)?
-        );
+        let mut va = VirtAddr::from_raw(backend.allocate(1)?);
         let block_count = PAGE_SIZE / size;
         let mut list = Self::default();
 

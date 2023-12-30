@@ -1,10 +1,40 @@
 [env]
-# this tells cargo-make that this directory acts as a workspace root
-CARGO_MAKE_WORKSPACE_EMULATION = true
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+TARGET = "aarch64-unknown-none-softfloat"
+KERNEL_BINARY = "target/${TARGET}/debug/sam_kernel"
+LINK_OPTS = "-C link-arg=--script=aarch64-qemu.ld -C force-frame-pointers"
 
-# a list of crate members. since we do not have a Cargo.toml, we will need to specify this in here.
-CARGO_MAKE_CRATE_WORKSPACE_MEMBERS = [
-	"userspace/fileserver",
-	"userspace/init",
-	"kernel"
-]
+[tasks.qemu]
+dependencies = ["build-kernel"]
+command = "qemu-system-aarch64"
+env = { "BIN" = "${KERNEL_BINARY}" }
+args = [ "-machine" ,"virt,gic-version=2", "-m", "2048M", "-cpu", "cortex-a53",
+	"-smp", "2", "-nographic", "-kernel", "${BIN}"]
+
+[tasks.build]
+disabled = true
+
+[tasks.do-build-first-proc]
+command = "cargo"
+env = {"TARGET" = "${TARGET}"}
+args = ["build", "--target", "${TARGET}", "-p", "fileserver"]
+
+[tasks.build-first-proc]
+dependencies = ["do-build-first-proc"]
+command = "echo"
+args = ["./target/${TARGET}/debug/fileserver |", "cpio", "-ocv0", "> /tmp/archive.cpio"]
+
+[tasks.build-init]
+dependencies = ["build-first-proc"]
+command = "cargo"
+env = {"TARGET" = "${TARGET}"}
+args = ["build", "--target", "${TARGET}", "-p", "sam_os_init"]
+
+[tasks.build-kernel]
+dependencies = ["build-init"]
+command = "cargo"
+env = {"TARGET" = "${TARGET}", "RUSTFLAGS" = "${LINK_OPTS}"}
+args = ["build", "-p", "sam_kernel", "--target", "${TARGET}"]
+
+[tasks.do-build]
+dependencies = ["build-kernel"]

@@ -2,9 +2,9 @@
 #![no_main]
 #![feature(format_args_nl)]
 
+use alloc::string::ToString;
 use libc::main;
 use libc::task::Task;
-use alloc::string::ToString;
 
 use rtl::cpio::Cpio;
 
@@ -25,12 +25,5 @@ fn main() {
         task.start().unwrap();
 
         println!("Spawned '{}'", task.name())
-    }
-
-    loop {
-        for _ in 0..100000 {
-            println!("YAy! 1");
-            libc::syscalls::Syscall::sys_yield();
-        }
     }
 }

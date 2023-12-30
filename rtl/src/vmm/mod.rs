@@ -1,8 +1,8 @@
 use bitflags::bitflags;
 
-pub mod types;
 pub mod alloc;
 pub mod slab;
+pub mod types;
 
 bitflags! {
 pub struct MappingType: usize {
