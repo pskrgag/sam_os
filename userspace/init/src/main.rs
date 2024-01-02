@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 #![feature(format_args_nl)]
+#![feature(thread_local)]
 
 use alloc::string::ToString;
 use libc::main;
@@ -15,7 +16,7 @@ static CPIO: &[u8] = include_bytes!("/tmp/archive.cpio");
 
 #[main]
 fn main(boot_handle: Handle) {
-    println!("Init proccess started {:x}", boot_handle);
+    println!("Init proccess started");
 
     assert!(boot_handle == HANDLE_INVALID);
 

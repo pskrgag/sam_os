@@ -45,8 +45,13 @@ SECTIONS
     {
         sdata = .;
         *(.data .data.*)
+
+        sfixup = .;
+        *(.fixup)
+        efixup = .;
+
         FILL(0x00)
-	. = ALIGN(4096);
+        . = ALIGN(4096);
         edata = .;
     }
 

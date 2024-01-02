@@ -3,6 +3,7 @@ pub mod paging;
 pub mod sections;
 pub mod vma_list;
 pub mod vms;
+pub mod user_buffer;
 
 pub fn init() {
     allocators::boot_alloc::init();

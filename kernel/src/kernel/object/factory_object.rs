@@ -7,6 +7,7 @@ use object_lib::object;
 use rtl::error::ErrorType;
 use rtl::objects::factory::FactroryInvoke;
 use alloc::sync::Arc;
+use crate::mm::user_buffer::UserBuffer;
 
 #[derive(object)]
 pub struct Factory {
@@ -21,10 +22,8 @@ impl Factory {
     fn do_invoke(&self, args: &[usize]) -> Result<usize, ErrorType> {
         match FactroryInvoke::from_bits(args[0]).ok_or(ErrorType::NO_OPERATION)? {
             FactroryInvoke::CREATE_TASK => {
-                let name_range = unsafe {
-                    core::slice::from_raw_parts(args[1] as *const u8, args[2])
-                };
-                let name = core::str::from_utf8(name_range).map_err(|_| ErrorType::FAULT)?;
+                let name = UserBuffer::<100>::new(args[1].into(), args[2]).ok_or(ErrorType::FAULT)?;
+                let name = core::str::from_utf8(name.data()).map_err(|_| ErrorType::INVALID_ARGUMENT)?;
                 let new_task = Task::new(name.to_string());
 
                 let task = current().unwrap().task();

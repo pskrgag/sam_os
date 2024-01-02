@@ -18,6 +18,7 @@ use rtl::misc::genmask;
 use core::mem;
 use cortex_a::registers::*;
 use tock_registers::interfaces::Readable;
+use core::arch::global_asm;
 
 use rtl::arch::PAGE_SIZE;
 use rtl::arch::PHYS_OFFSET;
@@ -66,3 +67,6 @@ pub fn time_since_start() -> f64 {
 pub fn mmu_on() -> bool {
     (SCTLR_EL1.get() & (1 << 0)) != 0
 }
+
+global_asm!(include_str!("boot.s"));
+global_asm!(include_str!("copy_from_user.s"));

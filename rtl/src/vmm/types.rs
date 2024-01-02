@@ -6,12 +6,15 @@ use core::{
 };
 
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug)]
+#[repr(transparent)]
 pub struct PhysAddr(usize);
 
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug)]
+#[repr(transparent)]
 pub struct VirtAddr(usize);
 
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
+#[repr(transparent)]
 pub struct Pfn(usize);
 
 #[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
@@ -310,5 +313,21 @@ impl fmt::Display for VirtAddr {
 impl fmt::Display for PhysAddr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl fmt::LowerHex for VirtAddr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let val = self.0;
+
+        fmt::LowerHex::fmt(&val, f)
+    }
+}
+
+impl fmt::LowerHex for PhysAddr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let val = self.0;
+
+        fmt::LowerHex::fmt(&val, f)
     }
 }

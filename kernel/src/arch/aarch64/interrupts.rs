@@ -1,14 +1,24 @@
 use crate::drivers::irq::irq::irq_dispatch;
 use crate::kernel::sched;
 use crate::kernel::syscalls::do_syscall;
+use crate::linker_var;
 use core::arch::{asm, global_asm};
 use core::fmt;
+use rtl::vmm::types::*;
 
 global_asm!(include_str!("interrupts.S"));
-global_asm!(include_str!("boot.s"));
 
 extern "C" {
     static exteption_vector: u64;
+    static sfixup: usize;
+    static efixup: usize;
+}
+
+#[repr(C)]
+#[derive(Debug)]
+struct FixupEntry {
+    pub fault: VirtAddr,
+    pub fix: VirtAddr,
 }
 
 #[repr(C)]
@@ -132,27 +142,39 @@ pub fn set_up_vbar() {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn kern_sync64(
-    esr_el1: usize,
-    far_el1: usize,
-    elr_el1: usize,
-    dump: &ExceptionCtx,
-) -> ! {
-    println!("!!! Kernel sync exception");
-    println!("{}", dump);
-    println!(
-        "ESR_EL1 0x{:x} FAR_EL1 0x{:x}, ELR_EL1 0x{:x}",
-        esr_el1, far_el1, elr_el1
-    );
+fn fixup(v: VirtAddr, ctx: &mut ExceptionCtx) -> bool {
+    let size = (linker_var!(efixup) - linker_var!(sfixup)) / core::mem::size_of::<FixupEntry>();
+    let array =
+        unsafe { core::slice::from_raw_parts(linker_var!(sfixup) as *const FixupEntry, size) };
+    let mut found = false;
 
-    panic!("Unhandler kernel sync exception");
+    for i in array {
+        if i.fault == v {
+            ctx.elr = i.fix.into();
+            found = true;
+            break;
+        }
+    }
+
+    found
+}
+
+#[no_mangle]
+pub extern "C" fn kern_sync64(esr_el1: VirtAddr, far_el1: VirtAddr, elr_el1: VirtAddr, ctx: &mut ExceptionCtx) {
+    if fixup(elr_el1, ctx) == false {
+        println!("!!! Kernel sync exception");
+        println!("{}", ctx);
+        println!(
+            "ESR_EL1 0x{:x} FAR_EL1 0x{:x}, ELR_EL1 0x{:x}",
+            esr_el1, far_el1, elr_el1
+        );
+
+        panic!("Unhandler kernel sync exception");
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn kern_irq() {
-    //println!("!!! Kernel irq");
-
     irq_dispatch();
 
     sched::run();
