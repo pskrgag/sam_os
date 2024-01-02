@@ -108,13 +108,13 @@ macro_rules! percpu_mut {
     }};
 }
 
-// TODO: preemption
 impl<T> PerCpu<T> {
     pub const fn new(data: T) -> Self {
-        Self { data: data }
+        Self { data }
     }
 
     pub fn per_cpu_var_get(&self) -> &'static T {
+        // assert!(crate::arch::irq::is_disabled());
         percpu!(self.data)
     }
 

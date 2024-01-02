@@ -1,10 +1,8 @@
-use crate::{
-    kernel::misc::kernel_offset, linker_var,
-    mm::paging::kernel_page_table::kernel_page_table,
-};
+use crate::{linker_var, mm::paging::kernel_page_table::kernel_page_table};
 use rtl::locking::fake_lock::FakeLock;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
+use rtl::arch::PHYS_OFFSET;
 
 use alloc::vec::Vec;
 
@@ -105,7 +103,7 @@ pub fn remap_kernel() {
         println!(
             "{}\t[0x{:x} -> 0x{:x}] (size 0x{:x})",
             i.name(),
-            i.start() - kernel_offset(),
+            i.start() - PHYS_OFFSET,
             i.start(),
             i.size()
         );

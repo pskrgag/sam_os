@@ -10,7 +10,7 @@ extern "C" {
 pub enum ThreadState {
     Initialized,
     Running,
-    Sleeping,
+    WaitingMessage,
     NeedResched,
 }
 
@@ -36,17 +36,6 @@ impl ThreadInner {
         }
     }
 
-    pub fn init_kernel(&mut self, stack: StackLayout, func: usize, arg: usize) {
-        self.arch_ctx.sp = stack.stack_head().into();
-        self.arch_ctx.lr = (kernel_thread_entry_point as *const fn()) as usize;
-        self.arch_ctx.x19 = arg;
-        self.arch_ctx.x20 = func as usize;
-
-        self.stack = Some(stack);
-
-        self.state = ThreadState::Running;
-    }
-
     pub fn setup_args(&mut self, args: &[usize]) {
         if args.len() > 0 {
             self.arch_ctx.x23 = args[0];
@@ -62,6 +51,10 @@ impl ThreadInner {
 
         if args.len() > 3 {
             self.arch_ctx.x26 = args[3];
+        }
+
+        if args.len() > 4 {
+            self.arch_ctx.x27 = args[4];
         }
     }
 

@@ -76,8 +76,6 @@ impl PageTableBlock {
     pub unsafe fn set_tte(&mut self, index: usize, entry: PageTableEntry) {
         assert!(index < 512);
 
-        // println!("Set entry 0x{:x}", entry.bits());
-
         self.addr
             .to_raw_mut::<usize>()
             .offset(index as isize)

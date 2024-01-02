@@ -1,11 +1,10 @@
 use crate::kernel::object::task_object::Task;
-use crate::kernel::sched::run_queue::RUN_QUEUE;
+use crate::kernel::sched::add_thread;
 use crate::kernel::tasks::thread::{ThreadInner, ThreadState};
 use crate::{
     arch::regs::Context, kernel::locking::spinlock::Spinlock,
     mm::allocators::stack_alloc::StackLayout,
 };
-use alloc::boxed::Box;
 use alloc::sync::Arc;
 use alloc::sync::Weak;
 use core::sync::atomic::{AtomicUsize, Ordering};
@@ -21,7 +20,6 @@ const RR_TICKS: usize = 10;
 
 #[derive(object)]
 pub struct Thread {
-    type_id: core::any::TypeId,
     id: u16,
     task: Weak<Task>,
     ticks: AtomicUsize,
@@ -31,7 +29,6 @@ pub struct Thread {
 impl Thread {
     pub fn new(task: Arc<Task>, id: u16) -> Arc<Thread> {
         Arc::new(Self {
-            type_id: core::any::TypeId::of::<Self>(),
             id,
             inner: Spinlock::new(ThreadInner::default()),
             ticks: RR_TICKS.into(),
@@ -53,18 +50,6 @@ impl Thread {
 
         // TODO(skripkin): smells like shit
         &mut *r
-    }
-
-    pub(crate) fn init_kernel<T>(self: &Arc<Thread>, func: fn(T) -> Option<()>, arg: T) {
-        use crate::kernel::misc::ref_mut_to_usize;
-
-        let arg = Box::new(arg);
-        let stack = StackLayout::new(3).expect("Failed to allocat stack");
-
-        let mut inner = self.inner.lock();
-
-        // TODO(skripkin): clean up heap allocation
-        inner.init_kernel(stack, func as usize, ref_mut_to_usize(Box::leak(arg)));
     }
 
     pub fn init_user(self: &Arc<Thread>, ep: VirtAddr) {
@@ -94,7 +79,7 @@ impl Thread {
     pub fn start(self: &Arc<Self>) {
         self.inner.lock().state = ThreadState::Running;
 
-        RUN_QUEUE.per_cpu_var_get().get().add(self.clone());
+        add_thread(self.clone());
     }
 
     pub fn tick(self: Arc<Thread>) {
@@ -109,6 +94,7 @@ impl Thread {
     pub fn self_yield(self: Arc<Thread>) {
         self.ticks.store(RR_TICKS, Ordering::Relaxed);
         self.set_state(ThreadState::NeedResched);
+        crate::sched::run();
     }
 
     pub fn set_state(self: &Arc<Thread>, state: ThreadState) {
@@ -117,6 +103,18 @@ impl Thread {
 
     pub fn state(self: &Arc<Thread>) -> ThreadState {
         self.inner.lock().state
+    }
+
+    pub fn wait_send(self: &Arc<Thread>) {
+        let mut inner = self.inner.lock();
+
+        assert!(inner.state == ThreadState::Running);
+        inner.state = ThreadState::WaitingMessage;
+
+        // drop the lock
+        drop(inner);
+
+        crate::sched::run();
     }
 
     fn do_invoke(&self, args: &[usize]) -> Result<usize, ErrorType> {

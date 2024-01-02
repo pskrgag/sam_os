@@ -8,6 +8,7 @@ use crate::kernel::tasks::task::TaskInner;
 use crate::sched::current;
 use rtl::error::ErrorType;
 use rtl::handle::HandleBase;
+use rtl::handle::HANDLE_INVALID;
 use rtl::vmm::types::VirtAddr;
 
 use alloc::string::String;
@@ -44,19 +45,19 @@ impl Task {
             factory_handle: usize::MAX,
         });
 
-        let handle = Handle::new::<Task>(s.clone());
+        let handle = Handle::new(s.clone());
         unsafe {
             Arc::get_mut_unchecked(&mut s).self_handle = handle.as_raw();
         }
         s.handle_table().add(handle);
 
-        let handle = Handle::new::<Vms>(s.vms.clone());
+        let handle = Handle::new(s.vms.clone());
         unsafe {
             Arc::get_mut_unchecked(&mut s).vms_handle = handle.as_raw();
         }
         s.handle_table().add(handle);
 
-        let handle = Handle::new::<Factory>(s.factory.clone());
+        let handle = Handle::new(s.factory.clone());
         unsafe {
             Arc::get_mut_unchecked(&mut s).factory_handle = handle.as_raw();
         }
@@ -77,8 +78,13 @@ impl Task {
         self.inner.lock().add_thread(t);
     }
 
-    pub fn add_initial_thread(&self, t: Arc<Thread>) {
-        t.setup_args(&[self.vms_handle, self.self_handle, self.factory_handle]);
+    pub fn add_initial_thread(&self, t: Arc<Thread>, boot_handle: HandleBase) {
+        t.setup_args(&[
+            self.vms_handle,
+            self.self_handle,
+            self.factory_handle,
+            boot_handle,
+        ]);
         self.inner.lock().add_thread(t);
     }
 
@@ -92,27 +98,41 @@ impl Task {
         match TaskInvoke::from_bits(args[0]).ok_or(ErrorType::NO_OPERATION)? {
             TaskInvoke::START => {
                 let ep: VirtAddr = args[1].into();
+                let h: HandleBase = args[2].into();
+                let curr = current().unwrap().task();
+                let cur_table = curr.handle_table();
+                let mut new_table = self.handle_table();
 
                 // ToDo: this is ugly as fuck
-                let s = self.handle_table().find::<Task>(self.self_handle).unwrap();
+                let s = cur_table.find::<Task>(self.self_handle).unwrap();
                 let init_thread = Thread::new(s.clone(), 10);
 
+                let mut boot_handle: HandleBase = HANDLE_INVALID;
+
+                if h != HANDLE_INVALID {
+                    let obj = cur_table.find_poly(h).ok_or(ErrorType::INVALID_HANDLE)?;
+                    let handle = Handle::new(obj);
+
+                    boot_handle = handle.as_raw();
+                    new_table.add(handle);
+                }
+
                 init_thread.init_user(ep);
-                self.add_initial_thread(init_thread);
+                self.add_initial_thread(init_thread, boot_handle);
 
                 self.start();
                 Ok(0)
-            },
+            }
             TaskInvoke::GET_VMS => {
                 let task = current().unwrap().task();
                 let mut table = task.handle_table();
 
-                let handle = Handle::new::<Vms>(self.vms.clone());
+                let handle = Handle::new(self.vms.clone());
                 let ret = handle.as_raw();
                 table.add(handle);
 
                 Ok(ret)
-            },
+            }
             _ => Err(ErrorType::NO_OPERATION),
         }
     }

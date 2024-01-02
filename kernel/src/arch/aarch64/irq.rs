@@ -11,6 +11,17 @@ pub unsafe fn disable_all() {
 }
 
 #[inline]
+pub fn is_disabled() -> bool {
+    let flags: usize;
+
+    unsafe {
+        asm!("mrs {}, daif", out(reg) flags);
+    }
+
+    flags & (1 << 7) == 0
+}
+
+#[inline]
 pub fn get_flags() -> usize {
     let flags: usize;
 

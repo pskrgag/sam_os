@@ -18,6 +18,7 @@ global_asm!(
     "mov    x0, x23",
     "mov    x1, x24",
     "mov    x2, x25",
+    "mov    x3, x26",
     "eor    x30, x30, x30",
     "eret",
 );

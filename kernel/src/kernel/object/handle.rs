@@ -13,7 +13,7 @@ impl Handle {
         Self { obj: None }
     }
 
-    pub fn new<T: KernelObject>(o: Arc<dyn KernelObject>) -> Self {
+    pub fn new(o: Arc<dyn KernelObject>) -> Self {
         Self { obj: Some(o) }
     }
 

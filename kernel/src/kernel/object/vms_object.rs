@@ -64,7 +64,7 @@ impl Vms {
 
                 let task = current().unwrap().task();
                 let mut table = task.handle_table();
-                let handle = Handle::new::<VmObject>(vmo.clone());
+                let handle = Handle::new(vmo.clone());
                 let ret = handle.as_raw();
 
                 table.add(handle);

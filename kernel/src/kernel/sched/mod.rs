@@ -1,10 +1,12 @@
 use crate::kernel::object::thread_object::Thread;
+use crate::percpu_global;
 use crate::{
     arch::irq, arch::regs::Context, kernel::elf::parse_elf, kernel::tasks::task::init_task,
     kernel::tasks::thread::ThreadState,
 };
 use alloc::sync::Arc;
-use run_queue::RUN_QUEUE;
+use rtl::locking::fake_lock::FakeLock;
+use run_queue::RunQueue;
 
 pub mod run_queue;
 
@@ -51,47 +53,87 @@ pub fn current() -> Option<Arc<Thread>> {
     crate::arch::current::get_current()
 }
 
-pub unsafe fn run() {
-    let rq = RUN_QUEUE.per_cpu_var_get().get();
+pub struct Scheduler {
+    rq: RunQueue,
+}
 
-    if rq.empty() {
-        return;
+percpu_global!(
+    pub static SCHEDULER: FakeLock<Scheduler> = FakeLock::new(Scheduler::new());
+);
+
+impl Scheduler {
+    pub const fn new() -> Self {
+        Self {
+            rq: RunQueue::new(),
+        }
     }
 
-    let cur = current();
+    pub fn schedule(&mut self) {
+        // Fix up queue based on recent events
+        self.rq.move_by_pred(|x| x.state() == ThreadState::Running);
 
-    if let Some(c) = cur {
-        if c.state() != ThreadState::NeedResched {
+        // If rq is empty -- do noting
+        if self.rq.empty() {
             return;
         }
 
-        let next = rq.pop();
-        next.set_state(ThreadState::Running);
+        if let Some(cur) = current() {
+            match cur.state() {
+                ThreadState::Running => return, // Just timer tick
+                ThreadState::NeedResched => self.rq.add_running(cur.clone()),
+                ThreadState::WaitingMessage => self.rq.add_sleeping(cur.clone()),
+                _ => panic!("Running scheduler in unexected state"),
+            }
 
-        println!("Switching to {} --> {}", c.id(), next.id());
+            if let Some(next) = self.rq.pop() {
+                next.set_state(ThreadState::Running);
 
-        let ctx = c.ctx_mut();
-        let ctx_next = next.ctx_mut();
+                println!("Switching to {} --> {}", cur.id(), next.id());
 
-        rq.add(c.clone());
+                unsafe {
+                    let ctx = cur.ctx_mut();
+                    let ctx_next = next.ctx_mut();
 
-        crate::arch::current::set_current(next.clone());
+                    crate::arch::current::set_current(next.clone());
 
-        switch_to(ctx as _, ctx_next as _);
-    } else {
-        let mut ctx = Context::default(); // tmp storage
-        let next = rq.pop();
-        let next_ctx = next.ctx_mut();
+                    switch_to(ctx as _, ctx_next as _);
+                }
+            }
+        } else {
+            let mut ctx = Context::default(); // tmp storage
+            let next = self.rq.pop().expect("Rq must not be empty at that moment");
+            let next_ctx = unsafe { next.ctx_mut() };
 
-        next.set_state(ThreadState::Running);
+            next.set_state(ThreadState::Running);
 
-        crate::arch::current::set_current(next.clone());
+            crate::arch::current::set_current(next.clone());
 
-        // We come here only for 1st process, so we need to turn on irqs
-        irq::enable_all();
-        switch_to(&mut ctx as *mut _, next_ctx as *const _);
-        panic!("Should not reach here");
+            // We come here only for 1st process, so we need to turn on irqs
+            unsafe {
+                irq::enable_all();
+                switch_to(&mut ctx as *mut _, next_ctx as *const _);
+            }
+            panic!("Should not reach here");
+        }
     }
+
+    pub fn add_thread(&mut self, t: Arc<Thread>) {
+        match t.state() {
+            ThreadState::Running => self.rq.add_running(t),
+            ThreadState::WaitingMessage => self.rq.add_sleeping(t),
+            _ => panic!("Called on wrong thread state"),
+        }
+    }
+}
+
+pub fn run() {
+    let scheduler = SCHEDULER.per_cpu_var_get().get();
+    scheduler.schedule();
+}
+
+pub fn add_thread(t: Arc<Thread>) {
+    let scheduler = SCHEDULER.per_cpu_var_get().get();
+    scheduler.add_thread(t);
 }
 
 pub fn init_userspace() {
@@ -110,21 +152,6 @@ pub fn init_userspace() {
 
     init_thread.init_user(data.ep);
 
-    init_task.add_initial_thread(init_thread);
+    init_task.add_initial_thread(init_thread, rtl::handle::HANDLE_INVALID);
     init_task.start();
 }
-
-// pub fn init_idle() {
-//     for i in 0..arch::NUM_CPUS {
-//         let parent = kernel_task();
-//         let idle = Thread::new(parent, i as u16);
-//
-//         idle.init_kernel(idle_thread, ());
-//
-//         unsafe {
-//             IDLE_THREAD_STACK[i] = 0; //PhysAddr::from(idle.stack_head().unwrap()).get();
-//         }
-//
-//         idle.start();
-//     }
-// }

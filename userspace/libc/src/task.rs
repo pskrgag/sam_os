@@ -51,8 +51,8 @@ impl Task {
         Some(new_task)
     }
 
-    pub fn start(&mut self) -> Option<()> {
-        Syscall::invoke(self.h, TaskInvoke::START.bits(), &[self.ep.into()]).ok()?;
+    pub fn start(&mut self, h: Handle) -> Option<()> {
+        Syscall::invoke(self.h, TaskInvoke::START.bits(), &[self.ep.into(), h]).ok()?;
         Some(())
     }
 

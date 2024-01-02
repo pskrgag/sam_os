@@ -10,6 +10,7 @@
 #![feature(const_mut_refs)]
 #![feature(allocator_api)]
 #![feature(get_mut_unchecked)]
+#![feature(extract_if)]
 
 extern crate alloc;
 

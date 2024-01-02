@@ -1,5 +1,5 @@
 use super::task_object::Task;
-use super::thread_object::Thread;
+use super::port_object::Port;
 use super::handle::Handle;
 use crate::kernel::sched::current;
 use alloc::string::ToString;
@@ -30,7 +30,20 @@ impl Factory {
                 let task = current().unwrap().task();
                 let mut table = task.handle_table();
 
-                let handle = Handle::new::<Task>(new_task.clone());
+                let handle = Handle::new(new_task.clone());
+                let ret = handle.as_raw();
+
+                table.add(handle);
+
+                Ok(ret)
+            }
+            FactroryInvoke::CREATE_PORT => {
+                let thread = current().unwrap();
+                let task = thread.task();
+                let mut table = task.handle_table();
+
+                let port = Port::new(thread);
+                let handle = Handle::new(port.clone());
                 let ret = handle.as_raw();
 
                 table.add(handle);

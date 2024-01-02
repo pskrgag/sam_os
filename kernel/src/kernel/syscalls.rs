@@ -42,7 +42,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
 
             let req_t = table
                 .find_poly(args.arg(0))
-                .ok_or(ErrorType::INVALID_ARGUMENT)?;
+                .ok_or(ErrorType::INVALID_HANDLE)?;
 
             // Drop locks
             drop(table);
@@ -54,7 +54,6 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             let thread = current().unwrap();
             thread.self_yield();
 
-            unsafe { crate::sched::run(); };
             Ok(0)
         }
         _ => Err(ErrorType::NO_OPERATION),

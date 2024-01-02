@@ -109,7 +109,8 @@ impl<'a> Iterator for Iter<'a> {
         }
 
         let file_size = header.filesize();
-        let offset = self.offset + size_of::<CpioHeader>() + name.len() + 1;
+        let offset = self.offset + size_of::<CpioHeader>() + name.len();
+        let offset = offset.next_multiple_of(4);
 
         let ret = Some(File {
             name,

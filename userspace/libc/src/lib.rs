@@ -10,6 +10,7 @@ pub mod allocator;
 pub mod task;
 pub mod vmm;
 pub mod factory;
+pub mod port;
 
 pub use rustrt::*;
 

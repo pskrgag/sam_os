@@ -6,16 +6,24 @@ RUSTFLAGS += -C force-frame-pointers
 TARGET = aarch64-unknown-none-softfloat
 BINARY = target/$(TARGET)/debug/sam_kernel
 
-all:
-	cd userspace/fileserver; cargo build --target $(TARGET) && \
-		find ../../target -name "fileserver" -print0 | cpio -ocv0  > /tmp/archive.cpio && \
-		cd ../init; cargo build --target $(TARGET) && \
-		cd ../../kernel; RUSTFLAGS="$(RUSTFLAGS)" cargo build --target $(TARGET) --features qemu
+.PHONY: readelf clean all qemu qemu_gdb init kernel ridl
 
-test:
-	RUSTFLAGS="$(RUSTFLAGS)" cargo test --target $(TARGET) -Zbuild-std
+ridl:
+	cargo build -p ridl
 
-qemu:
+fileserver: ridl
+	cargo build --target $(TARGET) -p fileserver
+	find  target -name "fileserver" -print0 | cpio -ocv0  > /tmp/archive.cpio
+
+init: fileserver
+	cargo build -p sam_os_init --target $(TARGET)
+
+kernel: init
+	RUSTFLAGS="$(RUSTFLAGS)" cargo build --target $(TARGET) --features qemu -p sam_kernel
+
+all: kernel
+
+qemu: all
 	qemu-system-aarch64 -d mmu,guest_errors -D test.txt -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel $(BINARY)
 
 qemu_gdb:
@@ -30,4 +38,3 @@ readelf: all
 objdump:
 	aarch64-linux-gnu-objdump -D $(BINARY) | less
 
-.PHONY: test readelf clean all qemu qemu_gdb

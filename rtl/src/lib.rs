@@ -13,4 +13,6 @@ pub mod locking;
 pub mod syscalls;
 pub mod vmm;
 
+pub mod misc;
+
 pub mod objects;

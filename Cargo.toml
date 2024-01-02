@@ -1,5 +1,6 @@
 [workspace]
 members = [
+	"ridl",
 	"rtl",
 	"userspace/fileserver",
 	"userspace/init",

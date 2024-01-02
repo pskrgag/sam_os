@@ -14,7 +14,7 @@ pub mod regs;
 pub mod smp;
 pub mod current;
 
-use crate::kernel::misc::genmask;
+use rtl::misc::genmask;
 use core::mem;
 use cortex_a::registers::*;
 use tock_registers::interfaces::Readable;

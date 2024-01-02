@@ -155,9 +155,7 @@ pub extern "C" fn kern_irq() {
 
     irq_dispatch();
 
-    unsafe {
-        sched::run();
-    }
+    sched::run();
 }
 
 #[no_mangle]
