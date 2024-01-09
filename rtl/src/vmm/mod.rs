@@ -6,16 +6,17 @@ pub mod types;
 
 bitflags! {
 pub struct MappingType: usize {
-    const KERNEL_DATA = 1;
-    const KERNEL_TEXT = 2;
-    const KERNEL_DATA_RO = 4;
-    const KERNEL_RWX = 8;
-    const KERNEL_DEVICE = 16;
+    const KERNEL_DATA = 1 << 0;
+    const KERNEL_TEXT = 1 << 1;
+    const KERNEL_DATA_RO = 1 << 2;
+    const KERNEL_RWX = 1 << 3;
+    const KERNEL_DEVICE = 1 << 4;
 
-    const USER_DATA = 32;
-    const USER_TEXT = 64;
-    const USER_DATA_RO = 128;
-    const NONE = 256;
+    const USER_DATA = 1 << 5;
+    const USER_TEXT = 1 << 6;
+    const USER_DATA_RO = 1 << 7;
+    const USER_DEVICE = 1 << 8;
+    const NONE = 1 << 9;
 }
 }
 

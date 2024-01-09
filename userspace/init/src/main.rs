@@ -35,5 +35,8 @@ fn main(boot_handle: Handle) {
         println!("Spawned '{}'", task.name())
     }
 
-    p.receive();
+    let mut msg = [111u8; 10];
+
+    p.receive_data(&mut msg);
+    println!("HELLO {:?}", msg);
 }

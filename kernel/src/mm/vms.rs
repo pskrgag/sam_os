@@ -23,7 +23,7 @@ impl VmsInner {
         }
     }
 
-    fn free_range(&self, size: usize) -> Option<MemRange<VirtAddr>> {
+    pub fn free_range(&self, size: usize) -> Option<MemRange<VirtAddr>> {
         self.vmas.free_range(size)
     }
 

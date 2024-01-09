@@ -11,6 +11,7 @@
 #![feature(allocator_api)]
 #![feature(get_mut_unchecked)]
 #![feature(extract_if)]
+#![feature(panic_info_message)]
 
 extern crate alloc;
 

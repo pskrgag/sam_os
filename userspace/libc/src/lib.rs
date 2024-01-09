@@ -18,7 +18,6 @@ pub use rustrt::*;
 mod syscalls_aarch64;
 
 pub fn init() -> Option<()> {
-    println_libc!("Started libc init");
     allocator::slab::init()?;
     Some(())
 }

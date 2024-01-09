@@ -40,9 +40,9 @@ impl Task {
             vms: Vms::new_user(),
             handles: Spinlock::new(HandleTable::new()),
             factory: Factory::new(),
-            vms_handle: usize::MAX,
-            self_handle: usize::MAX,
-            factory_handle: usize::MAX,
+            vms_handle: HANDLE_INVALID,
+            self_handle: HANDLE_INVALID,
+            factory_handle: HANDLE_INVALID,
         });
 
         let handle = Handle::new(s.clone());

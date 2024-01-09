@@ -5,5 +5,6 @@ bitflags! {
         const ALLOCATE = 0;
         const CREATE_VMO = 1;
         const MAP_VMO = 2;
+        const MAP_PHYS = 3;
     }
 }

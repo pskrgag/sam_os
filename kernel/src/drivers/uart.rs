@@ -1,43 +1,29 @@
 use crate::drivers::mmio_mapper::MMIO_ALLOCATOR;
 use crate::kernel::locking::spinlock::Spinlock;
-use core::{fmt, ptr};
+use core::fmt;
+use rtl::uart::Uart as BackendUart;
+use rtl::uart::UartTrait;
 use rtl::vmm::types::*;
 
 pub struct Uart;
 
-static UART_PTR: Spinlock<VirtAddr> = Spinlock::new(VirtAddr::new(0x09000000));
-
-pub fn uart_write(str: &[u8]) {
-    let ptr = UART_PTR.lock_irqsave();
-
-    for i in str {
-        unsafe {
-            ptr::write_volatile(ptr.to_raw_mut::<u8>(), *i);
-        }
-
-        if *i == b'\n' {
-            unsafe {
-                ptr::write_volatile(ptr.to_raw_mut::<u8>(), b'\r');
-            }
-        }
-    }
-}
+static UART: Spinlock<BackendUart> = Spinlock::new(BackendUart::default(VirtAddr::new(0x09000000)));
 
 impl fmt::Write for Uart {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        uart_write(s.as_bytes());
+        UART.lock_irqsave().write_bytes(s.as_bytes());
         Ok(())
     }
 }
 
 pub fn remap() {
-    let mut p = UART_PTR.lock();
+    let mut p = UART.lock();
     let alloc = MMIO_ALLOCATOR.get();
     let ptr = alloc
-        .iomap(PhysAddr::new(p.bits()), 1)
+        .iomap(PhysAddr::new(p.base().bits()), 1)
         .expect("Failed to remap uart");
 
-    *p = ptr;
+    *p = BackendUart::default(ptr);
 }
 
 pub fn uart() -> Uart {

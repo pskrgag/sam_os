@@ -22,8 +22,9 @@ impl Factory {
     fn do_invoke(&self, args: &[usize]) -> Result<usize, ErrorType> {
         match FactroryInvoke::from_bits(args[0]).ok_or(ErrorType::NO_OPERATION)? {
             FactroryInvoke::CREATE_TASK => {
-                let name = UserBuffer::<100>::new(args[1].into(), args[2]).ok_or(ErrorType::FAULT)?;
-                let name = core::str::from_utf8(name.data()).map_err(|_| ErrorType::INVALID_ARGUMENT)?;
+                let name = UserBuffer::new(args[1].into(), args[2]);
+                let name = name.read_on_stack::<100>().ok_or(ErrorType::FAULT)?;
+                let name = core::str::from_utf8(&name).map_err(|_| ErrorType::INVALID_ARGUMENT)?;
                 let new_task = Task::new(name.to_string());
 
                 let task = current().unwrap().task();

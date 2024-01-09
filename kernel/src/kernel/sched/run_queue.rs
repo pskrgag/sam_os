@@ -21,7 +21,6 @@ impl RunQueue {
     }
 
     pub fn add_sleeping(&mut self, t: Arc<Thread>) {
-        println!("Sleeper");
         self.list_sleep.push_back(t);
     }
 

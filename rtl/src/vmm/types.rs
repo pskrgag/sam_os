@@ -290,6 +290,18 @@ impl Address for PhysAddr {
     }
 }
 
+impl<T> From<*const T> for VirtAddr {
+    fn from(addr: *const T) -> Self {
+        Self(addr as usize)
+    }
+}
+
+impl<T> From<*mut T> for VirtAddr {
+    fn from(addr: *mut T) -> Self {
+        Self(addr as usize)
+    }
+}
+
 #[cfg(feature = "kernel")]
 impl From<PhysAddr> for VirtAddr {
     fn from(addr: PhysAddr) -> Self {

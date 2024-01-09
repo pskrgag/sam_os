@@ -1,8 +1,6 @@
-use crate::{
-    arch::{backtrace::backtrace, irq::disable_all},
-};
-use rtl::vmm::types::*;
+use crate::arch::{backtrace::backtrace, irq::disable_all};
 use core::panic::PanicInfo;
+use rtl::vmm::types::*;
 
 #[panic_handler]
 fn on_panic(info: &PanicInfo) -> ! {
@@ -15,6 +13,10 @@ fn on_panic(info: &PanicInfo) -> ! {
         disable_all();
         println!("--- cut here ---");
         println!("Kernel Panic!");
+
+        if let Some(m) = info.message() {
+            println!("{}", m);
+        }
 
         core::arch::asm!("mov {}, fp", out(reg) fp);
 

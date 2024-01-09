@@ -12,6 +12,9 @@ pub mod handle;
 pub mod locking;
 pub mod syscalls;
 pub mod vmm;
+pub mod ipc;
+
+pub mod uart;
 
 pub mod misc;
 

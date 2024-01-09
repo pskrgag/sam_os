@@ -3,10 +3,10 @@ use crate::kernel::object::handle::Handle;
 use crate::kernel::sched::current;
 use crate::mm::paging::page_table::MmError;
 use crate::mm::vms::VmsInner;
+use alloc::sync::Arc;
 use object_lib::object;
 use rtl::error::ErrorType;
 use rtl::vmm::{types::*, MappingType};
-use alloc::sync::Arc;
 
 #[derive(object)]
 pub struct Vms {
@@ -75,12 +75,27 @@ impl Vms {
                 let task = current().unwrap().task();
                 let table = task.handle_table();
 
-                let vmo = table.find::<VmObject>(args[1]).ok_or(ErrorType::INVALID_ARGUMENT)?;
+                let vmo = table
+                    .find::<VmObject>(args[1])
+                    .ok_or(ErrorType::INVALID_ARGUMENT)?;
                 let ranges = vmo.as_ranges();
 
                 self.vm_map(ranges.0, ranges.1, vmo.mapping_type()).unwrap();
 
                 Ok(0)
+            }
+            VmsInvoke::MAP_PHYS => {
+                let pa: PhysAddr = args[1].into();
+                let size = args[2];
+                let mut inner = self.inner.write();
+
+                let range = inner.free_range(size).ok_or(ErrorType::NO_MEMORY)?;
+
+                let va = inner
+                    .vm_map(range, MemRange::new(pa, size), MappingType::USER_DEVICE)
+                    .unwrap();
+
+                Ok(va.into())
             }
             _ => Err(ErrorType::NO_OPERATION),
         }

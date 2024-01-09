@@ -42,6 +42,18 @@ impl Vms {
         Syscall::invoke(self.h, VmsInvoke::MAP_VMO.bits(), &[o.handle()]).ok()?;
         Some(())
     }
+
+    pub fn map_phys(&self, p: MemRange<PhysAddr>) -> Option<VirtAddr> {
+        Some(
+            Syscall::invoke(
+                self.h,
+                VmsInvoke::MAP_PHYS.bits(),
+                &[p.start().into(), p.size()],
+            )
+            .ok()?
+            .into(),
+        )
+    }
 }
 
 unsafe impl Send for Vms {}

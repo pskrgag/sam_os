@@ -3,16 +3,26 @@
 #![feature(format_args_nl)]
 
 use libc::main;
+use libc::vmm::vms::vms;
+use rtl::arch::PAGE_SIZE;
 use rtl::handle::{Handle, HANDLE_INVALID};
+use rtl::uart::*;
+use rtl::vmm::types::*;
 use libc::port::Port;
 
 #[main]
 fn main(boot_handle: Handle) {
-
     assert!(boot_handle != HANDLE_INVALID);
 
-    let p = Port::new(boot_handle);
-    p.send();
+    let base = vms()
+        .map_phys(MemRange::<PhysAddr>::new(0x09000000.into(), PAGE_SIZE))
+        .unwrap();
 
-    println!("Hello, world!");
+    let mut uart = Uart::init(base);
+    let mut b = [1; 10];
+
+    // uart.read_bytes(&mut b);
+
+    let mut p = Port::new(boot_handle);
+    p.send_data(b);
 }

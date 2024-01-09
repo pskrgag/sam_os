@@ -117,7 +117,7 @@ impl Thread {
         crate::sched::run();
     }
 
-    fn do_invoke(&self, args: &[usize]) -> Result<usize, ErrorType> {
+    fn do_invoke(&self, _args: &[usize]) -> Result<usize, ErrorType> {
         todo!()
     }
 }

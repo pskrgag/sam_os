@@ -10,6 +10,7 @@ const KERNEL_DEVICE: usize = BLOCK_KERNEL_RW | BLOCK_DEVICE_MEM;
 const USER_DATA: usize = BLOCK_USER_RW | BLOCK_NORMAL_MEM;
 const USER_DATA_RO: usize = BLOCK_USER_RO | BLOCK_NORMAL_MEM;
 const USER_TEXT: usize = BLOCK_USER_RO & !BLOCK_UXN | BLOCK_NORMAL_MEM;
+const USER_DEVICE: usize = BLOCK_USER_RW | BLOCK_DEVICE_MEM;
 
 pub fn mapping_type_to_flags(tp: MappingType) -> usize {
     match tp {
@@ -21,6 +22,7 @@ pub fn mapping_type_to_flags(tp: MappingType) -> usize {
         MappingType::USER_DATA => USER_DATA,
         MappingType::USER_DATA_RO => USER_DATA_RO,
         MappingType::USER_TEXT => USER_TEXT,
+        MappingType::USER_DEVICE => USER_DEVICE,
         _ => panic!(),
     }
 }
