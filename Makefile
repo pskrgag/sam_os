@@ -8,6 +8,8 @@ BINARY = target/$(TARGET)/debug/sam_kernel
 
 .PHONY: readelf clean all qemu qemu_gdb init kernel ridl
 
+all: kernel
+
 ridl:
 	cargo build -p ridl
 
@@ -20,8 +22,6 @@ init: fileserver
 
 kernel: init
 	RUSTFLAGS="$(RUSTFLAGS)" cargo build --target $(TARGET) --features qemu -p sam_kernel
-
-all: kernel
 
 qemu: all
 	qemu-system-aarch64 -d mmu,guest_errors -D test.txt -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel $(BINARY)
