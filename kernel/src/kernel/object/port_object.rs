@@ -26,7 +26,12 @@ fn copy_ipc_message_from_user(user_msg: &IpcMessage<'_>) -> Option<IpcMessage<'s
         rtl::misc::ref_to_usize(user_msg).into(),
         size_of::<IpcMessage>(),
     );
-    let user_buffer = user_buffer.read_on_stack::<{ size_of::<IpcMessage>() }>()?;
+
+    // TODO: Smth should be reworked.....
+    let user_msg = unsafe {
+        &*(&user_buffer.read_on_stack::<{ size_of::<IpcMessage>() }>()? as *const _
+            as *const IpcMessage)
+    };
 
     let h = user_msg.handles();
     let data = user_msg.data();
@@ -58,7 +63,7 @@ impl Port {
         match PortInvoke::from_bits(args[0]).ok_or(ErrorType::NO_OPERATION)? {
             PortInvoke::CALL => {
                 todo!()
-            },
+            }
             PortInvoke::SEND => {
                 let msg = unsafe { rtl::misc::usize_to_ref::<IpcMessage>(args[1]) };
                 let msg = copy_ipc_message_from_user(&msg).ok_or(ErrorType::FAULT)?;

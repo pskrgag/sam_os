@@ -1,15 +1,19 @@
 #![feature(let_chains)]
 
+use simplelog::*;
 use std::io::*;
 
 #[macro_use]
 extern crate log;
 extern crate simplelog;
 
+mod backend;
 mod frontend;
 mod ir;
 
-use simplelog::*;
+#[macro_use]
+mod error_reporter;
+
 use frontend::lexer::*;
 use frontend::parser::*;
 
@@ -31,12 +35,15 @@ fn main() -> Result<()> {
 
     for i in &args[1..] {
         let source = std::fs::read_to_string(i).expect("Failed to read file");
+        let reporter = error_reporter::ErrorReporter::new(source.as_bytes());
         let lexer = Lexer::new(source.as_bytes());
-        let mut parser = Parser::new(lexer);
+        let mut parser = Parser::new(lexer, &reporter);
 
-        parser.parse();
+        let ir = parser
+            .parse()
+            .ok_or(Error::new(ErrorKind::Other, "Failed to parse source file"))?;
 
-        todo!();
+        backend::compile(&ir, &mut stdout(), "rust");
     }
 
     Ok(())

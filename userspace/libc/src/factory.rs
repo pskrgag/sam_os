@@ -49,6 +49,7 @@ pub fn init_self_factory(h: Handle) {
     }
 }
 
+#[allow(static_mut_ref)]
 pub fn factory() -> &'static Factory {
     unsafe { &SELF_FACTORY }
 }

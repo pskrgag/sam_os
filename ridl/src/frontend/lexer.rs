@@ -4,6 +4,7 @@ use super::token::*;
 pub struct Lexer<'a> {
     source: &'a [u8],
     parsed: usize,
+    line: usize,
 
     token_start: Option<usize>,
     prev_token: Option<usize>,
@@ -14,18 +15,19 @@ impl<'a> Lexer<'a> {
         Self {
             source,
             parsed: 0,
+            line: 0,
             token_start: None,
             prev_token: None,
         }
     }
 
-    fn finish_token(&mut self) -> &[u8] {
+    fn finish_token(&mut self) -> (&[u8], Location) {
         let start = self.token_start.unwrap();
 
         self.reset_token();
 
         self.prev_token = Some(start);
-        &self.source[start..self.parsed]
+        (&self.source[start..self.parsed], Location { line: self.line, pos: start })
     }
 
     fn reset_token(&mut self) {
@@ -61,6 +63,9 @@ impl<'a> Lexer<'a> {
                     self.unconsume();
                     false
                 } else {
+                    if c == b'\n' {
+                        self.line += 1;
+                    }
                     true
                 }
             } else {
@@ -71,7 +76,7 @@ impl<'a> Lexer<'a> {
 
     fn consume_word(&mut self) -> Option<Token> {
         while let Some(s) = self.peek() {
-            if s.is_ascii_alphabetic() {
+            if s.is_ascii_alphabetic() || s.is_ascii_digit() {
                 self.consume();
             } else {
                 self.unconsume();
@@ -79,9 +84,11 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        Some(Token::new_id(self.finish_token()))
+        let t = self.finish_token();
+        Some(Token::new_id(t.0, t.1))
     }
 
+    #[cfg(test)]
     pub fn into_iter(self) -> Self {
         self
     }
@@ -96,21 +103,29 @@ impl<'a> Lexer<'a> {
         match self.start_token() {
             Some(c) => {
                 match c {
-                    b'{' => return Some(Token::new(TokenType::LeftCurlParen, self.finish_token())),
+                    b'{' => {
+                        let t = self.finish_token();
+                        return Some(Token::new(TokenType::LeftCurlParen, t.0, t.1));
+                    }
                     b'}' => {
-                        return Some(Token::new(TokenType::RightCurlParen, self.finish_token()))
+                        let t = self.finish_token();
+                        return Some(Token::new(TokenType::RightCurlParen, t.0, t.1))
                     }
                     b'(' => {
-                        return Some(Token::new(TokenType::LeftParen, self.finish_token()))
+                        let t = self.finish_token();
+                        return Some(Token::new(TokenType::LeftParen, t.0, t.1))
                     }
                     b')' => {
-                        return Some(Token::new(TokenType::RightParen, self.finish_token()))
+                        let t = self.finish_token();
+                        return Some(Token::new(TokenType::RightParen, t.0, t.1))
                     }
                     b',' => {
-                        return Some(Token::new(TokenType::Comma, self.finish_token()))
+                        let t = self.finish_token();
+                        return Some(Token::new(TokenType::Comma, t.0, t.1))
                     }
                     b';' => {
-                        return Some(Token::new(TokenType::Semicolumn, self.finish_token()))
+                        let t = self.finish_token();
+                        return Some(Token::new(TokenType::Semicolumn, t.0, t.1))
                     }
                     other => {
                         if other.is_ascii_alphabetic() {
@@ -145,9 +160,9 @@ mod test {
         let text = "interface { }";
         let lexer = Lexer::new(text.as_bytes());
         let expected = vec![
-            Token::new_id("interface".as_bytes()),
-            Token::new(TokenType::LeftCurlParen, "{".as_bytes()),
-            Token::new(TokenType::RightCurlParen, "}".as_bytes()),
+            Token::new_id("interface".as_bytes(), Location::default()),
+            Token::new(TokenType::LeftCurlParen, "{".as_bytes(), Location::default()),
+            Token::new(TokenType::RightCurlParen, "}".as_bytes(), Location::default()),
         ];
 
         assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);
@@ -158,9 +173,9 @@ mod test {
         let text = "interface {\n}";
         let lexer = Lexer::new(text.as_bytes());
         let expected = vec![
-            Token::new_id("interface".as_bytes()),
-            Token::new(TokenType::LeftCurlParen, "{".as_bytes()),
-            Token::new(TokenType::RightCurlParen, "}".as_bytes()),
+            Token::new_id("interface".as_bytes(), Location::default()),
+            Token::new(TokenType::LeftCurlParen, "{".as_bytes(), Location::default()),
+            Token::new(TokenType::RightCurlParen, "}".as_bytes(), Location::default()),
         ];
 
         assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);
@@ -171,13 +186,13 @@ mod test {
         let text = "interface { Test(); }";
         let lexer = Lexer::new(text.as_bytes());
         let expected = vec![
-            Token::new_id("interface".as_bytes()),
-            Token::new(TokenType::LeftCurlParen, "{".as_bytes()),
-            Token::new(TokenType::TokenId(IdType::Identifier), "Test".as_bytes()),
-            Token::new(TokenType::LeftParen, "(".as_bytes()),
-            Token::new(TokenType::RightParen, ")".as_bytes()),
-            Token::new(TokenType::Semicolumn, ";".as_bytes()),
-            Token::new(TokenType::RightCurlParen, "}".as_bytes()),
+            Token::new_id("interface".as_bytes(), Location::default()),
+            Token::new(TokenType::LeftCurlParen, "{".as_bytes(), Location::default()),
+            Token::new(TokenType::TokenId(IdType::Identifier), "Test".as_bytes(), Location::default()),
+            Token::new(TokenType::LeftParen, "(".as_bytes(), Location::default()),
+            Token::new(TokenType::RightParen, ")".as_bytes(), Location::default()),
+            Token::new(TokenType::Semicolumn, ";".as_bytes(), Location::default()),
+            Token::new(TokenType::RightCurlParen, "}".as_bytes(), Location::default()),
         ];
 
         assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);
@@ -188,16 +203,16 @@ mod test {
         let text = "interface { Test(in Int a); }";
         let lexer = Lexer::new(text.as_bytes());
         let expected = vec![
-            Token::new_id("interface".as_bytes()),
-            Token::new(TokenType::LeftCurlParen, "{".as_bytes()),
-            Token::new_id("Test".as_bytes()),
-            Token::new(TokenType::LeftParen, "(".as_bytes()),
-            Token::new_id("in".as_bytes()),
-            Token::new_id("Int".as_bytes()),
-            Token::new_id("a".as_bytes()),
-            Token::new(TokenType::RightParen, ")".as_bytes()),
-            Token::new(TokenType::Semicolumn, ";".as_bytes()),
-            Token::new(TokenType::RightCurlParen, "}".as_bytes()),
+            Token::new_id("interface".as_bytes(), Location::default()),
+            Token::new(TokenType::LeftCurlParen, "{".as_bytes(), Location::default()),
+            Token::new_id("Test".as_bytes(), Location::default()),
+            Token::new(TokenType::LeftParen, "(".as_bytes(), Location::default()),
+            Token::new_id("in".as_bytes(), Location::default()),
+            Token::new_id("Int".as_bytes(), Location::default()),
+            Token::new_id("a".as_bytes(), Location::default()),
+            Token::new(TokenType::RightParen, ")".as_bytes(), Location::default()),
+            Token::new(TokenType::Semicolumn, ";".as_bytes(), Location::default()),
+            Token::new(TokenType::RightCurlParen, "}".as_bytes(), Location::default()),
         ];
 
         assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);
@@ -208,20 +223,40 @@ mod test {
         let text = "interface { Test(in Int a, in Int b); }";
         let lexer = Lexer::new(text.as_bytes());
         let expected = vec![
-            Token::new_id("interface".as_bytes()),
-            Token::new(TokenType::LeftCurlParen, "{".as_bytes()),
-            Token::new_id("Test".as_bytes()),
-            Token::new(TokenType::LeftParen, "(".as_bytes()),
-            Token::new_id("in".as_bytes()),
-            Token::new_id("Int".as_bytes()),
-            Token::new_id("a".as_bytes()),
-            Token::new(TokenType::Comma, ",".as_bytes()),
-            Token::new_id("in".as_bytes()),
-            Token::new_id("Int".as_bytes()),
-            Token::new_id("b".as_bytes()),
-            Token::new(TokenType::RightParen, ")".as_bytes()),
-            Token::new(TokenType::Semicolumn, ";".as_bytes()),
-            Token::new(TokenType::RightCurlParen, "}".as_bytes()),
+            Token::new_id("interface".as_bytes(), Location::default()),
+            Token::new(TokenType::LeftCurlParen, "{".as_bytes(), Location::default()),
+            Token::new_id("Test".as_bytes(), Location::default()),
+            Token::new(TokenType::LeftParen, "(".as_bytes(), Location::default()),
+            Token::new_id("in".as_bytes(), Location::default()),
+            Token::new_id("Int".as_bytes(), Location::default()),
+            Token::new_id("a".as_bytes(), Location::default()),
+            Token::new(TokenType::Comma, ",".as_bytes(), Location::default()),
+            Token::new_id("in".as_bytes(), Location::default()),
+            Token::new_id("Int".as_bytes(), Location::default()),
+            Token::new_id("b".as_bytes(), Location::default()),
+            Token::new(TokenType::RightParen, ")".as_bytes(), Location::default()),
+            Token::new(TokenType::Semicolumn, ";".as_bytes(), Location::default()),
+            Token::new(TokenType::RightCurlParen, "}".as_bytes(), Location::default()),
+        ];
+
+        assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);
+    }
+
+    #[test]
+    fn test_something_weird() {
+        let text = "interface { Test(out I32 a); }";
+        let lexer = Lexer::new(text.as_bytes());
+        let expected = vec![
+            Token::new_id("interface".as_bytes(), Location::default()),
+            Token::new(TokenType::LeftCurlParen, "{".as_bytes(), Location::default()),
+            Token::new_id("Test".as_bytes(), Location::default()),
+            Token::new(TokenType::LeftParen, "(".as_bytes(), Location::default()),
+            Token::new_id("out".as_bytes(), Location::default()),
+            Token::new_id("I32".as_bytes(), Location::default()),
+            Token::new_id("a".as_bytes(), Location::default()),
+            Token::new(TokenType::RightParen, ")".as_bytes(), Location::default()),
+            Token::new(TokenType::Semicolumn, ";".as_bytes(), Location::default()),
+            Token::new(TokenType::RightCurlParen, "}".as_bytes(), Location::default()),
         ];
 
         assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);

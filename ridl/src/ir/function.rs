@@ -1,12 +1,13 @@
 use super::argtype::Type;
+use ir_lib::ir;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Argument {
     In(Type, String),
     Out(Type, String),
 }
 
-#[derive(Clone)]
+#[derive(Clone, ir, Debug)]
 pub struct Function {
     name: String,
     args: Vec<Argument>,
@@ -24,5 +25,13 @@ impl Function {
 
     pub fn add_arg(&mut self, arg: Argument) {
         self.args.push(arg);
+    }
+
+    pub fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    pub fn args(&self) -> &Vec<Argument> {
+        &self.args
     }
 }

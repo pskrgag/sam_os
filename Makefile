@@ -6,14 +6,17 @@ RUSTFLAGS += -C force-frame-pointers
 TARGET = aarch64-unknown-none-softfloat
 BINARY = target/$(TARGET)/debug/sam_kernel
 
-.PHONY: readelf clean all qemu qemu_gdb init kernel ridl
+.PHONY: readelf clean all qemu qemu_gdb init kernel ridl interfaces
 
 all: kernel
 
 ridl:
 	cargo build -p ridl
 
-fileserver: ridl
+interfaces: ridl
+	cargo build --target $(TARGET) -p interfaces
+
+fileserver: interfaces
 	cargo build --target $(TARGET) -p fileserver
 	find  target -name "fileserver" -print0 | cpio -ocv0  > /tmp/archive.cpio
 

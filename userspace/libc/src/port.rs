@@ -18,7 +18,7 @@ impl Port {
         factory().create_port()
     }
 
-    pub fn receive_data<T: AsRef<[u8]>>(&self, data: &mut T) {
+    pub fn receive_data<T: AsRef<[u8]>>(&self, data: T) {
         let mut msg = IpcMessage::default();
         msg.add_data(&data);
 

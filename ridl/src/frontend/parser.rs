@@ -1,17 +1,20 @@
 use super::lexer::Lexer;
 use super::token::*;
 
+use crate::error_reporter::ErrorReporter;
 use crate::ir::argtype::Type;
 use crate::ir::function::{Argument, Function};
 use crate::ir::interface::Interface;
+use crate::ir::IrObject;
 
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
+    reporter: &'a ErrorReporter<'a>,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(lexer: Lexer<'a>) -> Self {
-        Self { lexer }
+    pub fn new(lexer: Lexer<'a>, reporter: &'a ErrorReporter) -> Self {
+        Self { lexer, reporter }
     }
 
     fn consume_token_pred<F: Fn(&Token) -> bool>(&mut self, f: F) -> Option<Token> {
@@ -20,6 +23,7 @@ impl<'a> Parser<'a> {
         if f(&t) {
             Some(t)
         } else {
+            crate::token_or_report!(None::<Token>, self.reporter, t.clone());
             None
         }
     }
@@ -42,12 +46,20 @@ impl<'a> Parser<'a> {
 
         if arg_dir.get_type() == TokenType::TokenId(IdType::In) {
             Some(Argument::In(
-                Type::new(arg_type.get_str().to_owned()),
+                crate::type_or_report!(
+                    Type::new(arg_type.get_str().to_owned()),
+                    &self.reporter,
+                    arg_type
+                )?,
                 name.get_str().to_owned(),
             ))
         } else {
             Some(Argument::Out(
-                Type::new(arg_type.get_str().to_owned()),
+                crate::type_or_report!(
+                    Type::new(arg_type.get_str().to_owned()),
+                    &self.reporter,
+                    arg_type
+                )?,
                 name.get_str().to_owned(),
             ))
         }
@@ -118,43 +130,37 @@ impl<'a> Parser<'a> {
                 }
             }?
         }
-
-        // Some(interface)
     }
 
-    pub fn parse(&mut self) -> bool {
+    pub fn parse(&mut self) -> Option<Vec<Box<dyn IrObject>>> {
+        let mut v = Vec::<Box<dyn IrObject>>::new();
         let t = self.consume_token_pred(|t| t.get_type() == TokenType::TokenId(IdType::Interface));
 
         match t {
-            Some(_) => self.parse_interface().is_some(),
+            Some(_) => v.push(Box::new(self.parse_interface()?)),
             None => {
                 error!("Failed to parse!");
-                false
+                return None;
             }
         }
+
+        Some(v)
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::error_reporter;
 
     #[test]
     fn test_empty_interface() {
         let text = "interface { }";
         let lexer = Lexer::new(text.as_bytes());
-        let mut parser = Parser::new(lexer);
+        let reporter = error_reporter::ErrorReporter::new(text.as_bytes());
+        let mut parser = Parser::new(lexer, &reporter);
 
-        assert_eq!(parser.parse(), true);
-    }
-
-    #[test]
-    fn test_interface_with_simple_func() {
-        let text = "interface { Test(in Int a); }";
-        let lexer = Lexer::new(text.as_bytes());
-        let mut parser = Parser::new(lexer);
-
-        assert_eq!(parser.parse(), true);
+        assert!(parser.parse().is_some());
     }
 
     #[test]
@@ -169,9 +175,20 @@ mod test {
 
         for i in text {
             let lexer = Lexer::new(i.as_bytes());
-            let mut parser = Parser::new(lexer);
+            let reporter = error_reporter::ErrorReporter::new(i.as_bytes());
+            let mut parser = Parser::new(lexer, &reporter);
 
-            assert_eq!(parser.parse(), false);
+            assert!(parser.parse().is_none());
         }
+    }
+
+    #[test]
+    fn test_interface_with_simple_func() {
+        let text = "interface { Test(out I32 a); }";
+        let lexer = Lexer::new(text.as_bytes());
+        let reporter = error_reporter::ErrorReporter::new(text.as_bytes());
+        let mut parser = Parser::new(lexer, &reporter);
+
+        assert!(parser.parse().is_some());
     }
 }
