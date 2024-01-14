@@ -12,4 +12,3 @@ lazy_static = "*"
 ir_lib = {path = "./src/ir/ir_lib" }
 strum = "0.25"
 strum_macros = "0.25"
-

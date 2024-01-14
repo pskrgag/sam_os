@@ -42,7 +42,7 @@ impl Factory {
                 let task = thread.task();
                 let mut table = task.handle_table();
 
-                let port = Port::new(thread);
+                let port = Port::new(task.clone());
                 let handle = Handle::new(port.clone());
                 let ret = handle.as_raw();
 

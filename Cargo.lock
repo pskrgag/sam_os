@@ -77,6 +77,7 @@ checksum = "4445909572dbd556c457c849c4ca58623d84b27c8fff1e74b0b4227d8b90d17b"
 name = "fileserver"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "libc 0.1.0",
  "rtl",
 ]
@@ -267,6 +268,7 @@ dependencies = [
 name = "sam_os_init"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "libc 0.1.0",
  "rtl",
 ]

@@ -10,6 +10,9 @@ use rtl::uart::*;
 use rtl::vmm::types::*;
 use libc::port::Port;
 
+// mod transport;
+// use transport::*;
+
 #[main]
 fn main(boot_handle: Handle) {
     assert!(boot_handle != HANDLE_INVALID);
@@ -19,10 +22,16 @@ fn main(boot_handle: Handle) {
         .unwrap();
 
     let mut uart = Uart::init(base);
-    let mut b = [1; 10];
+    let mut b = [1u8; 10];
 
-    // uart.read_bytes(&mut b);
+    let p = Port::new(boot_handle);
+    let reply = Port::create().unwrap();
 
-    let mut p = Port::new(boot_handle);
-    p.send_data(b);
+    let mut test = [1u8; 10];
+    p.call(&b, Some(&mut test), Some(&reply));
+
+    println!("{:?}", test);
+    // init(boot_handle);
+    // let mut out = 0;
+    // FindService(&12, &mut out);
 }

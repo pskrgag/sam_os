@@ -43,6 +43,7 @@ impl UserBuffer {
     }
 
     pub fn write(&mut self, data: &[u8]) -> Option<()> {
+        println!("{} {}", data.len(), self.size);
         if data.len() <= self.size {
             let res =
                 unsafe { arch_copy_to_user(data.as_ptr() as usize, data.len(), self.va.bits()) };

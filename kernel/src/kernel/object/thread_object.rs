@@ -101,6 +101,13 @@ impl Thread {
         self.inner.lock().state = state;
     }
 
+    pub fn wake(self: &Arc<Thread>) {
+        let mut inner = self.inner.lock();
+
+        assert!(inner.state == ThreadState::WaitingMessage);
+        inner.state = ThreadState::Running;
+    }
+
     pub fn state(self: &Arc<Thread>) -> ThreadState {
         self.inner.lock().state
     }

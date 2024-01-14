@@ -11,8 +11,6 @@ fn impl_kernel_object_macro(ast: &syn::DeriveInput) -> TokenStream {
     let _struct_type = ast.ident.to_string();
 
     let gen = quote! {
-        use qrwlock::RwLock;
-
         impl crate::kernel::object::KernelObject for #name {
             fn as_any(&self) -> &dyn core::any::Any {
                 self

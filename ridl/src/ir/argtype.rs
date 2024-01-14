@@ -2,12 +2,12 @@ use std::collections::HashMap;
 use ir_lib::ir;
 use strum_macros::Display;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Hash)]
 pub struct UserStruct {
 
 }
 
-#[derive(Clone, Copy, Debug, Display)]
+#[derive(Clone, Copy, Debug, Display, Hash)]
 pub enum BuiltinTypes {
     U8,
     I8,
@@ -21,13 +21,13 @@ pub enum BuiltinTypes {
     Handle,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Hash)]
 pub enum TypeKind {
     Builtin(BuiltinTypes),
     UserDefined(UserStruct)
 }
 
-#[derive(Clone, ir, Debug)]
+#[derive(Clone, ir, Debug, Hash)]
 pub struct Type {
     kind: TypeKind,
 }

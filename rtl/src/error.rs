@@ -8,6 +8,8 @@ bitflags! {
         const FAULT = 4;
         const NO_MEMORY = 8;
         const INVALID_HANDLE = 16;
+        const TASK_DEAD = 32;
+        const TRY_AGAIN = 64;
     }
 }
 

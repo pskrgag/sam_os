@@ -28,12 +28,21 @@ fn main() -> Result<()> {
 
     let args = std::env::args().collect::<Vec<_>>();
 
-    if args.len() < 2 {
-        error!("Usage: {} <file to compile>", args[0]);
+    if args.len() < 3 {
+        error!("Usage: {} <transport|server> <file to compile>", args[0]);
         return Err(Error::new(ErrorKind::InvalidInput, ""));
     }
 
-    for i in &args[1..] {
+    let server = match args[1].as_str() {
+        "transport" => false,
+        "server" => true,
+        _ => {
+            error!("Unknown mode {}. Supported <transport|server>", args[1]);
+            return Err(Error::new(ErrorKind::InvalidInput, ""));
+        }
+    };
+
+    for i in &args[2..] {
         let source = std::fs::read_to_string(i).expect("Failed to read file");
         let reporter = error_reporter::ErrorReporter::new(source.as_bytes());
         let lexer = Lexer::new(source.as_bytes());
@@ -43,7 +52,11 @@ fn main() -> Result<()> {
             .parse()
             .ok_or(Error::new(ErrorKind::Other, "Failed to parse source file"))?;
 
-        backend::compile(&ir, &mut stdout(), "rust");
+        if !server {
+            backend::compile_transport(&ir, &mut stdout(), "rust");
+        } else {
+            backend::compile_server(&ir, &mut stdout(), "rust");
+        }
     }
 
     Ok(())

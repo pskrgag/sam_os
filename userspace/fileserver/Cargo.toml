@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 libc = { path = "../libc" }
 rtl = { path = "../../rtl" }
+bytemuck = {version = "1.14", features = ["derive"]}
 
 [[bin]]
 name = "fileserver"
