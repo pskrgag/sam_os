@@ -1,11 +1,11 @@
 use crate::factory::factory;
 use crate::syscalls::Syscall;
+use rtl::error::*;
 use rtl::handle::Handle;
+use rtl::handle::*;
 use rtl::ipc::*;
 use rtl::misc::ref_to_usize;
 use rtl::objects::port::PortInvoke;
-use rtl::error::*;
-use rtl::handle::*;
 
 pub struct Port {
     h: Handle,
@@ -20,9 +20,9 @@ impl Port {
         factory().create_port()
     }
 
-    pub fn receive_data<T: Copy>(&self, data: &mut T) -> Result<Option<Port>, ErrorType> {
+    pub fn receive_data(&self, data: &mut [u8]) -> Result<Option<Port>, ErrorType> {
         let mut msg = IpcMessage::default();
-        msg.set_out_data(data);
+        msg.set_out_data_raw(data);
 
         match Syscall::invoke(self.h, PortInvoke::RECEIVE.bits(), &[ref_to_usize(&msg)]) {
             Ok(h) => {
@@ -31,42 +31,51 @@ impl Port {
                 } else {
                     Ok(None)
                 }
-            },
-            Err(e) => Err(e)
+            }
+            Err(e) => Err(e),
         }
     }
 
-    pub fn send_data<T: Copy>(&self, reply_port: Port, data: &T) {
+    pub fn send_data(&self, reply_port: Port, data: &[u8]) {
         let mut msg = IpcMessage::default();
-        msg.add_data(data);
+        msg.add_data_raw(data);
 
-        Syscall::invoke(self.h, PortInvoke::SEND.bits(), &[reply_port.handle(), ref_to_usize(&msg)]).unwrap();
+        Syscall::invoke(
+            self.h,
+            PortInvoke::SEND.bits(),
+            &[reply_port.handle(), ref_to_usize(&msg)],
+        )
+        .unwrap();
     }
 
-
-    // Copy is kinda POD-like from C
-    pub fn call<T: Copy, U: Copy>(
+    pub fn call(
         &self,
-        in_data: &T,
-        out_data: Option<&mut U>,
-        reply_port: Option<&Port>,
-    ) {
+        in_data: &[u8],
+        out_data: Option<&mut [u8]>,
+    ) -> Result<(), ErrorType> {
         let mut msg = IpcMessage::default();
 
-        msg.add_data(in_data);
+        // Make lifetime till end of the function.
+        let p;
+        msg.add_data_raw(in_data);
 
         if let Some(data) = out_data {
-            msg.set_out_data(data);
+            p = Port::create().ok_or(ErrorType::NO_OPERATION)?;
+            msg.set_out_data_raw(data);
+
+            msg.set_reply_port(p.handle());
         }
 
-        if let Some(r) = reply_port{
-            msg.set_reply_port(r.handle());
-        }
-
-        Syscall::invoke(self.h, PortInvoke::CALL.bits(), &[ref_to_usize(&msg)]).unwrap();
+        Syscall::invoke(self.h, PortInvoke::CALL.bits(), &[ref_to_usize(&msg)]).map(|x| ())
     }
 
     pub fn handle(&self) -> Handle {
         self.h
+    }
+}
+
+impl Drop for Port {
+    fn drop(&mut self) {
+        Syscall::invoke(self.h, rtl::handle::HANDLE_CLOSE, &[]).unwrap();
     }
 }

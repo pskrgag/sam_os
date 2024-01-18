@@ -39,11 +39,7 @@ impl BackendRust {
         )
     }
 
-    fn generate_start_func<B: Write>(
-        &self,
-        func: &Function,
-        out: &mut B,
-    ) -> Result<()> {
+    fn generate_start_func<B: Write>(&self, func: &Function, out: &mut B) -> Result<()> {
         write!(out, "pub fn {}(", func.name())
     }
 
@@ -58,6 +54,17 @@ impl BackendRust {
         s
     }
 
+    fn generate_server_union(&self, func: &Vec<Function>) -> String {
+        let mut s = String::new();
+
+        for i in func {
+            let names = Self::format_inout_structs(i);
+            s.push_str(format!("req_{}: {},\n", i.name(), names.0).as_str());
+        }
+
+        s
+    }
+
     fn generate_server_event_loop_match_arms(&self, func: &Vec<Function>) -> String {
         let mut s = String::new();
 
@@ -66,17 +73,17 @@ impl BackendRust {
             s.push_str(
                 format!(
                     "
-                               {} => {{
-                                    let mut {LOCAL_OUT_STRUCT_NAME}: {} = {}::zeroed();
-
-                                    {}
-
-                                    let {LOCAL_IN_STRUCT_NAME} = ({EVENT_LOOP_ARG_NAME}.cb_{})({LOCAL_OUT_STRUCT_NAME});
-                                }}
+                    {} => {{
+                        let arg: *const {} = 
+                            core::mem::transmute(
+                                buff.as_ptr().offset(core::mem::size_of::<{REQUEST_HEADER_STRUCT_NAME}>() as isize)
+                            );
+                        let res = ({EVENT_LOOP_ARG_NAME}.cb_{})(*arg);
+                        {SERVER_HANDLE}.as_ref().unwrap().send_data(port, bytemuck::bytes_of(&res));
+                    }}
                             ",
                     i.uid(),
-                    names.0, names.0,
-                    self.generate_in_call(),
+                    names.0,
                     i.name(),
                 )
                 .as_str(),
@@ -86,23 +93,21 @@ impl BackendRust {
         s
     }
 
+    fn generate_call(&self) -> String {
+        format!(
+            "    unsafe {{
+        let r = if core::mem::size_of_val(&{LOCAL_OUT_STRUCT_NAME}) != 0 {{ Some(bytemuck::bytes_of_mut(&mut {LOCAL_OUT_STRUCT_NAME})) }} else {{ None }};
+        {SERVER_HANDLE}.as_ref().unwrap().call(bytemuck::bytes_of(&{LOCAL_IN_STRUCT_NAME}), r);
+        }}")
+    }
+
     fn generate_in_call(&self) -> String {
         format!(
             "    unsafe {{
         if core::mem::size_of_val(&{LOCAL_OUT_STRUCT_NAME}) != 0 {{
-            println!(\"doing recv\");
-            {SERVER_HANDLE}.as_ref().unwrap().receive_data(bytemuck::bytes_of_mut(&mut {LOCAL_OUT_STRUCT_NAME}))
+            {SERVER_HANDLE}.as_ref().unwrap().receive_data(bytemuck::bytes_of_mut(&mut {LOCAL_OUT_STRUCT_NAME}));
         }}
     }}")
-    }
-
-    fn generate_out_call(&self) -> String {
-        format!(
-            "    unsafe {{
-            println!(\"doing send\");
-            {SERVER_HANDLE}.as_ref().unwrap().send_data(bytemuck::bytes_of(&{LOCAL_IN_STRUCT_NAME}))
-    }}"
-        )
     }
 
     fn generate_request_structs(&self, f: &Function, header: bool) -> String {
@@ -126,7 +131,7 @@ impl BackendRust {
         }
 
         s.push_str(format!("}}\n").as_str());
-        s.push_str(format!("{DERIVES}pub struct {} {{\n{header}", names.1).as_str());
+        s.push_str(format!("{DERIVES}pub struct {} {{\n", names.1).as_str());
 
         for i in arg {
             match i {
@@ -182,12 +187,7 @@ impl Backend for BackendRust {
     }
 
     fn generate_calls<B: Write>(&self, out: &mut B) -> Result<()> {
-        writeln!(
-            out,
-            "{}{}",
-            self.generate_out_call(),
-            self.generate_in_call()
-        )
+        writeln!(out, "{}", self.generate_call(),)
     }
 
     fn generate_request_struct<B: Write>(&self, f: &Function, out: &mut B) -> Result<()> {
@@ -224,11 +224,21 @@ impl Backend for BackendRust {
         write!(out, "    }};\n")?;
         write!(
             out,
-            "    let mut {LOCAL_OUT_STRUCT_NAME} = {}::zeroed();\n", names.0
+            "    let mut {LOCAL_OUT_STRUCT_NAME} = {}::zeroed();\n",
+            names.1
         )
     }
 
-    fn generate_end_func<B: Write>(&self, _func: &Function, out: &mut B) -> Result<()> {
+    fn generate_end_func<B: Write>(&self, func: &Function, out: &mut B) -> Result<()> {
+        for i in func.args() {
+            match i {
+                Argument::Out(_, name) => {
+                    writeln!(out, "*{name} = {LOCAL_OUT_STRUCT_NAME}.{name};")?;
+                }
+                _ => {}
+            }
+        }
+
         writeln!(out, "    Ok(0)")?;
         writeln!(out, "}}")
     }
@@ -272,20 +282,26 @@ pub fn start_server({EVENT_LOOP_ARG_NAME}: ServerVirtTable, p: Port) -> ! {{
     }}
 
     loop {{
-        let mut header: {REQUEST_HEADER_STRUCT_NAME} = {REQUEST_HEADER_STRUCT_NAME}::zeroed();
-
         unsafe {{
-            {SERVER_HANDLE}.as_ref().unwrap().receive_data(bytemuck::bytes_of_mut(&mut header))
-        }}
+            union Buffer___ {{
+                {}
+            }};
 
-        println!(\"alive\");
-        match header.num {{
-            {}
-            _ => {{ panic!() }}
-        }};
+            let mut buff = [0u8; core::mem::size_of::<Buffer___>() + core::mem::size_of::<{REQUEST_HEADER_STRUCT_NAME}>()];
+            let header: *const {REQUEST_HEADER_STRUCT_NAME} = core::mem::transmute(buff.as_ptr());
+
+            let port = {SERVER_HANDLE}.as_ref().unwrap().receive_data(bytemuck::bytes_of_mut(&mut buff)).unwrap().unwrap();
+
+            let n = (*header).num;
+            match (*header).num {{
+                {}
+                _ => {{ panic!() }}
+            }};
+        }}
     }};
 }}\n",
             self.generate_server_virt_table(f),
+            self.generate_server_union(f),
             self.generate_server_event_loop_match_arms(f),
         )
     }

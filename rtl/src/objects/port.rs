@@ -5,5 +5,6 @@ bitflags! {
         const RECEIVE = 0;
         const CALL = 1;
         const SEND = 2;
+        const CLOSE = 3;
     }
 }

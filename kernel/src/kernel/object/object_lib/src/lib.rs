@@ -26,7 +26,7 @@ fn impl_kernel_object_macro(ast: &syn::DeriveInput) -> TokenStream {
 
         impl Drop for #name {
             fn drop(&mut self) {
-                panic!();
+                // panic!();
             }
         }
     };

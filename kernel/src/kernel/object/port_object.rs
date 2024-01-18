@@ -39,6 +39,7 @@ fn copy_ipc_message_from_user(user_msg: &IpcMessage<'_>) -> Option<IpcMessage<'s
 
     let h = user_msg.handles();
     let data = user_msg.in_data();
+
     let mut msg = IpcMessage::default();
 
     if let Some(d) = data {
@@ -77,45 +78,32 @@ impl Port {
 
                 if let Some(t) = self.sleepers.lock().pop_front() {
                     let task = self.task.upgrade().ok_or(ErrorType::TASK_DEAD)?;
-                    let mut reply_port = None;
+                    let reply_port = current()
+                        .unwrap()
+                        .task()
+                        .handle_table()
+                        .find::<Self>(msg.reply_port())
+                        .ok_or(ErrorType::INVALID_HANDLE)?;
 
-                    if msg.reply_port() != HANDLE_INVALID {
-                        reply_port = Some(
-                            current()
-                                .unwrap()
-                                .task()
-                                .handle_table()
-                                .find::<Self>(msg.reply_port())
-                                .ok_or(ErrorType::INVALID_HANDLE)?,
-                        );
+                    reply_port.sleepers.lock().push_back(current().unwrap());
 
-                        reply_port
-                            .as_ref()
-                            .unwrap()
-                            .sleepers
-                            .lock()
-                            .push_back(current().unwrap());
+                    let h = Handle::new(reply_port.clone());
 
-                        let h = Handle::new(reply_port.as_ref().unwrap().clone());
-
-                        msg.set_reply_port(h.as_raw());
-                        task.handle_table().add(h);
-                    }
+                    msg.set_reply_port(h.as_raw());
+                    task.handle_table().add(h);
 
                     self.queue.lock().push_back(msg.clone());
                     t.wake();
 
-                    if let Some(r) = reply_port {
-                        current().unwrap().wait_send();
+                    current().unwrap().wait_send();
 
-                        let reply_msg = r.queue.lock().pop_front().unwrap();
+                    let reply_msg = reply_port.queue.lock().pop_front().unwrap();
 
-                        if let Some(d) = msg.out_data() {
-                            let mut ud = UserBuffer::new(d.as_ptr().into(), d.len());
+                    if let Some(d) = msg.out_data() {
+                        let mut ud = UserBuffer::new(d.as_ptr().into(), d.len());
 
-                            if let Some(d1) = reply_msg.in_data() {
-                                ud.write(d1).ok_or(ErrorType::FAULT)?;
-                            }
+                        if let Some(d1) = reply_msg.in_data() {
+                            ud.write(d1).ok_or(ErrorType::FAULT)?;
                         }
                     }
 
@@ -130,11 +118,13 @@ impl Port {
                 let reply_port = args[1] as HandleBase;
                 let cur = current().unwrap();
                 let self_task = cur.task();
-                let self_table = self_task.handle_table();
+                let mut self_table = self_task.handle_table();
 
                 let reply_port = self_table
                     .find::<Self>(reply_port)
                     .ok_or(ErrorType::INVALID_HANDLE)?;
+
+                self_table.remove(args[1]);
 
                 let user_msg = unsafe { rtl::misc::usize_to_ref::<IpcMessage>(args[2]) };
                 let user_msg = copy_ipc_message_from_user(&user_msg).ok_or(ErrorType::FAULT)?;
@@ -142,7 +132,10 @@ impl Port {
                 reply_port.queue.lock().push_back(user_msg);
                 let sleep = reply_port.sleepers.lock().pop_front().unwrap();
 
+                drop(self_table);
+
                 sleep.wake();
+                cur.self_yield();
 
                 Ok(0)
             }

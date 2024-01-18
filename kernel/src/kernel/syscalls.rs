@@ -38,7 +38,12 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
         },
         SyscallList::SYS_INVOKE => {
             let task = current().unwrap().task();
-            let table = task.handle_table();
+            let mut table = task.handle_table();
+
+            if args.arg::<usize>(1) == rtl::handle::HANDLE_CLOSE {
+                table.remove(args.arg(0));
+                return Ok(0);
+            }
 
             let req_t = table
                 .find_poly(args.arg(0))

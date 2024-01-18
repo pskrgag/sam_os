@@ -39,6 +39,25 @@ impl HandleTable {
         panic!("Please refactor me...");
     }
 
+    pub fn remove(&mut self, hdl: HandleBase) {
+        let key = hdl % MAX_HANDLES;
+
+        let start = key;
+        let mut idx = start;
+
+        while {
+            let h = &mut self.table[idx as usize];
+
+            if h.is_valid() && h.as_raw() == hdl {
+                *h = Handle::invalid();
+                return;
+            }
+
+            idx = (idx + 1) % MAX_HANDLES;
+            idx != start
+        } {}
+    }
+
     // ToDo factor out finding loop into own function
     pub fn find<T: KernelObject + Sized + 'static>(&self, hdl: HandleBase) -> Option<Arc<T>> {
         let key = hdl % MAX_HANDLES;
@@ -50,7 +69,7 @@ impl HandleTable {
             let h = &self.table[idx as usize];
 
             if h.is_valid() && h.as_raw() == hdl {
-                return h.obj::<T>()
+                return h.obj::<T>();
             }
 
             idx = (idx + 1) % MAX_HANDLES;
@@ -70,7 +89,7 @@ impl HandleTable {
             let h = &self.table[idx as usize];
 
             if h.is_valid() && h.as_raw() == hdl {
-                return h.obj_poly()
+                return h.obj_poly();
             }
 
             idx = (idx + 1) % MAX_HANDLES;

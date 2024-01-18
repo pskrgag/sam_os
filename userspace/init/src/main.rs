@@ -12,10 +12,18 @@ use rtl::handle::HANDLE_INVALID;
 
 use rtl::cpio::Cpio;
 
-// mod interface;
-// use interface::*;
+mod interface;
+use interface::*;
 
 static CPIO: &[u8] = include_bytes!("/tmp/archive.cpio");
+
+fn handle_req(r: sam_request_FindService_in) -> sam_request_FindService_out {
+    let n = r.tmp;
+
+    sam_request_FindService_out {
+        tmp1: 1337,
+    }
+}
 
 #[main]
 fn main(boot_handle: Handle) {
@@ -38,19 +46,9 @@ fn main(boot_handle: Handle) {
         println!("Spawned '{}'", task.name())
     }
 
-    let mut b = [100u8; 10];
-    let re = [111u8; 10];
+    let virt_table = ServerVirtTable {
+        cb_FindService: handle_req,
+    };
 
-    let reply = p.receive_data(&mut b).unwrap().unwrap();
-    p.send_data(reply, &re);
-
-    assert!(b == [1u8; 10]);
-    println!("Hello {:?}", b);
-
-    // let virt_table = ServerVirtTable {
-    //     cb_FindService: handle_req,
-    // };
-    //
-    // start_server(virt_table, p);
-
+    start_server(virt_table, p);
 }
