@@ -1,58 +1,98 @@
 use alloc::boxed::Box;
 use alloc::vec;
-use rtl::vmm::types::*;
+use rtl::error::ErrorType;
 
 extern "C" {
     fn arch_copy_from_user(from: usize, size: usize, to: usize) -> isize;
     fn arch_copy_to_user(from: usize, size: usize, to: usize) -> isize;
 }
 
-#[derive(Debug)]
-pub struct UserBuffer {
-    va: VirtAddr,
-    size: usize,
+#[derive(Clone, Copy, Debug)]
+pub struct UserPtr<T> {
+    p: *const T,
+    count: usize,
 }
 
-impl UserBuffer {
-    pub fn new(va: VirtAddr, size: usize) -> Self {
-        Self { va, size }
+impl<T> UserPtr<T> {
+    pub fn new(p: *const T) -> Self {
+        Self { p, count: 1 }
     }
 
-    pub fn read_on_stack<const N: usize>(&self) -> Option<[u8; N]> {
-        let mut arr = [0; N];
-
-        let res =
-            unsafe { arch_copy_from_user(self.va.into(), self.size, arr.as_mut_ptr() as usize) };
-        if res == 0 {
-            Some(arr)
-        } else {
-            None
-        }
+    pub fn new_array(p: *const T, count: usize) -> Self {
+        Self { p, count }
     }
 
-    pub fn read_on_heap(&self, size: usize) -> Option<Box<[u8]>> {
-        let mut arr = vec![0; size];
+    pub fn read_on_heap(&self) -> Option<Box<[u8]>> {
+        use core::mem::size_of;
 
-        let res =
-            unsafe { arch_copy_from_user(self.va.into(), self.size, arr.as_mut_ptr() as usize) };
-        if res == 0 {
-            Some(arr.into_boxed_slice())
-        } else {
-            None
-        }
-    }
+        let heap = vec![0; self.count * size_of::<T>()];
 
-    pub fn write(&mut self, data: &[u8]) -> Option<()> {
-        if data.len() <= self.size {
-            let res =
-                unsafe { arch_copy_to_user(data.as_ptr() as usize, data.len(), self.va.bits()) };
+        unsafe {
+            let res = arch_copy_from_user(
+                self.p as usize,
+                size_of::<T>() * self.count,
+                heap.as_ptr() as _,
+            );
             if res == 0 {
-                Some(())
+                Some(heap.into_boxed_slice())
             } else {
                 None
             }
-        } else {
-            None
+        }
+    }
+
+    pub fn read(&self) -> Option<T> {
+        use core::mem::{size_of, MaybeUninit};
+
+        let t = MaybeUninit::uninit();
+
+        unsafe {
+            let res = arch_copy_from_user(
+                self.p as usize,
+                size_of::<T>() * self.count,
+                t.as_ptr() as _,
+            );
+            if res == 0 {
+                Some(t.assume_init())
+            } else {
+                None
+            }
+        }
+    }
+
+    pub fn write(&mut self, t: &T) -> Result<(), ErrorType> {
+        use core::mem::size_of;
+
+        unsafe {
+            let res = arch_copy_to_user(
+                t as *const _ as usize,
+                size_of::<T>() * self.count,
+                self.p as usize,
+            );
+            if res == 0 {
+                Ok(())
+            } else {
+                Err(ErrorType::FAULT)
+            }
+        }
+    }
+
+    pub fn write_array(&mut self, t: &[T]) -> Result<(), ErrorType> {
+        use core::mem::size_of;
+
+        println!("size {}", size_of::<T>() * self.count);
+
+        unsafe {
+            let res = arch_copy_to_user(
+                t.as_ptr() as usize,
+                size_of::<T>() * self.count,
+                self.p as usize,
+            );
+            if res == 0 {
+                Ok(())
+            } else {
+                Err(ErrorType::FAULT)
+            }
         }
     }
 }

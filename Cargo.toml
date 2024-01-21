@@ -4,7 +4,6 @@ members = [
 	"rtl",
 	"userspace/fileserver",
 	"userspace/init",
-	"userspace/interfaces",
-	"kernel",
+	"kernel", "userspace/ridlrt",
 ]
 resolver = "1"

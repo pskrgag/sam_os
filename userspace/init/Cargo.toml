@@ -9,6 +9,7 @@ edition = "2021"
 libc = { path = "../libc", features = ["verbose"] }
 rtl = { path = "../../rtl" }
 bytemuck = {version = "1.14", features = ["derive"]}
+ridlrt = { path = "../ridlrt" }
 
 [[bin]]
 name = "init"

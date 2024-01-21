@@ -20,11 +20,11 @@ pub fn init(h: Handle) {
 #[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
 #[repr(C, packed)]#[allow(private_interfaces)]
 pub struct sam_request_FindService_in {
-    pub tmp: u32,}
+    pub tmp: i32,}
 #[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
 #[repr(C, packed)]#[allow(private_interfaces)]
 pub struct sam_request_FindService_out {
-    pub tmp1: Handle,}
+    pub tmp1: i32,}
 
 pub struct ServerVirtTable {
     pub cb_FindService: fn(sam_request_FindService_in) -> sam_request_FindService_out,

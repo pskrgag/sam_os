@@ -1,6 +1,9 @@
 #[cfg(target_arch = "aarch64")]
 use crate::syscalls_aarch64::*;
 
+#[cfg(target_arch = "x86_64")]
+use crate::syscalls_x86_64::*;
+
 use rtl::error::ErrorType;
 use rtl::handle::Handle;
 use rtl::syscalls::SyscallList;

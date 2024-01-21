@@ -6,6 +6,7 @@ pub mod backend;
 
 pub struct Allocator;
 
+#[cfg(not(target_os = "linux"))]
 #[global_allocator]
 pub static ALLOCATOR: Allocator = Allocator {};
 

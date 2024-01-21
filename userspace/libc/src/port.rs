@@ -2,8 +2,7 @@ use crate::factory::factory;
 use crate::syscalls::Syscall;
 use rtl::error::*;
 use rtl::handle::Handle;
-use rtl::handle::*;
-use rtl::ipc::*;
+use rtl::ipc::message::IpcMessage;
 use rtl::misc::ref_to_usize;
 use rtl::objects::port::PortInvoke;
 
@@ -20,53 +19,24 @@ impl Port {
         factory().create_port()
     }
 
-    pub fn receive_data(&self, data: &mut [u8]) -> Result<Option<Port>, ErrorType> {
-        let mut msg = IpcMessage::default();
-        msg.set_out_data_raw(data);
-
-        match Syscall::invoke(self.h, PortInvoke::RECEIVE.bits(), &[ref_to_usize(&msg)]) {
-            Ok(h) => {
-                if h != HANDLE_INVALID {
-                    Ok(Some(Port::new(h)))
-                } else {
-                    Ok(None)
-                }
-            }
-            Err(e) => Err(e),
-        }
+    pub fn receive_data(&self, msg: &mut IpcMessage) -> Result<(), ErrorType> {
+        Syscall::invoke(self.h, PortInvoke::RECEIVE.bits(), &[ref_to_usize(msg)]).map(|_| ())
     }
 
-    pub fn send_data(&self, reply_port: Port, data: &[u8]) {
-        let mut msg = IpcMessage::default();
-        msg.add_data_raw(data);
-
+    pub fn send_data(&self, reply_port: Port, msg: &IpcMessage) -> Result<(), ErrorType> {
         Syscall::invoke(
             self.h,
             PortInvoke::SEND.bits(),
-            &[reply_port.handle(), ref_to_usize(&msg)],
+            &[reply_port.handle(), ref_to_usize(msg)],
         )
-        .unwrap();
+        .map(|_| ())
     }
 
-    pub fn call(
-        &self,
-        in_data: &[u8],
-        out_data: Option<&mut [u8]>,
-    ) -> Result<(), ErrorType> {
-        let mut msg = IpcMessage::default();
+    pub fn call(&self, msg: &mut IpcMessage) -> Result<(), ErrorType> {
+        let p = Port::create().ok_or(ErrorType::NO_OPERATION)?;
 
-        // Make lifetime till end of the function.
-        let p;
-        msg.add_data_raw(in_data);
-
-        if let Some(data) = out_data {
-            p = Port::create().ok_or(ErrorType::NO_OPERATION)?;
-            msg.set_out_data_raw(data);
-
-            msg.set_reply_port(p.handle());
-        }
-
-        Syscall::invoke(self.h, PortInvoke::CALL.bits(), &[ref_to_usize(&msg)]).map(|x| ())
+        msg.set_reply_port(p.handle());
+        Syscall::invoke(self.h, PortInvoke::CALL.bits(), &[ref_to_usize(msg)]).map(|_| ())
     }
 
     pub fn handle(&self) -> Handle {

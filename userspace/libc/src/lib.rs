@@ -17,6 +17,9 @@ pub use rustrt::*;
 #[cfg(target_arch = "aarch64")]
 mod syscalls_aarch64;
 
+#[cfg(target_arch = "x86_64")]
+mod syscalls_x86_64;
+
 pub fn init() -> Option<()> {
     allocator::slab::init()?;
     Some(())
