@@ -9,7 +9,7 @@ pub struct MessageArena<'a> {
 }
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct ArenaPtr<T> {
     pub offset: usize,
     pub size: usize,
@@ -26,11 +26,9 @@ impl<'a> MessageArena<'a> {
         }
     }
 
-    pub fn allocate<T>(&mut self) -> Option<ArenaPtr<T>> {
-        let size = mem::size_of::<T>();
-        let align = mem::align_of::<T>();
+    fn allocate_impl<T>(&mut self, size: usize, align: usize) -> Option<ArenaPtr<T>> {
         let diff =
-            (self.free.as_ptr() as usize - 1).next_multiple_of(align) - self.free.as_ptr() as usize;
+            (self.free.as_ptr() as usize).next_multiple_of(align) - self.free.as_ptr() as usize;
 
         let alloc = self.free.get(diff..diff + size)?;
 
@@ -44,12 +42,35 @@ impl<'a> MessageArena<'a> {
         })
     }
 
-    pub fn store<T: Copy>(&mut self, ptr: ArenaPtr<T>, data: &T) {
+    pub fn allocate<T: Copy>(&mut self, t: &T) -> Option<ArenaPtr<T>> {
+        let size = mem::size_of::<T>();
+        let align = mem::align_of::<T>();
+
+        let p = self.allocate_impl(size, align)?;
+        self.store_impl(p, t as *const T, size);
+
+        Some(p)
+    }
+
+    pub fn allocate_slice<T: Copy>(&mut self, t: &[T]) -> Option<ArenaPtr<T>> {
+        let size = mem::size_of::<T>();
+        let align = mem::align_of::<T>();
+
+        let p = self.allocate_impl(size * t.len(), align)?;
+        self.store_impl(p, t.as_ptr(), size * t.len());
+
+        Some(p)
+    }
+
+    pub fn store_impl<T: Copy>(&mut self, ptr: ArenaPtr<T>, source: *const T, size: usize) {
         // TODO: sanity cheks
         let s = (self.start as usize + ptr.offset) as *mut T;
 
         unsafe {
-            *s = *data;
+            let dst = core::slice::from_raw_parts_mut(s, ptr.size / core::mem::size_of::<T>());
+            let src = core::slice::from_raw_parts(source, size / core::mem::size_of::<T>());
+
+            dst.copy_from_slice(src);
         }
     }
 
@@ -57,8 +78,18 @@ impl<'a> MessageArena<'a> {
         // TODO: sanity cheks
         let s = (self.start as usize + ptr.offset) as *mut T;
 
+        unsafe { Some(*s) }
+    }
+
+    pub fn read_slice<T: Copy>(&mut self, ptr: ArenaPtr<T>, to: &mut [T]) -> Result<usize, ()> {
+        // TODO: sanity cheks
+        let s = (self.start as usize + ptr.offset) as *mut T;
+        let count = ptr.size / core::mem::size_of::<T>();
+
         unsafe {
-            Some(*s)
+            let dst = core::slice::from_raw_parts_mut(s, count);
+            to[..dst.len()].copy_from_slice(dst);
+            Ok(dst.len())
         }
     }
 
@@ -80,7 +111,7 @@ mod test {
         let mut buff = [0u8; 100];
         let mut arena = MessageArena::new_backed(buff.as_mut_slice());
 
-        let p = arena.allocate::<i32>();
+        let p = arena.allocate::<i32>(&10);
         assert!(p.is_some());
 
         let p = p.unwrap();
@@ -91,6 +122,7 @@ mod test {
     #[test]
     fn basic_alloc_align() {
         #[repr(align(128))]
+        #[derive(Copy, Clone)]
         struct Aligned {
             _i: i32,
         }
@@ -98,7 +130,7 @@ mod test {
         let mut buff = [0u8; 1000];
         let mut arena = MessageArena::new_backed(buff.as_mut_slice());
 
-        let p = arena.allocate::<Aligned>();
+        let p = arena.allocate::<Aligned>(&Aligned { _i: 10 });
         assert!(p.is_some());
 
         let p = p.unwrap();
@@ -110,12 +142,13 @@ mod test {
     }
 
     #[test]
-    fn basic_alloc_to_do_intersect() {
+    fn basic_alloc_two_do_intersect() {
         let mut buff = [0u8; 1000];
         let mut arena = MessageArena::new_backed(buff.as_mut_slice());
 
-        let p = arena.allocate::<u64>();
-        let p1 = arena.allocate::<u64>();
+        let p = arena.allocate::<u64>(&10);
+        let p1 = arena.allocate::<u64>(&10);
+
         assert!(p.is_some());
         assert!(p1.is_some());
 
@@ -123,5 +156,31 @@ mod test {
         let p1 = p1.unwrap();
 
         assert!(p.offset + core::mem::size_of::<u64>() <= p1.offset);
+    }
+
+    #[test]
+    fn basic_alloc_and_read() {
+        let mut buff = [0u8; 1000];
+        let mut arena = MessageArena::new_backed(buff.as_mut_slice());
+
+        let p = arena.allocate::<u64>(&10).unwrap();
+        let p = arena.read(p).unwrap();
+
+        assert_eq!(p, 10);
+    }
+
+    #[test]
+    fn basic_alloc_and_read_slice() {
+        let mut buff = [0u8; 1000];
+        let mut arena = MessageArena::new_backed(buff.as_mut_slice());
+
+        let mut slice = [0u8; 100];
+        let p = arena.allocate_slice("hello".as_bytes()).unwrap();
+        let size = arena.read_slice(p, &mut slice).unwrap();
+
+        assert_eq!(
+            core::str::from_utf8(&slice[..size]).unwrap(),
+            "hello"
+        );
     }
 }

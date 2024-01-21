@@ -22,12 +22,11 @@ fn stupid_ipc_test(h: Handle) {
     let mut ipc = IpcMessage::new();
     let mut arena = MessageArena::new_backed(b.as_mut_slice());
 
-    let pi32 = arena.allocate::<i32>().unwrap();
-    arena.store(pi32, &12);
-
+    let ptr = arena.allocate_slice("hello, server".as_bytes()).unwrap();
     ipc.set_mid(1234);
     ipc.set_out_arena(arena.as_slice_allocated());
 
+    println!("{:?} {:?}", ptr, ipc);
     p.call(&mut ipc);
 }
 

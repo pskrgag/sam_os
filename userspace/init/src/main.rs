@@ -30,7 +30,8 @@ fn stupid_ipc_test(h: Handle) {
     use rtl::ipc::IpcMessage;
 
     let mut p = Port::new(h);
-    let mut b = [0u8; 10];
+    let mut b = [0u8; 100];
+    let mut s = [0u8; 100];
     let mut ipc = IpcMessage::new();
     let mut arena = MessageArena::new_backed(b.as_mut_slice());
 
@@ -38,8 +39,15 @@ fn stupid_ipc_test(h: Handle) {
 
     p.receive_data(&mut ipc).unwrap();
 
-    let i = arena.read(ArenaPtr { offset: 0, size: 4, _p: core::marker::PhantomData::<i32> }).unwrap();
-    assert_eq!(i, 12);
+    let size = arena
+        .read_slice(ArenaPtr {
+            offset: 0,
+            size: 13,
+            _p: core::marker::PhantomData::<u8>,
+        }, &mut s)
+        .unwrap();
+
+    println!("{:?}", core::str::from_utf8(&s[..size]).unwrap());
 }
 
 #[main]
