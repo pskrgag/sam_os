@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 rtl = { path = "../../rtl" }
 libc = { path = "../libc" }
+bytemuck = {version = "1.14", features = ["derive"]}

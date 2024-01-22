@@ -9,12 +9,6 @@ pub trait Backend {
     fn generate_file_start<B: Write>(&self, out: &mut B) -> Result<()>;
     fn generate_transport_init<B: Write>(&self, out: &mut B) -> Result<()>;
     fn generate_start_transport_func<B: Write>(&self, func: &Function, out: &mut B) -> Result<()>;
-    fn generate_function_arg<B: Write>(
-        &self,
-        arg: &Argument,
-        pos: usize,
-        out: &mut B,
-    ) -> Result<()>;
     fn generate_end_fuction_declaration<B: Write>(&self, arg: &Function, out: &mut B)
         -> Result<()>;
     fn generate_request_struct<B: Write>(
@@ -22,13 +16,8 @@ pub trait Backend {
         f: &Function,
         out: &mut B,
     ) -> Result<()>;
-    fn generate_structs_inialization<B: Write>(
-        &self,
-        arg: &Function,
-        out: &mut B,
-    ) -> Result<()>;
-    fn generate_end_func<B: Write>(&self, func: &Function, out: &mut B) -> Result<()>;
-    fn generate_calls<B: Write>(&self, out: &mut B) -> Result<()>;
+    fn generate_end_func<B: Write>(&self, out: &mut B) -> Result<()>;
+    fn generate_calls<B: Write>(&self, f: &Function, out: &mut B) -> Result<()>;
     fn generate_server_event_loop<B: Write>(&self, f: &Vec<Function>, out: &mut B) -> Result<()>;
     fn generate_request_struct_server<B: Write>(&self, f: &Function, out: &mut B) -> Result<()>;
 }
@@ -70,23 +59,12 @@ pub fn compile_transport<B: Write>(v: &Vec<Box<dyn IrObject>>, out: &mut B, lang
                     "generate function start"
                 );
 
-                for (num, arg) in f.args().iter().enumerate() {
-                    try_generate!(
-                        back.generate_function_arg(arg, num, out),
-                        "generate argument"
-                    );
-                }
-
                 try_generate!(
                     back.generate_end_fuction_declaration(f, out),
                     "generate decl function end"
                 );
-                try_generate!(
-                    back.generate_structs_inialization(f, out),
-                    "generate local args init"
-                );
-                try_generate!(back.generate_calls(out), "generate calls");
-                try_generate!(back.generate_end_func(f, out), "generate function end");
+                try_generate!(back.generate_calls(f, out), "generate calls");
+                try_generate!(back.generate_end_func(out), "generate function end");
             }
         };
     }

@@ -1,19 +1,36 @@
 use core::mem;
+use bytemuck::*;
 
 #[derive(Debug)]
 pub struct MessageArena<'a> {
     free: &'a [u8],
-    start: usize,
+    pub (crate) start: usize,
     allocated: usize,
     size: usize,
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct ArenaPtr<T> {
+#[derive(Debug, Copy, Clone, Zeroable, Pod)]
+pub struct ArenaPtr {
     pub offset: usize,
     pub size: usize,
-    pub _p: core::marker::PhantomData<T>,
+}
+
+impl ArenaPtr {
+    pub fn request_ptr<T>() -> Self {
+        Self {
+            offset: 0,
+            size: core::mem::size_of::<T>(),
+        }
+    }
+
+    pub fn ptr_to_native_in_arena<T>(&self, p: &MessageArena<'_>) -> Option<&mut T> {
+        let off = (p.start + self.offset) as usize as *mut T;
+
+        unsafe {
+            Some(&mut *off)
+        }
+    }
 }
 
 impl<'a> MessageArena<'a> {
@@ -26,7 +43,7 @@ impl<'a> MessageArena<'a> {
         }
     }
 
-    fn allocate_impl<T>(&mut self, size: usize, align: usize) -> Option<ArenaPtr<T>> {
+    fn allocate_impl<T>(&mut self, size: usize, align: usize) -> Option<ArenaPtr> {
         let diff =
             (self.free.as_ptr() as usize).next_multiple_of(align) - self.free.as_ptr() as usize;
 
@@ -38,31 +55,30 @@ impl<'a> MessageArena<'a> {
         Some(ArenaPtr {
             offset: alloc.as_ptr() as usize - self.start,
             size,
-            _p: core::marker::PhantomData,
         })
     }
 
-    pub fn allocate<T: Copy>(&mut self, t: &T) -> Option<ArenaPtr<T>> {
+    pub fn allocate<T: Copy>(&mut self, t: &T) -> Option<ArenaPtr> {
         let size = mem::size_of::<T>();
         let align = mem::align_of::<T>();
 
-        let p = self.allocate_impl(size, align)?;
+        let p = self.allocate_impl::<T>(size, align)?;
         self.store_impl(p, t as *const T, size);
 
         Some(p)
     }
 
-    pub fn allocate_slice<T: Copy>(&mut self, t: &[T]) -> Option<ArenaPtr<T>> {
+    pub fn allocate_slice<T: Copy>(&mut self, t: &[T]) -> Option<ArenaPtr> {
         let size = mem::size_of::<T>();
         let align = mem::align_of::<T>();
 
-        let p = self.allocate_impl(size * t.len(), align)?;
+        let p = self.allocate_impl::<T>(size * t.len(), align)?;
         self.store_impl(p, t.as_ptr(), size * t.len());
 
         Some(p)
     }
 
-    pub fn store_impl<T: Copy>(&mut self, ptr: ArenaPtr<T>, source: *const T, size: usize) {
+    fn store_impl<T: Copy>(&mut self, ptr: ArenaPtr, source: *const T, size: usize) {
         // TODO: sanity cheks
         let s = (self.start as usize + ptr.offset) as *mut T;
 
@@ -74,14 +90,14 @@ impl<'a> MessageArena<'a> {
         }
     }
 
-    pub fn read<T: Copy>(&mut self, ptr: ArenaPtr<T>) -> Option<T> {
+    pub fn read<T: Copy>(&mut self, ptr: ArenaPtr) -> Option<T> {
         // TODO: sanity cheks
         let s = (self.start as usize + ptr.offset) as *mut T;
 
         unsafe { Some(*s) }
     }
 
-    pub fn read_slice<T: Copy>(&mut self, ptr: ArenaPtr<T>, to: &mut [T]) -> Result<usize, ()> {
+    pub fn read_slice<T: Copy>(&self, ptr: ArenaPtr, to: &mut [T]) -> Result<usize, ()> {
         // TODO: sanity cheks
         let s = (self.start as usize + ptr.offset) as *mut T;
         let count = ptr.size / core::mem::size_of::<T>();

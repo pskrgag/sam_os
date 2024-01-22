@@ -1,7 +1,10 @@
 use libc::port::Port;
 use rtl::handle::*;
-use bytemuck;
-use bytemuck::Zeroable;
+use bytemuck::*;
+use rtl::error::*;
+use rtl::ipc::message::*;
+use ridlrt::arena::*;
+use libc::port::*;
 
 static mut SERVER_HANDLE: Option<Port> = None;
 
@@ -11,7 +14,7 @@ struct RequestHeader {
     pub num: u64,
 }
 
-pub fn init(h: Handle) {
+pub fn sam_transport_init(h: Handle) {
     if h != HANDLE_INVALID {
         unsafe { SERVER_HANDLE = Some(Port::new(h)); }
     }
@@ -20,48 +23,56 @@ pub fn init(h: Handle) {
 #[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
 #[repr(C, packed)]#[allow(private_interfaces)]
 pub struct sam_request_FindService_in {
-    pub tmp: i32,}
+    pub name: ArenaPtr,}
 #[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
 #[repr(C, packed)]#[allow(private_interfaces)]
 pub struct sam_request_FindService_out {
-    pub tmp1: i32,}
+    pub h: Handle,}
 
-pub struct ServerVirtTable {
-    pub cb_FindService: fn(sam_request_FindService_in) -> sam_request_FindService_out,
-}
+    use ridlrt::server::Dispatcher;
+    use ridlrt::arena::MessageArena;
 
-pub fn start_server(cbs: ServerVirtTable, p: Port) -> ! {
-    unsafe {
-        SERVER_HANDLE = Some(p);
+    pub struct Disp {
+        pub cb_FindService: fn(sam_request_FindService_in, req_arena: &MessageArena, resp_arena: &mut MessageArena) -> Result<sam_request_FindService_out, ErrorType>,
+
     }
 
-    loop {
-        unsafe {
-            union Buffer___ {
-                req_FindService: sam_request_FindService_in,
+    #[derive(Copy, Clone, Zeroable)]
+    #[repr(C)]
+    pub union RequestUnion {
+        pub req_FindService: sam_request_FindService_in,
 
-            };
+    }
 
-            let mut buff = [0u8; core::mem::size_of::<Buffer___>() + core::mem::size_of::<RequestHeader>()];
-            let header: *const RequestHeader = core::mem::transmute(buff.as_ptr());
+    #[derive(Copy, Clone, Zeroable)]
+    #[repr(C)]
+    pub union ResponseUnion {
+        pub req_FindService: sam_request_FindService_out,
 
-            let port = SERVER_HANDLE.as_ref().unwrap().receive_data(bytemuck::bytes_of_mut(&mut buff)).unwrap().unwrap();
+    }
 
-            let n = (*header).num;
-            match (*header).num {
+    impl Dispatcher for Disp {
+        type DispatchReq = RequestUnion;
+        type DispatchResp = ResponseUnion;
+
+        fn dispatch(
+            &self,
+            mid: usize,
+            request: &Self::DispatchReq,
+            req_arena: &MessageArena,
+            response: &mut Self::DispatchResp,
+            resp_arena: &mut MessageArena,
+        ) {
+            match mid {
                 
                     6790964161597629750 => {
-                        let arg: *const sam_request_FindService_in = 
-                            core::mem::transmute(
-                                buff.as_ptr().offset(core::mem::size_of::<RequestHeader>() as isize)
-                            );
-                        let res = (cbs.cb_FindService)(*arg);
-                        SERVER_HANDLE.as_ref().unwrap().send_data(port, bytemuck::bytes_of(&res));
+                        let arg = unsafe { &request.req_FindService };
+
+                        response.req_FindService = (self.cb_FindService)(*arg, req_arena, resp_arena).unwrap();
                     }
                             
-                _ => { panic!() }
-            };
+                _ => panic!(),
+            }
         }
-    };
-}
-
+    }
+        

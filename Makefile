@@ -12,8 +12,10 @@ all: kernel
 
 ridl:
 	cargo build -p ridl
-	cargo run -p ridl transport interface.idl > userspace/fileserver/src/transport.rs
+	cargo run -p ridl transport interface.idl > userspace/interfaces/src/rt/nameserver.rs
 	cargo run -p ridl server interface.idl > userspace/init/src/interface.rs
+
+ridl:
 
 fileserver: ridl
 	cargo build --target $(TARGET) -p fileserver

@@ -7,47 +7,33 @@ use alloc::string::ToString;
 use libc::main;
 use libc::port::Port;
 use libc::task::Task;
+use ridlrt::arena::MessageArena;
 use rtl::handle::Handle;
 use rtl::handle::HANDLE_INVALID;
-
+use rtl::error::ErrorType;
 use rtl::cpio::Cpio;
 
-// mod interface;
-// use interface::*;
+mod interface;
+use interface::*;
 
 static CPIO: &[u8] = include_bytes!("/tmp/archive.cpio");
 
-// fn handle_req(r: sam_request_FindService_in) -> sam_request_FindService_out {
-//     let n = r.tmp;
-//
-//     sam_request_FindService_out {
-//         tmp1: 1337,
-//     }
-// }
+fn handle_req(
+    r: sam_request_FindService_in,
+    req_arena: &MessageArena,
+    resp_arena: &mut MessageArena,
+) -> Result<sam_request_FindService_out, ErrorType> {
+    let mut name_buf = [0u8; 100];
+    let size = req_arena.read_slice(r.name, &mut name_buf).unwrap();
+    let name = core::str::from_utf8(&name_buf[..size]).unwrap();
 
-fn stupid_ipc_test(h: Handle) {
-    use ridlrt::arena::*;
-    use rtl::ipc::IpcMessage;
+    let p = r.name;
+    println!("CLIENT REQ: {:?}", p);
+    println!("CLIENT REQ: {name}");
 
-    let mut p = Port::new(h);
-    let mut b = [0u8; 100];
-    let mut s = [0u8; 100];
-    let mut ipc = IpcMessage::new();
-    let mut arena = MessageArena::new_backed(b.as_mut_slice());
-
-    ipc.set_in_arena(arena.as_slice());
-
-    p.receive_data(&mut ipc).unwrap();
-
-    let size = arena
-        .read_slice(ArenaPtr {
-            offset: 0,
-            size: 13,
-            _p: core::marker::PhantomData::<u8>,
-        }, &mut s)
-        .unwrap();
-
-    println!("{:?}", core::str::from_utf8(&s[..size]).unwrap());
+    Ok(sam_request_FindService_out {
+        h: 10,
+    })
 }
 
 #[main]
@@ -71,11 +57,14 @@ fn main(boot_handle: Handle) {
         println!("Spawned '{}'", task.name())
     }
 
-    stupid_ipc_test(p.handle());
+    let virt_table = Disp {
+        cb_FindService: handle_req,
+    };
 
-    // let virt_table = ServerVirtTable {
-    //     cb_FindService: handle_req,
-    // };
-    //
-    // start_server(virt_table, p);
+    let info = ridlrt::server::ServerInfo {
+        h: p.handle(),
+        dispatch: virt_table,
+    };
+
+    ridlrt::server::server_dispatch(&info);
 }
