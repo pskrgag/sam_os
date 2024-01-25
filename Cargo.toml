@@ -2,7 +2,7 @@
 members = [
 	"ridl",
 	"rtl",
-	"userspace/fileserver",
+	"userspace/serial",
 	"userspace/init",
 	"kernel", "userspace/ridlrt", "userspace/interfaces",
 ]

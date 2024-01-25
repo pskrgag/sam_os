@@ -17,11 +17,11 @@ ridl:
 
 ridl:
 
-fileserver: ridl
-	cargo build --target $(TARGET) -p fileserver
-	find  target -name "fileserver" -print0 | cpio -ocv0  > /tmp/archive.cpio
+serial: ridl
+	cargo build --target $(TARGET) -p serial
+	find  target -name "serial" -print0 | cpio -ocv0  > /tmp/archive.cpio
 
-init: fileserver
+init: serial
 	cargo build -p sam_os_init --target $(TARGET)
 
 kernel: init

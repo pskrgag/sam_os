@@ -68,23 +68,31 @@ pub req_RegisterService: sam_request_RegisterService_out,
 
         fn dispatch(
             &self,
-            ipc: &mut IpcMessage,
-            request: &Self::DispatchReq,
+            in_ipc: &IpcMessage,
+            out_ipc: &mut IpcMessage,
+            request: &mut Self::DispatchReq,
             req_arena: &MessageArena,
             response: &mut Self::DispatchResp,
             resp_arena: &mut MessageArena,
         ) {
-            match ipc.mid() {
+            match in_ipc.mid() {
                 
                     6790964161597629750 => {
-                        let arg = unsafe { &request.req_FindService };
+                        let arg = unsafe { &mut request.req_FindService };
+
+                        let h = in_ipc.handles();
+;
 
                         response.req_FindService = (self.cb_FindService)(*arg, req_arena, resp_arena).unwrap();
-                        response.req_FindService.h = ipc.add_handle(unsafe { response.req_FindService.h })
+                        response.req_FindService.h = out_ipc.add_handle(unsafe { response.req_FindService.h })
                     }
                             
                     12853408287206418855 => {
-                        let arg = unsafe { &request.req_RegisterService };
+                        let arg = unsafe { &mut request.req_RegisterService };
+
+                        let h = in_ipc.handles();
+    arg.h = h[0];
+;
 
                         response.req_RegisterService = (self.cb_RegisterService)(*arg, req_arena, resp_arena).unwrap();
                         

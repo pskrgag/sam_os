@@ -1,13 +1,15 @@
+use crate::kernel::object::thread_object::Thread;
 use core::{
     arch::asm,
     cell::UnsafeCell,
     ops::{Deref, DerefMut, Drop},
-    sync::atomic::{AtomicU16, Ordering},
+    sync::atomic::{AtomicPtr, AtomicU16, Ordering},
 };
 
 pub struct SpinLockInner {
     current: AtomicU16,
     next: AtomicU16,
+    t: AtomicPtr<Thread>,
 }
 
 pub struct Spinlock<T> {
@@ -44,16 +46,29 @@ impl<T> Spinlock<T> {
             inner: SpinLockInner {
                 current: AtomicU16::new(0),
                 next: AtomicU16::new(0),
+                t: AtomicPtr::new(core::ptr::null_mut()),
             },
             val: UnsafeCell::new(val),
         }
     }
 
     pub fn lock(&self) -> SpinlockGuard<T> {
+        use crate::arch::current::get_current_raw;
+
+        if let Some(cur) = get_current_raw() {
+            if cur == self.inner.t.load(Ordering::Relaxed) {
+                panic!("Deadlock");
+            }
+        }
+
         let my = self.inner.next.fetch_add(1, Ordering::Acquire);
 
         while self.inner.current.load(Ordering::Relaxed) != my {
             unsafe { asm!("yield") };
+        }
+
+        if let Some(cur) = get_current_raw() {
+            self.inner.t.store(cur, Ordering::Relaxed);
         }
 
         SpinlockGuard {
@@ -87,6 +102,8 @@ impl<T> Spinlock<T> {
 
 impl SpinLockInner {
     pub fn unlock(&self) {
+        self.t.store(core::ptr::null_mut(), Ordering::Relaxed);
+
         self.current.fetch_add(1, Ordering::Release);
     }
 

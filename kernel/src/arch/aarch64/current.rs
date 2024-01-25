@@ -16,6 +16,19 @@ pub fn get_current() -> Option<Arc<Thread>> {
     }
 }
 
+pub fn get_current_raw() -> Option<*mut Thread> {
+    unsafe {
+        let raw: *mut Thread;
+        asm!("mrs   {}, TPIDR_EL1", out(reg) raw);
+
+        if raw.is_null() {
+            None
+        } else {
+            Some(raw)
+        }
+    }
+}
+
 pub fn set_current(cur: Arc<Thread>) {
     unsafe {
         let raw = Arc::into_raw(cur.clone());

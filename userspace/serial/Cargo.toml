@@ -1,5 +1,5 @@
 [package]
-name = "fileserver"
+name = "serial"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,5 +13,5 @@ ridlrt = { path = "../ridlrt" }
 interfaces = { path = "../interfaces" }
 
 [[bin]]
-name = "fileserver"
+name = "serial"
 path = "src/main.rs"

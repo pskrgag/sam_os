@@ -59,9 +59,10 @@ impl Port {
         let cur_task = current().unwrap().task();
         let cur_table = cur_task.handle_table();
 
+        use alloc::format;
         for i in h {
             // TODO remove handles in case of an error
-            let h = cur_table.find_poly(*i)?;
+            let h = cur_table.find_poly(*i).expect(format!("failed to find {i}").as_str());
             let new_h = Handle::new(h);
 
             to.handle_table().add(new_h);
@@ -79,7 +80,10 @@ impl Port {
                 let mut client_msg =
                     copy_ipc_message_from_user(client_msg_uptr).ok_or(ErrorType::FAULT)?;
 
-                if let Some(t) = self.sleepers.lock().pop_front() {
+                // NOTE: Do not place it info if let Some() block, since rust does not drop the lock
+                // for some weird reason
+                let t = self.sleepers.lock().pop_front();
+                if let Some(t) = t {
                     let task = self.task.upgrade().ok_or(ErrorType::TASK_DEAD)?;
                     let reply_port = current()
                         .unwrap()
@@ -109,12 +113,10 @@ impl Port {
                         let mut ud = UserPtr::new_array(d.as_ptr(), d.len());
 
                         if let Some(d1) = server_msg.out_arena() {
-                            println!("do write {}", d1.len());
                             ud.write_array(d1)?;
                         }
                     }
 
-                    println!("server_msg handles {:?}", server_msg.handles());
                     client_msg.add_handles(server_msg.handles());
                     client_msg_uptr.write(&client_msg)?;
 
@@ -125,7 +127,7 @@ impl Port {
 
                 Ok(0)
             }
-            PortInvoke::SEND => {
+            PortInvoke::SEND_AND_WAIT => {
                 let reply_port = args[1] as HandleBase;
                 let cur = current().unwrap();
                 let self_task = cur.task();
@@ -149,11 +151,9 @@ impl Port {
                 reply_port.queue.lock().push_back(user_msg);
                 let sleep = reply_port.sleepers.lock().pop_front().unwrap();
 
-
                 sleep.wake();
-                cur.self_yield();
 
-                Ok(0)
+                self.do_invoke(&[PortInvoke::RECEIVE.bits(), args[3]])
             }
             PortInvoke::RECEIVE => {
                 let mut server_msg_uptr = UserPtr::new(args[1] as *mut _);
@@ -186,6 +186,7 @@ impl Port {
                 // Prepare message
                 server_msg.set_mid(client_msg.mid());
                 server_msg.set_reply_port(client_msg.reply_port());
+                server_msg.add_handles(client_msg.handles());
 
                 // Commit it to userspace
                 server_msg_uptr.write(&server_msg)?;

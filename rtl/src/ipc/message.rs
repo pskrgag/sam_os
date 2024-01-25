@@ -33,7 +33,7 @@ impl<'a> IpcMessage<'a> {
         self.mid = mid;
     }
 
-    pub fn mid(&mut self) -> MessageId {
+    pub fn mid(&self) -> MessageId {
         self.mid
     }
 
@@ -58,7 +58,7 @@ impl<'a> IpcMessage<'a> {
     }
 
     pub fn set_in_arena(&mut self, data: &'a [u8]) {
-        assert!(self.in_data.is_none());
+        // assert!(self.in_data.is_none());
         self.in_data = Some(data);
     }
 

@@ -25,5 +25,6 @@ fn main(boot_handle: Handle) {
     let p = Port::create().unwrap();
 
     init(boot_handle);
-    RegisterService("hello", p.handle());
+
+    RegisterService("serial", p.handle());
 }

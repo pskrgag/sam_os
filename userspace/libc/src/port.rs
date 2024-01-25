@@ -23,11 +23,16 @@ impl Port {
         Syscall::invoke(self.h, PortInvoke::RECEIVE.bits(), &[ref_to_usize(msg)]).map(|_| ())
     }
 
-    pub fn send_data(&self, reply_port: Port, msg: &IpcMessage) -> Result<(), ErrorType> {
+    pub fn send_and_wait(
+        &self,
+        reply_port: Port,
+        msg: &IpcMessage,
+        reply: &mut IpcMessage,
+    ) -> Result<(), ErrorType> {
         Syscall::invoke(
             self.h,
-            PortInvoke::SEND.bits(),
-            &[reply_port.handle(), ref_to_usize(msg)],
+            PortInvoke::SEND_AND_WAIT.bits(),
+            &[reply_port.handle(), ref_to_usize(msg), ref_to_usize(reply)],
         )
         .map(|_| ())
     }

@@ -80,8 +80,6 @@ impl<T> UserPtr<T> {
     pub fn write_array(&mut self, t: &[T]) -> Result<(), ErrorType> {
         use core::mem::size_of;
 
-        println!("size {}", size_of::<T>() * self.count);
-
         unsafe {
             let res = arch_copy_to_user(
                 t.as_ptr() as usize,

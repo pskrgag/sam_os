@@ -77,7 +77,9 @@ impl BackendRust {
                 format!(
                     "
                     {} => {{
-                        let arg = unsafe {{ &request.req_{} }};
+                        let arg = unsafe {{ &mut request.req_{} }};
+
+                        {};
 
                         response.req_{} = (self.cb_{})(*arg, req_arena, resp_arena).unwrap();
                         {}
@@ -85,9 +87,10 @@ impl BackendRust {
                             ",
                     i.uid(),
                     i.name(),
+                    self.generate_handle_transfer_server(i, true),
                     i.name(),
                     i.name(),
-                    self.generate_handle_transfer(i, true),
+                    self.generate_handle_transfer_server(i, false),
                 )
                 .as_str(),
             );
@@ -127,11 +130,11 @@ impl BackendRust {
         s
     }
 
-    fn generate_handle_transfer(&self, f: &Function, server: bool) -> String {
+    fn generate_handle_transfer_client(&self, f: &Function, iin: bool) -> String {
         let mut s = String::new();
         let mut index = 0;
 
-        if !server {
+        if !iin {
             let names = Self::format_inout_structs(f);
 
             s.push_str(format!("let h = ipc.handles();\n").as_str());
@@ -145,14 +148,55 @@ impl BackendRust {
         }
 
         for i in f.args() {
-            if server {
+            if !iin {
+                match i {
+                    Argument::Out(tp, name) => {
+                        if tp.kind() == TypeKind::Builtin(crate::ir::argtype::BuiltinTypes::Handle)
+                        {
+                            s.push_str(format!("resp_.{} = h[{index}];\n", name).as_str());
+
+                            index += 1;
+                        }
+                    }
+                    _ => {}
+                }
+            } else {
+                match i {
+                    Argument::In(tp, name) => {
+                        if tp.kind() == TypeKind::Builtin(crate::ir::argtype::BuiltinTypes::Handle)
+                        {
+                            s.push_str(
+                                format!("req.{} = ipc.add_handle(req.{});\n", name, name).as_str(),
+                            );
+
+                            index += 1;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        s
+    }
+
+    fn generate_handle_transfer_server(&self, f: &Function, iin: bool) -> String {
+        let mut s = String::new();
+        let mut index = 0;
+
+        if iin {
+            s.push_str(format!("let h = in_ipc.handles();\n").as_str());
+        }
+
+        for i in f.args() {
+            if !iin {
                 match i {
                     Argument::Out(tp, name) => {
                         if tp.kind() == TypeKind::Builtin(crate::ir::argtype::BuiltinTypes::Handle)
                         {
                             s.push_str(
                                 format!(
-                            "response.req_{}.{} = ipc.add_handle(unsafe {{ response.req_{}.{} }})",
+                            "response.req_{}.{} = out_ipc.add_handle(unsafe {{ response.req_{}.{} }})",
                             f.name(),
                             name,
                             f.name(),
@@ -166,11 +210,10 @@ impl BackendRust {
                 }
             } else {
                 match i {
-                    Argument::Out(tp, name) => {
+                    Argument::In(tp, name) => {
                         if tp.kind() == TypeKind::Builtin(crate::ir::argtype::BuiltinTypes::Handle)
                         {
-                            s.push_str(format!("resp_.{} = h[{index}];", name).as_str());
-
+                            s.push_str(format!("    arg.{} = h[{index}];\n", name).as_str());
                             index += 1;
                         }
                     }
@@ -178,7 +221,6 @@ impl BackendRust {
                 }
             }
         }
-
         s
     }
 }
@@ -189,7 +231,7 @@ impl Backend for BackendRust {
         let names = Self::format_inout_structs(func);
         write!(
             out,
-            "req: &{}, req_arena: &MessageArena, resp: &mut {}, resp_arena: &mut MessageArena",
+            "req: &mut {}, req_arena: &MessageArena, resp: &mut {}, resp_arena: &mut MessageArena",
             names.0, names.1
         )
     }
@@ -212,12 +254,16 @@ impl Backend for BackendRust {
 
     ipc.set_mid({});
 
-    unsafe {{ {SERVER_HANDLE}.as_ref().unwrap().call(&mut ipc).unwrap() }};
-
     {}
+
+    if unsafe {{ {SERVER_HANDLE}.as_ref().unwrap().call(&mut ipc) }}.is_ok() {{
+        {}
+        *resp = resp_;
+    }}
 ",
             f.uid(),
-            self.generate_handle_transfer(f, false)
+            self.generate_handle_transfer_client(f, true),
+            self.generate_handle_transfer_client(f, false)
         )
     }
 
@@ -230,7 +276,6 @@ impl Backend for BackendRust {
     }
 
     fn generate_end_func<B: Write>(&self, out: &mut B) -> Result<()> {
-        writeln!(out, "    *resp = resp_;")?;
         writeln!(out, "    Ok(0)")?;
         writeln!(out, "}}")
     }
@@ -293,13 +338,14 @@ impl Backend for BackendRust {
 
         fn dispatch(
             &self,
-            ipc: &mut IpcMessage,
-            request: &Self::DispatchReq,
+            in_ipc: &IpcMessage,
+            out_ipc: &mut IpcMessage,
+            request: &mut Self::DispatchReq,
             req_arena: &MessageArena,
             response: &mut Self::DispatchResp,
             resp_arena: &mut MessageArena,
         ) {{
-            match ipc.mid() {{
+            match in_ipc.mid() {{
                 {}
                 _ => panic!(),
             }}
