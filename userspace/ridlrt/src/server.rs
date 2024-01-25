@@ -55,7 +55,6 @@ pub fn server_dispatch<T: Dispatcher>(info: &ServerInfo<T>) -> Result<(), ErrorT
             &mut res_arena,
         );
 
-        libc::println!("Handles {:?}", reply_message.handles());
         reply_message.set_out_arena(res_arena.as_slice());
         reply_message.set_mid(receive_message.mid());
 

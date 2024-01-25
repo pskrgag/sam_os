@@ -8,7 +8,8 @@ use rtl::arch::PAGE_SIZE;
 use rtl::handle::{Handle, HANDLE_INVALID};
 use rtl::uart::*;
 use rtl::vmm::types::*;
-use interfaces::implementation::nameserver::{FindService, init};
+use interfaces::implementation::nameserver::*;
+use libc::port::Port;
 
 #[main]
 fn main(boot_handle: Handle) {
@@ -21,6 +22,8 @@ fn main(boot_handle: Handle) {
     let mut uart = Uart::init(base);
     let mut b = [1u8; 10];
 
+    let p = Port::create().unwrap();
+
     init(boot_handle);
-    FindService("hello");
+    RegisterService("hello", p.handle());
 }

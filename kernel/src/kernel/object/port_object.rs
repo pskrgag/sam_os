@@ -55,6 +55,21 @@ impl Port {
         })
     }
 
+    fn transfer_handles_from_current(to: &Task, h: &[HandleBase]) -> Option<()> {
+        let cur_task = current().unwrap().task();
+        let cur_table = cur_task.handle_table();
+
+        for i in h {
+            // TODO remove handles in case of an error
+            let h = cur_table.find_poly(*i)?;
+            let new_h = Handle::new(h);
+
+            to.handle_table().add(new_h);
+        }
+
+        Some(())
+    }
+
     fn do_invoke(&self, args: &[usize]) -> Result<usize, ErrorType> {
         use rtl::objects::port::PortInvoke;
 
@@ -74,6 +89,9 @@ impl Port {
                         .ok_or(ErrorType::INVALID_HANDLE)?;
 
                     reply_port.sleepers.lock().push_back(current().unwrap());
+
+                    Self::transfer_handles_from_current(&task, client_msg.handles())
+                        .ok_or(ErrorType::INVALID_HANDLE)?;
 
                     let h = Handle::new(reply_port.clone());
 
@@ -117,15 +135,20 @@ impl Port {
                     .find::<Self>(reply_port)
                     .ok_or(ErrorType::INVALID_HANDLE)?;
 
+                let task = reply_port.task.upgrade().ok_or(ErrorType::TASK_DEAD)?;
+
                 self_table.remove(args[1]);
+                drop(self_table);
 
                 let user_msg = UserPtr::new(args[2] as *mut _);
                 let user_msg = copy_ipc_message_from_user(user_msg).ok_or(ErrorType::FAULT)?;
 
+                Self::transfer_handles_from_current(&task, user_msg.handles())
+                    .ok_or(ErrorType::INVALID_HANDLE)?;
+
                 reply_port.queue.lock().push_back(user_msg);
                 let sleep = reply_port.sleepers.lock().pop_front().unwrap();
 
-                drop(self_table);
 
                 sleep.wake();
                 cur.self_yield();

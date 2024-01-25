@@ -28,12 +28,21 @@ pub struct sam_request_FindService_in {
 #[repr(C, packed)]#[allow(private_interfaces)]
 pub struct sam_request_FindService_out {
     pub h: Handle,}
+#[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
+#[repr(C, packed)]#[allow(private_interfaces)]
+pub struct sam_request_RegisterService_in {
+    pub name: ArenaPtr,    pub h: Handle,}
+#[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
+#[repr(C, packed)]#[allow(private_interfaces)]
+pub struct sam_request_RegisterService_out {
+}
 
     use ridlrt::server::Dispatcher;
     use ridlrt::arena::MessageArena;
 
     pub struct Disp {
         pub cb_FindService: fn(sam_request_FindService_in, req_arena: &MessageArena, resp_arena: &mut MessageArena) -> Result<sam_request_FindService_out, ErrorType>,
+pub cb_RegisterService: fn(sam_request_RegisterService_in, req_arena: &MessageArena, resp_arena: &mut MessageArena) -> Result<sam_request_RegisterService_out, ErrorType>,
 
     }
 
@@ -41,6 +50,7 @@ pub struct sam_request_FindService_out {
     #[repr(C)]
     pub union RequestUnion {
         pub req_FindService: sam_request_FindService_in,
+pub req_RegisterService: sam_request_RegisterService_in,
 
     }
 
@@ -48,6 +58,7 @@ pub struct sam_request_FindService_out {
     #[repr(C)]
     pub union ResponseUnion {
         pub req_FindService: sam_request_FindService_out,
+pub req_RegisterService: sam_request_RegisterService_out,
 
     }
 
@@ -70,6 +81,13 @@ pub struct sam_request_FindService_out {
 
                         response.req_FindService = (self.cb_FindService)(*arg, req_arena, resp_arena).unwrap();
                         response.req_FindService.h = ipc.add_handle(unsafe { response.req_FindService.h })
+                    }
+                            
+                    12853408287206418855 => {
+                        let arg = unsafe { &request.req_RegisterService };
+
+                        response.req_RegisterService = (self.cb_RegisterService)(*arg, req_arena, resp_arena).unwrap();
+                        
                     }
                             
                 _ => panic!(),

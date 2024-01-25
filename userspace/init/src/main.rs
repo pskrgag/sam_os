@@ -7,32 +7,14 @@ use alloc::string::ToString;
 use libc::main;
 use libc::port::Port;
 use libc::task::Task;
-use ridlrt::arena::MessageArena;
-use rtl::handle::Handle;
-use rtl::handle::HANDLE_INVALID;
-use rtl::error::ErrorType;
 use rtl::cpio::Cpio;
+use rtl::handle::*;
 
 mod interface;
-use interface::*;
+
+mod nameserver;
 
 static CPIO: &[u8] = include_bytes!("/tmp/archive.cpio");
-
-fn handle_req(
-    r: sam_request_FindService_in,
-    req_arena: &MessageArena,
-    resp_arena: &mut MessageArena,
-) -> Result<sam_request_FindService_out, ErrorType> {
-    let mut name_buf = [0u8; 100];
-    let size = req_arena.read_slice(r.name, &mut name_buf).unwrap();
-    let name = core::str::from_utf8(&name_buf[..size]).unwrap();
-
-    println!("CLIENT REQ: {name}");
-
-    Ok(sam_request_FindService_out {
-        h: 10,
-    })
-}
 
 #[main]
 fn main(boot_handle: Handle) {
@@ -55,14 +37,5 @@ fn main(boot_handle: Handle) {
         println!("Spawned '{}'", task.name())
     }
 
-    let virt_table = Disp {
-        cb_FindService: handle_req,
-    };
-
-    let info = ridlrt::server::ServerInfo {
-        h: p.handle(),
-        dispatch: virt_table,
-    };
-
-    ridlrt::server::server_dispatch(&info);
+    nameserver::start_nameserver(p);
 }

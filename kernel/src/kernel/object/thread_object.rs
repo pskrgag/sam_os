@@ -14,7 +14,7 @@ use rtl::error::ErrorType;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
 
-const USER_THREAD_STACK_PAGES: usize = 15;
+const USER_THREAD_STACK_PAGES: usize = 20;
 const KERNEL_STACK_PAGES: usize = 5;
 const RR_TICKS: usize = 10;
 
