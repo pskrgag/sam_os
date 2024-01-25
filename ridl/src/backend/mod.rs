@@ -1,4 +1,4 @@
-use crate::ir::function::{Argument, Function};
+use crate::ir::function::Function;
 use crate::ir::interface::Interface;
 use crate::ir::IrObject;
 use std::io::{Result, Write};
@@ -87,9 +87,6 @@ pub fn compile_server<B: Write>(v: &Vec<Box<dyn IrObject>>, out: &mut B, lang: &
     for i in v {
         if let Some(interface) = i.as_any().downcast_ref::<Interface>() {
             for f in interface.functions() {
-                let sn_in = format!("sam_request_{}_in", f.name());
-                let sn_out = format!("sam_request_{}_out", f.name());
-
                 try_generate!(
                     back.generate_request_struct_server(f, out),
                     "generate struct declr"

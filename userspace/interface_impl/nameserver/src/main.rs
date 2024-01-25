@@ -10,6 +10,11 @@ use libc::task::Task;
 use rtl::cpio::Cpio;
 use rtl::handle::*;
 
+#[allow(non_snake_case)]
+#[allow(unused_variables)]
+#[allow(redundant_semicolons)]
+#[allow(dead_code)]
+#[allow(unused_imports)]
 mod interface;
 
 mod nameserver;
@@ -18,7 +23,7 @@ static CPIO: &[u8] = include_bytes!("/tmp/archive.cpio");
 
 #[main]
 fn main(boot_handle: Handle) {
-    println!("Init proccess started");
+    println!("Nameserver proccess started");
 
     assert!(boot_handle == HANDLE_INVALID);
 
@@ -31,7 +36,7 @@ fn main(boot_handle: Handle) {
 
         let elf = i.data();
         let mut task =
-            Task::create_from_elf(elf, "test task".to_string()).expect("Failed to create task");
+            Task::create_from_elf(elf, "task1".to_string()).expect("Failed to create task");
         task.start(p.handle()).unwrap();
 
         println!("Spawned '{}'", task.name())

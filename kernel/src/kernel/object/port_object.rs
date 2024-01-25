@@ -162,7 +162,7 @@ impl Port {
 
                 let c = current().unwrap();
 
-                let mut client_msg;
+                let client_msg;
 
                 loop {
                     if let Some(m) = self.queue.lock().pop_front() {

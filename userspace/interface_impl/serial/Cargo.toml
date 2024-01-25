@@ -6,11 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libc = { path = "../libc" }
-rtl = { path = "../../rtl" }
+libc = { path = "../../libc" }
+rtl = { path = "../../../rtl" }
 bytemuck = {version = "1.14", features = ["derive"]}
-ridlrt = { path = "../ridlrt" }
-interfaces = { path = "../interfaces" }
+ridlrt = { path = "../../ridlrt" }
+interfaces = { path = "../../interfaces" }
 
 [[bin]]
 name = "serial"

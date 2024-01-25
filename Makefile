@@ -12,8 +12,8 @@ all: kernel
 
 ridl:
 	cargo build -p ridl
-	cargo run -p ridl transport interface.idl > userspace/interfaces/src/rt/nameserver.rs
-	cargo run -p ridl server interface.idl > userspace/init/src/interface.rs
+	cargo run -p ridl transport userspace/interfaces/idls/nameserver.idl > userspace/interfaces/src/rt/nameserver.rs
+	cargo run -p ridl server userspace/interfaces/idls/nameserver.idl > userspace/interface_impl/nameserver/src/interface.rs
 
 ridl:
 
@@ -22,7 +22,7 @@ serial: ridl
 	find  target -name "serial" -print0 | cpio -ocv0  > /tmp/archive.cpio
 
 init: serial
-	cargo build -p sam_os_init --target $(TARGET)
+	cargo build -p nameserver --target $(TARGET)
 
 kernel: init
 	RUSTFLAGS="$(RUSTFLAGS)" cargo build --target $(TARGET) --features qemu -p sam_kernel

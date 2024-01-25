@@ -13,7 +13,7 @@ static SERVICES: FakeLock<BTreeMap<String, Handle>> = FakeLock::new(BTreeMap::ne
 fn find_servive(
     r: sam_request_FindService_in,
     req_arena: &MessageArena,
-    resp_arena: &mut MessageArena,
+    _resp_arena: &mut MessageArena,
 ) -> Result<sam_request_FindService_out, ErrorType> {
     let mut name_buf = [0u8; 100];
     let size = req_arena.read_slice(r.name, &mut name_buf).unwrap();
@@ -31,7 +31,7 @@ fn find_servive(
 fn register_service(
     r: sam_request_RegisterService_in,
     req_arena: &MessageArena,
-    resp_arena: &mut MessageArena,
+    _resp_arena: &mut MessageArena,
 ) -> Result<sam_request_RegisterService_out, ErrorType> {
     let mut name_buf = [0u8; 100];
     let size = req_arena.read_slice(r.name, &mut name_buf).unwrap();
@@ -54,5 +54,5 @@ pub fn start_nameserver(p: Port) {
         dispatch: virt_table,
     };
 
-    ridlrt::server::server_dispatch(&info);
+    ridlrt::server::server_dispatch(&info).unwrap();
 }

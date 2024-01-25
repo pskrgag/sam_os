@@ -7,7 +7,7 @@ pub fn init(h: Handle) {
     sam_transport_init(h);
 }
 
-pub fn FindService(name: &str) -> Result<Handle, usize> {
+pub fn find_service(name: &str) -> Result<Handle, usize> {
     let mut req_arena_buf = [0u8; 100];
     let mut resp_arena_buf = [0u8; 100];
     let mut req_arena = MessageArena::new_backed(&mut req_arena_buf);
@@ -28,7 +28,7 @@ pub fn FindService(name: &str) -> Result<Handle, usize> {
     Ok(resp.h)
 }
 
-pub fn RegisterService(name: &str, h: Handle) -> Result<(), usize> {
+pub fn register_servive(name: &str, h: Handle) -> Result<(), usize> {
     let mut req_arena_buf = [0u8; 100];
     let mut resp_arena_buf = [0u8; 100];
     let mut req_arena = MessageArena::new_backed(&mut req_arena_buf);

@@ -156,6 +156,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nameserver"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "libc 0.1.0",
+ "ridlrt",
+ "rtl",
+]
+
+[[package]]
 name = "num_threads"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -263,16 +273,6 @@ dependencies = [
  "rtl",
  "spin",
  "tock-registers",
-]
-
-[[package]]
-name = "sam_os_init"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "libc 0.1.0",
- "ridlrt",
- "rtl",
 ]
 
 [[package]]

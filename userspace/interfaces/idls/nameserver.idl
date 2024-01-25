@@ -1,0 +1,4 @@
+interface {
+	FindService(in String name, out Handle h);
+	RegisterService(in String name, in Handle h);
+}

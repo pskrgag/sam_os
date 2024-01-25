@@ -1,16 +1,16 @@
 [package]
-name = "sam_os_init"
+name = "nameserver"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libc = { path = "../libc", features = ["verbose"] }
-rtl = { path = "../../rtl" }
+libc = { path = "../../libc", features = ["verbose"] }
+rtl = { path = "../../../rtl" }
 bytemuck = {version = "1.14", features = ["derive"]}
-ridlrt = { path = "../ridlrt" }
+ridlrt = { path = "../../ridlrt" }
 
 [[bin]]
-name = "init"
-path = "src/main.rs"
+name = "nameserver"
+# path = "src/main.rs"

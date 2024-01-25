@@ -15,16 +15,15 @@ use libc::port::Port;
 fn main(boot_handle: Handle) {
     assert!(boot_handle != HANDLE_INVALID);
 
-    let base = vms()
-        .map_phys(MemRange::<PhysAddr>::new(0x09000000.into(), PAGE_SIZE))
-        .unwrap();
-
-    let mut uart = Uart::init(base);
-    let mut b = [1u8; 10];
+    // let base = vms()
+    //     .map_phys(MemRange::<PhysAddr>::new(0x09000000.into(), PAGE_SIZE))
+    //     .unwrap();
+    //
+    // let mut uart = Uart::init(base);
 
     let p = Port::create().unwrap();
 
     init(boot_handle);
 
-    RegisterService("serial", p.handle());
+    register_servive("serial", p.handle()).unwrap();
 }

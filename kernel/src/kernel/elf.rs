@@ -177,9 +177,6 @@ fn parse_program_headers(
             - *(pheader.p_vaddr as usize).round_down_page())
         .round_up_page();
 
-        let p = pheader.p_vaddr;
-        let o = pheader.p_offset;
-
         // Handle bss properly
         let p_range = if pheader.p_memsz != pheader.p_filesz {
             let p = page_allocator().alloc(*(pheader.p_memsz as usize).round_up_page() / PAGE_SIZE).unwrap();
