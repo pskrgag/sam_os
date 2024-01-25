@@ -1,11 +1,11 @@
 use crate::kernel::locking::spinlock::Spinlock;
 use crate::mm::allocators::page_alloc::page_allocator;
+use alloc::sync::Arc;
 use object_lib::object;
 use rtl::arch::{PAGE_SHIFT, PAGE_SIZE};
+use rtl::error::ErrorType;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
-use rtl::error::ErrorType;
-use alloc::sync::Arc;
 
 #[derive(Debug)]
 struct VmObjectInner {
@@ -28,6 +28,9 @@ impl VmObjectInner {
 
         let p: PhysAddr = page_allocator().alloc(pages)?;
         let va = VirtAddr::from(p);
+
+        unsafe { va.as_slice_mut::<u8>(pages * PAGE_SIZE).fill(0x00) };
+
         let range = unsafe { va.as_slice_at_offset_mut::<u8>(b.len(), load_addr.page_offset()) };
 
         range.copy_from_slice(b);

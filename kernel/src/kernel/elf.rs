@@ -2,6 +2,8 @@ use alloc::vec::Vec;
 use core::mem::size_of;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
+use crate::mm::allocators::page_alloc::page_allocator;
+use rtl::arch::PAGE_SIZE;
 
 const EI_NIDENT: usize = 16;
 const ELF_MAGIC: [u8; 4] = [0x7f, 'E' as u8, 'L' as u8, 'F' as u8];
@@ -77,6 +79,7 @@ struct ElfPhdr {
     p_align: Elf64_Xword,
 }
 
+#[derive(Debug)]
 pub struct ElfData {
     pub regions: Vec<(MemRange<VirtAddr>, MemRange<PhysAddr>, MappingType)>,
     pub ep: VirtAddr,
@@ -176,17 +179,24 @@ fn parse_program_headers(
 
         let p = pheader.p_vaddr;
         let o = pheader.p_offset;
-        println!("uu 0x{:x} 0x{:x}", p, o);
-        println!("uuUU 0x{:x} 0x{:x}", p, base_pa.bits() as u64 + o);
+
+        // Handle bss properly
+        let p_range = if pheader.p_memsz != pheader.p_filesz {
+            let p = page_allocator().alloc(*(pheader.p_memsz as usize).round_up_page() / PAGE_SIZE).unwrap();
+            MemRange::new(p, pheader.p_memsz as usize)
+        } else {
+            MemRange::new(
+                *(base_pa + PhysAddr::from(pheader.p_offset as usize)).round_down_page(),
+                size,
+            )
+        };
+
         vec.push((
             MemRange::new(
                 *VirtAddr::from(pheader.p_vaddr as usize).round_down_page(),
                 size,
             ),
-            MemRange::new(
-                *(base_pa + PhysAddr::from(pheader.p_offset as usize)).round_down_page(),
-                size,
-            ),
+            p_range,
             flags_to_mt(pheader.p_flags),
         ));
     }

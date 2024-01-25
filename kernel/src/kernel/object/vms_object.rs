@@ -60,6 +60,7 @@ impl Vms {
             },
             VmsInvoke::CREATE_VMO => {
                 let range = unsafe { core::slice::from_raw_parts(args[1] as *const u8, args[2]) };
+                // ToDo: use proper use-copy API
                 let vmo = VmObject::from_buffer(range, args[3].into(), args[4].into())
                     .ok_or(ErrorType::NO_MEMORY)?;
 

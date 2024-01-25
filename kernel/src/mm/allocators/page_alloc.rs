@@ -1,4 +1,8 @@
-use crate::{arch, arch::cpuid::CpuLayout, kernel::misc::{image_end_rounded, image_size}};
+use crate::{
+    arch,
+    arch::cpuid::CpuLayout,
+    kernel::misc::{image_end_rounded, image_size},
+};
 use lock_free_buddy_allocator::buddy_alloc::BuddyAlloc;
 use spin::once::Once;
 

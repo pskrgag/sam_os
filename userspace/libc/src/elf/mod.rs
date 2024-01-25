@@ -46,7 +46,7 @@ impl<'a> Elf<'a> {
     }
 
     pub fn program_header_to_data(&self, h: ProgramHeader) -> Option<&'a [u8]> {
-        Some(&self.raw[h.p_offset as usize..(h.p_offset + h.p_memsz) as usize])
+        Some(&self.raw[h.p_offset as usize..(h.p_offset + h.p_filesz) as usize])
     }
 
     pub fn program_header_to_mapping_type(h: ProgramHeader) -> MappingType {

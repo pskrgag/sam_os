@@ -27,7 +27,7 @@ unsafe impl Sync for PMMBackend {}
 
 impl BackendAllocator for PMMBackend {
     fn allocate(&self, num_pages: usize) -> Option<*mut u8> {
-        let pa: PhysAddr = page_allocator().alloc(num_pages)?.into();
+        let pa = page_allocator().alloc(num_pages)?;
         let va = VirtAddr::from(pa);
 
         Some(va.to_raw_mut::<u8>())

@@ -9,7 +9,7 @@ pub struct StackLayout {
 
 impl StackLayout {
     pub fn new(num_pages: usize) -> Option<Self> {
-        let stack = VirtAddr::from(PhysAddr::from(page_allocator().alloc(num_pages + 2)?));
+        let stack = VirtAddr::from(page_allocator().alloc(num_pages + 2)?);
 
         Some(Self {
             base: stack,
