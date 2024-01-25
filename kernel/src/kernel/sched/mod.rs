@@ -137,6 +137,10 @@ pub fn add_thread(t: Arc<Thread>) {
 }
 
 pub fn init_userspace() {
+
+    use rtl::vmm::types::*;
+    assert!((INIT.as_ptr() as usize).is_page_aligned());
+
     let data = parse_elf(INIT).expect("Failed to parse elf");
     let init_task = init_task();
 

@@ -67,12 +67,14 @@ impl<'a> IpcMessage<'a> {
         self.out_data = Some(data);
     }
 
-    pub fn add_handle(&mut self, h: Handle) {
+    pub fn add_handle(&mut self, h: Handle) -> usize {
         // TODO: that API should not cause a crash
         assert!(self.num_handles != IPC_MAX_HANDLES);
 
         self.handles[self.num_handles] = h;
         self.num_handles += 1;
+
+        self.num_handles - 1
     }
 
     pub fn add_handles(&mut self, h: &[Handle]) {

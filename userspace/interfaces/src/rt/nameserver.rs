@@ -28,19 +28,24 @@ pub struct sam_request_FindService_in {
 #[repr(C, packed)]#[allow(private_interfaces)]
 pub struct sam_request_FindService_out {
     pub h: Handle,}
-pub fn sam_FindService(req: &sam_request_FindService_in, req_arena: &MessageArena, reps: &mut sam_request_FindService_out, resp_arena: Option<&mut MessageArena>) -> Result<usize, usize> {
+pub fn sam_FindService(req: &sam_request_FindService_in, req_arena: &MessageArena, resp: &mut sam_request_FindService_out, resp_arena: &mut MessageArena) -> Result<usize, usize> {
 
     let mut ipc = IpcMessage::new();
 
     ipc.set_out_arena(req_arena.as_slice_allocated());
 
-    if let Some(arena) = resp_arena {
-        ipc.set_in_arena(arena.as_slice());
-    }
+    // if let Some(arena) = resp_arena {
+        ipc.set_in_arena(resp_arena.as_slice());
+    // }
 
     ipc.set_mid(6790964161597629750);
 
     unsafe { SERVER_HANDLE.as_ref().unwrap().call(&mut ipc).unwrap() };
 
+    let h = ipc.handles();
+let mut resp_ = resp_arena.read::<sam_request_FindService_out>(ArenaPtr::request_ptr::<sam_request_FindService_out>()).unwrap();
+resp_.h = h[0];
+
+    *resp = resp_;
     Ok(0)
 }

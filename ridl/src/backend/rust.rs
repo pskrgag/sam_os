@@ -80,12 +80,14 @@ impl BackendRust {
                         let arg = unsafe {{ &request.req_{} }};
 
                         response.req_{} = (self.cb_{})(*arg, req_arena, resp_arena).unwrap();
+                        {}
                     }}
                             ",
                     i.uid(),
                     i.name(),
                     i.name(),
                     i.name(),
+                    self.generate_handle_transfer(i, true),
                 )
                 .as_str(),
             );
@@ -124,6 +126,61 @@ impl BackendRust {
         s.push_str(format!("}}\n").as_str());
         s
     }
+
+    fn generate_handle_transfer(&self, f: &Function, server: bool) -> String {
+        let mut s = String::new();
+        let mut index = 0;
+
+        if !server {
+            let names = Self::format_inout_structs(f);
+
+            s.push_str(format!("let h = ipc.handles();\n").as_str());
+            s.push_str(
+                format!(
+                    "let mut resp_ = resp_arena.read::<{}>(ArenaPtr::request_ptr::<{}>()).unwrap();\n",
+                    names.1, names.1
+                )
+                .as_str(),
+            );
+        }
+
+        for i in f.args() {
+            if server {
+                match i {
+                    Argument::Out(tp, name) => {
+                        if tp.kind() == TypeKind::Builtin(crate::ir::argtype::BuiltinTypes::Handle)
+                        {
+                            s.push_str(
+                                format!(
+                            "response.req_{}.{} = ipc.add_handle(unsafe {{ response.req_{}.{} }})",
+                            f.name(),
+                            name,
+                            f.name(),
+                            name
+                        )
+                                .as_str(),
+                            );
+                        }
+                    }
+                    _ => {}
+                }
+            } else {
+                match i {
+                    Argument::Out(tp, name) => {
+                        if tp.kind() == TypeKind::Builtin(crate::ir::argtype::BuiltinTypes::Handle)
+                        {
+                            s.push_str(format!("resp_.{} = h[{index}];", name).as_str());
+
+                            index += 1;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        s
+    }
 }
 
 impl Backend for BackendRust {
@@ -132,7 +189,7 @@ impl Backend for BackendRust {
         let names = Self::format_inout_structs(func);
         write!(
             out,
-            "req: &{}, req_arena: &MessageArena, reps: &mut {}, resp_arena: Option<&mut MessageArena>",
+            "req: &{}, req_arena: &MessageArena, resp: &mut {}, resp_arena: &mut MessageArena",
             names.0, names.1
         )
     }
@@ -149,15 +206,18 @@ impl Backend for BackendRust {
 
     ipc.set_out_arena(req_arena.as_slice_allocated());
 
-    if let Some(arena) = resp_arena {{
-        ipc.set_in_arena(arena.as_slice());
-    }}
+    // if let Some(arena) = resp_arena {{
+        ipc.set_in_arena(resp_arena.as_slice());
+    // }}
 
     ipc.set_mid({});
 
     unsafe {{ {SERVER_HANDLE}.as_ref().unwrap().call(&mut ipc).unwrap() }};
+
+    {}
 ",
-            f.uid()
+            f.uid(),
+            self.generate_handle_transfer(f, false)
         )
     }
 
@@ -170,6 +230,7 @@ impl Backend for BackendRust {
     }
 
     fn generate_end_func<B: Write>(&self, out: &mut B) -> Result<()> {
+        writeln!(out, "    *resp = resp_;")?;
         writeln!(out, "    Ok(0)")?;
         writeln!(out, "}}")
     }
@@ -232,13 +293,13 @@ impl Backend for BackendRust {
 
         fn dispatch(
             &self,
-            mid: usize,
+            ipc: &mut IpcMessage,
             request: &Self::DispatchReq,
             req_arena: &MessageArena,
             response: &mut Self::DispatchResp,
             resp_arena: &mut MessageArena,
         ) {{
-            match mid {{
+            match ipc.mid() {{
                 {}
                 _ => panic!(),
             }}

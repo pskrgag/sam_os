@@ -11,7 +11,7 @@ pub trait Dispatcher {
 
     fn dispatch(
         &self,
-        mid: usize,
+        ipc: &mut IpcMessage,
         request: &Self::DispatchReq,
         req_arena: &MessageArena,
         response: &mut Self::DispatchResp,
@@ -43,16 +43,19 @@ pub fn server_dispatch<T: Dispatcher>(info: &ServerInfo<T>) -> Result<(), ErrorT
         let req = req_arena.read::<T::DispatchReq>(ArenaPtr::request_ptr::<T::DispatchReq>()).unwrap();
 
         let resp = resp.ptr_to_native_in_arena(&res_arena).unwrap();
+        let mut reply_message = IpcMessage::new();
+
+        reply_message.set_mid(receive_message.mid());
 
         info.dispatch.dispatch(
-            receive_message.mid(),
+            &mut reply_message,
             &req,
             &req_arena,
             resp,
             &mut res_arena,
         );
 
-        let mut reply_message = IpcMessage::new();
+        libc::println!("Handles {:?}", reply_message.handles());
         reply_message.set_out_arena(res_arena.as_slice());
         reply_message.set_mid(receive_message.mid());
 

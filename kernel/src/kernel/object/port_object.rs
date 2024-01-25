@@ -29,7 +29,6 @@ fn copy_ipc_message_from_user(
 ) -> Option<IpcMessage<'static>> {
     let user_msg = user_msg.read()?;
 
-    let h = user_msg.handles();
     let data = user_msg.out_arena();
 
     // Simply move, by bit-copy all fields, which will preserve user-addresses inside slices
@@ -41,8 +40,6 @@ fn copy_ipc_message_from_user(
 
         msg.set_out_arena(Box::leak(user_buffer));
     }
-
-    msg.add_handles(h);
 
     msg.set_reply_port(user_msg.reply_port());
 
@@ -63,7 +60,7 @@ impl Port {
 
         match PortInvoke::from_bits(args[0]).ok_or(ErrorType::NO_OPERATION)? {
             PortInvoke::CALL => {
-                let client_msg_uptr = UserPtr::new(args[1] as *mut IpcMessage);
+                let mut client_msg_uptr = UserPtr::new(args[1] as *mut IpcMessage);
                 let mut client_msg =
                     copy_ipc_message_from_user(client_msg_uptr).ok_or(ErrorType::FAULT)?;
 
@@ -94,9 +91,14 @@ impl Port {
                         let mut ud = UserPtr::new_array(d.as_ptr(), d.len());
 
                         if let Some(d1) = server_msg.out_arena() {
+                            println!("do write {}", d1.len());
                             ud.write_array(d1)?;
                         }
                     }
+
+                    println!("server_msg handles {:?}", server_msg.handles());
+                    client_msg.add_handles(server_msg.handles());
+                    client_msg_uptr.write(&client_msg)?;
 
                     Ok(())
                 } else {

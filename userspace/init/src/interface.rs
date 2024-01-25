@@ -57,18 +57,19 @@ pub struct sam_request_FindService_out {
 
         fn dispatch(
             &self,
-            mid: usize,
+            ipc: &mut IpcMessage,
             request: &Self::DispatchReq,
             req_arena: &MessageArena,
             response: &mut Self::DispatchResp,
             resp_arena: &mut MessageArena,
         ) {
-            match mid {
+            match ipc.mid() {
                 
                     6790964161597629750 => {
                         let arg = unsafe { &request.req_FindService };
 
                         response.req_FindService = (self.cb_FindService)(*arg, req_arena, resp_arena).unwrap();
+                        response.req_FindService.h = ipc.add_handle(unsafe { response.req_FindService.h })
                     }
                             
                 _ => panic!(),

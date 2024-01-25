@@ -179,6 +179,14 @@ impl Add for PhysAddr {
     }
 }
 
+impl Sub for PhysAddr {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Self(self.0 - other.0)
+    }
+}
+
 impl Sub for Pfn {
     type Output = usize;
 

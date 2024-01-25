@@ -149,13 +149,19 @@ fn flags_to_mt(flags: Elf64_Word) -> MappingType {
     }
 }
 
+// TODO: that shit needs rework
 fn parse_program_headers(
     data: &mut &[u8],
     header: &ElfHeader,
 ) -> Option<Vec<(MemRange<VirtAddr>, MemRange<PhysAddr>, MappingType)>> {
     let mut vec = Vec::new();
     let mut data = &data[header.e_phoff as usize - core::mem::size_of::<ElfHeader>()..];
-    let base_pa = PhysAddr::from(VirtAddr::from_raw(data.as_ptr()));
+
+    // I have no time to refactor it. Leaving as is for now, since i test IPC
+    let base_pa = PhysAddr::from(VirtAddr::from_raw((*data).as_ptr()))
+        - PhysAddr::from(core::mem::size_of::<ElfHeader>());
+
+    assert!(base_pa.is_page_aligned());
 
     for _ in 0..header.e_phnum {
         let pheader = read_data::<ElfPhdr>(&mut data);
@@ -168,6 +174,10 @@ fn parse_program_headers(
             - *(pheader.p_vaddr as usize).round_down_page())
         .round_up_page();
 
+        let p = pheader.p_vaddr;
+        let o = pheader.p_offset;
+        println!("uu 0x{:x} 0x{:x}", p, o);
+        println!("uuUU 0x{:x} 0x{:x}", p, base_pa.bits() as u64 + o);
         vec.push((
             MemRange::new(
                 *VirtAddr::from(pheader.p_vaddr as usize).round_down_page(),

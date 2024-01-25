@@ -27,8 +27,6 @@ fn handle_req(
     let size = req_arena.read_slice(r.name, &mut name_buf).unwrap();
     let name = core::str::from_utf8(&name_buf[..size]).unwrap();
 
-    let p = r.name;
-    println!("CLIENT REQ: {:?}", p);
     println!("CLIENT REQ: {name}");
 
     Ok(sam_request_FindService_out {
