@@ -50,7 +50,6 @@ SECTIONS
         *(.fixup)
         efixup = .;
 
-        FILL(0x00)
         . = ALIGN(4096);
         edata = .;
     }
@@ -59,7 +58,8 @@ SECTIONS
     {
         sbss = .;
         *(.bss .bss.*)
-        *(COMMON)
+        /* *(COMMON) */
+        FILL(0x00)
         . = ALIGN(PAGE_SIZE); /* Align up to page size */
         ebss = .;
     }
@@ -72,7 +72,7 @@ SECTIONS
         edatapercpu = .;
     }
 
-    . = . + 0x100000;
+    . = . + 0x20000;
     . = ALIGN(16);
     __STACK_START = .; /* Stack grows from here towards 0x0. */
 

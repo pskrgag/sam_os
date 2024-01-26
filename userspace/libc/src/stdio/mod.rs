@@ -35,6 +35,7 @@ macro_rules! println_libc {
 }
 
 #[cfg(feature = "verbose")]
+#[allow(unused_macros)]
 macro_rules! println_libc_verbose {
     () => (print!("\n"));
     ($($arg:tt)*) => ({
@@ -43,6 +44,7 @@ macro_rules! println_libc_verbose {
 }
 
 #[cfg(not(feature = "verbose"))]
+#[allow(unused_macros)]
 macro_rules! println_libc_verbose {
     () => (print!("\n"));
     ($($arg:tt)*) => ({ })

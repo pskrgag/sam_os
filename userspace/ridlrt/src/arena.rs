@@ -43,6 +43,13 @@ impl<'a> MessageArena<'a> {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.free = self.as_slice();
+        self.start = self.free.as_ptr() as usize;
+        self.allocated = 0;
+        self.size = self.free.len();
+    }
+
     fn allocate_impl<T>(&mut self, size: usize, align: usize) -> Option<ArenaPtr> {
         let diff =
             (self.free.as_ptr() as usize).next_multiple_of(align) - self.free.as_ptr() as usize;

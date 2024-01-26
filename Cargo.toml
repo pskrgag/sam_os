@@ -3,7 +3,8 @@ members = [
 	"ridl",
 	"rtl",
 	"userspace/interface_impl/serial",
+	"userspace/apps/console",
 	"userspace/interface_impl/nameserver",
-	"kernel", "userspace/ridlrt", "userspace/interfaces",
+	"kernel", "userspace/ridlrt", "userspace/interfaces", "userspace/apps/console",
 ]
 resolver = "1"

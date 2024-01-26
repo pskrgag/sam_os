@@ -66,6 +66,10 @@ impl Task {
         s
     }
 
+    pub fn id(&self) -> u32 {
+        self.id
+    }
+
     pub fn handle_table(&self) -> SpinlockGuard<HandleTable> {
         self.handles.lock()
     }
@@ -94,6 +98,9 @@ impl Task {
 
     fn do_invoke(&self, args: &[usize]) -> Result<usize, ErrorType> {
         use rtl::objects::task::TaskInvoke;
+        use core::sync::atomic::{AtomicU16, Ordering};
+
+        static ID_THREAD: AtomicU16 = AtomicU16::new(1);
 
         match TaskInvoke::from_bits(args[0]).ok_or(ErrorType::NO_OPERATION)? {
             TaskInvoke::START => {
@@ -105,7 +112,7 @@ impl Task {
 
                 // ToDo: this is ugly as fuck
                 let s = cur_table.find::<Task>(self.self_handle).unwrap();
-                let init_thread = Thread::new(s.clone(), 10);
+                let init_thread = Thread::new(s.clone(), ID_THREAD.fetch_add(1, Ordering::Relaxed));
 
                 let mut boot_handle: HandleBase = HANDLE_INVALID;
 

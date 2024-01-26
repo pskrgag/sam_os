@@ -7,7 +7,6 @@ use std::io::{Result, Write};
 pub struct BackendRust {}
 
 const SERVER_HANDLE: &str = "SERVER_HANDLE";
-const REQUEST_HEADER_STRUCT_NAME: &str = "RequestHeader";
 const DERIVES: &str = "#[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]\n#[repr(C, packed)]#[allow(private_interfaces)]\n";
 
 impl BackendRust {
@@ -81,8 +80,14 @@ impl BackendRust {
 
                         {};
 
-                        response.req_{} = (self.cb_{})(*arg, req_arena, resp_arena).unwrap();
-                        {}
+                        match (self.cb_{})(*arg, req_arena, resp_arena) {{
+                            Ok(rr) => {{ 
+                                response.req_{} = rr;
+                                {}
+                            }},
+                            Err(err) => response.req_{}.error = err,
+                        }};
+
                     }}
                             ",
                     i.uid(),
@@ -91,6 +96,7 @@ impl BackendRust {
                     i.name(),
                     i.name(),
                     self.generate_handle_transfer_server(i, false),
+                    i.name(),
                 )
                 .as_str(),
             );
@@ -117,6 +123,8 @@ impl BackendRust {
         s.push_str(format!("}}\n").as_str());
         s.push_str(format!("{DERIVES}pub struct {} {{\n", names.1).as_str());
 
+        s.push_str(format!("    pub error: ErrorType,").as_str());
+
         for i in arg {
             match i {
                 Argument::Out(t, name) => {
@@ -140,7 +148,12 @@ impl BackendRust {
             s.push_str(format!("let h = ipc.handles();\n").as_str());
             s.push_str(
                 format!(
-                    "let mut resp_ = resp_arena.read::<{}>(ArenaPtr::request_ptr::<{}>()).unwrap();\n",
+                    "let mut resp_ = resp_arena.read::<{}>(ArenaPtr::request_ptr::<{}>()).unwrap();
+                     let error = resp_.error;
+                     if error != 0.into() {{
+                        return Err(error.into());
+                     }}
+                    ",
                     names.1, names.1
                 )
                 .as_str(),
@@ -256,10 +269,9 @@ impl Backend for BackendRust {
 
     {}
 
-    if unsafe {{ {SERVER_HANDLE}.as_ref().unwrap().call(&mut ipc) }}.is_ok() {{
-        {}
-        *resp = resp_;
-    }}
+    unsafe {{ {SERVER_HANDLE}.as_ref().unwrap().call(&mut ipc) }}?;
+    {}
+    *resp = resp_;
 ",
             f.uid(),
             self.generate_handle_transfer_client(f, true),
@@ -281,11 +293,6 @@ impl Backend for BackendRust {
     }
 
     fn generate_file_start<B: Write>(&self, out: &mut B) -> Result<()> {
-        let req = format!(
-            "{DERIVES}struct {REQUEST_HEADER_STRUCT_NAME} {{
-    pub num: u64,
-}}"
-        );
         writeln!(out, "use libc::port::Port;")?;
         writeln!(out, "use rtl::handle::*;")?;
         writeln!(out, "use bytemuck::*;")?;
@@ -294,8 +301,7 @@ impl Backend for BackendRust {
         writeln!(out, "use ridlrt::arena::*;")?;
         writeln!(out, "use libc::port::*;")?;
         writeln!(out, "")?;
-        writeln!(out, "static mut {SERVER_HANDLE}: Option<Port> = None;\n")?;
-        writeln!(out, "{req}\n")
+        writeln!(out, "static mut {SERVER_HANDLE}: Option<Port> = None;\n")
     }
 
     fn generate_transport_init<B: Write>(&self, out: &mut B) -> Result<()> {

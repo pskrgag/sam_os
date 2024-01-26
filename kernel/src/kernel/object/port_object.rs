@@ -59,13 +59,14 @@ impl Port {
         let cur_task = current().unwrap().task();
         let cur_table = cur_task.handle_table();
 
-        use alloc::format;
         for i in h {
-            // TODO remove handles in case of an error
-            let h = cur_table.find_poly(*i).expect(format!("failed to find {i}").as_str());
-            let new_h = Handle::new(h);
+            if *i != 0 {
+                // TODO remove handles in case of an error
+                let h = cur_table.find_poly(*i)?;
+                let new_h = Handle::new(h);
 
-            to.handle_table().add(new_h);
+                to.handle_table().add(new_h);
+            }
         }
 
         Some(())
@@ -113,6 +114,8 @@ impl Port {
                         let mut ud = UserPtr::new_array(d.as_ptr(), d.len());
 
                         if let Some(d1) = server_msg.out_arena() {
+                            // println!("d1 {:?}", d1);
+                            // println!("d1.len() {} d.len() {}", d1.len(), d.len());
                             ud.write_array(d1)?;
                         }
                     }

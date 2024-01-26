@@ -12,16 +12,21 @@ all: kernel
 
 ridl:
 	cargo build -p ridl
-	cargo run -p ridl transport userspace/interfaces/idls/nameserver.idl > userspace/interfaces/src/rt/nameserver.rs
-	cargo run -p ridl server userspace/interfaces/idls/nameserver.idl > userspace/interface_impl/nameserver/src/interface.rs
 
-ridl:
+	cargo run -p ridl transport userspace/interfaces/idls/nameserver.idl > userspace/interfaces/src/client/nameserver.rs
+	cargo run -p ridl server userspace/interfaces/idls/nameserver.idl > userspace/interfaces/src/server/nameserver.rs
 
-serial: ridl
+	cargo run -p ridl transport userspace/interfaces/idls/serial.idl > userspace/interfaces/src/client/serial.rs
+	cargo run -p ridl server userspace/interfaces/idls/serial.idl > userspace/interfaces/src/server/serial.rs
+
+app: ridl
+	cargo build -p console --target $(TARGET)
+
+serial: app
 	cargo build --target $(TARGET) -p serial
-	find  target -name "serial" -print0 | cpio -ocv0  > /tmp/archive.cpio
 
 init: serial
+	find ./target -name console -o -name serial | cpio -ocv > /tmp/archive.cpio
 	cargo build -p nameserver --target $(TARGET)
 
 kernel: init

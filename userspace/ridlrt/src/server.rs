@@ -26,8 +26,8 @@ pub struct ServerInfo<T: Dispatcher> {
 }
 
 pub fn server_dispatch<T: Dispatcher>(info: &ServerInfo<T>) -> Result<(), ErrorType> {
-    let mut req_stack = [0u8; 1000];
-    let mut res_stack = [0u8; 1000];
+    let mut req_stack = [0u8; 1100];
+    let mut res_stack = [0u8; 1100];
 
     let p = Port::new(info.h);
 
@@ -53,9 +53,10 @@ pub fn server_dispatch<T: Dispatcher>(info: &ServerInfo<T>) -> Result<(), ErrorT
         info.dispatch
             .dispatch(&receive_message, &mut reply_message, &mut req, &req_arena, resp, &mut res_arena);
 
-        reply_message.set_out_arena(res_arena.as_slice());
+        reply_message.set_out_arena(res_arena.as_slice_allocated());
         reply_message.set_mid(receive_message.mid());
 
         p.send_and_wait(Port::new(receive_message.reply_port()), &reply_message, &mut receive_message)?;
+        res_arena.reset();
     }
 }

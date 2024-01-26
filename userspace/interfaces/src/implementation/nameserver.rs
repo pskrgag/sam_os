@@ -1,13 +1,14 @@
-use crate::rt::nameserver::*;
+use crate::client::nameserver::*;
 use bytemuck::*;
 use ridlrt::arena::*;
+use rtl::error::*;
 use rtl::handle::*;
 
 pub fn init(h: Handle) {
     sam_transport_init(h);
 }
 
-pub fn find_service(name: &str) -> Result<Handle, usize> {
+pub fn find_service(name: &str) -> Result<Handle, ErrorType> {
     let mut req_arena_buf = [0u8; 100];
     let mut resp_arena_buf = [0u8; 100];
     let mut req_arena = MessageArena::new_backed(&mut req_arena_buf);
@@ -23,9 +24,18 @@ pub fn find_service(name: &str) -> Result<Handle, usize> {
 
     req.name = req_arena.allocate_slice(name.as_bytes()).unwrap();
 
-    sam_FindService(&mut req, &req_arena, &mut resp, &mut resp_arena).unwrap();
+    while sam_FindService(&mut req, &req_arena, &mut resp, &mut resp_arena)
+        == Err(ErrorType::TRY_AGAIN.into())
+    {
+        libc::syscalls::Syscall::sys_yield();
+    }
 
-    Ok(resp.h)
+    let error = resp.error;
+    if error != 0.into() {
+        Err(resp.error)
+    } else {
+        Ok(resp.h)
+    }
 }
 
 pub fn register_servive(name: &str, h: Handle) -> Result<(), usize> {
@@ -45,7 +55,11 @@ pub fn register_servive(name: &str, h: Handle) -> Result<(), usize> {
     req.h = h;
     req.name = req_arena.allocate_slice(name.as_bytes()).unwrap();
 
-    sam_RegisterService(&mut req, &req_arena, &mut resp, &mut resp_arena).unwrap();
+    while sam_RegisterService(&mut req, &req_arena, &mut resp, &mut resp_arena)
+        == Err(ErrorType::TRY_AGAIN.into())
+    {
+        libc::syscalls::Syscall::sys_yield();
+    }
 
     Ok(())
 }

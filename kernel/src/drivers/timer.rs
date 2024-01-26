@@ -2,6 +2,13 @@ use crate::drivers::irq::irq;
 use crate::kernel::sched::current;
 use core::arch::asm;
 
+pub fn disable() {
+    unsafe {
+        asm!("mov x0, #0");
+        asm!("msr CNTP_CTL_EL0, x0");
+    }
+}
+
 pub fn init() {
     reprogram();
 

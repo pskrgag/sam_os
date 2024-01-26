@@ -50,6 +50,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "console"
+version = "0.1.0"
+dependencies = [
+ "interfaces",
+ "libc 0.1.0",
+ "rtl",
+]
+
+[[package]]
 name = "cortex-a"
 version = "7.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -160,6 +169,7 @@ name = "nameserver"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "interfaces",
  "libc 0.1.0",
  "ridlrt",
  "rtl",
@@ -241,6 +251,7 @@ name = "rtl"
 version = "0.1.0"
 dependencies = [
  "bitflags",
+ "bytemuck",
  "static_assertions",
 ]
 

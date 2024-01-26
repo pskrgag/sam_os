@@ -3,27 +3,20 @@
 #![feature(format_args_nl)]
 
 use libc::main;
-use libc::vmm::vms::vms;
-use rtl::arch::PAGE_SIZE;
 use rtl::handle::{Handle, HANDLE_INVALID};
-use rtl::uart::*;
-use rtl::vmm::types::*;
-use interfaces::implementation::nameserver::*;
+use interfaces::implementation::nameserver;
 use libc::port::Port;
+
+mod serial;
 
 #[main]
 fn main(boot_handle: Handle) {
     assert!(boot_handle != HANDLE_INVALID);
 
-    // let base = vms()
-    //     .map_phys(MemRange::<PhysAddr>::new(0x09000000.into(), PAGE_SIZE))
-    //     .unwrap();
-    //
-    // let mut uart = Uart::init(base);
-
     let p = Port::create().unwrap();
 
-    init(boot_handle);
+    nameserver::init(boot_handle);
+    nameserver::register_servive("serial", p.handle()).unwrap();
 
-    register_servive("serial", p.handle()).unwrap();
+    serial::start_serial(p);
 }

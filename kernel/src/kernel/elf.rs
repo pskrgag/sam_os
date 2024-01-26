@@ -131,14 +131,6 @@ fn check_header(data: &mut &[u8]) -> Option<ElfHeader> {
         _ => None,
     }?;
 
-    // #[allow(unaligned_references)]
-    // unsafe {
-    //     println!(
-    //         "Entry point 0x{:x}",
-    //         (&header.e_entry as *const u64).read_unaligned()
-    //     );
-    // }
-
     Some(header)
 }
 
@@ -179,8 +171,8 @@ fn parse_program_headers(
 
         // Handle bss properly
         let p_range = if pheader.p_memsz != pheader.p_filesz {
-            let p = page_allocator().alloc(*(pheader.p_memsz as usize).round_up_page() / PAGE_SIZE).unwrap();
-            MemRange::new(p, pheader.p_memsz as usize)
+            let p = page_allocator().alloc(*(size as usize).round_up_page() / PAGE_SIZE).unwrap();
+            MemRange::new(p, size)
         } else {
             MemRange::new(
                 *(base_pa + PhysAddr::from(pheader.p_offset as usize)).round_down_page(),

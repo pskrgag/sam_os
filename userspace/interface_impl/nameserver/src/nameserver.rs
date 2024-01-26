@@ -1,4 +1,4 @@
-use crate::interface::*;
+use interfaces::server::nameserver::*;
 use libc::port::Port;
 use ridlrt::arena::MessageArena;
 use rtl::error::ErrorType;
@@ -22,10 +22,12 @@ fn find_servive(
     let h = SERVICES
         .get()
         .get(&name.to_string())
-        .ok_or(ErrorType::INVALID_ARGUMENT)
-        .unwrap();
+        .ok_or(ErrorType::INVALID_ARGUMENT)?;
 
-    Ok(sam_request_FindService_out { h: *h })
+    Ok(sam_request_FindService_out {
+        error: 0.into(),
+        h: *h,
+    })
 }
 
 fn register_service(
@@ -40,7 +42,7 @@ fn register_service(
     SERVICES.get().insert(name.to_string(), r.h);
 
     println!("Registered service '{name}'");
-    Ok(sam_request_RegisterService_out {})
+    Ok(sam_request_RegisterService_out { error: 0.into() })
 }
 
 pub fn start_nameserver(p: Port) {

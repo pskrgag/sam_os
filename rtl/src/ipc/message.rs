@@ -63,7 +63,6 @@ impl<'a> IpcMessage<'a> {
     }
 
     pub fn set_out_arena(&mut self, data: &'a [u8]) {
-        // assert!(self.out_data.is_none());
         self.out_data = Some(data);
     }
 

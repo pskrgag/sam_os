@@ -11,8 +11,13 @@ fn on_panic(info: &PanicInfo) -> ! {
         let fp: usize;
 
         disable_all();
+        let id = if let Some(c) = crate::sched::current() {
+            c.id()
+        } else {
+            u16::MAX
+        };
         println!("--- cut here ---");
-        println!("Kernel Panic!");
+        println!("Kernel Panic! In context of {}", id);
 
         if let Some(m) = info.message() {
             println!("{}", m);

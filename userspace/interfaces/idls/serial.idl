@@ -1,0 +1,5 @@
+interface {
+	ReadByte(out U8 b);
+	WriteByte(in U8 b);
+	WriteBytes(in String str);
+}

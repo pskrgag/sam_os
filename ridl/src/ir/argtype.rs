@@ -24,6 +24,7 @@ pub enum BuiltinTypes {
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum TypeKind {
     Builtin(BuiltinTypes),
+    #[allow(dead_code)]
     UserDefined(UserStruct)
 }
 

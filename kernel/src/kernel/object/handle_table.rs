@@ -4,7 +4,7 @@ use crate::make_array;
 use alloc::sync::Arc;
 use rtl::handle::HandleBase;
 
-const MAX_HANDLES: usize = 15;
+const MAX_HANDLES: usize = 20;
 
 // This is SHIT! Must be replaced with radix trie-like stuff,
 // but for my own sake, I will leave it as simple array

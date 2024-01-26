@@ -8,12 +8,6 @@ use libc::port::*;
 
 static mut SERVER_HANDLE: Option<Port> = None;
 
-#[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
-#[repr(C, packed)]#[allow(private_interfaces)]
-struct RequestHeader {
-    pub num: u64,
-}
-
 pub fn sam_transport_init(h: Handle) {
     if h != HANDLE_INVALID {
         unsafe { SERVER_HANDLE = Some(Port::new(h)); }
@@ -27,7 +21,7 @@ pub struct sam_request_FindService_in {
 #[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
 #[repr(C, packed)]#[allow(private_interfaces)]
 pub struct sam_request_FindService_out {
-    pub h: Handle,}
+    pub error: ErrorType,    pub h: Handle,}
 #[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
 #[repr(C, packed)]#[allow(private_interfaces)]
 pub struct sam_request_RegisterService_in {
@@ -35,7 +29,7 @@ pub struct sam_request_RegisterService_in {
 #[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
 #[repr(C, packed)]#[allow(private_interfaces)]
 pub struct sam_request_RegisterService_out {
-}
+    pub error: ErrorType,}
 
     use ridlrt::server::Dispatcher;
     use ridlrt::arena::MessageArena;
@@ -83,8 +77,14 @@ pub req_RegisterService: sam_request_RegisterService_out,
                         let h = in_ipc.handles();
 ;
 
-                        response.req_FindService = (self.cb_FindService)(*arg, req_arena, resp_arena).unwrap();
-                        response.req_FindService.h = out_ipc.add_handle(unsafe { response.req_FindService.h })
+                        match (self.cb_FindService)(*arg, req_arena, resp_arena) {
+                            Ok(rr) => { 
+                                response.req_FindService = rr;
+                                response.req_FindService.h = out_ipc.add_handle(unsafe { response.req_FindService.h })
+                            },
+                            Err(err) => response.req_FindService.error = err,
+                        };
+
                     }
                             
                     12853408287206418855 => {
@@ -94,8 +94,14 @@ pub req_RegisterService: sam_request_RegisterService_out,
     arg.h = h[0];
 ;
 
-                        response.req_RegisterService = (self.cb_RegisterService)(*arg, req_arena, resp_arena).unwrap();
-                        
+                        match (self.cb_RegisterService)(*arg, req_arena, resp_arena) {
+                            Ok(rr) => { 
+                                response.req_RegisterService = rr;
+                                
+                            },
+                            Err(err) => response.req_RegisterService.error = err,
+                        };
+
                     }
                             
                 _ => panic!(),

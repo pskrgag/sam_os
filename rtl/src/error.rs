@@ -1,6 +1,9 @@
 use bitflags::bitflags;
+use bytemuck::*;
 
 bitflags! {
+    #[derive(Zeroable, Pod)]
+    #[repr(C)]
     pub struct ErrorType: usize {
         const OK = 0;
         const INVALID_ARGUMENT = 1;
@@ -16,5 +19,11 @@ bitflags! {
 impl From<ErrorType> for usize {
     fn from(value: ErrorType) -> Self {
         value.bits()
+    }
+}
+
+impl From<usize> for ErrorType {
+    fn from(value: usize) -> Self {
+        ErrorType::from_bits(value).unwrap()
     }
 }

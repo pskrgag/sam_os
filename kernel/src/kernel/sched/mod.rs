@@ -33,7 +33,7 @@ macro_rules! include_bytes_align_as {
     }};
 }
 
-#[repr(align(4096))]
+#[repr(align(0x1000))]
 struct Aligned;
 
 static INIT: &[u8] = include_bytes_align_as!(
@@ -73,9 +73,9 @@ impl Scheduler {
         self.rq.move_by_pred(|x| x.state() == ThreadState::Running);
 
         // If rq is empty -- do noting
-        if self.rq.empty() {
-            return;
-        }
+        // if self.rq.empty(){
+        //     return;
+        // }
 
         if let Some(cur) = current() {
             match cur.state() {
@@ -88,7 +88,7 @@ impl Scheduler {
             if let Some(next) = self.rq.pop() {
                 next.set_state(ThreadState::Running);
 
-                println!("Switching to {} --> {}", cur.id(), next.id());
+                // println!("Switching to {} --> {}", cur.id(), next.id());
 
                 unsafe {
                     let ctx = cur.ctx_mut();
@@ -98,6 +98,9 @@ impl Scheduler {
 
                     switch_to(ctx as _, ctx_next as _);
                 }
+            } else if cur.state() == ThreadState::WaitingMessage {
+                crate::drivers::timer::disable();
+                unsafe { core::arch::asm!("wfi") };
             }
         } else {
             let mut ctx = Context::default(); // tmp storage
@@ -149,10 +152,13 @@ pub fn init_userspace() {
     let init_vms = init_task.vms();
 
     for mut i in data.regions {
+        println!("{:?} {:?}", i.0, i.1);
         i.0.align_page();
         i.1.align_page();
         init_vms.vm_map(i.0, i.1, i.2).expect("Failed to map");
     }
+
+    println!("Started userspace...");
 
     init_thread.init_user(data.ep);
 

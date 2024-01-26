@@ -10,13 +10,6 @@ use libc::task::Task;
 use rtl::cpio::Cpio;
 use rtl::handle::*;
 
-#[allow(non_snake_case)]
-#[allow(unused_variables)]
-#[allow(redundant_semicolons)]
-#[allow(dead_code)]
-#[allow(unused_imports)]
-mod interface;
-
 mod nameserver;
 
 static CPIO: &[u8] = include_bytes!("/tmp/archive.cpio");
@@ -42,5 +35,6 @@ fn main(boot_handle: Handle) {
         println!("Spawned '{}'", task.name())
     }
 
+    println!("Serving nameserver interface...");
     nameserver::start_nameserver(p);
 }
