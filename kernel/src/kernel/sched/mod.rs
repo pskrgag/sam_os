@@ -88,7 +88,7 @@ impl Scheduler {
             if let Some(next) = self.rq.pop() {
                 next.set_state(ThreadState::Running);
 
-                // println!("Switching to {} --> {}", cur.id(), next.id());
+                println!("Switching to {} --> {}", cur.id(), next.id());
 
                 unsafe {
                     let ctx = cur.ctx_mut();

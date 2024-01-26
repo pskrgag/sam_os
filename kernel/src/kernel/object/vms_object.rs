@@ -5,9 +5,10 @@ use crate::mm::paging::page_table::MmError;
 use crate::mm::vms::VmsInner;
 use alloc::sync::Arc;
 use object_lib::object;
+use qrwlock::RwLock;
 use rtl::error::ErrorType;
 use rtl::vmm::{types::*, MappingType};
-use qrwlock::RwLock;
+use crate::mm::user_buffer::UserPtr;
 
 #[derive(object)]
 pub struct Vms {
@@ -59,10 +60,23 @@ impl Vms {
                 Err(_) => Err(ErrorType::INVALID_ARGUMENT),
             },
             VmsInvoke::CREATE_VMO => {
-                let range = unsafe { core::slice::from_raw_parts(args[1] as *const u8, args[2]) };
-                // ToDo: use proper use-copy API
-                let vmo = VmObject::from_buffer(range, args[3].into(), args[4].into())
-                    .ok_or(ErrorType::NO_MEMORY)?;
+                use rtl::objects::vmo::VmoFlags;
+
+                let flags = VmoFlags::from_bits(args[5]).ok_or(ErrorType::INVALID_ARGUMENT)?;
+
+                let vmo = match flags {
+                    VmoFlags::BACKED => {
+                        let range = UserPtr::new_array(args[1] as *const u8, args[2]);
+                            unsafe { core::slice::from_raw_parts(args[1] as *const u8, args[2]) };
+                        VmObject::from_buffer(range, args[3].into(), args[4].into())
+                            .ok_or(ErrorType::NO_MEMORY)?
+                    }
+                    VmoFlags::ZEROED => VmObject::zeroed(args[2], args[3].into(), args[4].into())
+                        .ok_or(ErrorType::NO_MEMORY)?,
+                    _ => Err(ErrorType::INVALID_ARGUMENT)?,
+                };
+
+                println!("{:?} {:?}", vmo.as_ranges(), vmo.mapping_type());
 
                 let task = current().unwrap().task();
                 let mut table = task.handle_table();

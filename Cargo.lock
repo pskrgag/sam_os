@@ -54,6 +54,7 @@ name = "console"
 version = "0.1.0"
 dependencies = [
  "interfaces",
+ "lazy_static",
  "libc 0.1.0",
  "rtl",
 ]
@@ -126,6 +127,9 @@ name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+dependencies = [
+ "spin 0.5.2",
+]
 
 [[package]]
 name = "libc"
@@ -134,7 +138,7 @@ dependencies = [
  "elf",
  "rtl",
  "rustrt",
- "spin",
+ "spin 0.9.8",
 ]
 
 [[package]]
@@ -212,7 +216,7 @@ name = "qrwlock"
 version = "0.2.0"
 source = "git+https://github.com/pskrgag/rust-qrwlock.git#0c146176ba39b7ccfe4636377e1dc9506d95402a"
 dependencies = [
- "spin",
+ "spin 0.9.8",
  "static_assertions",
 ]
 
@@ -282,7 +286,7 @@ dependencies = [
  "object_lib",
  "qrwlock",
  "rtl",
- "spin",
+ "spin 0.9.8",
  "tock-registers",
 ]
 
@@ -327,6 +331,12 @@ dependencies = [
  "termcolor",
  "time",
 ]
+
+[[package]]
+name = "spin"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "spin"

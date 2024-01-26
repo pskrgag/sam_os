@@ -17,7 +17,11 @@ pub struct Task {
 
 impl Task {
     pub fn new(h: Handle, name: String) -> Self {
-        Self { h, name, ep: 0.into() }
+        Self {
+            h,
+            name,
+            ep: 0.into(),
+        }
     }
 
     pub fn set_ep(&mut self, ep: VirtAddr) {
@@ -30,11 +34,19 @@ impl Task {
         let mut h = Vec::with_capacity(ph.len());
 
         for i in ph {
-            let vm = vms().create_vm_object(
-                elf.program_header_to_data(i)?,
-                Elf::program_header_to_mapping_type(i),
-                VirtAddr::from(i.p_vaddr as usize),
-            )?;
+            let vm = if i.p_filesz != 0 {
+                vms().create_vm_object(
+                    elf.program_header_to_data(i)?,
+                    Elf::program_header_to_mapping_type(i),
+                    VirtAddr::from(i.p_vaddr as usize),
+                )?
+            } else {
+                vms().create_vm_object_zeroed(
+                    Elf::program_header_to_mapping_type(i),
+                    VirtAddr::from(i.p_vaddr as usize),
+                    i.p_memsz as usize,
+                )?
+            };
 
             h.push(vm);
         }

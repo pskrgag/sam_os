@@ -6,6 +6,7 @@ use rtl::arch::{PAGE_SHIFT, PAGE_SIZE};
 use rtl::error::ErrorType;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
+use crate::mm::user_buffer::UserPtr;
 
 #[derive(Debug)]
 struct VmObjectInner {
@@ -21,7 +22,7 @@ pub struct VmObject {
 }
 
 impl VmObjectInner {
-    pub fn from_buffer(b: &[u8], tp: MappingType, mut load_addr: VirtAddr) -> Option<Self> {
+    pub fn from_buffer(b: UserPtr<u8>, tp: MappingType, mut load_addr: VirtAddr) -> Option<Self> {
         let pages = ((load_addr.bits() + b.len()) >> PAGE_SHIFT)
             - ((load_addr.bits() as usize) >> PAGE_SHIFT)
             + 1;
@@ -33,7 +34,24 @@ impl VmObjectInner {
 
         let range = unsafe { va.as_slice_at_offset_mut::<u8>(b.len(), load_addr.page_offset()) };
 
-        range.copy_from_slice(b);
+        let s = b.read_to(range);
+        assert!(s == Some(b.len()));
+        println!("bbb {}", b.len());
+
+        Some(Self {
+            start: p,
+            pages,
+            mt: tp,
+            load_addr: *load_addr.round_down_page(),
+        })
+    }
+
+    pub fn zeroed(mut size: usize, tp: MappingType, mut load_addr: VirtAddr) -> Option<Self> {
+        let pages = *size.round_up_page() / PAGE_SIZE;
+        let p = page_allocator().alloc(pages)?;
+        let va = VirtAddr::from(p);
+
+        unsafe { va.as_slice_mut::<u8>(pages * PAGE_SIZE).fill(0x00) };
 
         Some(Self {
             start: p,
@@ -45,9 +63,15 @@ impl VmObjectInner {
 }
 
 impl VmObject {
-    pub fn from_buffer(b: &[u8], tp: MappingType, load_addr: VirtAddr) -> Option<Arc<Self>> {
+    pub fn from_buffer(b: UserPtr<u8>, tp: MappingType, load_addr: VirtAddr) -> Option<Arc<Self>> {
         Some(Arc::new(Self {
             inner: Spinlock::new(VmObjectInner::from_buffer(b, tp, load_addr)?),
+        }))
+    }
+
+    pub fn zeroed(size: usize, tp: MappingType, load_addr: VirtAddr) -> Option<Arc<Self>> {
+        Some(Arc::new(Self {
+            inner: Spinlock::new(VmObjectInner::zeroed(size, tp, load_addr)?),
         }))
     }
 

@@ -9,6 +9,7 @@ use interfaces::implementation::serial;
 
 mod console;
 mod backend;
+mod commands;
 
 use backend::uart::UartBackend;
 

@@ -22,6 +22,10 @@ impl<T> UserPtr<T> {
         Self { p, count }
     }
 
+    pub fn len(&self) -> usize {
+        self.count
+    }
+
     pub fn read_on_heap(&self) -> Option<Box<[u8]>> {
         use core::mem::size_of;
 
@@ -35,6 +39,24 @@ impl<T> UserPtr<T> {
             );
             if res == 0 {
                 Some(heap.into_boxed_slice())
+            } else {
+                None
+            }
+        }
+    }
+
+    pub fn read_to(&self, to: &mut [T]) -> Option<usize> {
+        let s = usize::min(self.count, to.len());
+
+        unsafe {
+            let res = arch_copy_from_user(
+                self.p as usize,
+                core::mem::size_of::<T>() * s,
+                to.as_ptr() as _,
+            );
+
+            if res == 0 {
+                Some(s)
             } else {
                 None
             }
