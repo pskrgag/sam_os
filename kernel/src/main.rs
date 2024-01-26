@@ -28,6 +28,17 @@ mod panic;
 use kernel::sched;
 pub use lib::printf;
 
+static SAMOS_BANNER: &str = "
+(  ____ \\(  ___  )(       )  (  ___  )(  ____ \\
+| (    \\/| (   ) || () () |  | (   ) || (    \\/
+| (_____ | (___) || || || |  | |   | || (_____ 
+(_____  )|  ___  || |(_)| |  | |   | |(_____  )
+      ) || (   ) || |   | |  | |   | |      ) |
+/\\____) || )   ( || )   ( |  | (___) |/\\____) |
+\\_______)|/     \\||/     \\|  (_______)\\_______)
+                                               
+";
+
 /* At this point we have:
  *
  *      1) MMU is turned on
@@ -53,6 +64,8 @@ extern "C" fn start_kernel() -> ! {
 
     // -- Scheduler must be initialized at that point
     drivers::init();
+
+    print!("{}", SAMOS_BANNER);
 
     // arch::smp::bring_up_cpus();
 

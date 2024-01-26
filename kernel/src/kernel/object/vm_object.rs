@@ -36,7 +36,6 @@ impl VmObjectInner {
 
         let s = b.read_to(range);
         assert!(s == Some(b.len()));
-        println!("bbb {}", b.len());
 
         Some(Self {
             start: p,
@@ -47,7 +46,9 @@ impl VmObjectInner {
     }
 
     pub fn zeroed(mut size: usize, tp: MappingType, mut load_addr: VirtAddr) -> Option<Self> {
-        let pages = *size.round_up_page() / PAGE_SIZE;
+        let pages = ((load_addr.bits() + size) >> PAGE_SHIFT)
+            - ((load_addr.bits() as usize) >> PAGE_SHIFT)
+            + 1;
         let p = page_allocator().alloc(pages)?;
         let va = VirtAddr::from(p);
 

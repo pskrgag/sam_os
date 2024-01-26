@@ -88,7 +88,7 @@ impl Scheduler {
             if let Some(next) = self.rq.pop() {
                 next.set_state(ThreadState::Running);
 
-                println!("Switching to {} --> {}", cur.id(), next.id());
+                // println!("Switching to {} --> {}", cur.id(), next.id());
 
                 unsafe {
                     let ctx = cur.ctx_mut();
@@ -152,7 +152,6 @@ pub fn init_userspace() {
     let init_vms = init_task.vms();
 
     for mut i in data.regions {
-        println!("{:?} {:?}", i.0, i.1);
         i.0.align_page();
         i.1.align_page();
         init_vms.vm_map(i.0, i.1, i.2).expect("Failed to map");

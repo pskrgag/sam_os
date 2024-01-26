@@ -20,7 +20,7 @@ fn main(boot_handle: Handle) {
     let p = nameserver::find_service("serial").unwrap();
 
     serial::init(p);
-    println!("Starting console app.....");
+    println!("Starting console app");
     let c = console::Console::<UartBackend>::new();
     c.exec();
 }

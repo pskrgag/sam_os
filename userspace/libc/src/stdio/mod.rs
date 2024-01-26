@@ -17,13 +17,20 @@ macro_rules! print {
     ($($arg:tt)*) => (libc::stdio::_print(format_args!($($arg)*)));
 }
 
-/// Macro similar to [std](https://doc.rust-lang.org/src/std/macros.rs.html)
-/// but for writing into kernel-specific output (UART or QEMU console).
 #[macro_export]
 macro_rules! println {
     () => (print!("\n"));
-    ($($arg:tt)*) => ({
-        libc::stdio::_print(format_args_nl!($($arg)*));
+    ($format:expr) => ({
+        libc::stdio::_print(format_args_nl!(
+                concat!("{} :: ", $format), env!("CARGO_PKG_NAME")
+            ));
+    });
+    ($format:expr, $($arg:tt)*) => ({
+        libc::stdio::_print(format_args_nl!(
+                concat!("{} :: ", $format),
+                env!("CARGO_PKG_NAME"),
+                $($arg)*
+        ));
     })
 }
 
@@ -46,6 +53,8 @@ macro_rules! println_libc_verbose {
 #[cfg(not(feature = "verbose"))]
 #[allow(unused_macros)]
 macro_rules! println_libc_verbose {
-    () => (print!("\n"));
-    ($($arg:tt)*) => ({ })
+    () => {
+        print!("\n")
+    };
+    ($($arg:tt)*) => {{}};
 }

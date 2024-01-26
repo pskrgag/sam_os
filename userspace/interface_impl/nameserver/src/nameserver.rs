@@ -41,7 +41,7 @@ fn register_service(
 
     SERVICES.get().insert(name.to_string(), r.h);
 
-    println!("Registered service '{name}'");
+    println!("Registered service '{}'", name);
     Ok(sam_request_RegisterService_out { error: 0.into() })
 }
 

@@ -76,8 +76,6 @@ impl Vms {
                     _ => Err(ErrorType::INVALID_ARGUMENT)?,
                 };
 
-                println!("{:?} {:?}", vmo.as_ranges(), vmo.mapping_type());
-
                 let task = current().unwrap().task();
                 let mut table = task.handle_table();
                 let handle = Handle::new(vmo.clone());
