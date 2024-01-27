@@ -1,5 +1,4 @@
-RUSTFLAGS =  -C link-arg=--library-path=.
-RUSTFLAGS += -C link-arg=--script=aarch64-qemu.ld
+RUSTFLAGS += -C link-arg=--script=kernel/src/arch/aarch64/aarch64-qemu.ld
 RUSTFLAGS += -C opt-level=0
 RUSTFLAGS += -C force-frame-pointers
 

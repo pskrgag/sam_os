@@ -70,7 +70,6 @@ impl VmsInner {
                 return Err(());
             };
 
-            println!("Mapping {:?}", range);
             // ToDo: clean up in case of an error
             self.ttbr0.as_mut().unwrap().map(
                 Some(MemRange::new(p, PAGE_SIZE)),
