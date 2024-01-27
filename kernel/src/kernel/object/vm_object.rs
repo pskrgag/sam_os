@@ -45,7 +45,7 @@ impl VmObjectInner {
         })
     }
 
-    pub fn zeroed(mut size: usize, tp: MappingType, mut load_addr: VirtAddr) -> Option<Self> {
+    pub fn zeroed(size: usize, tp: MappingType, mut load_addr: VirtAddr) -> Option<Self> {
         let pages = ((load_addr.bits() + size) >> PAGE_SHIFT)
             - ((load_addr.bits() as usize) >> PAGE_SHIFT)
             + 1;
