@@ -18,7 +18,7 @@ impl Command for Echo {
     }
 
     fn help(&self) -> &str {
-        ""
+        "Echoes arguments on the console"
     }
 }
 

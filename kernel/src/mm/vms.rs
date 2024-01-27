@@ -52,7 +52,7 @@ impl VmsInner {
 
     // ToDo: on-demang allocation of physical memory
     pub fn vm_allocate(&mut self, size: usize, tp: MappingType) -> Result<VirtAddr, ()> {
-        let range = if let Some(r) = self.free_range(size) {
+        let mut range = if let Some(r) = self.free_range(size) {
             r
         } else {
             return Err(());
@@ -61,21 +61,45 @@ impl VmsInner {
 
         assert!(size.is_page_aligned());
 
-        let p: PhysAddr = if let Some(p) = page_allocator().alloc(size >> PAGE_SHIFT) {
-            p.into()
-        } else {
-            return Err(());
-        };
-
         self.add_to_tree(Vma::new(range, tp))?;
 
-        // ToDo: clean up in case of an error
-        self.ttbr0
-            .as_mut()
-            .unwrap()
-            .map(Some(MemRange::new(p, size)), range, tp)?;
+        while range.size() != 0 {
+            let p: PhysAddr = if let Some(p) = page_allocator().alloc(1) {
+                p.into()
+            } else {
+                return Err(());
+            };
+
+            println!("Mapping {:?}", range);
+            // ToDo: clean up in case of an error
+            self.ttbr0.as_mut().unwrap().map(
+                Some(MemRange::new(p, PAGE_SIZE)),
+                MemRange::new(range.start().into(), PAGE_SIZE),
+                tp,
+            )?;
+
+            range = MemRange::new(
+                VirtAddr::from(range.start() + PAGE_SIZE),
+                range.size() - PAGE_SIZE,
+            );
+        }
 
         Ok(va)
+    }
+
+    pub fn vm_free(&mut self, range: MemRange<VirtAddr>) -> Result<(), ()> {
+        assert!(range.start().is_page_aligned());
+        assert!(range.size().is_page_aligned());
+
+        self.vmas.mark_free(Vma::new(range, MappingType::USER_DATA));
+
+        self.ttbr0.as_mut().unwrap().free(range, |pa, device| {
+            if !device {
+                page_allocator().free(pa, 1);
+            }
+        })?;
+
+        Ok(())
     }
 
     pub fn ttbr0(&self) -> Option<PhysAddr> {

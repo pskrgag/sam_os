@@ -46,6 +46,13 @@ impl Vms {
         Ok(res)
     }
 
+    pub fn vm_free(&self, base: VirtAddr, size: usize) -> Result<usize, ()> {
+        let mut inner = self.inner.write();
+        let res = inner.vm_free(MemRange::new(base, size))?;
+
+        Ok(0)
+    }
+
     pub fn base(&self) -> PhysAddr {
         let inner = self.inner.read();
         inner.ttbr0().unwrap()
@@ -56,6 +63,10 @@ impl Vms {
 
         match VmsInvoke::from_bits(args[0]).ok_or(ErrorType::NO_OPERATION)? {
             VmsInvoke::ALLOCATE => match self.vm_allocate(args[1], args[2].into()) {
+                Ok(v) => Ok(v.into()),
+                Err(_) => Err(ErrorType::INVALID_ARGUMENT),
+            },
+            VmsInvoke::FREE => match self.vm_free(args[1].into(), args[2].into()) {
                 Ok(v) => Ok(v.into()),
                 Err(_) => Err(ErrorType::INVALID_ARGUMENT),
             },

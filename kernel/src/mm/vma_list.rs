@@ -1,12 +1,8 @@
 use alloc::rc::Rc;
 use core::cmp::Ordering;
-use intrusive_collections::{
-    intrusive_adapter,
-    rbtree::CursorMut,
-    KeyAdapter, RBTree, RBTreeLink,
-};
-use rtl::vmm::MappingType;
+use intrusive_collections::{intrusive_adapter, rbtree::CursorMut, KeyAdapter, RBTree, RBTreeLink};
 use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 
 #[derive(Debug, Eq, Clone, Copy)]
 pub(crate) struct MemRangeVma(MemRange<VirtAddr>);
@@ -18,7 +14,7 @@ pub enum VmaFlags {
     VmaCommited,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Vma {
     pub(crate) range: MemRangeVma,
     pub(crate) tp: MappingType,
@@ -40,6 +36,7 @@ impl<'a> KeyAdapter<'a> for VmaAdapter {
     }
 }
 
+// TODO: all these APIs are pure garbage and need rework one day
 impl VmaList {
     pub fn dump_tree(&self) {
         for i in &self.list {
@@ -54,7 +51,7 @@ impl VmaList {
         Self { list }
     }
 
-    fn find_free_vma_addr(&mut self, addr: VirtAddr) -> CursorMut<'_, VmaAdapter> {
+    fn find_vma_addr(&mut self, addr: VirtAddr) -> CursorMut<'_, VmaAdapter> {
         self.list.find_mut(&MemRangeVma(MemRange::new(addr, 1)))
     }
 
@@ -62,7 +59,7 @@ impl VmaList {
         let addr = vma.start();
         let size = vma.size();
 
-        let mut vma_c = self.find_free_vma_addr(vma.start());
+        let mut vma_c = self.find_vma_addr(vma.start());
 
         if vma_c.get().unwrap().is_free() {
             let mut vmas: [Vma; 2] = core::array::from_fn(|_| Vma::default_user());
@@ -85,6 +82,20 @@ impl VmaList {
             Ok(addr)
         } else {
             Err(())
+        }
+    }
+
+    pub fn mark_free(&mut self, vma: Vma) -> Option<()> {
+        let mut vma_c = self.find_vma_addr(vma.start());
+
+        if let Some(vma) = vma_c.get() {
+            let mut v = vma.clone();
+            v.mark_free();
+
+            vma_c.replace_with(Rc::new(v)).unwrap();
+            Some(())
+        } else {
+            None
         }
     }
 
@@ -169,6 +180,10 @@ impl Vma {
 
     pub fn is_free(&self) -> bool {
         self.state == VmaFlags::VmaFree
+    }
+
+    pub fn mark_free(&mut self) {
+        self.state = VmaFlags::VmaFree;
     }
 
     pub fn contains_addr(&self, addr: VirtAddr) -> bool {

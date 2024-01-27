@@ -1,5 +1,7 @@
-use crate::{arch::mm::mmu_flags::*};
-use rtl::vmm::MappingType;
+use crate::arch::mm::mmu_flags::*;
+use core::arch::asm;
+use rtl::vmm::types::*;
+use rtl::vmm::*;
 
 const KERNEL_DATA: usize = BLOCK_KERNEL_RW | BLOCK_NORMAL_MEM;
 const KERNEL_TEXT: usize = BLOCK_KERNEL_RO & !BLOCK_PXN | BLOCK_NORMAL_MEM;
@@ -25,4 +27,9 @@ pub fn mapping_type_to_flags(tp: MappingType) -> usize {
         MappingType::USER_DEVICE => USER_DEVICE,
         _ => panic!(),
     }
+}
+
+// TODO: less aggressive tlb maintainence (i.e last level flush with ASID support)
+pub unsafe fn flush_tlb_page_last(_v: VirtAddr) {
+    core::arch::asm!("tlbi       vmalle1");
 }

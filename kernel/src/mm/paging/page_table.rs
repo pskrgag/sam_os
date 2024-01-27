@@ -1,5 +1,5 @@
 use crate::{
-    arch::mm::mmu,
+    arch::mm::mmu::{self, *},
     arch::PT_LVL1_ENTIRES,
     arch::{self, mm::mmu_flags},
     mm::allocators::page_alloc::page_allocator,
@@ -63,7 +63,7 @@ impl PageTableBlock {
 
     pub fn is_valid_tte(&self, index: usize) -> bool {
         assert!(index < 512);
-        
+
         PageTableEntry::from_bits(unsafe {
             self.addr
                 .to_raw_mut::<usize>()
@@ -81,6 +81,19 @@ impl PageTableBlock {
             .offset(index as isize)
             .write_volatile(entry.bits());
         // TODO: barriers, please.....
+    }
+
+    pub fn get_tte(&mut self, index: usize) -> PageTableEntry {
+        assert!(index < 512);
+
+        unsafe {
+            PageTableEntry::from_bits(
+                self.addr
+                    .to_raw_mut::<usize>()
+                    .offset(index as isize)
+                    .read_volatile(),
+            )
+        }
     }
 
     pub fn index_of(&self, addr: VirtAddr) -> usize {
@@ -162,6 +175,7 @@ impl PageTable {
         pa: PhysAddr,
         tp: MappingType,
         lvl: usize,
+        v: VirtAddr,
     ) {
         let flags = mmu::mapping_type_to_flags(tp);
         let control = if lvl != 3 {
@@ -181,7 +195,47 @@ impl PageTable {
         };
     }
 
-    fn op_lvl<F: FnMut(&mut PageTableBlock, usize, PhysAddr, MappingType, usize) + Copy>(
+    fn allocate_new_block(
+        b: &mut PageTableBlock,
+        lvl: usize,
+        index: usize,
+    ) -> Result<PageTableBlock, ()> {
+        let new_page: PhysAddr = page_allocator()
+            .alloc(1)
+            .expect("Failed to allocate memory")
+            .into();
+        let new_entry = PageTableEntry::from_bits(PageFlags::table().bits() | new_page.get());
+
+        unsafe { b.set_tte(index, new_entry) };
+        Ok(PageTableBlock::new(VirtAddr::from(new_page), lvl as u8 + 1))
+    }
+
+    fn abort_walk(
+        _b: &mut PageTableBlock,
+        _lvl: usize,
+        _index: usize,
+    ) -> Result<PageTableBlock, ()> {
+        Err(())
+    }
+
+    fn clean_tte(
+        b: &mut PageTableBlock,
+        index: usize,
+        _pa: PhysAddr,
+        _tp: MappingType,
+        _lvl: usize,
+        v: VirtAddr,
+    ) {
+        unsafe {
+            b.set_tte(index, PageTableEntry::from_bits(0));
+            flush_tlb_page_last(v);
+        };
+    }
+
+    fn op_lvl<
+        F: FnMut(&mut PageTableBlock, usize, PhysAddr, MappingType, usize, VirtAddr) + Copy, // Set leaf
+        G: FnMut(&mut PageTableBlock, usize, usize) -> Result<PageTableBlock, ()> + Copy, // Process walk
+    >(
         &mut self,
         mut base: PageTableBlock,
         lvl: usize,
@@ -189,6 +243,7 @@ impl PageTable {
         p: &mut MemRange<PhysAddr>,
         map: MappingType,
         mut cb: F,
+        mut cb_b: G,
         use_huge_pages: bool,
     ) -> Result<VirtAddr, MmError> {
         let order = match lvl {
@@ -210,27 +265,14 @@ impl PageTable {
             {
                 let next_block = match base.next(index) {
                     Some(e) => e,
-                    None => {
-                        let new_page: PhysAddr = page_allocator()
-                            .alloc(1)
-                            .expect("Failed to allocate memory")
-                            .into();
-                        let new_entry =
-                            PageTableEntry::from_bits(PageFlags::table().bits() | new_page.get());
-
-                        unsafe { base.set_tte(index, new_entry) };
-
-                        PageTableBlock::new(VirtAddr::from(new_page), lvl as u8 + 1)
-                    }
+                    None => cb_b(&mut base, lvl, index)?,
                 };
 
-                // println!("New block {:?}", next_block);
-                self.op_lvl(next_block, lvl + 1, v, p, map, cb, use_huge_pages)?;
+                self.op_lvl(next_block, lvl + 1, v, p, map, cb, cb_b, use_huge_pages)?;
             } else {
                 assert!(p.start().is_aligned(order));
 
-                // println!("set {}", lvl);
-                cb(&mut base, index, p.start(), map, lvl);
+                cb(&mut base, index, p.start(), map, lvl, v.start());
 
                 p.truncate(size);
                 v.truncate(size);
@@ -261,6 +303,7 @@ impl PageTable {
             &mut p_range,
             m_type,
             Self::set_leaf_tte,
+            Self::allocate_new_block,
             true,
         )
     }
@@ -286,8 +329,39 @@ impl PageTable {
             &mut p_range,
             m_type,
             Self::set_leaf_tte,
+            Self::allocate_new_block,
             false,
         )
+    }
+
+    pub fn free<F: Fn(PhysAddr, bool)>(
+        &mut self,
+        mut v: MemRange<VirtAddr>,
+        cb: F,
+    ) -> Result<(), MmError> {
+        println!("do free {:?}", v);
+        let mut p = MemRange::new(PhysAddr::new(v.start().bits()), v.size());
+
+        self.op_lvl(
+            self.lvl1(),
+            1,
+            &mut v,
+            &mut p,
+            MappingType::NONE,
+            |base, index, pa, tp, lvl, v| {
+                let tte = base.get_tte(index);
+
+                cb(
+                    tte.addr(),
+                    tte.flags().bits() == mmu::mapping_type_to_flags(MappingType::USER_DEVICE),
+                );
+
+                Self::clean_tte(base, index, pa, tp, lvl, v);
+            },
+            Self::abort_walk,
+            true,
+        )
+        .map(|_| ())
     }
 
     pub fn unmap(&mut self, _v: MemRange<VirtAddr>) -> Result<(), MmError> {

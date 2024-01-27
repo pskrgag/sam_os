@@ -22,6 +22,10 @@ impl Vms {
         Ok(Syscall::invoke(self.h, VmsInvoke::ALLOCATE.bits(), &[size, mt.bits()])? as *mut u8)
     }
 
+    pub fn vm_free(&self, addr: *mut u8, size: usize) -> Result<*mut u8, ErrorType> {
+        Ok(Syscall::invoke(self.h, VmsInvoke::FREE.bits(), &[addr as usize, size])? as *mut u8)
+    }
+
     pub fn create_vm_object(
         &self,
         b: &[u8],
