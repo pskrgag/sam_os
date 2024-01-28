@@ -48,7 +48,7 @@ impl Vms {
 
     pub fn vm_free(&self, base: VirtAddr, size: usize) -> Result<usize, ()> {
         let mut inner = self.inner.write();
-        let res = inner.vm_free(MemRange::new(base, size))?;
+        inner.vm_free(MemRange::new(base, size))?;
 
         Ok(0)
     }

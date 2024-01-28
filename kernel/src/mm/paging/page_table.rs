@@ -175,7 +175,7 @@ impl PageTable {
         pa: PhysAddr,
         tp: MappingType,
         lvl: usize,
-        v: VirtAddr,
+        _v: VirtAddr,
     ) {
         let flags = mmu::mapping_type_to_flags(tp);
         let control = if lvl != 3 {

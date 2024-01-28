@@ -84,7 +84,7 @@ impl Port {
                 // NOTE: Do not place it info if let Some() block, since rust does not drop the lock
                 // for some weird reason
                 let t = self.sleepers.lock().pop_front();
-               if let Some(t) = t {
+                if let Some(t) = t {
                     let task = self.task.upgrade().ok_or(ErrorType::TASK_DEAD)?;
                     let reply_port = current()
                         .unwrap()
@@ -115,6 +115,7 @@ impl Port {
 
                         if let Some(d1) = server_msg.out_arena() {
                             ud.write_array(d1)?;
+                            unsafe { drop(Box::from_raw(d1)) };
                         }
                     }
 
@@ -181,6 +182,7 @@ impl Port {
 
                     if let Some(d1) = client_msg.out_arena() {
                         ud.write_array(d1)?;
+                        unsafe { drop(Box::from_raw(d1)) };
                     }
                 }
 

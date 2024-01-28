@@ -25,7 +25,7 @@ To make life of developers (me) easier custom IDL language along with compiler g
 ## Supported arches
  - [x] aarch64 (qemu only for now)
 
-Maybe risv64 one day. I am not messing with long, real, unreal engine 5 modes in x86 ever in my life.   
+Maybe riscv64 one day. I am not messing with long, real, unreal engine 5 modes in x86 ever in my life.   
 
 ## How to use it
 

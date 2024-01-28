@@ -1,5 +1,4 @@
 use crate::arch::mm::mmu_flags::*;
-use core::arch::asm;
 use rtl::vmm::types::*;
 use rtl::vmm::*;
 

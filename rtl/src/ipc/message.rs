@@ -4,6 +4,8 @@ pub const IPC_MAX_HANDLES: usize = 5;
 
 type MessageId = usize;
 
+// Note: I want to keep Copy marker here, so I had to lie about
+// mutablity of arena slices.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct IpcMessage<'a> {
@@ -45,8 +47,14 @@ impl<'a> IpcMessage<'a> {
         self.in_data
     }
 
-    pub fn out_arena(&self) -> Option<&[u8]> {
-        self.out_data
+    pub fn out_arena(&self) -> Option<&mut [u8]> {
+        if let Some(d) = self.out_data {
+            Some(unsafe {
+                core::slice::from_raw_parts_mut(d.as_ptr() as usize as *mut u8, d.len())
+            })
+        } else {
+            None
+        }
     }
 
     pub fn reply_port(&self) -> HandleBase {
