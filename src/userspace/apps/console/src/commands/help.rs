@@ -8,7 +8,7 @@ impl Command for Help {
         "help"
     }
 
-    fn exe(&self, args: &[&str]) -> Option<String> {
+    fn exe(&self, _args: &[&str]) -> Option<String> {
         let mut s = String::from("Supported commands:\n");
 
         COMMANDS.iter().for_each(|x| {

@@ -1,10 +1,10 @@
 [workspace]
 members = [
-	"ridl",
-	"rtl",
-	"userspace/interface_impl/serial",
-	"userspace/apps/console",
-	"userspace/interface_impl/nameserver",
-	"kernel", "userspace/ridlrt", "userspace/interfaces", "userspace/apps/console",
+	"tools/ridl",
+	"src/rtl",
+	"src/userspace/interface_impl/uart",
+	"src/userspace/apps/console",
+	"src/userspace/interface_impl/nameserver",
+	"src/kernel", "src/userspace/ridlrt", "src/userspace/interfaces", "src/userspace/apps/console", "tools/builder",
 ]
 resolver = "1"

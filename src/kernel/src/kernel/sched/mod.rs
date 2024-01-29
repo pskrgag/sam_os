@@ -38,7 +38,7 @@ struct Aligned;
 
 static INIT: &[u8] = include_bytes_align_as!(
     Aligned,
-    "../../../../target/aarch64-unknown-none-softfloat/debug/nameserver"
+    "../../../../../target/aarch64-unknown-none-softfloat/debug/nameserver"
 );
 
 // Simple, Simple, Simple

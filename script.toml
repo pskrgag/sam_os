@@ -1,0 +1,14 @@
+name = 'Console app'
+
+[[component]]
+name = 'nameserver'
+implements = ['nameserver', 'init']
+
+[[component]]
+name = 'uart'
+implements = ['serial']
+depends = ['nameserver']
+
+[[component]]
+name = 'console'
+depends = ['nameserver', 'serial']

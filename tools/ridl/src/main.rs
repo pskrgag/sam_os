@@ -43,7 +43,8 @@ fn main() -> Result<()> {
     };
 
     for i in &args[2..] {
-        let source = std::fs::read_to_string(i).expect("Failed to read file");
+        let source =
+            std::fs::read_to_string(i).expect(format!("Failed to read file '{}'", i).as_str());
         let reporter = error_reporter::ErrorReporter::new(source.as_bytes());
         let lexer = Lexer::new(source.as_bytes());
         let mut parser = Parser::new(lexer, &reporter);

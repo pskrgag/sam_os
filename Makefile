@@ -1,4 +1,4 @@
-RUSTFLAGS += -C link-arg=--script=kernel/src/arch/aarch64/aarch64-qemu.ld
+RUSTFLAGS += -C link-arg=--script=src/kernel/src/arch/aarch64/aarch64-qemu.ld
 RUSTFLAGS += -C opt-level=0
 RUSTFLAGS += -C force-frame-pointers
 
@@ -10,13 +10,13 @@ BINARY = target/$(TARGET)/debug/sam_kernel
 all: kernel
 
 ridl:
-	cargo build -p ridl
+	cargo build -p ridll
 
-	cargo run -p ridl transport userspace/interfaces/idls/nameserver.idl > userspace/interfaces/src/client/nameserver.rs
-	cargo run -p ridl server userspace/interfaces/idls/nameserver.idl > userspace/interfaces/src/server/nameserver.rs
+	cargo run -p ridl transport src/userspace/interfaces/idls/nameserver.idl > src/userspace/interfaces/src/client/nameserver.rs
+	cargo run -p ridl server src/userspace/interfaces/idls/nameserver.idl > src/userspace/interfaces/src/server/nameserver.rs
 
-	cargo run -p ridl transport userspace/interfaces/idls/serial.idl > userspace/interfaces/src/client/serial.rs
-	cargo run -p ridl server userspace/interfaces/idls/serial.idl > userspace/interfaces/src/server/serial.rs
+	cargo run -p ridl transport src/userspace/interfaces/idls/serial.idl > src/userspace/interfaces/src/client/serial.rs
+	cargo run -p ridl server src/userspace/interfaces/idls/serial.idl > src/userspace/interfaces/src/server/serial.rs
 
 app: ridl
 	cargo build -p console --target $(TARGET)

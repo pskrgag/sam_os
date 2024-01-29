@@ -1,5 +1,5 @@
 [package]
-name = "serial"
+name = "uart"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,7 +11,3 @@ rtl = { path = "../../../rtl" }
 bytemuck = {version = "1.14", features = ["derive"]}
 ridlrt = { path = "../../ridlrt" }
 interfaces = { path = "../../interfaces" }
-
-[[bin]]
-name = "serial"
-path = "src/main.rs"
