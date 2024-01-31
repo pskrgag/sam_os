@@ -149,6 +149,7 @@ impl BackendRust {
             s.push_str(
                 format!(
                     "let mut resp_ = resp_arena.read::<{}>(ArenaPtr::request_ptr::<{}>()).unwrap();
+    *resp = resp_;
                      let error = resp_.error;
                      if error != 0.into() {{
                         return Err(error.into());
@@ -244,7 +245,7 @@ impl Backend for BackendRust {
         let names = Self::format_inout_structs(func);
         write!(
             out,
-            "req: &mut {}, req_arena: &MessageArena, resp: &mut {}, resp_arena: &mut MessageArena",
+            "__req: &mut {}, req_arena: &MessageArena, resp: &mut {}, resp_arena: &mut MessageArena",
             names.0, names.1
         )
     }
@@ -258,6 +259,7 @@ impl Backend for BackendRust {
             out,
             "
     let mut ipc = IpcMessage::new();
+    let mut req = *__req;
 
     ipc.set_out_arena(req_arena.as_slice_allocated());
 

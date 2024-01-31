@@ -41,7 +41,7 @@ fn copy_ipc_message_from_user(
         msg.set_out_arena(Box::leak(user_buffer));
     }
 
-    msg.set_reply_port(user_msg.reply_port());
+    // msg.set_reply_port(user_msg.reply_port());
 
     Some(msg)
 }
@@ -60,13 +60,11 @@ impl Port {
         let cur_table = cur_task.handle_table();
 
         for i in h {
-            if *i != 0 {
-                // TODO remove handles in case of an error
-                let h = cur_table.find_poly(*i)?;
-                let new_h = Handle::new(h);
+            // TODO remove handles in case of an error
+            let h = cur_table.find_poly(*i)?;
+            let new_h = Handle::new(h);
 
-                to.handle_table().add(new_h);
-            }
+            to.handle_table().add(new_h);
         }
 
         Some(())

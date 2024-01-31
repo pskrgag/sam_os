@@ -14,6 +14,7 @@ Kernel exports object to userspace which are referenced by capabilities:
  - Task
  - Port (IPC primitive)
  - Factory
+
  ... others comming later
 
 Userspace can create new objects via Factory object which is created by kernel on task start. After capability is obtained, userspace may do various stuff with object by invoking it via INVOKE system call.
@@ -35,13 +36,14 @@ You don't
 
 You will need nighly rust compiler with  aarch64-unknown-none-softfloat support. Hit 
 ```
+$ make console
 $ make qemu
 ```
 and maybe you will see simple console. If not -- idk; works on my machine. 
 
 ## TODO
 List of things I am planning to do in near future (maybe)
- - [ ] Custom build system, which will support dependencies from interfaces
+ - [x] Custom build system, which will support dependencies from interfaces (i don't like how it looks, but anyway)
  - [ ] Sane VMM
  - [ ] SMP
  - [ ] IRQ object (to support more drivers)

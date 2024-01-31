@@ -15,7 +15,7 @@ mod runner;
 
 fn main() -> Result<()> {
     CombinedLogger::init(vec![TermLogger::new(
-        LevelFilter::Debug,
+        LevelFilter::Info,
         Config::default(),
         TerminalMode::Mixed,
         ColorChoice::Auto,
@@ -30,7 +30,7 @@ fn main() -> Result<()> {
     }
 
     let script = &args[1];
-    let image = &args[2];
+    // let image = &args[2];
 
     let mut file = match File::open(script) {
         Ok(f) => Ok(f),
@@ -51,5 +51,6 @@ fn main() -> Result<()> {
     builder::build(script)
         .map_err(|_| Error::new(ErrorKind::InvalidData, "Failed to build"))?;
 
+    info!("Done!");
     Ok(())
 }

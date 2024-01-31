@@ -22,7 +22,7 @@ fn find_servive(
     let h = SERVICES
         .get()
         .get(&name.to_string())
-        .ok_or(ErrorType::INVALID_ARGUMENT)?;
+        .ok_or(ErrorType::TRY_AGAIN)?;
 
     Ok(sam_request_FindService_out {
         error: 0.into(),

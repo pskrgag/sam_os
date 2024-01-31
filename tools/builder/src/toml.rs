@@ -16,6 +16,6 @@ pub struct Component {
 pub fn process_toml(script: &str) -> Result<BuildScript, ()> {
     let config: BuildScript = toml::from_str(script).unwrap();
 
-    info!("{:?}", config);
+    debug!("{:?}", config);
     Ok(config)
 }

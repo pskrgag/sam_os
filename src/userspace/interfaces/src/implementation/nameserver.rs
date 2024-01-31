@@ -38,7 +38,7 @@ pub fn find_service(name: &str) -> Result<Handle, ErrorType> {
     }
 }
 
-pub fn register_servive(name: &str, h: Handle) -> Result<(), usize> {
+pub fn register_service(name: &str, h: Handle) -> Result<(), usize> {
     let mut req_arena_buf = [0u8; 100];
     let mut resp_arena_buf = [0u8; 100];
     let mut req_arena = MessageArena::new_backed(&mut req_arena_buf);

@@ -1,4 +1,4 @@
-use crate::runner::{build_component, prepare_cpio, build_kernel};
+use crate::runner::*;
 use crate::toml::*;
 
 fn check_wrong_impl_and_deps(c: &Component) -> Result<(), String> {
@@ -103,6 +103,11 @@ pub fn build(b: BuildScript) -> Result<(), ()> {
         Err(())
     } else {
         let mut init = None;
+
+        if let Err(e) = prepare_idls() {
+            error!("Failed to prepare idls: {}", e);
+            return Err(());
+        }
 
         for i in b.component.iter() {
             if let Some(ref impls) = i.implements {

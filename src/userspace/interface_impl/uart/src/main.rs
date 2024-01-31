@@ -16,7 +16,7 @@ fn main(boot_handle: Handle) {
     let p = Port::create().unwrap();
 
     nameserver::init(boot_handle);
-    nameserver::register_servive("serial", p.handle()).unwrap();
+    nameserver::register_service("serial", p.handle()).unwrap();
 
     serial::start_serial(p);
 }

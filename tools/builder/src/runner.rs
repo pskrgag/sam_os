@@ -15,87 +15,133 @@ static INTERFACE_IMPL_DIR: &str = concat!(
 
 static TARGET: &str = "aarch64-unknown-none-softfloat";
 
-pub fn build_kernel() -> Result<(), String> {
-    info!("Building kernel...",);
+pub fn run_prog(
+    name: &str,
+    args: &[&str],
+    stdin: Option<&[u8]>,
+    stdout: Option<&mut Vec<u8>>,
+    env: Option<&[(&str, &str)]>,
+) -> Result<(), String> {
+    let mut child = Command::new(name);
+    let mut child = child.args(args);
 
-    let mut child = Command::new("cargo")
-        .arg("build")
-        .arg("-p")
-        .arg("sam_kernel")
-        .arg("--target")
-        .arg(TARGET)
-        .arg("--features")
-        .arg("qemu")
-        .stdout(Stdio::piped())
-        .spawn()
-        .map_err(|x| format!("Failed to run cargo: {}", x))?;
-
-    let e = child
-        .wait()
-        .map_err(|x| format!("Failed to build: {}", x))?;
-
-    if !e.success() {
-        Err(String::from(format!("Build failed with an error {e}")))
-    } else {
-        Ok(())
+    if stdin.is_some() {
+        child = child.stdin(Stdio::piped());
     }
-}
 
-fn do_build_component(name: &String) -> Result<(), String> {
-    info!("Building component '{name}'...",);
-
-    let mut child = Command::new("cargo")
-        .arg("build")
-        .arg("-p")
-        .arg(name)
-        .arg("--target")
-        .arg(TARGET)
-        .stdout(Stdio::piped())
-        .spawn()
-        .map_err(|x| format!("Failed to run cargo: {}", x))?;
-
-    let e = child
-        .wait()
-        .map_err(|x| format!("Failed to build: {}", x))?;
-
-    if !e.success() {
-        Err(String::from(format!("Build failed with an error {e}")))
-    } else {
-        Ok(())
+    if stdout.is_some() {
+        child = child.stdout(Stdio::piped());
     }
-}
 
-fn compile_idl(impls: &String, server: bool) -> Result<String, String> {
-    info!(
-        "Compiling '{}' part of interface {:?}...",
-        if server { "server" } else { "transport" },
-        impls
-    );
+    if let Some(env) = env {
+        for i in env {
+            child = child.env(i.0, i.1);
+        }
+    }
 
-    let mut child = Command::new("cargo")
-        .arg("run")
-        .arg("-p")
-        .arg("ridl")
-        .arg(if server { "server" } else { "transport" })
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .arg(format!("{IDLS_DIR}/{impls}.idl"))
+    let mut child = child
         .spawn()
-        .map_err(|x| format!("Failed to run ridl compiler {}", x))?;
+        .map_err(|x| format!("Failed to run {name}: {x}"))?;
+
+    if let Some(stdin) = stdin {
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write(stdin)
+            .map_err(|x| format!("Failed to write to {name} intput: {x}"))?;
+    }
+
+    if let Some(stdout) = stdout {
+        child
+            .stdout
+            .take()
+            .unwrap()
+            .read_to_end(stdout)
+            .map_err(|x| format!("Failed to read cpio output {x}"))?;
+    }
 
     let exit = child
         .wait()
-        .map_err(|_| format!("Failed to run ridl {}", impls))?;
+        .map_err(|x| format!("Failed to run {name} {x}"))?;
 
     if !exit.success() {
-        return Err(format!("Cargo failed with: {exit}"));
+        // let mut err = String::new();
+        // child
+        //     .stderr
+        //     .take()
+        //     .unwrap()
+        //     .read_to_string(&mut err)
+        //     .map_err(|_| "Failed to read stderr of a process")?;
+
+        // TODO: figure out how to preserve color when reading stderr, since parsing
+        // uncolored error messages is kinda.... sad...?
+        return Err(format!("{name} failed with: {exit}"));
     }
 
-    let out = std::io::read_to_string(child.stdout.unwrap())
-        .map_err(|_| String::from("Failed to read ridl stdout"))?;
+    Ok(())
+}
 
-    assert!(out.len() != 0);
-    Ok(out)
+pub fn build_kernel() -> Result<(), String> {
+    info!("[CARGO]    Building kernel...",);
+
+    let mut out = Vec::new();
+    run_prog(
+        "cargo",
+        &[
+            "build",
+            "-p",
+            "sam_kernel",
+            "--target",
+            TARGET,
+            "--features",
+            "qemu",
+        ],
+        None,
+        Some(&mut out),
+        Some(&[(
+            "RUSTFLAGS",
+            "-C link-arg=--script=src/kernel/src/arch/aarch64/aarch64-qemu.ld -C opt-level=0 -C force-frame-pointers",
+        )]),
+    )
+}
+
+fn do_build_component(name: &String) -> Result<(), String> {
+    info!("[CARGO]    Compiling component '{name}'...",);
+
+    run_prog(
+        "cargo",
+        &["build", "-p", name.as_str(), "--target", TARGET],
+        None,
+        None,
+        None,
+    )
+}
+
+pub fn compile_idl(i: &String, server: bool) -> Result<String, String> {
+    info!(
+        "[RIDL]     Compiling '{}' part of interface {:?}...",
+        if server { "server" } else { "transport" },
+        i
+    );
+
+    let mut out = Vec::new();
+    run_prog(
+        "cargo",
+        &[
+            "run",
+            "-p",
+            "ridl",
+            if server { "server" } else { "transport" },
+            format!("{IDLS_DIR}/{i}").as_str(),
+        ],
+        None,
+        Some(&mut out),
+        None,
+    )?;
+
+    let s = std::str::from_utf8(out.as_slice()).unwrap();
+    Ok(s.to_string())
 }
 
 pub fn prepare_cpio(b: &Vec<Component>, to: &str) -> Result<(), String> {
@@ -118,18 +164,12 @@ pub fn prepare_cpio(b: &Vec<Component>, to: &str) -> Result<(), String> {
         files.push(format!("{bin_out}/{}", c.name));
     }
 
-    let mut child = Command::new("cpio")
-        .arg("-ocv")
-        .stdout(Stdio::piped())
-        .stdin(Stdio::piped())
-        .spawn()
-        .map_err(|x| format!("Failed to run cargo: {}", x))?;
+    let mut out = Vec::new();
 
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write(
+    run_prog(
+        "cpio",
+        &["-ocv"],
+        Some(
             files
                 .iter()
                 .fold(String::new(), |mut s: String, x: &String| {
@@ -138,27 +178,10 @@ pub fn prepare_cpio(b: &Vec<Component>, to: &str) -> Result<(), String> {
                 })
                 .as_str()
                 .as_bytes(),
-        )
-        .map_err(|x| format!("Failed to write to cpio intput: {x}"))?;
-
-    // NOTE: it's importnant to take stdout first, since otherwise process will
-    // just block forever
-    let mut buf = Vec::new();
-
-    child
-        .stdout
-        .take()
-        .unwrap()
-        .read_to_end(&mut buf)
-        .map_err(|x| format!("Failed to read cpio output {x}"))?;
-
-    let exit = child
-        .wait()
-        .map_err(|x| format!("Failed to run cpio {}", x))?;
-
-    if !exit.success() {
-        return Err(format!("cpio failed with: {exit}"));
-    }
+        ),
+        Some(&mut out),
+        None,
+    )?;
 
     let mut file = OpenOptions::new()
         .truncate(true)
@@ -167,44 +190,74 @@ pub fn prepare_cpio(b: &Vec<Component>, to: &str) -> Result<(), String> {
         .open(to)
         .map_err(|_| String::from("Failed to create file cpio"))?;
 
-    file.write(buf.as_slice())
+    file.write(out.as_slice())
         .map_err(|x| format!("Failed to write to file: {x}"))?;
+
+    Ok(())
+}
+
+pub fn prepare_idls() -> Result<(), String> {
+    let paths = std::fs::read_dir(IDLS_DIR).unwrap();
+
+    let mut server_mod = OpenOptions::new()
+        .truncate(true)
+        .write(true)
+        .create(true)
+        .open(format!("{INTERFACE_IMPL_DIR}/server/mod.rs"))
+        .map_err(|_| String::from("Failed to create file for mod"))?;
+
+    let mut client_mod = OpenOptions::new()
+        .truncate(true)
+        .write(true)
+        .create(true)
+        .open(format!("{INTERFACE_IMPL_DIR}/client/mod.rs"))
+        .map_err(|_| String::from("Failed to create file for mod"))?;
+
+    for i in paths {
+        let i = i.unwrap();
+        let path = i.path();
+        let i = path.file_name().unwrap().to_str().unwrap().to_string();
+        let file_strep = path.file_stem().unwrap().to_str().unwrap();
+
+        let out = compile_idl(&i, true)?;
+
+        let mut file = OpenOptions::new()
+            .truncate(true)
+            .write(true)
+            .create(true)
+            .open(format!(
+                "{INTERFACE_IMPL_DIR}/server/{}.rs", file_strep
+                
+            ))
+            .map_err(|_| String::from("Failed to create file for compiled idl"))?;
+
+        file.write(out.as_str().as_bytes())
+            .map_err(|x| format!("Failed to write to file: {}", x))?;
+
+        writeln!(server_mod, "pub mod {};", file_strep).unwrap();
+
+        let out = compile_idl(&i, false)?;
+
+        let mut file = OpenOptions::new()
+            .truncate(true)
+            .write(true)
+            .create(true)
+            .open(format!(
+                "{INTERFACE_IMPL_DIR}/client/{}.rs", file_strep
+            ))
+            .map_err(|_| String::from("Failed to create file for compiled idl"))?;
+
+        file.write(out.as_str().as_bytes())
+            .map_err(|x| format!("Failed to write to file: {}", x))?;
+
+        writeln!(client_mod, "pub mod {};", file_strep).unwrap();
+    }
 
     Ok(())
 }
 
 pub fn build_component(c: &Component) -> Result<(), String> {
     info!("Builing {:?}...", c.name);
-
-    if let Some(ref impls) = c.implements {
-        for i in impls {
-            if i.as_str() != "init" {
-                let out = compile_idl(i, false)?;
-
-                let mut file = OpenOptions::new()
-                    .truncate(true)
-                    .write(true)
-                    .create(true)
-                    .open(format!("{INTERFACE_IMPL_DIR}/client/{}.rs", c.name))
-                    .map_err(|_| String::from("Failed to create file for compiled idl"))?;
-
-                file.write(out.as_str().as_bytes())
-                    .map_err(|x| format!("Failed to write to file: {}", x))?;
-
-                let out = compile_idl(i, true)?;
-
-                let mut file = OpenOptions::new()
-                    .truncate(true)
-                    .write(true)
-                    .create(true)
-                    .open(format!("{INTERFACE_IMPL_DIR}/server/{}.rs", c.name))
-                    .map_err(|_| String::from("Failed to create file for compiled idl"))?;
-
-                file.write(out.as_str().as_bytes())
-                    .map_err(|x| format!("Failed to write to file: {}", x))?;
-            }
-        }
-    }
 
     do_build_component(&c.name)?;
 
