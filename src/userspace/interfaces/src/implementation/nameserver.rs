@@ -24,11 +24,7 @@ pub fn find_service(name: &str) -> Result<Handle, ErrorType> {
 
     req.name = req_arena.allocate_slice(name.as_bytes()).unwrap();
 
-    while sam_FindService(&mut req, &req_arena, &mut resp, &mut resp_arena)
-        == Err(ErrorType::TRY_AGAIN.into())
-    {
-        libc::syscalls::Syscall::sys_yield();
-    }
+    sam_FindService(&mut req, &req_arena, &mut resp, &mut resp_arena)?;
 
     let error = resp.error;
     if error != 0.into() {
@@ -55,11 +51,7 @@ pub fn register_service(name: &str, h: Handle) -> Result<(), usize> {
     req.h = h;
     req.name = req_arena.allocate_slice(name.as_bytes()).unwrap();
 
-    while sam_RegisterService(&mut req, &req_arena, &mut resp, &mut resp_arena)
-        == Err(ErrorType::TRY_AGAIN.into())
-    {
-        libc::syscalls::Syscall::sys_yield();
-    }
+    sam_RegisterService(&mut req, &req_arena, &mut resp, &mut resp_arena)?;
 
     Ok(())
 }

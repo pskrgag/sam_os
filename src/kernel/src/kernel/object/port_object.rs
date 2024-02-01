@@ -19,8 +19,7 @@ use rtl::ipc::*;
 #[derive(object)]
 pub struct Port {
     task: Weak<Task>,
-    queue: Spinlock<VecDeque<IpcMessage<'static>>>, // Kernel holds a copy, so just lie about
-    // lifetime for now
+    queue: Spinlock<VecDeque<IpcMessage<'static>>>, // Kernel holds a copy, so just lie about lifetime for now
     sleepers: Spinlock<LinkedList<Arc<Thread>>>,
 }
 
@@ -40,8 +39,6 @@ fn copy_ipc_message_from_user(
 
         msg.set_out_arena(Box::leak(user_buffer));
     }
-
-    // msg.set_reply_port(user_msg.reply_port());
 
     Some(msg)
 }
@@ -78,6 +75,7 @@ impl Port {
                 let mut client_msg_uptr = UserPtr::new(args[1] as *mut IpcMessage);
                 let mut client_msg =
                     copy_ipc_message_from_user(client_msg_uptr).ok_or(ErrorType::FAULT)?;
+                let cur = current().unwrap();
 
                 // NOTE: Do not place it info if let Some() block, since rust does not drop the lock
                 // for some weird reason
@@ -104,7 +102,7 @@ impl Port {
                     self.queue.lock().push_back(client_msg.clone());
                     t.wake();
 
-                    current().unwrap().wait_send();
+                    cur.wait_send();
 
                     let server_msg = reply_port.queue.lock().pop_front().unwrap();
 
@@ -120,12 +118,12 @@ impl Port {
                     client_msg.add_handles(server_msg.handles());
                     client_msg_uptr.write(&client_msg)?;
 
-                    Ok(())
+                    return Ok(0);
                 } else {
-                    Err(ErrorType::TRY_AGAIN)
-                }?;
-
-                Ok(0)
+                    self.sleepers.lock().push_back(cur.clone());
+                    cur.wait_send();
+                    return self.do_invoke(args);
+                };
             }
             PortInvoke::SEND_AND_WAIT => {
                 let reply_port = args[1] as HandleBase;
@@ -163,6 +161,10 @@ impl Port {
                 let c = current().unwrap();
 
                 let client_msg;
+
+                if let Some(sender) = self.sleepers.lock().pop_front() {
+                    sender.wake();
+                }
 
                 loop {
                     if let Some(m) = self.queue.lock().pop_front() {
