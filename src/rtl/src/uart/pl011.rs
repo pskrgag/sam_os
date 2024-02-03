@@ -1,7 +1,7 @@
 use crate::uart::UartTrait;
 use crate::vmm::types::VirtAddr;
-use core::ptr;
 use core::mem::size_of;
+use core::ptr;
 
 #[repr(u8)]
 #[allow(dead_code)]
@@ -44,7 +44,9 @@ impl Uart {
 
     fn write_reg(&mut self, reg: Pl011, data: u32) {
         let ptr = self.base.to_raw_mut::<u32>();
-        unsafe { ptr::write_volatile(ptr.offset((reg as usize / size_of::<u32>()) as isize), data) };
+        unsafe {
+            ptr::write_volatile(ptr.offset((reg as usize / size_of::<u32>()) as isize), data)
+        };
     }
 
     fn read_reg(&self, reg: Pl011) -> u32 {

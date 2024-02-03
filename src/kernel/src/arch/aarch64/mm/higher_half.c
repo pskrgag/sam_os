@@ -34,16 +34,47 @@ static uint64_t l2_linear_offset(void *p)
 	return (va >> 21) & (512 - 1);
 }
 
-/* static inline void tmp_printf(const char *ptr) */
-/* { */
-/* 	for (; *ptr; ptr++) */
-/* 		*(volatile char *) (uintptr_t)0x09000000 = *ptr; */
-/* } */
+static inline void tmp_printf(const char *ptr)
+{
+	for (; *ptr; ptr++)
+		*(volatile char *) (uintptr_t)0x01C28000 = *ptr;
+}
+
+
+void check_el(void)
+{
+	unsigned long el;
+
+	asm volatile ("mrs	%0, CurrentEl": "=r" (el));
+
+	switch (el >> 2) {
+	case 1:
+		tmp_printf("el1\n");
+		break;
+	case 2:
+		tmp_printf("el2\n");
+		break;
+	case 3:
+		tmp_printf("el3\n");
+		break;
+	case 0:
+		tmp_printf("el0\n");
+		break;
+	default:
+		tmp_printf("undefined el\n");
+		break;
+	}
+}
+
+void hello(void)
+{
+	check_el();
+}
 
 static inline void mmio_1_v_1(void)
 {
 	tte_t device_lvl1 = UL(&lvl2) | 0b11;
-	unsigned long mmio_size = 0x02000000; //UL(&mmio_end - &mmio_start);
+	unsigned long mmio_size = (2 << 20); //UL(&mmio_end - &mmio_start);
 	void *mmio_addr = &mmio_base;
 
 	lvl1[l1_linear_offset(mmio_addr)] = device_lvl1;
@@ -64,6 +95,7 @@ __attribute__((section(".text.boot"))) void map(void)
 	uint64_t sctrl;
 	void (*rust_start_higher_half)(void) = (void *) (&start_kernel);
 
+	tmp_printf("Hello C\n");
 	lvl1[l1_linear_offset(&load_addr)] = _1_v_1_1gb;
 	lvl1[l1_linear_offset(&kernel_virtual_base)] = _1_v_1_1gb;
 
@@ -74,15 +106,19 @@ __attribute__((section(".text.boot"))) void map(void)
 
 	asm volatile ("msr TTBR0_EL1, %0"::"r"(ttbr_el1):"memory");
 	asm volatile ("msr TTBR1_EL1, %0"::"r"(ttbr_el1));
-	asm volatile ("tlbi    vmalle1is");
+	asm volatile ("tlbi    vmalle1");
 
 	asm volatile ("mrs %0, SCTLR_EL1": "=r"(sctrl));
 
 	sctrl = ((1 << 0) | (1 << 2) | (1 << 12));
 
+	asm volatile ("isb");
+	asm volatile ("dsb ishst");
 	asm volatile ("msr SCTLR_EL1, %0"::"r"(sctrl));
+	asm volatile ("dsb ishst");
+	asm volatile ("isb");
 
-	/* tmp_printf("Set up minimal page_table... Jumping to Rust code\n"); */
+	tmp_printf("Set up minimal page_table... Jumping to Rust code\n\r");
 
 	asm volatile ("br	%0"::"r"(rust_start_higher_half));
 	asm ("b		."::: "memory");

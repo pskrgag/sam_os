@@ -3,7 +3,7 @@ ENTRY(__start)
 PAGE_SIZE = 4096;
 
 load_addr = 0x40000000;
-mmio_base = 0x08000000;
+mmio_base = 0x01C00000;
 kernel_virtual_base = 0xffffffa000000000;
 
 SECTIONS

@@ -2,6 +2,34 @@
 
 .global __start
 __start:
+	bl	hello
+	mrs	x0, CurrentEl
+	cmp	x0, #(1 << 2)
+	b.eq	el1_1
+
+	/* Only EL2 supported, too tired for el3 boilerplate. why tf you even
+	 * want to boot OS from el3?. */
+	msr	SCTLR_EL1, xzr
+
+	mov	x0, xzr
+	orr	x0, x0, #(1 << 31)
+	orr	x0, x0, #(1 << 29)
+	msr	HCR_EL2, x0
+
+	mov	x0, #(0b00101 | (1 << 7) | (1 << 6) | (1 << 9) | (1 << 8))
+	msr	SPSR_EL2, x0
+
+	adr	x1, el1_1
+	msr	ELR_EL2, x1
+
+	mrs	x1, VBAR_EL2
+	msr	VBAR_EL1, x1
+
+	bl	hello
+	isb
+	eret
+el1_1:
+	bl	hello
 	adrp	x0, __STACK_START
 	add	x0, x0, #:lo12:__STACK_START
 	mov	sp, x0

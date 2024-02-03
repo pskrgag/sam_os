@@ -1,14 +1,15 @@
+use crate::arch::uart_base;
 use crate::drivers::mmio_mapper::MMIO_ALLOCATOR;
 use crate::kernel::locking::spinlock::Spinlock;
 use core::fmt;
 use rtl::uart::Uart as BackendUart;
 use rtl::uart::UartTrait;
 use rtl::vmm::types::*;
-use crate::arch::uart_base;
 
 pub struct Uart;
 
-static UART: Spinlock<BackendUart> = Spinlock::new(BackendUart::default(uart_base()));
+static UART: Spinlock<BackendUart> =
+    Spinlock::new(BackendUart::default(VirtAddr::new(0x01C2_8000)));
 
 impl fmt::Write for Uart {
     fn write_str(&mut self, s: &str) -> fmt::Result {
