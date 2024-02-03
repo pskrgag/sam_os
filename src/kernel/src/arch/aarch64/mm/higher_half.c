@@ -34,11 +34,11 @@ static uint64_t l2_linear_offset(void *p)
 	return (va >> 21) & (512 - 1);
 }
 
-static inline void tmp_printf(const char *ptr)
-{
-	for (; *ptr; ptr++)
-		*(volatile char *) (uintptr_t)0x09000000 = *ptr;
-}
+/* static inline void tmp_printf(const char *ptr) */
+/* { */
+/* 	for (; *ptr; ptr++) */
+/* 		*(volatile char *) (uintptr_t)0x09000000 = *ptr; */
+/* } */
 
 static inline void mmio_1_v_1(void)
 {
@@ -82,7 +82,7 @@ __attribute__((section(".text.boot"))) void map(void)
 
 	asm volatile ("msr SCTLR_EL1, %0"::"r"(sctrl));
 
-	tmp_printf("Set up minimal page_table... Jumping to Rust code\n");
+	/* tmp_printf("Set up minimal page_table... Jumping to Rust code\n"); */
 
 	asm volatile ("br	%0"::"r"(rust_start_higher_half));
 	asm ("b		."::: "memory");

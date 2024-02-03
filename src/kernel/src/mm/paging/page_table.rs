@@ -160,12 +160,6 @@ impl PageTable {
             base: VirtAddr::from(base),
         };
 
-        // let base_va = new_table.base;
-
-        // unsafe {
-        //     core::slice::from_raw_parts_mut(base_va.to_raw_mut::<u8>(), PAGE_SIZE).fill(0);
-        // }
-
         Some(new_table)
     }
 
@@ -184,7 +178,6 @@ impl PageTable {
             PageFlags::page().bits()
         };
 
-        // println!("lvl {} index {}", lvl, index);
         assert!(!b.is_valid_tte(index));
 
         unsafe {
@@ -339,7 +332,6 @@ impl PageTable {
         mut v: MemRange<VirtAddr>,
         cb: F,
     ) -> Result<(), MmError> {
-        println!("do free {:?}", v);
         let mut p = MemRange::new(PhysAddr::new(v.start().bits()), v.size());
 
         self.op_lvl(

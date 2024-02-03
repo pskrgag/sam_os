@@ -1,4 +1,5 @@
 name = "Console app"
+board = 'qemu'
 
 [[component]]
 name = "nameserver"

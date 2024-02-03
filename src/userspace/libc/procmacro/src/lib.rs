@@ -32,7 +32,7 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
             main(boot_handle);
 
-            loop { }
+            loop { libc::syscalls::Syscall::sys_yield() }
         }
 
         #[panic_handler]

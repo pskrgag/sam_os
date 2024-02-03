@@ -6,7 +6,7 @@ use core::{
 use rtl::arch::PAGE_SIZE;
 use rtl::locking::fake_lock::FakeLock;
 
-const INIT_PAGE_POOL: usize = 50;
+const INIT_PAGE_POOL: usize = 100;
 
 #[repr(C)]
 struct FfHeader {
@@ -26,7 +26,7 @@ pub static BOOT_ALLOC: FakeLock<BootAlloc> = FakeLock::new(BootAlloc::default())
 unsafe impl Sync for BootAlloc {}
 
 impl BootAlloc {
-    pub(self) const fn default() -> Self {
+    pub const fn default() -> Self {
         Self {
             pool: [0; PAGE_SIZE * INIT_PAGE_POOL],
             free: core::mem::size_of::<Self>() - core::mem::size_of::<FfHeader>(),
@@ -100,14 +100,13 @@ impl BootAlloc {
                 (*header).size = size;
                 (*header).free = false;
 
-                //        println!("Boot alloc {:p} {:p}", &self.pool, header_raw.offset(core::mem::size_of::<FfHeader>() as isize));
                 return header_raw.offset(core::mem::size_of::<FfHeader>() as isize);
             }
 
             iter = (*header).next;
         }
 
-        panic!("Built in pool on static excided. Consider increasing INIT_PAGE_POOL");
+        panic!("Builtin pool on static memory has excided. Consider increasing INIT_PAGE_POOL");
     }
 
     pub unsafe fn free(&mut self, data: *mut u8) {

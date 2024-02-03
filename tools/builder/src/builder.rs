@@ -133,7 +133,7 @@ pub fn build(b: BuildScript) -> Result<(), ()> {
             return Err(());
         }
 
-        if let Err(e) = build_kernel() {
+        if let Err(e) = build_kernel(&b) {
             error!("Failed to build kernel: {}", e);
             return Err(());
         }

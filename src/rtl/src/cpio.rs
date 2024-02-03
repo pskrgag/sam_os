@@ -81,6 +81,10 @@ impl<'a> File<'a> {
     pub fn data(&self) -> &'a [u8] {
         self.data
     }
+
+    pub fn name(&self) -> &str {
+        self.name
+    }
 }
 
 impl<'a> Iterator for Iter<'a> {

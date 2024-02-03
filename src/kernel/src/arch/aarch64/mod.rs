@@ -1,8 +1,12 @@
 #[cfg(feature = "qemu")]
 pub mod qemu;
-
 #[cfg(feature = "qemu")]
 pub use qemu::config::*;
+
+#[cfg(feature = "orpipc2")]
+pub mod orpipc2;
+#[cfg(feature = "orpipc2")]
+pub use orpipc2::config::*;
 
 pub mod backtrace;
 pub mod context;

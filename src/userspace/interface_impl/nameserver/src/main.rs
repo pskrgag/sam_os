@@ -25,11 +25,15 @@ fn main(boot_handle: Handle) {
     let p = Port::create().unwrap();
 
     for i in cpio.iter() {
-        println!("{:?}", i);
-
         let elf = i.data();
+        let name = if let Some(pos) = i.name().rfind('/') {
+            &i.name()[pos + 1..]
+        } else {
+            i.name()
+        };
+
         let mut task =
-            Task::create_from_elf(elf, "task1".to_string()).expect("Failed to create task");
+            Task::create_from_elf(elf, name.to_string()).expect("Failed to create task");
         task.start(p.handle()).unwrap();
 
         println!("Spawned '{}'", task.name())

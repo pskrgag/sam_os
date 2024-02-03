@@ -3,8 +3,6 @@ pub mod aarch64;
 #[cfg(target_arch = "aarch64")]
 pub use aarch64::*;
 
-pub mod board;
-
 #[derive(Copy, Clone)]
 pub enum MemoryType {
     MEM,

@@ -4,10 +4,11 @@ use core::fmt;
 use rtl::uart::Uart as BackendUart;
 use rtl::uart::UartTrait;
 use rtl::vmm::types::*;
+use crate::arch::uart_base;
 
 pub struct Uart;
 
-static UART: Spinlock<BackendUart> = Spinlock::new(BackendUart::default(VirtAddr::new(0x09000000)));
+static UART: Spinlock<BackendUart> = Spinlock::new(BackendUart::default(uart_base()));
 
 impl fmt::Write for Uart {
     fn write_str(&mut self, s: &str) -> fmt::Result {

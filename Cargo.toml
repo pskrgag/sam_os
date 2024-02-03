@@ -5,6 +5,7 @@ members = [
 	"src/userspace/interface_impl/uart",
 	"src/userspace/apps/console",
 	"src/userspace/interface_impl/nameserver",
-	"src/kernel", "src/userspace/ridlrt", "src/userspace/interfaces", "src/userspace/apps/console", "tools/builder",
+	"src/kernel", "src/userspace/ridlrt", "src/userspace/interfaces", "src/userspace/apps/console", "tools/builder"
 ]
+
 resolver = "1"

@@ -82,7 +82,7 @@ pub fn run_prog(
     Ok(())
 }
 
-pub fn build_kernel() -> Result<(), String> {
+pub fn build_kernel(b: &BuildScript) -> Result<(), String> {
     info!("[CARGO]    Building kernel...",);
 
     let mut out = Vec::new();
@@ -95,7 +95,7 @@ pub fn build_kernel() -> Result<(), String> {
             "--target",
             TARGET,
             "--features",
-            "qemu",
+            &b.board.to_string(),
         ],
         None,
         Some(&mut out),
