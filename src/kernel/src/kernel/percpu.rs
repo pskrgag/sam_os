@@ -1,15 +1,12 @@
 use crate::{
     arch::cpuid::current_cpu,
     linker_var,
-    mm::{
-        allocators::page_alloc::page_allocator,
-        paging::{kernel_page_table::kernel_page_table},
-    },
+    mm::{allocators::page_alloc::page_allocator, paging::kernel_page_table::kernel_page_table},
 };
 
-use rtl::vmm::MappingType;
-use rtl::vmm::types::*;
 use rtl::arch::PAGE_SIZE;
+use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 use spin::Once;
 
 // TODO: W/A. it should be read from dtb
@@ -151,7 +148,7 @@ pub fn init_percpu() -> Option<()> {
     kernel_page_table()
         .map(
             None,
-            MemRange::new(VirtAddr::from(linker_var!(sdatapercpu)), per_cpu_size),
+            MemRange::new(VirtAddr::new(linker_var!(sdatapercpu)), per_cpu_size),
             MappingType::KERNEL_DATA,
         )
         .ok()?;

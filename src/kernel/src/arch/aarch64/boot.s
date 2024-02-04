@@ -2,7 +2,6 @@
 
 .global __start
 __start:
-	bl	hello
 	mrs	x0, CurrentEl
 	cmp	x0, #(1 << 2)
 	b.eq	el1_1
@@ -25,11 +24,9 @@ __start:
 	mrs	x1, VBAR_EL2
 	msr	VBAR_EL1, x1
 
-	bl	hello
 	isb
 	eret
 el1_1:
-	bl	hello
 	adrp	x0, __STACK_START
 	add	x0, x0, #:lo12:__STACK_START
 	mov	sp, x0

@@ -73,6 +73,9 @@ impl UartTrait for Uart {
             if *i == b'\n' {
                 self.write_reg(Pl011::UARTDR, b'\r' as u32);
             }
+
+            // #[cfg(feature = "tmp")]
+            while unsafe { self.base.to_raw_mut::<u32>().offset(5).read_volatile() & 0x40 == 0 } {}
         }
     }
 }

@@ -3,7 +3,15 @@ ENTRY(__start)
 PAGE_SIZE = 4096;
 
 load_addr = 0x40000000;
+
+#if defined(CONFIG_BOARD_QEMU)
+mmio_base = 0x08000000;
+#elif defined(CONFIG_BOARD_ORPIPC2)
 mmio_base = 0x01C00000;
+#else
+# error "Misconfiguration"
+#endif
+
 kernel_virtual_base = 0xffffffa000000000;
 
 SECTIONS

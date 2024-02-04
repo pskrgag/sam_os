@@ -3,9 +3,9 @@ use crate::{linker_var, mm::paging::kernel_page_table::kernel_page_table};
 use crate::arch::KERNEL_MMIO_BASE;
 use rtl::arch::PAGE_SIZE;
 use rtl::locking::fake_lock::FakeLock;
+use rtl::misc::num_pages;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
-use rtl::misc::num_pages;
 
 extern "C" {
     static mmio_start: usize;

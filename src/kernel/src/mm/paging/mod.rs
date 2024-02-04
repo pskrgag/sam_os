@@ -25,5 +25,5 @@ pub fn init_linear_map() {
         KERNEL_LINEAR_SPACE_END
     );
 
-    unsafe { set_kernel_page_table((*tt).base()) };
+    unsafe { set_kernel_page_table(tt.base()) };
 }

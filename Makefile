@@ -10,6 +10,7 @@ SCRIPTS := $(wildcard build_scripts/*.toml)
 TARGETS := $(patsubst %.toml,%, $(SCRIPTS))
 
 %:
+	echo "Building $@"
 	cargo run -p builder build_scripts/$@.toml test
 
 qemu:

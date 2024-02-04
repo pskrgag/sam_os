@@ -1,6 +1,6 @@
 use crate::{arch, drivers::mmio_mapper::MMIO_ALLOCATOR};
-use rtl::vmm::types::*;
 use rtl::locking::fake_lock::FakeLock;
+use rtl::vmm::types::*;
 
 const GICD_CTLR: usize = 0x0;
 const GICC_CTLR: usize = 0x0;
@@ -65,14 +65,22 @@ pub struct Gic {
 // TODO: Should it be per-cpu locked?
 pub static GIC: FakeLock<Gic> = FakeLock::new(Gic::new());
 
+#[inline(never)]
 fn write_to_reg<T>(base: VirtAddr, offset: usize, val: T) {
     unsafe {
-        (base.to_raw_mut::<T>().add(offset) as *mut T).write_volatile(val);
+        base.to_raw_mut::<T>()
+            .offset(offset as isize)
+            .write_volatile(val);
     };
 }
 
+#[inline(never)]
 fn read_from_reg<T>(base: VirtAddr, offset: usize) -> T {
-    unsafe { (base.to_raw_mut::<T>().add(offset) as *const T).read_volatile() }
+    unsafe {
+        base.to_raw_mut::<T>()
+            .offset(offset as isize)
+            .read_volatile()
+    }
 }
 
 impl GICC {

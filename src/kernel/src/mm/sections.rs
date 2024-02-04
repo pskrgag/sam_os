@@ -1,8 +1,8 @@
 use crate::{linker_var, mm::paging::kernel_page_table::kernel_page_table};
+use rtl::arch::PHYS_OFFSET;
 use rtl::locking::fake_lock::FakeLock;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
-use rtl::arch::PHYS_OFFSET;
 
 use alloc::vec::Vec;
 
@@ -30,12 +30,12 @@ pub struct KernelSection {
 static KERNEL_SECTIONS: FakeLock<Vec<KernelSection>> = FakeLock::new(Vec::new());
 
 impl KernelSection {
-    pub fn new(start: usize, size: usize, name: &'static str, tp: MappingType) -> Self {
+    pub fn new(start: usize, size: usize, name: &'static str, map_type: MappingType) -> Self {
         Self {
-            start: start,
-            size: size,
-            name: name,
-            map_type: tp,
+            start,
+            size,
+            name,
+            map_type,
         }
     }
 
@@ -101,7 +101,7 @@ pub fn remap_kernel() {
 
     for i in &*array {
         println!(
-            "{}\t[0x{:x} -> 0x{:x}] (size 0x{:x})",
+            "{}\t\t[0x{:x} -> 0x{:x}] (size 0x{:x})",
             i.name(),
             i.start() - PHYS_OFFSET,
             i.start(),
@@ -117,5 +117,5 @@ pub fn remap_kernel() {
             .expect("Failed to map kernel sections");
     }
 
-    println!("Fine grained mapping enabled");
+    println!("Remaped kernel image");
 }

@@ -19,10 +19,13 @@ pub fn l3_linear_offset(va: VirtAddr) -> usize {
 }
 
 pub unsafe fn set_kernel_page_table(base: PhysAddr) {
-    asm!("dsb ishst");
-    asm!("msr TTBR1_EL1, {}", in(reg) base.get());
-    asm!("isb");
-    asm!("tlbi vmalle1");
-    asm!("dsb ishst");
-    asm!("isb");
+    asm!("dsb   sy",
+         "isb",
+         "msr   TTBR1_EL1, {}",
+         "isb",
+         "tlbi  vmalle1is",
+         "dsb   sy",
+         "isb",
+          in(reg) base.bits(),
+    );
 }

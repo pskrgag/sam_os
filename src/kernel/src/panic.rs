@@ -23,18 +23,17 @@ fn on_panic(info: &PanicInfo) -> ! {
             println!("{}", m);
         }
 
+        if let Some(location) = info.location() {
+            println!(
+                "Happened in file '{}' at line {}",
+                location.file(),
+                location.line(),
+            );
+        }
         core::arch::asm!("mov {}, fp", out(reg) fp);
 
         bt_size = backtrace(&mut bt, VirtAddr::from(fp));
     };
-
-    if let Some(location) = info.location() {
-        println!(
-            "Happened in file '{}' at line {}",
-            location.file(),
-            location.line(),
-        );
-    }
 
     println!("Kernel backtrace");
     for i in 0..bt_size {

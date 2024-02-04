@@ -8,7 +8,7 @@ use rtl::vmm::types::*;
 global_asm!(include_str!("interrupts.S"));
 
 extern "C" {
-    static exteption_vector: u64;
+    static exception_vector: u64;
     static sfixup: usize;
     static efixup: usize;
 }
@@ -70,7 +70,7 @@ pub fn set_up_vbar() {
     unsafe {
         asm!("msr VBAR_EL1, {}",
              "isb",
-            in(reg) &exteption_vector);
+            in(reg) &exception_vector);
     }
 }
 
@@ -92,7 +92,12 @@ fn fixup(v: VirtAddr, ctx: &mut ExceptionCtx) -> bool {
 }
 
 #[no_mangle]
-pub extern "C" fn kern_sync64(esr_el1: VirtAddr, far_el1: VirtAddr, elr_el1: VirtAddr, ctx: &mut ExceptionCtx) {
+pub extern "C" fn kern_sync64(
+    esr_el1: VirtAddr,
+    far_el1: VirtAddr,
+    elr_el1: VirtAddr,
+    ctx: &mut ExceptionCtx,
+) {
     if fixup(elr_el1, ctx) == false {
         println!("!!! Kernel sync exception");
         println!("{:?}", ctx);
@@ -100,6 +105,13 @@ pub extern "C" fn kern_sync64(esr_el1: VirtAddr, far_el1: VirtAddr, elr_el1: Vir
             "ESR_EL1 0x{:x} FAR_EL1 0x{:x}, ELR_EL1 0x{:x}",
             esr_el1, far_el1, elr_el1
         );
+
+        unsafe {
+            let tcr: u64;
+
+            asm!("mrs   {}, TCR_EL1", out(reg) tcr);
+            println!("TCR_EL1 {:x}", tcr);
+        };
 
         panic!("Unhandled kernel sync exception");
     }

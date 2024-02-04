@@ -33,7 +33,7 @@ impl PageAlloc {
             pool.push(Bitmap::<64>::new());
         }
 
-        println!("Page allocator initialized: phys size {}", size);
+        println!("Page allocator initialized: phys size {:x}", size);
 
         Some(Self {
             pool,

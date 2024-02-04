@@ -4,6 +4,7 @@ use crate::{
     arch::{self, mm::mmu_flags},
     mm::allocators::page_alloc::page_allocator,
 };
+use rtl::arch::PAGE_SIZE;
 
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
@@ -80,7 +81,8 @@ impl PageTableBlock {
             .to_raw_mut::<usize>()
             .offset(index as isize)
             .write_volatile(entry.bits());
-        // TODO: barriers, please.....
+
+        core::arch::asm!("dsb ishst", "isb");
     }
 
     pub fn get_tte(&mut self, index: usize) -> PageTableEntry {
@@ -154,11 +156,33 @@ impl PageTable {
         }
     }
 
+    pub fn walk(&mut self, va: VirtAddr) {
+        let mut base = self.lvl1();
+
+        for _ in 0..2 {
+            let index = base.index_of(va);
+            println!("entry {:x}", base.get_tte(index).bits());
+
+            let next_block = match base.next(index) {
+                Some(e) => e,
+                None => return,
+            };
+
+            base = next_block;
+        }
+
+        let index = base.index_of(va);
+        println!("entry {:x}", base.get_tte(index).bits());
+    }
+
     pub fn new() -> Option<Self> {
-        let base: PhysAddr = page_allocator().alloc(1)?.into();
+        let base: PhysAddr = page_allocator().alloc(1)?;
         let new_table = Self {
             base: VirtAddr::from(base),
         };
+
+        let va = VirtAddr::from(base);
+        unsafe { va.as_slice_mut::<u8>(PAGE_SIZE).fill(0x00) };
 
         Some(new_table)
     }
@@ -193,10 +217,10 @@ impl PageTable {
         lvl: usize,
         index: usize,
     ) -> Result<PageTableBlock, ()> {
-        let new_page: PhysAddr = page_allocator()
-            .alloc(1)
-            .expect("Failed to allocate memory")
-            .into();
+        let new_page = page_allocator().alloc(1).ok_or(())?;
+        let va = VirtAddr::from(new_page);
+        unsafe { va.as_slice_mut::<u8>(PAGE_SIZE).fill(0x00) };
+
         let new_entry = PageTableEntry::from_bits(PageFlags::table().bits() | new_page.get());
 
         unsafe { b.set_tte(index, new_entry) };
@@ -264,6 +288,7 @@ impl PageTable {
                 self.op_lvl(next_block, lvl + 1, v, p, map, cb, cb_b, use_huge_pages)?;
             } else {
                 assert!(p.start().is_aligned(order));
+                assert!(v.start().is_aligned(order));
 
                 cb(&mut base, index, p.start(), map, lvl, v.start());
 
@@ -354,10 +379,6 @@ impl PageTable {
             true,
         )
         .map(|_| ())
-    }
-
-    pub fn unmap(&mut self, _v: MemRange<VirtAddr>) -> Result<(), MmError> {
-        Err(MmError::NotImpl)
     }
 
     #[inline]

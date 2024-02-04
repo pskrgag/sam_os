@@ -23,7 +23,7 @@ pub fn run_prog(
     env: Option<&[(&str, &str)]>,
 ) -> Result<(), String> {
     let mut child = Command::new(name);
-    let mut child = child.args(args);
+    let mut child = child.args(args).stderr(Stdio::piped());
 
     if stdin.is_some() {
         child = child.stdin(Stdio::piped());
@@ -66,16 +66,16 @@ pub fn run_prog(
         .map_err(|x| format!("Failed to run {name} {x}"))?;
 
     if !exit.success() {
-        // let mut err = String::new();
-        // child
-        //     .stderr
-        //     .take()
-        //     .unwrap()
-        //     .read_to_string(&mut err)
-        //     .map_err(|_| "Failed to read stderr of a process")?;
+        let mut err = Vec::new();
+        child
+            .stderr
+            .take()
+            .unwrap()
+            .read_to_end(&mut err)
+            .map_err(|_| "Failed to read stderr of a process")?;
 
-        // TODO: figure out how to preserve color when reading stderr, since parsing
-        // uncolored error messages is kinda.... sad...?
+        std::io::stderr().write(err.as_slice()).unwrap();
+
         return Err(format!("{name} failed with: {exit}"));
     }
 
@@ -84,6 +84,18 @@ pub fn run_prog(
 
 pub fn build_kernel(b: &BuildScript) -> Result<(), String> {
     info!("[CARGO]    Building kernel...",);
+
+    let ldpath = "src/kernel/src/arch/aarch64/aarch64-qemu.ld";
+    let flag = format!("-DCONFIG_BOARD_{}", b.board.to_uppercase());
+
+    run_prog(
+        "cpp",
+        &[ldpath, flag.as_str(), "-o", "/tmp/tmp.ld"],
+        None,
+        None,
+        None,
+    )
+    .unwrap();
 
     let mut out = Vec::new();
     run_prog(
@@ -96,22 +108,23 @@ pub fn build_kernel(b: &BuildScript) -> Result<(), String> {
             TARGET,
             "--features",
             &b.board.to_string(),
+            "--color=always",
         ],
         None,
         Some(&mut out),
         Some(&[(
             "RUSTFLAGS",
-            "-C link-arg=--script=src/kernel/src/arch/aarch64/aarch64-qemu.ld -C opt-level=0 -C force-frame-pointers",
+            "-C link-arg=--script=/tmp/tmp.ld -C opt-level=0 -C force-frame-pointers",
         )]),
     )
 }
 
 fn do_build_component(name: &String) -> Result<(), String> {
-    info!("[CARGO]    Compiling component '{name}'...",);
+    info!("[CARGO]    Compiling component \"{name}\"...",);
 
     run_prog(
         "cargo",
-        &["build", "-p", name.as_str(), "--target", TARGET],
+        &["build", "-p", name.as_str(), "--target", TARGET, "--color=always"],
         None,
         None,
         None,
@@ -130,6 +143,7 @@ pub fn compile_idl(i: &String, server: bool) -> Result<String, String> {
         "cargo",
         &[
             "run",
+            "--color=always",
             "-p",
             "ridl",
             if server { "server" } else { "transport" },
@@ -225,10 +239,7 @@ pub fn prepare_idls() -> Result<(), String> {
             .truncate(true)
             .write(true)
             .create(true)
-            .open(format!(
-                "{INTERFACE_IMPL_DIR}/server/{}.rs", file_strep
-                
-            ))
+            .open(format!("{INTERFACE_IMPL_DIR}/server/{}.rs", file_strep))
             .map_err(|_| String::from("Failed to create file for compiled idl"))?;
 
         file.write(out.as_str().as_bytes())
@@ -242,9 +253,7 @@ pub fn prepare_idls() -> Result<(), String> {
             .truncate(true)
             .write(true)
             .create(true)
-            .open(format!(
-                "{INTERFACE_IMPL_DIR}/client/{}.rs", file_strep
-            ))
+            .open(format!("{INTERFACE_IMPL_DIR}/client/{}.rs", file_strep))
             .map_err(|_| String::from("Failed to create file for compiled idl"))?;
 
         file.write(out.as_str().as_bytes())
@@ -257,7 +266,7 @@ pub fn prepare_idls() -> Result<(), String> {
 }
 
 pub fn build_component(c: &Component) -> Result<(), String> {
-    info!("Builing {:?}...", c.name);
+    info!("[INFO]     Builing {:?}...", c.name);
 
     do_build_component(&c.name)?;
 

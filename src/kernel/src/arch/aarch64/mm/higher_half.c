@@ -15,7 +15,17 @@ extern uint64_t mmio_base;
 extern void __attribute__((noreturn)) start_kernel(void);
 extern void __attribute__((noreturn)) cpu_reset(void);
 
+#define ROUND_UP(x, y)	((((x) - 1) | ((y) - 1)) + 1)
+
 typedef uint64_t tte_t;
+
+#if defined(CONFIG_BOARD_QEMU)
+#define UART_BASE	0x09000000
+#elif defined(CONFIG_BOARD_ORPIPC2)
+#define UART_BASE	0x01C28000
+#else
+# error "Misconfiguration"
+#endif
 
 static tte_t lvl1[512] __attribute__((aligned(4096)));
 static tte_t lvl2[512] __attribute__((aligned(4096)));
@@ -37,44 +47,14 @@ static uint64_t l2_linear_offset(void *p)
 static inline void tmp_printf(const char *ptr)
 {
 	for (; *ptr; ptr++)
-		*(volatile char *) (uintptr_t)0x01C28000 = *ptr;
+		*(volatile char *) (uintptr_t)UART_BASE = *ptr;
 }
 
-
-void check_el(void)
-{
-	unsigned long el;
-
-	asm volatile ("mrs	%0, CurrentEl": "=r" (el));
-
-	switch (el >> 2) {
-	case 1:
-		tmp_printf("el1\n");
-		break;
-	case 2:
-		tmp_printf("el2\n");
-		break;
-	case 3:
-		tmp_printf("el3\n");
-		break;
-	case 0:
-		tmp_printf("el0\n");
-		break;
-	default:
-		tmp_printf("undefined el\n");
-		break;
-	}
-}
-
-void hello(void)
-{
-	check_el();
-}
 
 static inline void mmio_1_v_1(void)
 {
 	tte_t device_lvl1 = UL(&lvl2) | 0b11;
-	unsigned long mmio_size = (2 << 20); //UL(&mmio_end - &mmio_start);
+	unsigned long mmio_size = ROUND_UP(UART_BASE - UL(&mmio_base) + 1, (1 << 21));
 	void *mmio_addr = &mmio_base;
 
 	lvl1[l1_linear_offset(mmio_addr)] = device_lvl1;
@@ -89,13 +69,12 @@ static inline void mmio_1_v_1(void)
 __attribute__((section(".text.boot"))) void map(void)
 {
 	tte_t _1_v_1_1gb = UL(&load_addr) | (1 << 10) |  0b01;
-	uint64_t tcr = (25UL << 16) | 25 | (2UL << 30);
+	uint64_t tcr = (25UL << 16) | 25 | (2UL << 30) | (3UL << 26) | (3UL << 24);
 	uint64_t mair = (0b00000000 << 8) | 0b01110111;
 	uint64_t ttbr_el1 = ((uint64_t) (void *) &lvl1);
 	uint64_t sctrl;
 	void (*rust_start_higher_half)(void) = (void *) (&start_kernel);
 
-	tmp_printf("Hello C\n");
 	lvl1[l1_linear_offset(&load_addr)] = _1_v_1_1gb;
 	lvl1[l1_linear_offset(&kernel_virtual_base)] = _1_v_1_1gb;
 
@@ -129,7 +108,7 @@ __attribute__((section(".text.boot"))) void map(void)
 
 void __attribute__((section(".text.boot"))) reset(void)
 {
-	uint64_t tcr = (25UL << 16) | 25 | (2UL << 30);
+	uint64_t tcr = (25UL << 16) | 25 | (2UL << 30) | (3UL << 26) | (3UL << 24);
 	uint64_t mair = (0b00000000 << 8) | 0b01110111;
 	uint64_t sctrl;
 	void (*rust_reset)(void) = (void *) (&cpu_reset);

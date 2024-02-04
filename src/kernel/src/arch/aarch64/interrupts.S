@@ -113,8 +113,8 @@ user_ret:
 
 .section ".text"
 .align 11
-.global
-exteption_vector:
+.global exception_vector
+exception_vector:
 curr_el_sp0_sync:		 // The exception handler for a synchronous
 	b __exception_bug
 				// exception from the current EL using SP0
