@@ -2,10 +2,10 @@
 #![no_main]
 #![feature(format_args_nl)]
 
-use libc::main;
-use rtl::handle::{Handle, HANDLE_INVALID};
 use interfaces::implementation::nameserver;
+use libc::main;
 use libc::port::Port;
+use rtl::handle::{Handle, HANDLE_INVALID};
 
 mod serial;
 

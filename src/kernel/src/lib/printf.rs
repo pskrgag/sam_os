@@ -15,7 +15,7 @@ pub fn _print(args: fmt::Arguments) {
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => {
-        ($crate::lib::printf::_print(format_args!($($arg)*))) 
+        ($crate::lib::printf::_print(format_args!($($arg)*)))
     };
 }
 
@@ -39,7 +39,7 @@ macro_rules! println {
     })
 }
 
-//#[cfg(debug_assertions)]
+#[cfg(debug_assertions)]
 macro_rules! dbg {
     () => ($crate::print!("\n"));
     ($($arg:tt)*) => ({

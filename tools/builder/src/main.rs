@@ -9,9 +9,9 @@ use std::io::*;
 extern crate log;
 extern crate simplelog;
 
-mod toml;
 mod builder;
 mod runner;
+mod toml;
 
 fn main() -> Result<()> {
     CombinedLogger::init(vec![TermLogger::new(
@@ -48,8 +48,7 @@ fn main() -> Result<()> {
 
     info!("Building '{}' ...", script.name);
 
-    builder::build(script)
-        .map_err(|_| Error::new(ErrorKind::InvalidData, "Failed to build"))?;
+    builder::build(script).map_err(|_| Error::new(ErrorKind::InvalidData, "Failed to build"))?;
 
     info!("Done!");
     Ok(())

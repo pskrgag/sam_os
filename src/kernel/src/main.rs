@@ -48,7 +48,7 @@ static SAMOS_BANNER: &str = "
 #[no_mangle]
 extern "C" fn start_kernel() -> ! {
     println!("Starting kernel...");
-    arch::interrupts::set_up_vbar();
+    arch::irq::handlers::set_up_vbar();
 
     // allocators + paging
     mm::init();
@@ -76,7 +76,7 @@ extern "C" fn start_kernel() -> ! {
 extern "C" fn cpu_reset() -> ! {
     println!("Cpu {} started!", arch::cpuid::current_cpu());
 
-    arch::interrupts::set_up_vbar();
+    arch::irq::handlers::set_up_vbar();
 
     unsafe {
         arch::irq::enable_all();

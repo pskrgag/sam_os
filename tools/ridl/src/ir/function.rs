@@ -1,7 +1,7 @@
 use super::argtype::Type;
 use ir_lib::ir;
-use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 #[derive(Clone, Debug, Hash)]
 pub enum Argument {

@@ -2,7 +2,9 @@ use crate::runner::*;
 use crate::toml::*;
 
 fn check_wrong_impl_and_deps(c: &Component) -> Result<(), String> {
-    if let Some(ref deps) = c.depends  && let Some(ref impls) = c.implements {
+    if let Some(ref deps) = c.depends
+        && let Some(ref impls) = c.implements
+    {
         let inter = impls
             .iter()
             .filter(|&num| deps.contains(num))
@@ -117,7 +119,7 @@ pub fn build(b: BuildScript) -> Result<(), ()> {
                 }
             }
 
-            if let Err(e) = build_component(&i) {
+            if let Err(e) = build_component(&i, &b) {
                 error!("Failed to build component '{}': {}", i.name, e);
                 return Err(());
             }
@@ -128,7 +130,7 @@ pub fn build(b: BuildScript) -> Result<(), ()> {
             return Err(());
         }
 
-        if let Err(e) = build_component(init.unwrap()) {
+        if let Err(e) = build_component(init.unwrap(), &b) {
             error!("Failed to build component '{}': {}", init.unwrap().name, e);
             return Err(());
         }

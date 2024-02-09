@@ -52,16 +52,7 @@ impl<'a> Syscall<'a> {
 
                 a
             }
-            Syscall::Yield => [
-                SyscallList::SYS_YIELD.into(),
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-            ],
+            Syscall::Yield => [SyscallList::SYS_YIELD.into(), 0, 0, 0, 0, 0, 0, 0],
         }
     }
 }

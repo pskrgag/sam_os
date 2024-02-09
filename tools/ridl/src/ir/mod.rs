@@ -1,6 +1,6 @@
-pub mod interface;
-pub mod function;
 pub mod argtype;
+pub mod function;
+pub mod interface;
 
 use std::any::Any;
 

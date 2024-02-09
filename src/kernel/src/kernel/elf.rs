@@ -1,9 +1,9 @@
+use crate::mm::allocators::page_alloc::page_allocator;
 use alloc::vec::Vec;
 use core::mem::size_of;
+use rtl::arch::PAGE_SIZE;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
-use crate::mm::allocators::page_alloc::page_allocator;
-use rtl::arch::PAGE_SIZE;
 
 const EI_NIDENT: usize = 16;
 const ELF_MAGIC: [u8; 4] = [0x7f, 'E' as u8, 'L' as u8, 'F' as u8];
@@ -171,7 +171,9 @@ fn parse_program_headers(
 
         // Handle bss properly
         let p_range = if pheader.p_memsz != pheader.p_filesz {
-            let p = page_allocator().alloc(*(size as usize).round_up_page() / PAGE_SIZE).unwrap();
+            let p = page_allocator()
+                .alloc(*(size as usize).round_up_page() / PAGE_SIZE)
+                .unwrap();
             MemRange::new(p, size)
         } else {
             MemRange::new(

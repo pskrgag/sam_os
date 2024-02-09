@@ -1,10 +1,10 @@
-use core::mem;
 use bytemuck::*;
+use core::mem;
 
 #[derive(Debug)]
 pub struct MessageArena<'a> {
     free: &'a [u8],
-    pub (crate) start: usize,
+    pub(crate) start: usize,
     allocated: usize,
     size: usize,
 }
@@ -27,9 +27,7 @@ impl ArenaPtr {
     pub fn ptr_to_native_in_arena<T>(&self, p: &MessageArena<'_>) -> Option<&mut T> {
         let off = (p.start + self.offset) as usize as *mut T;
 
-        unsafe {
-            Some(&mut *off)
-        }
+        unsafe { Some(&mut *off) }
     }
 }
 
@@ -201,9 +199,6 @@ mod test {
         let p = arena.allocate_slice("hello".as_bytes()).unwrap();
         let size = arena.read_slice(p, &mut slice).unwrap();
 
-        assert_eq!(
-            core::str::from_utf8(&slice[..size]).unwrap(),
-            "hello"
-        );
+        assert_eq!(core::str::from_utf8(&slice[..size]).unwrap(), "hello");
     }
 }

@@ -3,14 +3,14 @@
 
 extern crate alloc;
 
-pub mod syscalls;
-pub mod stdio;
-pub mod elf;
 pub mod allocator;
-pub mod task;
-pub mod vmm;
+pub mod elf;
 pub mod factory;
 pub mod port;
+pub mod stdio;
+pub mod syscalls;
+pub mod task;
+pub mod vmm;
 
 pub use rustrt::*;
 

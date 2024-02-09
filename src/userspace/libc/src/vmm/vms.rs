@@ -2,10 +2,10 @@ use crate::syscalls::Syscall;
 use crate::vmm::vm_object::VmObject;
 use rtl::error::ErrorType;
 use rtl::handle::Handle;
+use rtl::objects::vmo::VmoFlags;
 use rtl::objects::vms::VmsInvoke;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
-use rtl::objects::vmo::VmoFlags;
 
 pub static mut SELF_VMS: Vms = Vms::new(0);
 
@@ -35,7 +35,13 @@ impl Vms {
         let h: Handle = Syscall::invoke(
             self.h,
             VmsInvoke::CREATE_VMO.bits(),
-            &[b.as_ptr() as usize, b.len(), tp.into(), load_addr.into(), VmoFlags::BACKED.bits()],
+            &[
+                b.as_ptr() as usize,
+                b.len(),
+                tp.into(),
+                load_addr.into(),
+                VmoFlags::BACKED.bits(),
+            ],
         )
         .ok()?
         .into();
@@ -52,7 +58,13 @@ impl Vms {
         let h: Handle = Syscall::invoke(
             self.h,
             VmsInvoke::CREATE_VMO.bits(),
-            &[0, size, tp.into(), load_addr.into(), VmoFlags::ZEROED.bits()],
+            &[
+                0,
+                size,
+                tp.into(),
+                load_addr.into(),
+                VmoFlags::ZEROED.bits(),
+            ],
         )
         .ok()?
         .into();

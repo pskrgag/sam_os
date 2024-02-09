@@ -29,11 +29,8 @@ fn put_byte(
     _req_arena: &MessageArena,
     _resp_arena: &mut MessageArena,
 ) -> Result<sam_request_WriteByte_out, ErrorType> {
-
     UART.get().write_bytes(&[r.b]);
-    Ok(sam_request_WriteByte_out {
-        error: 0.into(),
-    })
+    Ok(sam_request_WriteByte_out { error: 0.into() })
 }
 
 fn put_bytes(
@@ -45,9 +42,7 @@ fn put_bytes(
     let size = req_arena.read_slice(r.str, &mut buf).unwrap();
 
     UART.get().write_bytes(&buf[..size]);
-    Ok(sam_request_WriteBytes_out {
-        error: 0.into(),
-    })
+    Ok(sam_request_WriteBytes_out { error: 0.into() })
 }
 
 pub fn start_serial(p: Port) {

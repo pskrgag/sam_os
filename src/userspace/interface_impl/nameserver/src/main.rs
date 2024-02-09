@@ -32,8 +32,7 @@ fn main(boot_handle: Handle) {
             i.name()
         };
 
-        let mut task =
-            Task::create_from_elf(elf, name.to_string()).expect("Failed to create task");
+        let mut task = Task::create_from_elf(elf, name.to_string()).expect("Failed to create task");
         task.start(p.handle()).unwrap();
 
         println!("Spawned '{}'", task.name())

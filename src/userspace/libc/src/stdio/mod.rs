@@ -34,6 +34,7 @@ macro_rules! println {
     })
 }
 
+#[macro_export]
 macro_rules! println_libc {
     () => (print!("\n"));
     ($($arg:tt)*) => ({

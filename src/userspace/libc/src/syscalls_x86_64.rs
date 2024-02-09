@@ -5,4 +5,3 @@ use rtl::error::ErrorType;
 pub unsafe fn syscall(_args: [usize; 8]) -> Result<usize, ErrorType> {
     unimplemented!();
 }
-

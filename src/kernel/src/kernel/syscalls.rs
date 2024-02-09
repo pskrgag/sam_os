@@ -54,7 +54,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             drop(task);
 
             req_t.invoke(&args.args()[1..])
-        },
+        }
         SyscallList::SYS_YIELD => {
             let thread = current().unwrap();
             thread.self_yield();

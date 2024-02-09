@@ -24,4 +24,3 @@ pub unsafe fn syscall(args: [usize; 8]) -> Result<usize, ErrorType> {
         Ok(ret as usize)
     }
 }
-

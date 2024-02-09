@@ -19,6 +19,6 @@ impl Backend for UartBackend {
 
 impl Default for UartBackend {
     fn default() -> Self {
-        UartBackend{}
+        UartBackend {}
     }
 }

@@ -9,10 +9,10 @@ pub mod arch;
 pub mod cpio;
 pub mod error;
 pub mod handle;
+pub mod ipc;
 pub mod locking;
 pub mod syscalls;
 pub mod vmm;
-pub mod ipc;
 
 pub mod uart;
 

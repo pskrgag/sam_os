@@ -1,12 +1,12 @@
 use crate::kernel::locking::spinlock::Spinlock;
 use crate::mm::allocators::page_alloc::page_allocator;
+use crate::mm::user_buffer::UserPtr;
 use alloc::sync::Arc;
 use object_lib::object;
 use rtl::arch::{PAGE_SHIFT, PAGE_SIZE};
 use rtl::error::ErrorType;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
-use crate::mm::user_buffer::UserPtr;
 
 #[derive(Debug)]
 struct VmObjectInner {

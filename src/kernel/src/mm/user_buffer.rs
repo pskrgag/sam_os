@@ -105,11 +105,7 @@ impl<T> UserPtr<T> {
         let s = usize::min(self.count, t.len());
 
         unsafe {
-            let res = arch_copy_to_user(
-                t.as_ptr() as usize,
-                size_of::<T>() * s,
-                self.p as usize,
-            );
+            let res = arch_copy_to_user(t.as_ptr() as usize, size_of::<T>() * s, self.p as usize);
             if res == 0 {
                 Ok(())
             } else {

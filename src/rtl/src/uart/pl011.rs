@@ -74,8 +74,11 @@ impl UartTrait for Uart {
                 self.write_reg(Pl011::UARTDR, b'\r' as u32);
             }
 
-            // #[cfg(feature = "tmp")]
-            while unsafe { self.base.to_raw_mut::<u32>().offset(5).read_volatile() & 0x40 == 0 } {}
+            if env!("BOARD_TYPE") == "orpipc2" {
+                while unsafe { self.base.to_raw_mut::<u32>().offset(5).read_volatile() & 0x40 == 0 }
+                {
+                }
+            }
         }
     }
 }

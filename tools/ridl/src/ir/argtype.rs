@@ -1,11 +1,9 @@
-use std::collections::HashMap;
 use ir_lib::ir;
+use std::collections::HashMap;
 use strum_macros::Display;
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
-pub struct UserStruct {
-
-}
+pub struct UserStruct {}
 
 #[derive(Clone, Copy, Debug, Display, Hash, PartialEq, Eq)]
 pub enum BuiltinTypes {
@@ -25,7 +23,7 @@ pub enum BuiltinTypes {
 pub enum TypeKind {
     Builtin(BuiltinTypes),
     #[allow(dead_code)]
-    UserDefined(UserStruct)
+    UserDefined(UserStruct),
 }
 
 #[derive(Clone, ir, Debug, Hash)]

@@ -1,6 +1,6 @@
+use crate::kernel::object::thread_object::Thread;
 use alloc::sync::Arc;
 use core::arch::asm;
-use crate::kernel::object::thread_object::Thread;
 
 pub fn get_current() -> Option<Arc<Thread>> {
     unsafe {

@@ -79,7 +79,7 @@ impl<T> Spinlock<T> {
     }
 
     pub fn lock_irqsave(&self) -> SpinlockGuard<T> {
-        use crate::arch::irq::{disable_all, get_flags};
+        use crate::arch::irq::interrupts::{disable_all, get_flags};
         let my = self.inner.next.fetch_add(1, Ordering::Acquire);
 
         while self.inner.current.load(Ordering::Relaxed) != my {
@@ -108,7 +108,7 @@ impl SpinLockInner {
     }
 
     pub fn unlock_irqrestore(&self, flags: usize) {
-        use crate::arch::irq::set_flags;
+        use crate::arch::irq::interrupts::set_flags;
 
         unsafe {
             set_flags(flags);

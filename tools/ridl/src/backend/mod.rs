@@ -11,11 +11,7 @@ pub trait Backend {
     fn generate_start_transport_func<B: Write>(&self, func: &Function, out: &mut B) -> Result<()>;
     fn generate_end_fuction_declaration<B: Write>(&self, arg: &Function, out: &mut B)
         -> Result<()>;
-    fn generate_request_struct<B: Write>(
-        &self,
-        f: &Function,
-        out: &mut B,
-    ) -> Result<()>;
+    fn generate_request_struct<B: Write>(&self, f: &Function, out: &mut B) -> Result<()>;
     fn generate_end_func<B: Write>(&self, out: &mut B) -> Result<()>;
     fn generate_calls<B: Write>(&self, f: &Function, out: &mut B) -> Result<()>;
     fn generate_server_event_loop<B: Write>(&self, f: &Vec<Function>, out: &mut B) -> Result<()>;

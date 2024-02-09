@@ -61,23 +61,25 @@ pub fn run_prog(
             .map_err(|x| format!("Failed to read cpio output {x}"))?;
     }
 
-    let exit = child
+    let _exit = child
         .wait()
         .map_err(|x| format!("Failed to run {name} {x}"))?;
 
-    if !exit.success() {
-        let mut err = Vec::new();
-        child
-            .stderr
-            .take()
-            .unwrap()
-            .read_to_end(&mut err)
-            .map_err(|_| "Failed to read stderr of a process")?;
+    // Cargo prints a lot of stuff to stderr for some reason, but I like to preverse warnings
+    // during build
+    // if !exit.success() {
+    let mut err = Vec::new();
+    child
+        .stderr
+        .take()
+        .unwrap()
+        .read_to_end(&mut err)
+        .map_err(|_| "Failed to read stderr of a process")?;
 
-        std::io::stderr().write(err.as_slice()).unwrap();
+    std::io::stderr().write(err.as_slice()).unwrap();
 
-        return Err(format!("{name} failed with: {exit}"));
-    }
+    // return Err(format!("{name} failed with: {exit}"));
+    // }
 
     Ok(())
 }
@@ -112,22 +114,33 @@ pub fn build_kernel(b: &BuildScript) -> Result<(), String> {
         ],
         None,
         Some(&mut out),
-        Some(&[(
-            "RUSTFLAGS",
-            "-C link-arg=--script=/tmp/tmp.ld -C opt-level=0 -C force-frame-pointers",
-        )]),
+        Some(&[
+            (
+                "RUSTFLAGS",
+                "-C link-arg=--script=/tmp/tmp.ld -C opt-level=0 -C force-frame-pointers",
+            ),
+            ("BOARD_TYPE", b.board.as_str()),
+        ]),
     )
 }
 
-fn do_build_component(name: &String) -> Result<(), String> {
+fn do_build_component(name: &String, b: &BuildScript) -> Result<(), String> {
     info!("[CARGO]    Compiling component \"{name}\"...",);
 
     run_prog(
         "cargo",
-        &["build", "-p", name.as_str(), "--target", TARGET, "--color=always"],
+        &[
+            "build",
+            "-p",
+            name.as_str(),
+            "--target",
+            TARGET,
+            "--color=always",
+            "--quiet",
+        ],
         None,
         None,
-        None,
+        Some(&[("BOARD_TYPE", b.board.as_str())]),
     )
 }
 
@@ -265,10 +278,8 @@ pub fn prepare_idls() -> Result<(), String> {
     Ok(())
 }
 
-pub fn build_component(c: &Component) -> Result<(), String> {
+pub fn build_component(c: &Component, b: &BuildScript) -> Result<(), String> {
     info!("[INFO]     Builing {:?}...", c.name);
 
-    do_build_component(&c.name)?;
-
-    Ok(())
+    do_build_component(&c.name, b)
 }

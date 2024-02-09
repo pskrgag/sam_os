@@ -8,20 +8,23 @@ pub mod orpipc2;
 #[cfg(feature = "orpipc2")]
 pub use orpipc2::config::*;
 
+#[cfg(all(feature = "qemu", feature = "orpipc2"))]
+compile_error!("Please choose one board");
+
 pub mod backtrace;
 pub mod context;
 pub mod cpuid;
-pub mod interrupts;
+pub mod current;
 pub mod irq;
 pub mod mm;
 pub mod regs;
 pub mod smp;
-pub mod current;
+pub mod timer;
 
+use core::arch::global_asm;
 use core::mem;
 use cortex_a::registers::*;
 use tock_registers::interfaces::Readable;
-use core::arch::global_asm;
 
 use rtl::arch::PAGE_SIZE;
 use rtl::arch::PHYS_OFFSET;
@@ -39,7 +42,7 @@ pub const KERNEL_AS_END: usize = usize::MAX;
 /// Let it be 126gb
 pub const KERNEL_LINEAR_SPACE_SIZE: usize = 10 << 30;
 pub const KERNEL_LINEAR_SPACE_BEGIN: usize = PHYS_OFFSET;
-pub const KERNEL_LINEAR_SPACE_END: usize  = KERNEL_LINEAR_SPACE_BEGIN + KERNEL_LINEAR_SPACE_SIZE;
+pub const KERNEL_LINEAR_SPACE_END: usize = KERNEL_LINEAR_SPACE_BEGIN + KERNEL_LINEAR_SPACE_SIZE;
 
 // TODO: There is memory corruption somewhere. Fix it please
 pub const KERNEL_MMIO_BASE: usize = KERNEL_LINEAR_SPACE_END + PAGE_SIZE * 10;
@@ -68,4 +71,3 @@ pub fn mmu_on() -> bool {
 }
 
 global_asm!(include_str!("boot.s"));
-global_asm!(include_str!("copy_from_user.s"));

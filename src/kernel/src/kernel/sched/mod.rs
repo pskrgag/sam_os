@@ -1,7 +1,7 @@
 use crate::kernel::object::thread_object::Thread;
 use crate::percpu_global;
 use crate::{
-    arch::irq, arch::regs::Context, kernel::elf::parse_elf, kernel::tasks::task::init_task,
+    arch::irq::interrupts, arch::regs::Context, kernel::elf::parse_elf, kernel::tasks::task::init_task,
     kernel::tasks::thread::ThreadState,
 };
 use alloc::sync::Arc;
@@ -113,7 +113,7 @@ impl Scheduler {
 
             // We come here only for 1st process, so we need to turn on irqs
             unsafe {
-                irq::enable_all();
+                interrupts::enable_all();
                 switch_to(&mut ctx as *mut _, next_ctx as *const _);
             }
             panic!("Should not reach here");
@@ -140,7 +140,6 @@ pub fn add_thread(t: Arc<Thread>) {
 }
 
 pub fn init_userspace() {
-
     use rtl::vmm::types::*;
     assert!((INIT.as_ptr() as usize).is_page_aligned());
 

@@ -2,8 +2,8 @@ use elf::abi::PT_LOAD;
 use elf::endian::LittleEndian;
 use elf::segment::ProgramHeader;
 use elf::ElfBytes;
-use rtl::vmm::MappingType;
 use rtl::vmm::types::VirtAddr;
+use rtl::vmm::MappingType;
 
 // const PF_R: u32 = 0x4;
 const PF_W: u32 = 0x2;
@@ -24,7 +24,7 @@ impl<'a> Elf<'a> {
             elf_data: match ElfBytes::<LittleEndian>::minimal_parse(raw_data) {
                 Ok(data) => Some(data),
                 Err(err) => {
-                    println_libc!("Failed to parse elf file {}", err);
+                    crate::println_libc!("Failed to parse elf file {}", err);
                     None
                 }
             }?,

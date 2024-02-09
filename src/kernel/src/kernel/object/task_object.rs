@@ -97,8 +97,8 @@ impl Task {
     }
 
     fn do_invoke(&self, args: &[usize]) -> Result<usize, ErrorType> {
-        use rtl::objects::task::TaskInvoke;
         use core::sync::atomic::{AtomicU16, Ordering};
+        use rtl::objects::task::TaskInvoke;
 
         static ID_THREAD: AtomicU16 = AtomicU16::new(1);
 

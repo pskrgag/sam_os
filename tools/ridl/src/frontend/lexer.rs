@@ -27,7 +27,13 @@ impl<'a> Lexer<'a> {
         self.reset_token();
 
         self.prev_token = Some(start);
-        (&self.source[start..self.parsed], Location { line: self.line, pos: start })
+        (
+            &self.source[start..self.parsed],
+            Location {
+                line: self.line,
+                pos: start,
+            },
+        )
     }
 
     fn reset_token(&mut self) {
@@ -109,23 +115,23 @@ impl<'a> Lexer<'a> {
                     }
                     b'}' => {
                         let t = self.finish_token();
-                        return Some(Token::new(TokenType::RightCurlParen, t.0, t.1))
+                        return Some(Token::new(TokenType::RightCurlParen, t.0, t.1));
                     }
                     b'(' => {
                         let t = self.finish_token();
-                        return Some(Token::new(TokenType::LeftParen, t.0, t.1))
+                        return Some(Token::new(TokenType::LeftParen, t.0, t.1));
                     }
                     b')' => {
                         let t = self.finish_token();
-                        return Some(Token::new(TokenType::RightParen, t.0, t.1))
+                        return Some(Token::new(TokenType::RightParen, t.0, t.1));
                     }
                     b',' => {
                         let t = self.finish_token();
-                        return Some(Token::new(TokenType::Comma, t.0, t.1))
+                        return Some(Token::new(TokenType::Comma, t.0, t.1));
                     }
                     b';' => {
                         let t = self.finish_token();
-                        return Some(Token::new(TokenType::Semicolumn, t.0, t.1))
+                        return Some(Token::new(TokenType::Semicolumn, t.0, t.1));
                     }
                     other => {
                         if other.is_ascii_alphabetic() {
@@ -161,8 +167,16 @@ mod test {
         let lexer = Lexer::new(text.as_bytes());
         let expected = vec![
             Token::new_id("interface".as_bytes(), Location::default()),
-            Token::new(TokenType::LeftCurlParen, "{".as_bytes(), Location::default()),
-            Token::new(TokenType::RightCurlParen, "}".as_bytes(), Location::default()),
+            Token::new(
+                TokenType::LeftCurlParen,
+                "{".as_bytes(),
+                Location::default(),
+            ),
+            Token::new(
+                TokenType::RightCurlParen,
+                "}".as_bytes(),
+                Location::default(),
+            ),
         ];
 
         assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);
@@ -174,8 +188,16 @@ mod test {
         let lexer = Lexer::new(text.as_bytes());
         let expected = vec![
             Token::new_id("interface".as_bytes(), Location::default()),
-            Token::new(TokenType::LeftCurlParen, "{".as_bytes(), Location::default()),
-            Token::new(TokenType::RightCurlParen, "}".as_bytes(), Location::default()),
+            Token::new(
+                TokenType::LeftCurlParen,
+                "{".as_bytes(),
+                Location::default(),
+            ),
+            Token::new(
+                TokenType::RightCurlParen,
+                "}".as_bytes(),
+                Location::default(),
+            ),
         ];
 
         assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);
@@ -187,12 +209,24 @@ mod test {
         let lexer = Lexer::new(text.as_bytes());
         let expected = vec![
             Token::new_id("interface".as_bytes(), Location::default()),
-            Token::new(TokenType::LeftCurlParen, "{".as_bytes(), Location::default()),
-            Token::new(TokenType::TokenId(IdType::Identifier), "Test".as_bytes(), Location::default()),
+            Token::new(
+                TokenType::LeftCurlParen,
+                "{".as_bytes(),
+                Location::default(),
+            ),
+            Token::new(
+                TokenType::TokenId(IdType::Identifier),
+                "Test".as_bytes(),
+                Location::default(),
+            ),
             Token::new(TokenType::LeftParen, "(".as_bytes(), Location::default()),
             Token::new(TokenType::RightParen, ")".as_bytes(), Location::default()),
             Token::new(TokenType::Semicolumn, ";".as_bytes(), Location::default()),
-            Token::new(TokenType::RightCurlParen, "}".as_bytes(), Location::default()),
+            Token::new(
+                TokenType::RightCurlParen,
+                "}".as_bytes(),
+                Location::default(),
+            ),
         ];
 
         assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);
@@ -204,7 +238,11 @@ mod test {
         let lexer = Lexer::new(text.as_bytes());
         let expected = vec![
             Token::new_id("interface".as_bytes(), Location::default()),
-            Token::new(TokenType::LeftCurlParen, "{".as_bytes(), Location::default()),
+            Token::new(
+                TokenType::LeftCurlParen,
+                "{".as_bytes(),
+                Location::default(),
+            ),
             Token::new_id("Test".as_bytes(), Location::default()),
             Token::new(TokenType::LeftParen, "(".as_bytes(), Location::default()),
             Token::new_id("in".as_bytes(), Location::default()),
@@ -212,7 +250,11 @@ mod test {
             Token::new_id("a".as_bytes(), Location::default()),
             Token::new(TokenType::RightParen, ")".as_bytes(), Location::default()),
             Token::new(TokenType::Semicolumn, ";".as_bytes(), Location::default()),
-            Token::new(TokenType::RightCurlParen, "}".as_bytes(), Location::default()),
+            Token::new(
+                TokenType::RightCurlParen,
+                "}".as_bytes(),
+                Location::default(),
+            ),
         ];
 
         assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);
@@ -224,7 +266,11 @@ mod test {
         let lexer = Lexer::new(text.as_bytes());
         let expected = vec![
             Token::new_id("interface".as_bytes(), Location::default()),
-            Token::new(TokenType::LeftCurlParen, "{".as_bytes(), Location::default()),
+            Token::new(
+                TokenType::LeftCurlParen,
+                "{".as_bytes(),
+                Location::default(),
+            ),
             Token::new_id("Test".as_bytes(), Location::default()),
             Token::new(TokenType::LeftParen, "(".as_bytes(), Location::default()),
             Token::new_id("in".as_bytes(), Location::default()),
@@ -236,7 +282,11 @@ mod test {
             Token::new_id("b".as_bytes(), Location::default()),
             Token::new(TokenType::RightParen, ")".as_bytes(), Location::default()),
             Token::new(TokenType::Semicolumn, ";".as_bytes(), Location::default()),
-            Token::new(TokenType::RightCurlParen, "}".as_bytes(), Location::default()),
+            Token::new(
+                TokenType::RightCurlParen,
+                "}".as_bytes(),
+                Location::default(),
+            ),
         ];
 
         assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);
@@ -248,7 +298,11 @@ mod test {
         let lexer = Lexer::new(text.as_bytes());
         let expected = vec![
             Token::new_id("interface".as_bytes(), Location::default()),
-            Token::new(TokenType::LeftCurlParen, "{".as_bytes(), Location::default()),
+            Token::new(
+                TokenType::LeftCurlParen,
+                "{".as_bytes(),
+                Location::default(),
+            ),
             Token::new_id("Test".as_bytes(), Location::default()),
             Token::new(TokenType::LeftParen, "(".as_bytes(), Location::default()),
             Token::new_id("out".as_bytes(), Location::default()),
@@ -256,7 +310,11 @@ mod test {
             Token::new_id("a".as_bytes(), Location::default()),
             Token::new(TokenType::RightParen, ")".as_bytes(), Location::default()),
             Token::new(TokenType::Semicolumn, ";".as_bytes(), Location::default()),
-            Token::new(TokenType::RightCurlParen, "}".as_bytes(), Location::default()),
+            Token::new(
+                TokenType::RightCurlParen,
+                "}".as_bytes(),
+                Location::default(),
+            ),
         ];
 
         assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);

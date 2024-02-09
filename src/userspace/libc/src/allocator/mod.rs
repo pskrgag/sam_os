@@ -1,8 +1,8 @@
-use alloc::alloc::Layout;
 use alloc::alloc::GlobalAlloc;
+use alloc::alloc::Layout;
 
-pub mod slab;
 pub mod backend;
+pub mod slab;
 
 pub struct Allocator;
 

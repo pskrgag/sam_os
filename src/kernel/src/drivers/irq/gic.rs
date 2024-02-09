@@ -10,6 +10,7 @@ const CTLR: usize = 0;
 const ISENABLER: usize = 0x0100;
 const ICENABLER: usize = 0x0180;
 const ICPENDR: usize = 0x0280;
+const ICACTIVER: usize = 0x0380;
 const ITARGETSR: usize = 0x0800;
 const IPRIORITYR: usize = 0x0400;
 const ICFGR: usize = 0x0c00;
@@ -18,13 +19,13 @@ const ICFGR: usize = 0x0c00;
 const CTLR_ENABLE: u32 = 1;
 const CTLR_DISABLE: u32 = 0;
 
-const ICENABLER_SHIFT: u32 = 5; // 32 bits -> x / 32 == x >> 5
+const ICENABLER_SHIFT: u32 = 5;
 const ICENABLER_MASK: u32 = 0b11111;
 
-const ISENABLER_SHIFT: u32 = 5; // 32 bits -> x / 32 == x >> 5
+const ISENABLER_SHIFT: u32 = 5;
 const ISENABLER_MASK: u32 = 0b11111;
 
-const ICPENDR_SHIFT: u32 = 5; // 32 bits -> x / 32 == x >> 5
+const ICPENDR_SHIFT: u32 = 5;
 const ICPENDR_MASK: u32 = 0b11111;
 
 // 8 bits per 4 interrupts in register
@@ -47,6 +48,13 @@ const IPRIORITY_SIZE: u32 = 4;
 const IPRIORITY_BITS: u32 = 8;
 const ICFGR_SIZE: u32 = 16;
 const ICFGR_BITS: u32 = 2;
+
+// Cpu Registers
+const PMR: usize = 0x4;
+
+const PMR_PRIO: u32 = 0xF0;
+
+const IRQ_LINES: u32 = 256;
 
 struct GICC {
     base: VirtAddr,
@@ -97,7 +105,7 @@ impl GICC {
 
     pub fn init(&mut self) {
         write_to_reg::<u32>(self.base, 0, 1);
-        write_to_reg::<u32>(self.base, 4 >> 2, 0xff);
+        write_to_reg::<u32>(self.base, PMR >> 2, 0xf0);
         write_to_reg::<u32>(self.base, 8 >> 2, 0x00);
     }
 }
@@ -109,28 +117,31 @@ impl GICD {
         }
     }
 
+    pub fn disable(&mut self) {
+        write_to_reg::<u32>(self.base, 0, 0);
+    }
+
     pub fn new(base: PhysAddr) -> Option<Self> {
         let dist_va = MMIO_ALLOCATOR.get().iomap(base, 1)?;
         Some(Self { base: dist_va })
     }
 
     pub fn init(&mut self) {
-        write_to_reg::<u32>(self.base, 0, 1);
+        for i in 0..IRQ_LINES >> 2 {
+            write_to_reg(self.base, ICENABLER + i as usize, u32::MAX);
+            write_to_reg(self.base, ICPENDR + i as usize, u32::MAX);
+            write_to_reg(self.base, ICACTIVER + i as usize, u32::MAX);
+        }
     }
 
-    pub fn enable(&mut self, interrupt: u32) {
-        write_to_reg::<u32>(
-            self.base,
-            0x0100_usize + (interrupt as usize / 32),
-            1 << (interrupt % 32),
-        );
+    pub fn enable(&mut self) {
+        write_to_reg::<u32>(self.base, 0, 1);
     }
 
     pub fn set_priotity(&mut self, intnum: u32, prio: u32) {
         let shift = (intnum & IPRIORITYR_INTERRUPT_MASK) << IPRIORITYR_VALUE_SHIFT;
         let offset = intnum >> IPRIORITYR_INTERRUPT_SHIFT;
-        let value = read_from_reg::<u32>(self.base, (IPRIORITYR >> 2) + offset as usize)
-            & !(IPRIORITYR_VALUE_MASK << shift);
+        let value = 0xA0;
 
         write_to_reg::<u32>(
             self.base,
@@ -174,6 +185,8 @@ impl GICD {
     }
 
     pub fn set_interrupt(&self, intnum: u32) {
+        println!("Set irq {}", intnum);
+
         write_to_reg::<u32>(
             self.base,
             (ISENABLER >> 2) + (intnum as usize >> ISENABLER_SHIFT),
@@ -206,24 +219,22 @@ impl Gic {
         self.cpu = GICC::new(cpu.0)?;
         self.dist = GICD::new(dist.0)?;
 
-        self.cpu.init();
+        // Turn off to start initialization
+        self.dist.disable();
+
         self.dist.init();
+        self.cpu.init();
+
+        self.dist.enable();
 
         Some(())
     }
 
-    // TODO: figure out tf is going on here
-    //
-    // For record: uncommenting 4 these lines will lead
-    // to weird behaviour:
-    //
-    // CPU0 will be able to clear pending state on CPU1 causing
-    // generic timer stop on CPU1
     pub fn enable_irq(&mut self, num: u32) {
-        // self.dist.set_priotity(num, 0);
-        // self.dist.set_interrupt_core(num, 0);
-        // self.dist.clear_interrupt(num);
-        // self.dist.set_interrupt_config(num, 2);
+        self.dist.set_priotity(num, 0);
+        self.dist.set_interrupt_core(num, 0);
+        self.dist.clear_interrupt(num);
+        self.dist.set_interrupt_config(num, 0);
         self.dist.set_interrupt(num);
     }
 

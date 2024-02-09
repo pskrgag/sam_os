@@ -2,13 +2,13 @@ use super::vm_object::VmObject;
 use crate::kernel::object::handle::Handle;
 use crate::kernel::sched::current;
 use crate::mm::paging::page_table::MmError;
+use crate::mm::user_buffer::UserPtr;
 use crate::mm::vms::VmsInner;
 use alloc::sync::Arc;
 use object_lib::object;
 use qrwlock::RwLock;
 use rtl::error::ErrorType;
 use rtl::vmm::{types::*, MappingType};
-use crate::mm::user_buffer::UserPtr;
 
 #[derive(object)]
 pub struct Vms {

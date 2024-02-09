@@ -1,4 +1,3 @@
-use crate::arch;
 use rtl::vmm::types::*;
 
 pub const fn uart_base() -> VirtAddr {

@@ -1,4 +1,4 @@
-use crate::arch::{backtrace::backtrace, irq::disable_all};
+use crate::arch::{backtrace::backtrace, irq::interrupts::disable_all};
 use core::panic::PanicInfo;
 use rtl::vmm::types::*;
 

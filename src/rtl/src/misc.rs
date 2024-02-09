@@ -1,9 +1,9 @@
+use crate::arch::*;
 use core::{
     fmt::Debug,
     mem::size_of,
     ops::{Add, BitAnd, Not, Shl, Shr, Sub},
 };
-use crate::arch::*;
 
 #[inline]
 pub fn num_pages(size: usize) -> usize {
