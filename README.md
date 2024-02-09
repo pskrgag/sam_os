@@ -24,7 +24,7 @@ Tasks can communicate via Ports. Port primitive is simple blob transport with su
 To make life of developers (me) easier custom IDL language along with compiler generates some boilerplate code for transfer logic. Compiler lives under `ridl` directory and `.idl` files live under `userspace/interfaces` directory. 
 
 ## Supported arches
- - [x] aarch64 (qemu only for now)
+ - [x] aarch64 (qemu and orangepi pc 2)
 
 Maybe riscv64 one day. I am not messing with long, real, unreal engine 5 modes in x86 ever in my life.   
 

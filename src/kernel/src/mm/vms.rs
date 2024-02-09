@@ -59,7 +59,9 @@ impl VmsInner {
         };
         let va = range.start();
 
-        assert!(size.is_page_aligned());
+        if !size.is_page_aligned() {
+            return Err(());
+        }
 
         self.add_to_tree(Vma::new(range, tp))?;
 
