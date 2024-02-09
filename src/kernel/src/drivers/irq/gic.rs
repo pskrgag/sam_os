@@ -185,8 +185,6 @@ impl GICD {
     }
 
     pub fn set_interrupt(&self, intnum: u32) {
-        println!("Set irq {}", intnum);
-
         write_to_reg::<u32>(
             self.base,
             (ISENABLER >> 2) + (intnum as usize >> ISENABLER_SHIFT),

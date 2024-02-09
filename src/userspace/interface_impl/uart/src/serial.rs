@@ -57,8 +57,14 @@ pub fn start_serial(p: Port) {
         dispatch: virt_table,
     };
 
+    let uart_base = match env!("BOARD_TYPE") {
+        "orpipc2" => 0x01C28000,
+        "qemu" => 0x09000000,
+        _ => panic!(""),
+    };
+
     let base = vms()
-        .map_phys(MemRange::<PhysAddr>::new(0x09000000.into(), PAGE_SIZE))
+        .map_phys(MemRange::<PhysAddr>::new(uart_base.into(), PAGE_SIZE))
         .unwrap();
 
     *UART.get() = Uart::init(base);

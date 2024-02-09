@@ -117,7 +117,7 @@ pub fn build_kernel(b: &BuildScript) -> Result<(), String> {
         Some(&[
             (
                 "RUSTFLAGS",
-                "-C link-arg=--script=/tmp/tmp.ld -C opt-level=0 -C force-frame-pointers",
+                "-C link-arg=--script=/tmp/tmp.ld -C opt-level=2 -C force-frame-pointers",
             ),
             ("BOARD_TYPE", b.board.as_str()),
         ]),
@@ -140,7 +140,10 @@ fn do_build_component(name: &String, b: &BuildScript) -> Result<(), String> {
         ],
         None,
         None,
-        Some(&[("BOARD_TYPE", b.board.as_str())]),
+        Some(&[
+            ("BOARD_TYPE", b.board.as_str()),
+            ("RUSTFLAGS", "-C opt-level=2"),
+        ]),
     )
 }
 

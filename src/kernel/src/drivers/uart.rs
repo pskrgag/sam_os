@@ -8,7 +8,7 @@ use rtl::vmm::types::*;
 
 pub struct Uart;
 
-static UART: Spinlock<BackendUart> = Spinlock::new(BackendUart::default(uart_base()));
+pub static UART: Spinlock<BackendUart> = Spinlock::new(BackendUart::default(uart_base()));
 
 impl fmt::Write for Uart {
     fn write_str(&mut self, s: &str) -> fmt::Result {

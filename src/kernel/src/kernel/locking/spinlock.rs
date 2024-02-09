@@ -1,17 +1,18 @@
 use crate::kernel::object::thread_object::Thread;
 use core::{
-    arch::asm,
     cell::UnsafeCell,
     ops::{Deref, DerefMut, Drop},
     sync::atomic::{AtomicPtr, AtomicU16, Ordering},
 };
 
+#[derive(Debug)]
 pub struct SpinLockInner {
     current: AtomicU16,
     next: AtomicU16,
     t: AtomicPtr<Thread>,
 }
 
+#[derive(Debug)]
 pub struct Spinlock<T> {
     inner: SpinLockInner,
     val: UnsafeCell<T>,
@@ -64,7 +65,7 @@ impl<T> Spinlock<T> {
         let my = self.inner.next.fetch_add(1, Ordering::Acquire);
 
         while self.inner.current.load(Ordering::Relaxed) != my {
-            unsafe { asm!("yield") };
+            core::hint::spin_loop();
         }
 
         if let Some(cur) = get_current_raw() {
@@ -83,7 +84,7 @@ impl<T> Spinlock<T> {
         let my = self.inner.next.fetch_add(1, Ordering::Acquire);
 
         while self.inner.current.load(Ordering::Relaxed) != my {
-            unsafe { asm!("yield") };
+            core::hint::spin_loop();
         }
 
         let flags = Some(get_flags());

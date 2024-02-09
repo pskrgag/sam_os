@@ -65,6 +65,7 @@ extern "C" fn start_kernel() -> ! {
     // -- Scheduler must be initialized at that point
     drivers::init();
 
+    // TODO: WTF is going on hw???
     print!("{}", SAMOS_BANNER);
 
     // arch::smp::bring_up_cpus();

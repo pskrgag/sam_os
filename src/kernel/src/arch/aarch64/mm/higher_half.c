@@ -1,6 +1,8 @@
 typedef unsigned long uint64_t;
 typedef unsigned long uintptr_t;
 
+typedef unsigned int uint32_t;
+
 #define PAGE_SIZE	(1 << 12)
 #define UL(x)		((unsigned long) (x))
 
@@ -46,8 +48,13 @@ static uint64_t l2_linear_offset(void *p)
 
 static inline void tmp_printf(const char *ptr)
 {
+#if defined(CONFIG_BOARD_ORPIPC2)
+	while ((*((volatile uint32_t *) UART_BASE + 5) & 0x40) == 0) {}
+#endif
+
 	for (; *ptr; ptr++)
 		*(volatile char *) (uintptr_t)UART_BASE = *ptr;
+
 }
 
 
@@ -69,7 +76,7 @@ static inline void mmio_1_v_1(void)
 __attribute__((section(".text.boot"))) void map(void)
 {
 	tte_t _1_v_1_1gb = UL(&load_addr) | (1 << 10) |  0b01;
-	uint64_t tcr = (25UL << 16) | 25 | (2UL << 30) | (3UL << 26) | (3UL << 24);
+	uint64_t tcr = (25UL << 16) | 25 | (2UL << 30) | (3UL << 26) | (3UL << 24) | (3UL << 8) | (3UL << 10);
 	uint64_t mair = (0b00000000 << 8) | 0b01110111;
 	uint64_t ttbr_el1 = ((uint64_t) (void *) &lvl1);
 	uint64_t sctrl;
@@ -108,7 +115,7 @@ __attribute__((section(".text.boot"))) void map(void)
 
 void __attribute__((section(".text.boot"))) reset(void)
 {
-	uint64_t tcr = (25UL << 16) | 25 | (2UL << 30) | (3UL << 26) | (3UL << 24);
+	uint64_t tcr = (25UL << 16) | 25 | (2UL << 30) | (3UL << 26) | (3UL << 24) | (3UL << 8) | (3UL << 10);
 	uint64_t mair = (0b00000000 << 8) | 0b01110111;
 	uint64_t sctrl;
 	void (*rust_reset)(void) = (void *) (&cpu_reset);

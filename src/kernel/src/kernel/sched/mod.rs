@@ -85,10 +85,10 @@ impl Scheduler {
                 _ => panic!("Running scheduler in unexected state"),
             }
 
-            if let Some(next) = self.rq.pop() {
-                next.set_state(ThreadState::Running);
+            if let Some(next) = self.rq.pop_running() {
+                // println!("Switching {} ({:?}) --> {} ({:?})", cur.id(), cur.state(), next.id(), next.state());
 
-                // println!("Switching to {} --> {}", cur.id(), next.id());
+                next.set_state(ThreadState::Running);
 
                 unsafe {
                     let ctx = cur.ctx_mut();
@@ -99,12 +99,13 @@ impl Scheduler {
                     switch_to(ctx as _, ctx_next as _);
                 }
             } else if cur.state() == ThreadState::WaitingMessage {
+                println!("WTF");
                 crate::drivers::timer::disable();
                 unsafe { core::arch::asm!("wfi") };
             }
         } else {
             let mut ctx = Context::default(); // tmp storage
-            let next = self.rq.pop().expect("Rq must not be empty at that moment");
+            let next = self.rq.pop_running().expect("Rq must not be empty at that moment");
             let next_ctx = unsafe { next.ctx_mut() };
 
             next.set_state(ThreadState::Running);
@@ -156,7 +157,7 @@ pub fn init_userspace() {
         init_vms.vm_map(i.0, i.1, i.2).expect("Failed to map");
     }
 
-    println!("Started userspace...");
+    println!("Initialized init task...");
 
     init_thread.init_user(data.ep);
 

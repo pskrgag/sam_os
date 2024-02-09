@@ -30,7 +30,7 @@ impl RunQueue {
         self.list_active.append(&mut ext);
     }
 
-    pub fn pop(&mut self) -> Option<Arc<Thread>> {
+    pub fn pop_running(&mut self) -> Option<Arc<Thread>> {
         let next = self.list_active.pop_front();
         next
     }

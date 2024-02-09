@@ -64,11 +64,14 @@ impl VmsInner {
         self.add_to_tree(Vma::new(range, tp))?;
 
         while range.size() != 0 {
-            let p: PhysAddr = if let Some(p) = page_allocator().alloc(1) {
-                p.into()
+            let p = if let Some(p) = page_allocator().alloc(1) {
+                p
             } else {
                 return Err(());
             };
+            let va = VirtAddr::from(p);
+
+            unsafe { va.as_slice_mut::<u8>(PAGE_SIZE).fill(0x00) };
 
             // ToDo: clean up in case of an error
             self.ttbr0.as_mut().unwrap().map(
