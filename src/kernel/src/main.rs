@@ -12,6 +12,9 @@
 #![feature(get_mut_unchecked)]
 #![feature(extract_if)]
 #![feature(panic_info_message)]
+#![feature(custom_test_frameworks)]
+#![test_runner(crate::tests::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
 extern crate alloc;
 
@@ -19,6 +22,7 @@ extern crate alloc;
 mod lib;
 
 mod arch;
+
 #[macro_use]
 mod kernel;
 mod drivers;
@@ -27,6 +31,10 @@ mod panic;
 
 use kernel::sched;
 pub use lib::printf;
+
+#[cfg(test)]
+#[macro_use]
+pub mod tests;
 
 static SAMOS_BANNER: &str = "
 (  ____ \\(  ___  )(       )  (  ___  )(  ____ \\
@@ -58,19 +66,25 @@ extern "C" fn start_kernel() -> ! {
 
     kernel::percpu::init_percpu();
 
-    // task::init_kernel_task();
-    // sched::init_idle();
-    sched::init_userspace();
-
-    // -- Scheduler must be initialized at that point
     drivers::init();
 
-    // TODO: WTF is going on hw???
     print!("{}", SAMOS_BANNER);
 
-    // arch::smp::bring_up_cpus();
+    #[cfg(test)]
+    {
+        test_main();
+        println!("Testing finishes!");
+        loop {}
+    }
 
-    loop {}
+    #[cfg(not(test))]
+    {
+        sched::init_userspace();
+
+        // arch::smp::bring_up_cpus();
+
+        loop {}
+    }
 }
 
 #[no_mangle]

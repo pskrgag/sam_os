@@ -1,16 +1,15 @@
-RUSTFLAGS += -C link-arg=--script=src/kernel/src/arch/aarch64/aarch64-qemu.ld
-RUSTFLAGS += -C opt-level=0
-RUSTFLAGS += -C force-frame-pointers
-
-BINARY = ./target/aarch64-unknown-none-softfloat/debug/sam_kernel
-
 .PHONY: readelf clean qemu qemu_gdb
 
 SCRIPTS := $(wildcard build_scripts/*.toml)
 TARGETS := $(patsubst %.toml,%, $(SCRIPTS))
+BINARY = ./target/aarch64-unknown-none-softfloat/debug/sam_kernel
 
 %:
 	echo "Building $@"
+	cargo run -p builder build_scripts/$@.toml test
+
+test_kernel:
+	BOARD_TYPE=qemu cargo test -p sam_kernel --target aarch64-unknown-none-softfloat --features qemu
 	cargo run -p builder build_scripts/$@.toml test
 
 qemu:

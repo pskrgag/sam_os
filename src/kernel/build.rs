@@ -1,14 +1,12 @@
 extern crate cc;
 
 fn main() {
-    let features = ["qemu".to_uppercase(), "orpipc2".to_uppercase()];
     let mut flag = None;
 
-    for i in features {
-        if std::env::var(format!("CARGO_FEATURE_{}", i)).is_ok() {
-            flag = Some(format!("-DCONFIG_BOARD_{}", i));
-            break;
-        }
+    if env!("BOARD_TYPE") == "qemu" {
+        flag = Some("-DCONFIG_BOARD_QEMU");
+    } else if env!("BOARD_TYPE") == "orpipc2" {
+        flag = Some("-DCONFIG_BOARD_ORPIPC2");
     }
 
     cc::Build::new()
@@ -18,6 +16,6 @@ fn main() {
         .flag("-fPIC")
         .flag("-O2")
         .flag("-Wall")
-        .flag(flag.unwrap().as_str())
+        .flag(flag.unwrap())
         .compile("libfoo.a");
 }

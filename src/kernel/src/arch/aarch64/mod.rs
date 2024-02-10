@@ -23,8 +23,6 @@ pub mod timer;
 
 use core::arch::global_asm;
 use core::mem;
-use cortex_a::registers::*;
-use tock_registers::interfaces::Readable;
 
 use rtl::arch::PAGE_SIZE;
 use rtl::arch::PHYS_OFFSET;
@@ -44,7 +42,6 @@ pub const KERNEL_LINEAR_SPACE_SIZE: usize = 10 << 30;
 pub const KERNEL_LINEAR_SPACE_BEGIN: usize = PHYS_OFFSET;
 pub const KERNEL_LINEAR_SPACE_END: usize = KERNEL_LINEAR_SPACE_BEGIN + KERNEL_LINEAR_SPACE_SIZE;
 
-// TODO: There is memory corruption somewhere. Fix it please
 pub const KERNEL_MMIO_BASE: usize = KERNEL_LINEAR_SPACE_END + PAGE_SIZE * 10;
 
 sa::const_assert!(KERNEL_MMIO_BASE > usize::MAX - (1 << (64 - 25)));
@@ -63,11 +60,17 @@ pub const fn user_as_size() -> usize {
 pub const PAGE_TABLE_LVLS: u8 = 3;
 
 pub fn time_since_start() -> f64 {
-    CNTPCT_EL0.get() as f64 / CNTFRQ_EL0.get() as f64
-}
+    let cntfrq: usize;
+    let cntpct: usize;
 
-pub fn mmu_on() -> bool {
-    (SCTLR_EL1.get() & (1 << 0)) != 0
+    unsafe {
+        core::arch::asm!("mrs {0}, CNTPCT_EL0",
+                         "mrs {1}, CNTFRQ_EL0",
+                         out(reg) cntpct,
+                         out(reg) cntfrq);
+    }
+
+    cntpct as f64 / cntfrq as f64
 }
 
 global_asm!(include_str!("boot.s"));

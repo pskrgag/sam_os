@@ -1,7 +1,29 @@
+#[cfg(not(test))]
 use crate::arch::{backtrace::backtrace, irq::interrupts::disable_all};
+
 use core::panic::PanicInfo;
+
+#[cfg(not(test))]
 use rtl::vmm::types::*;
 
+#[cfg(test)]
+#[panic_handler]
+fn on_panic(info: &PanicInfo) -> ! {
+    if let Some(m) = info.message() {
+        println!("{}", m);
+    }
+    if let Some(location) = info.location() {
+        println!(
+            "Happened in file '{}' at line {}",
+            location.file(),
+            location.line(),
+        );
+    }
+
+    loop {}
+}
+
+#[cfg(not(test))]
 #[panic_handler]
 fn on_panic(info: &PanicInfo) -> ! {
     let mut bt = [VirtAddr::from(0); 50];

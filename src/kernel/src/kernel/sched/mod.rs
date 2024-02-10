@@ -1,9 +1,8 @@
 use crate::kernel::object::thread_object::Thread;
 use crate::percpu_global;
-use crate::{
-    arch::irq::interrupts, arch::regs::Context, kernel::elf::parse_elf, kernel::tasks::task::init_task,
-    kernel::tasks::thread::ThreadState,
-};
+use crate::{arch::irq::interrupts, arch::regs::Context, kernel::tasks::thread::ThreadState};
+#[cfg(not(test))]
+use crate::{kernel::elf::parse_elf, kernel::tasks::task::init_task};
 use alloc::sync::Arc;
 use rtl::locking::fake_lock::FakeLock;
 use run_queue::RunQueue;
@@ -36,6 +35,7 @@ macro_rules! include_bytes_align_as {
 #[repr(align(0x1000))]
 struct Aligned;
 
+#[cfg(not(test))]
 static INIT: &[u8] = include_bytes_align_as!(
     Aligned,
     "../../../../../target/aarch64-unknown-none-softfloat/debug/nameserver"
@@ -72,11 +72,6 @@ impl Scheduler {
         // Fix up queue based on recent events
         self.rq.move_by_pred(|x| x.state() == ThreadState::Running);
 
-        // If rq is empty -- do noting
-        // if self.rq.empty(){
-        //     return;
-        // }
-
         if let Some(cur) = current() {
             match cur.state() {
                 ThreadState::Running => return, // Just timer tick
@@ -104,8 +99,16 @@ impl Scheduler {
                 unsafe { core::arch::asm!("wfi") };
             }
         } else {
+            // If there is nothing to switch to, then do nothing
+            if self.rq.empty() {
+                return;
+            }
+
             let mut ctx = Context::default(); // tmp storage
-            let next = self.rq.pop_running().expect("Rq must not be empty at that moment");
+            let next = self
+                .rq
+                .pop_running()
+                .expect("Rq must not be empty at that moment");
             let next_ctx = unsafe { next.ctx_mut() };
 
             next.set_state(ThreadState::Running);
@@ -141,26 +144,27 @@ pub fn add_thread(t: Arc<Thread>) {
 }
 
 pub fn init_userspace() {
-    use rtl::vmm::types::*;
-    assert!((INIT.as_ptr() as usize).is_page_aligned());
+    #[cfg(not(test))]
+    {
+        use rtl::vmm::types::*;
+        assert!((INIT.as_ptr() as usize).is_page_aligned());
 
-    let data = parse_elf(INIT).expect("Failed to parse elf");
-    let init_task = init_task();
+        let data = parse_elf(INIT).expect("Failed to parse elf");
+        let init_task = init_task();
 
-    let init_thread = Thread::new(init_task.clone(), 0);
+        let init_thread = Thread::new(init_task.clone(), 0);
 
-    let init_vms = init_task.vms();
+        let init_vms = init_task.vms();
 
-    for mut i in data.regions {
-        i.0.align_page();
-        i.1.align_page();
-        init_vms.vm_map(i.0, i.1, i.2).expect("Failed to map");
+        for mut i in data.regions {
+            i.0.align_page();
+            i.1.align_page();
+            init_vms.vm_map(i.0, i.1, i.2).expect("Failed to map");
+        }
+
+        init_thread.init_user(data.ep);
+
+        init_task.add_initial_thread(init_thread, rtl::handle::HANDLE_INVALID);
+        init_task.start();
     }
-
-    println!("Initialized init task...");
-
-    init_thread.init_user(data.ep);
-
-    init_task.add_initial_thread(init_thread, rtl::handle::HANDLE_INVALID);
-    init_task.start();
 }

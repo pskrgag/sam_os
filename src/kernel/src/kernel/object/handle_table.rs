@@ -99,3 +99,59 @@ impl HandleTable {
         None
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::kernel::object::handle::Handle;
+    use crate::kernel::object::task_object::Task;
+    use crate::*;
+    use alloc::sync::Arc;
+    use test_macros::*;
+
+    #[kernel_test]
+    fn find_smth() {
+        let table = HandleTable::new();
+
+        // this Q/A engineer is very smart!
+        test_assert!(table.find_poly(12123812398).is_none());
+    }
+
+    #[kernel_test]
+    fn add_handle_find_poly() {
+        let mut table = HandleTable::new();
+
+        let t = Task::new("test".into());
+        let h = Handle::new(t.clone());
+        let raw = h.as_raw();
+
+        table.add(h);
+        let found = table.find_poly(raw);
+
+        test_assert!(found.is_some());
+
+        test_assert_eq!(
+            Arc::as_ptr(&found.as_ref().unwrap()) as *const u8 as usize,
+            Arc::as_ptr(&t) as usize
+        );
+    }
+
+    #[kernel_test]
+    fn add_handle_find() {
+        let mut table = HandleTable::new();
+
+        let t = Task::new("test".into());
+        let h = Handle::new(t.clone());
+        let raw = h.as_raw();
+
+        table.add(h);
+        let found = table.find::<Task>(raw);
+
+        test_assert!(found.is_some());
+
+        test_assert_eq!(
+            Arc::as_ptr(&found.as_ref().unwrap()) as *const u8 as usize,
+            Arc::as_ptr(&t) as usize
+        );
+    }
+}

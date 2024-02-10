@@ -41,10 +41,15 @@ SECTIONS
     {
         srodata = .;
         *(.rodata .rodata.*)
-        FILL(0x00)
-	. = ALIGN(4096);
-	erodata = .;
+
+        skerneltests = .;
+        *(.kernel_tests)
+        ekerneltests = .;
+
+       . = ALIGN(4096);
+       erodata = .;
     }
+
     . = ALIGN(PAGE_SIZE); /* Fill up to page size */
     __RO_END = .; /* __RO_END must be 4KiB aligned */
     __DATA_START = .; /* __DATA_START must be 4KiB aligned */
