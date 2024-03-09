@@ -1,5 +1,5 @@
 [target.'cfg(target_os = "none")']
-runner = "qemu-system-aarch64 -d mmu,guest_errors -D test.txt -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel "
+runner = "qemu-system-aarch64 -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel "
 
 [target.aarch64-unknown-none-softfloat]
 rustflags = [
