@@ -1,7 +1,7 @@
 use crate::mm::{
     allocators::page_alloc::page_allocator,
     paging::page_table::{MmError, PageTable},
-    vma_list::{Vma, VmaList},
+    vma_list::{MemRangeVma, Vma, VmaList},
 };
 use rtl::arch::*;
 use rtl::vmm::{types::*, MappingType};
@@ -23,14 +23,6 @@ impl VmsInner {
         }
     }
 
-    pub fn free_range(&self, size: usize) -> Option<MemRange<VirtAddr>> {
-        self.vmas.free_range(size)
-    }
-
-    fn free_range_at(&self, range: MemRange<VirtAddr>) -> Option<MemRange<VirtAddr>> {
-        self.vmas.free_range_at(range)
-    }
-
     fn add_to_tree(&mut self, vma: Vma) -> Result<VirtAddr, ()> {
         self.vmas.add_to_tree(vma)
     }
@@ -41,31 +33,27 @@ impl VmsInner {
         p: MemRange<PhysAddr>,
         tp: MappingType,
     ) -> Result<VirtAddr, MmError> {
-        let range = self.free_range_at(v).unwrap();
+        let va = self.add_to_tree(Vma::new(v.into(), tp))?;
 
-        self.add_to_tree(Vma::new(range, tp))?;
+        self.ttbr0
+            .as_mut()
+            .unwrap()
+            .map(Some(p), MemRange::new(va, v.size()), tp)?;
 
-        self.ttbr0.as_mut().unwrap().map(Some(p), range, tp)?;
         assert!(v.start().is_page_aligned());
-        Ok(v.start())
+        Ok(va)
     }
 
     // ToDo: on-demang allocation of physical memory
-    pub fn vm_allocate(&mut self, size: usize, tp: MappingType) -> Result<VirtAddr, ()> {
-        let mut range = if let Some(r) = self.free_range(size) {
-            r
-        } else {
-            return Err(());
-        };
-        let va = range.start();
-
+    pub fn vm_allocate(&mut self, mut size: usize, tp: MappingType) -> Result<VirtAddr, ()> {
         if !size.is_page_aligned() {
             return Err(());
         }
 
-        self.add_to_tree(Vma::new(range, tp))?;
+        let mut new_va = self.add_to_tree(Vma::new(MemRangeVma::new_non_fixed(size), tp))?;
+        let ret = new_va;
 
-        while range.size() != 0 {
+        while size != 0 {
             let p = if let Some(p) = page_allocator().alloc(1) {
                 p
             } else {
@@ -78,24 +66,24 @@ impl VmsInner {
             // ToDo: clean up in case of an error
             self.ttbr0.as_mut().unwrap().map(
                 Some(MemRange::new(p, PAGE_SIZE)),
-                MemRange::new(range.start().into(), PAGE_SIZE),
+                MemRange::new(new_va, PAGE_SIZE),
                 tp,
             )?;
 
-            range = MemRange::new(
-                VirtAddr::from(range.start() + PAGE_SIZE),
-                range.size() - PAGE_SIZE,
-            );
+            size -= PAGE_SIZE;
+            new_va.add(PAGE_SIZE);
         }
 
-        Ok(va)
+        Ok(ret)
     }
 
     pub fn vm_free(&mut self, range: MemRange<VirtAddr>) -> Result<(), ()> {
         assert!(range.start().is_page_aligned());
         assert!(range.size().is_page_aligned());
 
-        self.vmas.mark_free(Vma::new(range, MappingType::USER_DATA));
+        self.vmas
+            .mark_free(Vma::new(range.into(), MappingType::USER_DATA))
+            .ok_or(())?;
 
         self.ttbr0.as_mut().unwrap().free(range, |pa, device| {
             if !device {

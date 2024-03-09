@@ -37,6 +37,10 @@ pub trait Address {
     fn bits(&self) -> usize;
     fn set_bits(&mut self, bits: usize);
 
+    fn is_null(&self) -> bool {
+        self.bits() == 0
+    }
+
     fn round_up(&mut self, to: usize) -> &mut Self {
         assert!(to.is_power_of_two());
 

@@ -113,10 +113,12 @@ impl Vms {
                 let size = args[2];
                 let mut inner = self.inner.write();
 
-                let range = inner.free_range(size).ok_or(ErrorType::NO_MEMORY)?;
-
                 let va = inner
-                    .vm_map(range, MemRange::new(pa, size), MappingType::USER_DEVICE)
+                    .vm_map(
+                        MemRange::new(VirtAddr::new(0), size),
+                        MemRange::new(pa, size),
+                        MappingType::USER_DEVICE,
+                    )
                     .unwrap();
 
                 Ok(va.into())

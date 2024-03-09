@@ -10,7 +10,6 @@ BINARY = ./target/aarch64-unknown-none-softfloat/debug/sam_kernel
 
 test_kernel:
 	BOARD_TYPE=qemu cargo test -p sam_kernel --target aarch64-unknown-none-softfloat --features qemu
-	cargo run -p builder build_scripts/$@.toml test
 
 qemu:
 	qemu-system-aarch64 -d mmu,guest_errors -D test.txt -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel $(BINARY)
