@@ -1,6 +1,5 @@
 use crate::kernel::object::handle::Handle;
 use crate::kernel::object::KernelObject;
-use crate::make_array;
 use alloc::sync::Arc;
 use rtl::handle::HandleBase;
 

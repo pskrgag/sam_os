@@ -1,4 +1,4 @@
-use crate::{linker_var, mm::paging::kernel_page_table::kernel_page_table};
+use crate::mm::paging::kernel_page_table::kernel_page_table;
 use rtl::arch::PHYS_OFFSET;
 use rtl::locking::fake_lock::FakeLock;
 use rtl::vmm::types::*;

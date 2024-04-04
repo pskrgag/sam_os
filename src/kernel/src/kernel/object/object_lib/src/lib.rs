@@ -3,8 +3,6 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::quote;
 
-use std::string::ToString;
-
 fn impl_kernel_object_macro(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
 
