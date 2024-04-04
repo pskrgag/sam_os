@@ -99,7 +99,7 @@ pub fn init_self_vms(h: Handle) {
     }
 }
 
-#[allow(static_mut_ref)]
+#[allow(static_mut_refs)]
 pub fn vms() -> &'static Vms {
     unsafe { &SELF_VMS }
 }

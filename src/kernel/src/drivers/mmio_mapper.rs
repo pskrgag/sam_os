@@ -1,4 +1,4 @@
-use crate::{linker_var, mm::paging::kernel_page_table::kernel_page_table};
+use crate::mm::paging::kernel_page_table::kernel_page_table;
 
 use crate::arch::KERNEL_MMIO_BASE;
 use rtl::arch::PAGE_SIZE;

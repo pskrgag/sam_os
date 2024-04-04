@@ -74,7 +74,7 @@ impl VmaList {
             // 3. Split if needed
             if vma.size() != size {
                 let flags = vma.map_flags();
-                let mut clone = vma_c.remove().unwrap();
+                let clone = vma_c.remove().unwrap();
                 let arr = Rc::into_inner(clone).unwrap().split_at(addr, size, flags);
 
                 for i in arr.into_iter() {
@@ -88,7 +88,7 @@ impl VmaList {
                 let mut allocated = vma_c.get().unwrap().clone();
 
                 allocated.mark_allocated();
-                vma_c.replace_with(Rc::new(allocated));
+                vma_c.replace_with(Rc::new(allocated)).unwrap();
             }
 
             Ok(addr)
@@ -189,7 +189,6 @@ impl Vma {
     pub fn split_at(mut self, addr: VirtAddr, size: usize, tp: MappingType) -> [Vma; 3] {
         let range = self.range.0;
         let start = range.start();
-        let end = start + range.size();
         let isize = range.size();
 
         // Split at 3

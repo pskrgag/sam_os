@@ -1,7 +1,7 @@
 use crate::kernel::object::thread_object::Thread;
 use core::{
     cell::UnsafeCell,
-    ops::{Deref, DerefMut, Drop},
+    ops::{Deref, DerefMut},
     sync::atomic::{AtomicPtr, AtomicU16, Ordering},
 };
 

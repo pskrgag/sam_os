@@ -1,6 +1,5 @@
 use crate::{
     arch::cpuid::current_cpu,
-    linker_var,
     mm::{allocators::page_alloc::page_allocator, paging::kernel_page_table::kernel_page_table},
 };
 
