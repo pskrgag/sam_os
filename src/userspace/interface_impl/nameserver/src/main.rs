@@ -1,7 +1,5 @@
 #![no_std]
 #![no_main]
-#![feature(format_args_nl)]
-#![feature(thread_local)]
 
 use alloc::string::ToString;
 use libc::main;

@@ -1,6 +1,5 @@
 #![no_std]
 #![no_main]
-#![feature(format_args_nl)]
 #![feature(const_trait_impl)]
 #![allow(dead_code)]
 #![allow(non_upper_case_globals)]
