@@ -1,5 +1,4 @@
 #![no_std]
-#![feature(format_args_nl)]
 
 #[allow(non_snake_case)]
 #[allow(unused_variables)]

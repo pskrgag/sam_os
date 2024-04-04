@@ -23,15 +23,15 @@ macro_rules! print {
 macro_rules! println {
     () => ($crate::print!("\n"));
     ($format:expr) => ({
-        $crate::lib::printf::_print(format_args_nl!(
-                concat!("[{:.10}] [{}] ", $format),
+        $crate::lib::printf::_print(format_args!(
+                concat!("[{:.10}] [{}] ", $format, "\n"),
                 $crate::arch::time_since_start(),
                 $crate::arch::cpuid::current_cpu()
             ));
     });
     ($format:expr, $($arg:tt)*) => ({
-        $crate::lib::printf::_print(format_args_nl!(
-                concat!("[{:.10}] [{}] ", $format),
+        $crate::lib::printf::_print(format_args!(
+                concat!("[{:.10}] [{}] ", $format, "\n"),
                 $crate::arch::time_since_start(),
                 $crate::arch::cpuid::current_cpu(),
                 $($arg)*

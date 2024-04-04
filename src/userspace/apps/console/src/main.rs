@@ -1,6 +1,5 @@
 #![no_std]
 #![no_main]
-#![feature(format_args_nl)]
 
 use interfaces::implementation::nameserver;
 use interfaces::implementation::serial;

@@ -9,7 +9,9 @@ use log_syscall::log;
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    log().write_fmt(args).expect("Failed to write to UART");
+    log()
+        .write_fmt(args)
+        .expect("Failed to write to standart log");
 }
 
 #[macro_export]
@@ -21,13 +23,13 @@ macro_rules! print {
 macro_rules! println {
     () => (print!("\n"));
     ($format:expr) => ({
-        libc::stdio::_print(format_args_nl!(
-                concat!("{} :: ", $format), env!("CARGO_PKG_NAME")
+        libc::stdio::_print(format_args!(
+                concat!("{} :: ", $format, "\n"), env!("CARGO_PKG_NAME")
             ));
     });
     ($format:expr, $($arg:tt)*) => ({
-        libc::stdio::_print(format_args_nl!(
-                concat!("{} :: ", $format),
+        libc::stdio::_print(format_args!(
+                concat!("{} :: ", $format, "\n"),
                 env!("CARGO_PKG_NAME"),
                 $($arg)*
         ));
@@ -37,8 +39,8 @@ macro_rules! println {
 #[macro_export]
 macro_rules! println_libc {
     () => (print!("\n"));
-    ($($arg:tt)*) => ({
-        crate::stdio::_print(format_args_nl!($($arg)*));
+    ($fmt:expr, $($args:tt)*) => ({
+        crate::stdio::_print(format_args!(concat!($fmt, "\n"), $($args)*));
     })
 }
 
@@ -46,8 +48,8 @@ macro_rules! println_libc {
 #[allow(unused_macros)]
 macro_rules! println_libc_verbose {
     () => (print!("\n"));
-    ($($arg:tt)*) => ({
-        crate::stdio::_print(format_args_nl!($($arg)*));
+    ($fmt:expr, $($args:tt)*) => ({
+        crate::stdio::_print(format_args!(concat!($fmt, "\n"), $($args)*));
     })
 }
 
