@@ -77,12 +77,14 @@ impl<T> UserPtr<T> {
             if res == 0 {
                 Some(t.assume_init())
             } else {
+                println!("{:?}", self.p);
+                panic!("");
                 None
             }
         }
     }
 
-    pub fn write(&mut self, t: &T) -> Result<(), ErrorType> {
+    pub fn write(mut self, t: &T) -> Result<(), ErrorType> {
         use core::mem::size_of;
 
         unsafe {

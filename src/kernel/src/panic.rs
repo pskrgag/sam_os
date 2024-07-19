@@ -41,9 +41,7 @@ fn on_panic(info: &PanicInfo) -> ! {
         println!("--- cut here ---");
         println!("Kernel Panic! In context of {}", id);
 
-        if let Some(m) = info.message() {
-            println!("{}", m);
-        }
+        println!("{}", info.message());
 
         if let Some(location) = info.location() {
             println!(

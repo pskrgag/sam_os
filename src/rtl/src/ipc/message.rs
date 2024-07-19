@@ -11,8 +11,7 @@ type MessageId = usize;
 pub struct IpcMessage<'a> {
     handles: [Handle; IPC_MAX_HANDLES],
     num_handles: usize,
-    in_data: Option<&'a [u8]>,
-    out_data: Option<&'a [u8]>,
+    data: Option<&'a [u8]>,
     reply_port: Handle,
     mid: MessageId,
 }
@@ -21,18 +20,51 @@ impl<'a> IpcMessage<'a> {
     const DEFAULT: Self = Self {
         handles: [HANDLE_INVALID; IPC_MAX_HANDLES],
         num_handles: 0,
-        in_data: None,
-        out_data: None,
+        data: None,
         reply_port: HANDLE_INVALID,
         mid: MessageId::MAX,
     };
 
-    pub const fn new() -> Self {
+    pub const fn empty() -> Self {
         Self::DEFAULT
     }
 
-    pub fn set_mid(&mut self, mid: MessageId) {
-        self.mid = mid;
+    pub fn new(data: &'a [u8], mid: MessageId, handles: &[Handle]) -> Self {
+        let mut s = Self::default();
+
+        assert!(handles.len() < 10);
+
+        s.add_handles(handles);
+        s.data = Some(data);
+        s.reply_port = HANDLE_INVALID;
+        s.mid = mid;
+
+        s
+    }
+
+    pub fn new_receive(data: &'a mut [u8]) -> Self {
+        let mut s = Self::default();
+
+        s.data = Some(data);
+        s
+    }
+
+    pub fn data(&self) -> Option<&'a [u8]> {
+        self.data
+    }
+
+    pub fn data_mut(&mut self) -> Option<&'a mut [u8]> {
+        unsafe {
+            let data = self.data?;
+
+            let ptr = data.as_ptr() as usize as *mut u8;
+
+            Some(core::slice::from_raw_parts_mut(ptr, data.len()))
+        }
+    }
+
+    pub fn set_reply_port(&mut self, reply_port: Handle) {
+        self.reply_port = reply_port;
     }
 
     pub fn mid(&self) -> MessageId {
@@ -43,54 +75,18 @@ impl<'a> IpcMessage<'a> {
         &self.handles[..self.num_handles]
     }
 
-    pub fn in_arena(&self) -> Option<&[u8]> {
-        self.in_data
-    }
-
-    pub fn out_arena(&self) -> Option<&mut [u8]> {
-        if let Some(d) = self.out_data {
-            Some(unsafe {
-                core::slice::from_raw_parts_mut(d.as_ptr() as usize as *mut u8, d.len())
-            })
-        } else {
-            None
-        }
-    }
-
-    pub fn reply_port(&self) -> HandleBase {
-        self.reply_port
-    }
-
-    pub fn set_reply_port(&mut self, h: HandleBase) {
-        self.reply_port = h;
-    }
-
-    pub fn set_in_arena(&mut self, data: &'a [u8]) {
-        // assert!(self.in_data.is_none());
-        self.in_data = Some(data);
-    }
-
-    pub fn set_out_arena(&mut self, data: &'a [u8]) {
-        self.out_data = Some(data);
-    }
-
-    pub fn add_handle(&mut self, h: Handle) -> usize {
-        // TODO: that API should not cause a crash
-        assert!(self.num_handles != IPC_MAX_HANDLES);
-
-        self.handles[self.num_handles] = h;
-        self.num_handles += 1;
-
-        self.num_handles - 1
-    }
-
     pub fn add_handles(&mut self, h: &[Handle]) {
         // TODO: that API should not cause a crash
         assert!(self.num_handles != IPC_MAX_HANDLES);
 
         for i in h {
-            self.add_handle(*i);
+            self.handles[self.num_handles] = *i;
+            self.num_handles += 1;
         }
+    }
+
+    pub fn reply_port(&self) -> HandleBase {
+        self.reply_port
     }
 }
 

@@ -1,4 +1,5 @@
 use bytemuck::*;
+use core::cell::Cell;
 use core::mem;
 
 #[derive(Debug)]
@@ -24,7 +25,7 @@ impl ArenaPtr {
         }
     }
 
-    pub fn ptr_to_native_in_arena<T>(&self, p: &MessageArena<'_>) -> Option<&mut T> {
+    pub fn ptr_to_native_in_arena<'a, T>(self, p: &MessageArena<'a>) -> Option<&'a mut T> {
         let off = (p.start + self.offset) as usize as *mut T;
 
         unsafe { Some(&mut *off) }
@@ -71,6 +72,16 @@ impl<'a> MessageArena<'a> {
         self.store_impl(p, t as *const T, size);
 
         Some(p)
+    }
+
+    pub fn allocate_native<T: Copy>(&mut self, t: &T) -> Option<&Cell<T>> {
+        let size = mem::size_of::<T>();
+        let align = mem::align_of::<T>();
+
+        let p = self.allocate_impl::<T>(size, align)?;
+        self.store_impl(p, t as *const T, size);
+
+        Some(Cell::from_mut(p.ptr_to_native_in_arena::<T>(self)?))
     }
 
     pub fn allocate_slice<T: Copy>(&mut self, t: &[T]) -> Option<ArenaPtr> {

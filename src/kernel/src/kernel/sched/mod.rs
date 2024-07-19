@@ -20,7 +20,7 @@ pub struct AlignedAs<Align, Bytes: ?Sized> {
 }
 
 macro_rules! include_bytes_align_as {
-    ($align_ty:ty, $path:literal) => {{
+    ($align_ty:ty, $path:expr) => {{
         // const block expression to encapsulate the static
 
         static ALIGNED: &AlignedAs<$align_ty, [u8]> = &AlignedAs {
@@ -38,7 +38,7 @@ struct Aligned;
 #[cfg(not(test))]
 static INIT: &[u8] = include_bytes_align_as!(
     Aligned,
-    "../../../../../target/aarch64-unknown-none-softfloat/debug/nameserver"
+    concat!("../../../../../target/aarch64-unknown-none-softfloat/debug/", env!("SAMOS_INIT_NAME"))
 );
 
 // Simple, Simple, Simple

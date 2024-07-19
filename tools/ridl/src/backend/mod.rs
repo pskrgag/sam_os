@@ -125,6 +125,6 @@ mod test {
         assert!(compile_transport(&ir.unwrap(), &mut res, "rust"));
         println!("\n{}", std::str::from_utf8(res.as_slice()).unwrap());
 
-        // assert_eq!(std::str::from_utf8(res.as_slice()).unwrap(), expected);
+        assert_eq!(std::str::from_utf8(res.as_slice()).unwrap(), expected);
     }
 }

@@ -19,7 +19,7 @@ impl Port {
         factory().create_port()
     }
 
-    pub fn receive_data(&self, msg: &mut IpcMessage) -> Result<(), ErrorType> {
+    pub fn receive(&self, msg: &mut IpcMessage) -> Result<(), ErrorType> {
         Syscall::invoke(self.h, PortInvoke::RECEIVE.bits(), &[ref_to_usize(msg)]).map(|_| ())
     }
 
@@ -37,11 +37,11 @@ impl Port {
         .map(|_| ())
     }
 
-    pub fn call(&self, msg: &mut IpcMessage) -> Result<(), ErrorType> {
+    pub fn call(&self, send: &mut IpcMessage, reply: &mut IpcMessage) -> Result<(), ErrorType> {
         let p = Port::create().ok_or(ErrorType::NO_OPERATION)?;
 
-        msg.set_reply_port(p.handle());
-        Syscall::invoke(self.h, PortInvoke::CALL.bits(), &[ref_to_usize(msg)]).map(|_| ())
+        send.set_reply_port(p.handle());
+        Syscall::invoke(self.h, PortInvoke::CALL.bits(), &[ref_to_usize(send), ref_to_usize(reply)]).map(|_| ())
     }
 
     pub fn handle(&self) -> Handle {

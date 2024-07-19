@@ -23,24 +23,34 @@ pub struct Port {
     sleepers: Spinlock<LinkedList<Arc<Thread>>>,
 }
 
-fn copy_ipc_message_from_user(
+fn copy_ipc_message_from_user_in(
     user_msg: UserPtr<IpcMessage<'static>>,
 ) -> Option<IpcMessage<'static>> {
     let user_msg = user_msg.read()?;
 
-    let data = user_msg.out_arena();
-
-    // Simply move, by bit-copy all fields, which will preserve user-addresses inside slices
-    let mut msg = user_msg;
+    let data = user_msg.data();
 
     if let Some(d) = data {
         let user_buffer = UserPtr::new_array(d.as_ptr(), d.len());
         let user_buffer = user_buffer.read_on_heap()?;
 
-        msg.set_out_arena(Box::leak(user_buffer));
-    }
+        let mut res = IpcMessage::new(
+            Box::leak(user_buffer),
+            user_msg.mid(),
+            user_msg.handles(),
+        );
 
-    Some(msg)
+        res.set_reply_port(user_msg.reply_port());
+        Some(res)
+    } else {
+        Some(user_msg)
+    }
+}
+
+fn copy_ipc_message_from_user_out(
+    user_msg: UserPtr<IpcMessage<'static>>,
+) -> Option<IpcMessage<'static>> {
+    user_msg.read()
 }
 
 impl Port {
@@ -72,14 +82,17 @@ impl Port {
 
         match PortInvoke::from_bits(args[0]).ok_or(ErrorType::NO_OPERATION)? {
             PortInvoke::CALL => {
-                let mut client_msg_uptr = UserPtr::new(args[1] as *mut IpcMessage);
-                let mut client_msg =
-                    copy_ipc_message_from_user(client_msg_uptr).ok_or(ErrorType::FAULT)?;
+                let mut in_msg = UserPtr::new(args[1] as *mut IpcMessage);
+                let outmsg = UserPtr::new(args[2] as *mut IpcMessage);
+
+                let mut client_msg = copy_ipc_message_from_user_in(in_msg).ok_or(ErrorType::FAULT)?;
+                let outmsg = copy_ipc_message_from_user_out(outmsg).ok_or(ErrorType::FAULT)?;
                 let cur = current().unwrap();
 
                 // NOTE: Do not place it info if let Some() block, since rust does not drop the lock
                 // for some weird reason
                 let t = self.sleepers.lock().pop_front();
+
                 if let Some(t) = t {
                     let task = self.task.upgrade().ok_or(ErrorType::TASK_DEAD)?;
                     let reply_port = current()
@@ -104,19 +117,19 @@ impl Port {
 
                     cur.wait_send();
 
-                    let server_msg = reply_port.queue.lock().pop_front().unwrap();
+                    let mut server_msg = reply_port.queue.lock().pop_front().unwrap();
 
-                    if let Some(d) = client_msg.in_arena() {
+                    if let Some(d) = outmsg.data() {
                         let mut ud = UserPtr::new_array(d.as_ptr(), d.len());
 
-                        if let Some(d1) = server_msg.out_arena() {
+                        if let Some(d1) = server_msg.data_mut() {
                             ud.write_array(d1)?;
                             unsafe { drop(Box::from_raw(d1)) };
                         }
                     }
 
                     client_msg.add_handles(server_msg.handles());
-                    client_msg_uptr.write(&client_msg)?;
+                    in_msg.write(&client_msg)?;
 
                     return Ok(0);
                 } else {
@@ -141,7 +154,7 @@ impl Port {
                 drop(self_table);
 
                 let user_msg = UserPtr::new(args[2] as *mut _);
-                let user_msg = copy_ipc_message_from_user(user_msg).ok_or(ErrorType::FAULT)?;
+                let user_msg = copy_ipc_message_from_user_out(user_msg).ok_or(ErrorType::FAULT)?;
 
                 Self::transfer_handles_from_current(&task, user_msg.handles())
                     .ok_or(ErrorType::INVALID_HANDLE)?;
@@ -156,11 +169,11 @@ impl Port {
             PortInvoke::RECEIVE => {
                 let mut server_msg_uptr = UserPtr::new(args[1] as *mut _);
                 let mut server_msg =
-                    copy_ipc_message_from_user(server_msg_uptr).ok_or(ErrorType::FAULT)?;
+                    copy_ipc_message_from_user_out(server_msg_uptr).ok_or(ErrorType::FAULT)?;
 
                 let c = current().unwrap();
 
-                let client_msg;
+                let mut client_msg;
 
                 if let Some(sender) = self.sleepers.lock().pop_front() {
                     sender.wake();
@@ -177,22 +190,26 @@ impl Port {
                 }
 
                 // Copy arena data
-                if let Some(d) = server_msg.in_arena() {
+                if let Some(d) = server_msg.data() {
                     let mut ud = UserPtr::new_array(d.as_ptr(), d.len());
 
-                    if let Some(d1) = client_msg.out_arena() {
+                    if let Some(d1) = client_msg.data_mut() {
                         ud.write_array(d1)?;
                         unsafe { drop(Box::from_raw(d1)) };
                     }
                 }
 
                 // Prepare message
-                server_msg.set_mid(client_msg.mid());
-                server_msg.set_reply_port(client_msg.reply_port());
-                server_msg.add_handles(client_msg.handles());
+                let mut reply_msg = IpcMessage::new(
+                    server_msg.data().unwrap(),
+                    server_msg.mid(),
+                    client_msg.handles(),
+                );
+
+                reply_msg.set_reply_port(client_msg.reply_port());
 
                 // Commit it to userspace
-                server_msg_uptr.write(&server_msg)?;
+                server_msg_uptr.write(&reply_msg)?;
 
                 Ok(0)
             }

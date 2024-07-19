@@ -61,7 +61,7 @@ pub fn run_prog(
             .map_err(|x| format!("Failed to read cpio output {x}"))?;
     }
 
-    let _exit = child
+    let exit = child
         .wait()
         .map_err(|x| format!("Failed to run {name} {x}"))?;
 
@@ -81,10 +81,14 @@ pub fn run_prog(
     // return Err(format!("{name} failed with: {exit}"));
     // }
 
-    Ok(())
+    if !exit.success() {
+        Err(String::new())
+    } else {
+        Ok(())
+    }
 }
 
-pub fn build_kernel(b: &BuildScript) -> Result<(), String> {
+pub fn build_kernel(b: &BuildScript, init_name: &String) -> Result<(), String> {
     info!("[CARGO]    Building kernel...",);
 
     let ldpath = "src/kernel/src/arch/aarch64/aarch64-qemu.ld";
@@ -120,6 +124,7 @@ pub fn build_kernel(b: &BuildScript) -> Result<(), String> {
                 "-C link-arg=--script=/tmp/tmp.ld -C opt-level=2 -C force-frame-pointers",
             ),
             ("BOARD_TYPE", b.board.as_str()),
+            ("SAMOS_INIT_NAME", init_name),
         ]),
     )
 }

@@ -4,6 +4,7 @@ use libc::port::Port;
 use rtl::error::ErrorType;
 use rtl::handle::*;
 use rtl::ipc::IpcMessage;
+use core::cell::Cell;
 
 pub trait Dispatcher {
     type DispatchReq: Copy + Zeroable;
@@ -40,12 +41,11 @@ pub fn server_dispatch<T: Dispatcher>(info: &ServerInfo<T>) -> Result<(), ErrorT
     p.receive_data(&mut receive_message)?;
 
     loop {
-        let resp = res_arena.allocate(&T::DispatchResp::zeroed()).unwrap();
+        let resp: &Cell<<T as Dispatcher>::DispatchResp> = res_arena.allocate_native(&T::DispatchResp::zeroed()).unwrap();
         let mut req = req_arena
             .read::<T::DispatchReq>(ArenaPtr::request_ptr::<T::DispatchReq>())
             .unwrap();
 
-        let resp = resp.ptr_to_native_in_arena(&res_arena).unwrap();
         let mut reply_message = IpcMessage::new();
 
         reply_message.set_mid(receive_message.mid());
@@ -55,7 +55,7 @@ pub fn server_dispatch<T: Dispatcher>(info: &ServerInfo<T>) -> Result<(), ErrorT
             &mut reply_message,
             &mut req,
             &req_arena,
-            resp,
+            resp.get_mut(),
             &mut res_arena,
         );
 
