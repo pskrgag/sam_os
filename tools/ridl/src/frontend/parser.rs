@@ -104,8 +104,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_interface(&mut self) -> Option<Interface> {
-        let mut interface = Interface::new();
+    fn parse_interface(&mut self, name: String) -> Option<Interface> {
+        let mut interface = Interface::new(name);
 
         self.consume_token_type(TokenType::LeftCurlParen)?;
 
@@ -134,15 +134,11 @@ impl<'a> Parser<'a> {
 
     pub fn parse(&mut self) -> Option<Vec<Box<dyn IrObject>>> {
         let mut v = Vec::<Box<dyn IrObject>>::new();
-        let t = self.consume_token_pred(|t| t.get_type() == TokenType::TokenId(IdType::Interface));
 
-        match t {
-            Some(_) => v.push(Box::new(self.parse_interface()?)),
-            None => {
-                error!("Failed to parse!");
-                return None;
-            }
-        }
+        self.consume_token_pred(|t| t.get_type() == TokenType::TokenId(IdType::Interface))?;
+        let name = self.consume_token_pred(|t| t.get_type() == TokenType::TokenId(IdType::Identifier))?;
+
+        v.push(Box::new(self.parse_interface(name.get_str().to_owned())?));
 
         Some(v)
     }

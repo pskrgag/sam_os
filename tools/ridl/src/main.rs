@@ -54,9 +54,9 @@ fn main() -> Result<()> {
             .ok_or(Error::new(ErrorKind::Other, "Failed to parse source file"))?;
 
         if !server {
-            backend::compile_transport(&ir, &mut stdout(), "rust");
+            backend::compile_transport(&ir, &mut stdout(), "rust")?;
         } else {
-            backend::compile_server(&ir, &mut stdout(), "rust");
+            backend::compile_server(&ir, &mut stdout(), "rust")?;
         }
     }
 
