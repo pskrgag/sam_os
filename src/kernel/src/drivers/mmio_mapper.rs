@@ -1,8 +1,8 @@
 use crate::mm::paging::kernel_page_table::kernel_page_table;
 
 use crate::arch::KERNEL_MMIO_BASE;
+use crate::kernel::locking::spinlock::Spinlock;
 use rtl::arch::PAGE_SIZE;
-use rtl::locking::fake_lock::FakeLock;
 use rtl::misc::num_pages;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
@@ -19,7 +19,7 @@ pub struct MmioAllocator {
     offset: usize,
 }
 
-pub static MMIO_ALLOCATOR: FakeLock<MmioAllocator> = FakeLock::new(MmioAllocator::default());
+pub static MMIO_ALLOCATOR: Spinlock<MmioAllocator> = Spinlock::new(MmioAllocator::default());
 
 impl MmioAllocator {
     pub const fn default() -> Self {
@@ -66,5 +66,5 @@ impl MmioAllocator {
 pub fn init() {
     let new_allocator = MmioAllocator::new();
 
-    *MMIO_ALLOCATOR.get() = new_allocator;
+    *MMIO_ALLOCATOR.lock() = new_allocator;
 }

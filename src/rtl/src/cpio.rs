@@ -49,7 +49,7 @@ impl<'a> Cpio<'a> {
 
     pub fn iter(&'a self) -> Iter<'a> {
         Iter {
-            archive: &self,
+            archive: self,
             offset: 0,
         }
     }
@@ -97,7 +97,7 @@ impl<'a> Iterator for Iter<'a> {
         }
 
         let header = unsafe {
-            (self.archive.data.as_ptr().offset(self.offset as isize) as *const CpioHeader)
+            (self.archive.data.as_ptr().add(self.offset) as *const CpioHeader)
                 .as_ref()
                 .unwrap()
         };

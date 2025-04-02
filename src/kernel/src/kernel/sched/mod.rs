@@ -4,7 +4,6 @@ use crate::{arch::irq::interrupts, arch::regs::Context, kernel::tasks::thread::T
 #[cfg(not(test))]
 use crate::{kernel::elf::parse_elf, kernel::tasks::task::init_task};
 use alloc::sync::Arc;
-use rtl::locking::fake_lock::FakeLock;
 use run_queue::RunQueue;
 
 pub mod run_queue;
@@ -38,7 +37,7 @@ struct Aligned;
 #[cfg(not(test))]
 static INIT: &[u8] = include_bytes_align_as!(
     Aligned,
-    "../../../../../target/aarch64-unknown-none-softfloat/debug/nameserver"
+    "../../../../../target/aarch64-unknown-none-softfloat/debug/roottask"
 );
 
 // Simple, Simple, Simple
@@ -58,7 +57,7 @@ pub struct Scheduler {
 }
 
 percpu_global!(
-    pub static SCHEDULER: FakeLock<Scheduler> = FakeLock::new(Scheduler::new());
+    pub static SCHEDULER: Scheduler = Scheduler::new();
 );
 
 impl Scheduler {
@@ -134,12 +133,14 @@ impl Scheduler {
 }
 
 pub fn run() {
-    let scheduler = SCHEDULER.per_cpu_var_get().get();
+    let scheduler = SCHEDULER.per_cpu_var_get_mut();
+
     scheduler.schedule();
 }
 
 pub fn add_thread(t: Arc<Thread>) {
-    let scheduler = SCHEDULER.per_cpu_var_get().get();
+    let scheduler = SCHEDULER.per_cpu_var_get_mut();
+
     scheduler.add_thread(t);
 }
 

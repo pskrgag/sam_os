@@ -175,14 +175,12 @@ impl Vma {
 
         if !(self_before || self_after) || !flags_eq {
             None
+        } else if self_before {
+            self.range = MemRangeVma::new_fixed(self.start(), self.size() + other.size());
+            Some(())
         } else {
-            if self_before {
-                self.range = MemRangeVma::new_fixed(self.start(), self.size() + other.size());
-                Some(())
-            } else {
-                self.range = MemRangeVma::new_fixed(other.start(), self.size() + other.size());
-                Some(())
-            }
+            self.range = MemRangeVma::new_fixed(other.start(), self.size() + other.size());
+            Some(())
         }
     }
 

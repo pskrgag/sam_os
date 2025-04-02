@@ -1,7 +1,6 @@
 #![no_std]
 #![feature(allocator_api)]
 #![feature(slice_ptr_get)]
-#![feature(const_mut_refs)]
 
 extern crate static_assertions;
 

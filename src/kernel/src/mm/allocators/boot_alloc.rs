@@ -1,10 +1,10 @@
+use crate::kernel::locking::spinlock::Spinlock;
 use core::{
     alloc::Layout,
     mem::{size_of, size_of_val, transmute},
     ptr::NonNull,
 };
 use rtl::arch::PAGE_SIZE;
-use rtl::locking::fake_lock::FakeLock;
 
 const INIT_PAGE_POOL: usize = 100;
 
@@ -21,7 +21,7 @@ pub struct BootAlloc {
     free: usize,
 }
 
-pub static BOOT_ALLOC: FakeLock<BootAlloc> = FakeLock::new(BootAlloc::default());
+pub static BOOT_ALLOC: Spinlock<BootAlloc> = Spinlock::new(BootAlloc::default());
 
 unsafe impl Sync for BootAlloc {}
 
@@ -151,5 +151,5 @@ impl BootAlloc {
 }
 
 pub fn init() {
-    BOOT_ALLOC.get().init();
+    BOOT_ALLOC.lock().init();
 }

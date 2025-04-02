@@ -1,20 +1,20 @@
 use super::backend::{SyscallBackend, SyscallBackendImpl};
-use rtl::locking::fake_lock::FakeLock;
+use rtl::locking::spinlock::Spinlock;
 use rtl::vmm::slab::SlabAllocator;
 
 const MIN_SLAB_SIZE: usize = 8;
 
-static SLABS: [FakeLock<SlabAllocator<SyscallBackend>>; 10] = [
-    FakeLock::new(SlabAllocator::default()),
-    FakeLock::new(SlabAllocator::default()),
-    FakeLock::new(SlabAllocator::default()),
-    FakeLock::new(SlabAllocator::default()),
-    FakeLock::new(SlabAllocator::default()),
-    FakeLock::new(SlabAllocator::default()),
-    FakeLock::new(SlabAllocator::default()),
-    FakeLock::new(SlabAllocator::default()),
-    FakeLock::new(SlabAllocator::default()),
-    FakeLock::new(SlabAllocator::default()),
+static SLABS: [Spinlock<SlabAllocator<SyscallBackend>>; 10] = [
+    Spinlock::new(SlabAllocator::default()),
+    Spinlock::new(SlabAllocator::default()),
+    Spinlock::new(SlabAllocator::default()),
+    Spinlock::new(SlabAllocator::default()),
+    Spinlock::new(SlabAllocator::default()),
+    Spinlock::new(SlabAllocator::default()),
+    Spinlock::new(SlabAllocator::default()),
+    Spinlock::new(SlabAllocator::default()),
+    Spinlock::new(SlabAllocator::default()),
+    Spinlock::new(SlabAllocator::default()),
 ];
 
 pub fn alloc(mut size: usize) -> Option<*mut u8> {
@@ -25,7 +25,7 @@ pub fn alloc(mut size: usize) -> Option<*mut u8> {
     if slab_index >= SLABS.len() {
         None
     } else {
-        SLABS[slab_index].get().alloc()
+        SLABS[slab_index].lock().alloc()
     }
 }
 
@@ -37,14 +37,14 @@ pub fn free(ptr: *mut u8, l: alloc::alloc::Layout) {
         panic!();
     }
 
-    SLABS[slab_index].get().free(ptr);
+    SLABS[slab_index].lock().free(ptr);
 }
 
 pub fn init() -> Option<()> {
     let mut size = MIN_SLAB_SIZE;
 
     for i in &SLABS {
-        (*i.get()) = SlabAllocator::new(size, &SyscallBackendImpl)?;
+        (*i.lock()) = SlabAllocator::new(size, &SyscallBackendImpl)?;
         size = (size + 1).next_power_of_two();
     }
 

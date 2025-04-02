@@ -1,6 +1,6 @@
 use crate::{arch, drivers::mmio_mapper::MMIO_ALLOCATOR};
-use rtl::locking::fake_lock::FakeLock;
 use rtl::vmm::types::*;
+use crate::percpu_global;
 
 const GICD_CTLR: usize = 0x0;
 const GICC_CTLR: usize = 0x0;
@@ -71,7 +71,9 @@ pub struct Gic {
 }
 
 // TODO: Should it be per-cpu locked?
-pub static GIC: FakeLock<Gic> = FakeLock::new(Gic::new());
+percpu_global!(
+    pub static GIC: Gic = Gic::new();
+);
 
 #[inline(never)]
 fn write_to_reg<T>(base: VirtAddr, offset: usize, val: T) {
@@ -99,7 +101,7 @@ impl GICC {
     }
 
     pub fn new(base: PhysAddr) -> Option<Self> {
-        let cpu_va = MMIO_ALLOCATOR.get().iomap(base, 1)?;
+        let cpu_va = MMIO_ALLOCATOR.lock().iomap(base, 1)?;
         Some(Self { base: cpu_va })
     }
 
@@ -122,7 +124,7 @@ impl GICD {
     }
 
     pub fn new(base: PhysAddr) -> Option<Self> {
-        let dist_va = MMIO_ALLOCATOR.get().iomap(base, 1)?;
+        let dist_va = MMIO_ALLOCATOR.lock().iomap(base, 1)?;
         Some(Self { base: dist_va })
     }
 
@@ -254,7 +256,7 @@ impl Gic {
 }
 
 pub fn init() {
-    GIC.get().init().expect("Failed to initalize GIC");
+    GIC.per_cpu_var_get_mut().init().expect("Failed to initalize GIC");
 
     println!("Gic initalized");
 }

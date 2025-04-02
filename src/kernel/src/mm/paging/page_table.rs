@@ -18,9 +18,7 @@ pub enum MmError {
 }
 
 impl From<MmError> for () {
-    fn from(_value: MmError) -> Self {
-        ()
-    }
+    fn from(_value: MmError) -> Self {}
 }
 
 impl From<()> for MmError {
@@ -181,7 +179,7 @@ impl PageTable {
             base: VirtAddr::from(base),
         };
 
-        let va = VirtAddr::from(base);
+        let mut va = VirtAddr::from(base);
         unsafe { va.as_slice_mut::<u8>(PAGE_SIZE).fill(0x00) };
 
         Some(new_table)
@@ -218,7 +216,7 @@ impl PageTable {
         index: usize,
     ) -> Result<PageTableBlock, ()> {
         let new_page = page_allocator().alloc(1).ok_or(())?;
-        let va = VirtAddr::from(new_page);
+        let mut va = VirtAddr::from(new_page);
         unsafe { va.as_slice_mut::<u8>(PAGE_SIZE).fill(0x00) };
 
         let new_entry = PageTableEntry::from_bits(PageFlags::table().bits() | new_page.get());

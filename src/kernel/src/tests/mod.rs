@@ -13,7 +13,12 @@ extern "C" {
 macro_rules! test_assert {
     ($cond:expr) => {
         if !$cond {
-            print!("\nCondition failed: `{}` at {}:{}", stringify!($cond), file!(), line!());
+            print!(
+                "\nCondition failed: `{}` at {}:{}",
+                stringify!($cond),
+                file!(),
+                line!()
+            );
             *crate::tests::TEST_FAIL.get() = true;
             return;
         }

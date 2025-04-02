@@ -29,18 +29,18 @@ impl IrqHandler {
 pub fn register_handler(irq: u32, func: fn(u32)) {
     let handler = IrqHandler::new(irq, func);
 
-    GIC.get().enable_irq(irq);
+    GIC.per_cpu_var_get_mut().enable_irq(irq);
     IRQS.lock().push_back(handler);
 }
 
 pub fn init_secondary(irq: u32) {
     use crate::arch::cpuid::current_cpu;
 
-    GIC.get().init_secondary(irq, current_cpu() as u32);
+    GIC.per_cpu_var_get_mut().init_secondary(irq, current_cpu() as u32);
 }
 
 pub fn irq_dispatch() {
-    let gic = GIC.get();
+    let gic = GIC.per_cpu_var_get_mut();
     let irqs = IRQS.lock();
 
     for i in irqs.iter() {

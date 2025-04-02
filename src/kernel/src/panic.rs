@@ -9,9 +9,8 @@ use rtl::vmm::types::*;
 #[cfg(test)]
 #[panic_handler]
 fn on_panic(info: &PanicInfo) -> ! {
-    if let Some(m) = info.message() {
-        println!("{}", m);
-    }
+    println!("{}", info.message());
+
     if let Some(location) = info.location() {
         println!(
             "Happened in file '{}' at line {}",
@@ -58,10 +57,6 @@ fn on_panic(info: &PanicInfo) -> ! {
     println!("Kernel backtrace");
     for i in 0..bt_size {
         println!("#{} [{:p}]", i, bt[i].to_raw::<usize>());
-    }
-
-    if let Some(s) = info.payload().downcast_ref::<&str>() {
-        println!("Reason: {:?}", s);
     }
 
     loop {}

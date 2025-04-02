@@ -14,9 +14,7 @@ unsafe impl Sync for Allocator {}
 unsafe impl GlobalAlloc for Allocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         if !BOOT_ALLOC_IS_DEAD.load(Ordering::Relaxed) {
-            let boot_alloc = boot_alloc::BOOT_ALLOC.get();
-
-            boot_alloc.alloc(layout)
+            boot_alloc::BOOT_ALLOC.lock().alloc(layout)
         } else {
             slab::alloc(layout.size()).unwrap()
         }
@@ -24,9 +22,7 @@ unsafe impl GlobalAlloc for Allocator {
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         if !BOOT_ALLOC_IS_DEAD.load(Ordering::Relaxed) {
-            let boot_alloc = boot_alloc::BOOT_ALLOC.get();
-
-            boot_alloc.free(ptr)
+            boot_alloc::BOOT_ALLOC.lock().free(ptr)
         } else {
             slab::free(ptr, layout);
         }

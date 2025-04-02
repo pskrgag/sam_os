@@ -28,7 +28,7 @@ impl VmObjectInner {
             + 1;
 
         let p: PhysAddr = page_allocator().alloc(pages)?;
-        let va = VirtAddr::from(p);
+        let mut va = VirtAddr::from(p);
 
         unsafe { va.as_slice_mut::<u8>(pages * PAGE_SIZE).fill(0x00) };
 
@@ -50,7 +50,7 @@ impl VmObjectInner {
             - ((load_addr.bits() as usize) >> PAGE_SHIFT)
             + 1;
         let p = page_allocator().alloc(pages)?;
-        let va = VirtAddr::from(p);
+        let mut va = VirtAddr::from(p);
 
         unsafe { va.as_slice_mut::<u8>(pages * PAGE_SIZE).fill(0x00) };
 

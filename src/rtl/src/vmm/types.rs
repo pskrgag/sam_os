@@ -105,7 +105,8 @@ impl<T: Copy + Address + From<usize> + Ord + core::fmt::Debug> MemRange<T> {
 
     pub fn truncate(&mut self, size: usize) -> bool {
         self.start.add(size);
-        if self.size.overflowing_sub(size).1 == false {
+
+        if !self.size.overflowing_sub(size).1 {
             self.size -= size;
             true
         } else {
@@ -258,12 +259,18 @@ impl VirtAddr {
         self.0 as *mut T
     }
 
-    pub unsafe fn as_slice_mut<T>(&self, count: usize) -> &mut [T] {
+    /// # Safety
+    ///
+    /// Caller should be sure that pointer points to [`[count; T]`]
+    pub unsafe fn as_slice_mut<T>(&mut self, count: usize) -> &mut [T] {
         core::slice::from_raw_parts_mut(self.0 as *mut T, count)
     }
 
-    pub unsafe fn as_slice_at_offset_mut<T>(&self, count: usize, offset: usize) -> &mut [T] {
-        core::slice::from_raw_parts_mut((self.0 as usize + offset) as *mut T, count)
+    /// # Safety
+    ///
+    /// Caller should be sure that pointer points to [`[count; T]`]
+    pub unsafe fn as_slice_at_offset_mut<T>(&mut self, count: usize, offset: usize) -> &mut [T] {
+        core::slice::from_raw_parts_mut((self.0 + offset) as *mut T, count)
     }
 }
 

@@ -19,8 +19,8 @@ impl fmt::Write for Uart {
 
 pub fn remap() {
     let mut p = UART.lock();
-    let alloc = MMIO_ALLOCATOR.get();
-    let ptr = alloc
+    let ptr = MMIO_ALLOCATOR
+        .lock()
         .iomap(PhysAddr::new(p.base().bits()), 1)
         .expect("Failed to remap uart");
 

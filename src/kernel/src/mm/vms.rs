@@ -59,7 +59,7 @@ impl VmsInner {
             } else {
                 return Err(());
             };
-            let va = VirtAddr::from(p);
+            let mut va = VirtAddr::from(p);
 
             unsafe { va.as_slice_mut::<u8>(PAGE_SIZE).fill(0x00) };
 

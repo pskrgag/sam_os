@@ -173,7 +173,7 @@ fn parse_program_headers(
         let p_range = if pheader.p_memsz != pheader.p_filesz {
             let pages = *(size as usize).round_up_page() / PAGE_SIZE;
             let p = page_allocator().alloc(pages).unwrap();
-            let va = VirtAddr::from(p);
+            let mut va = VirtAddr::from(p);
 
             unsafe { va.as_slice_mut::<u8>(pages * PAGE_SIZE).fill(0x00) };
             MemRange::new(p, size)
