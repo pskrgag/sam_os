@@ -31,8 +31,7 @@ impl RunQueue {
     }
 
     pub fn pop_running(&mut self) -> Option<Arc<Thread>> {
-        let next = self.list_active.pop_front();
-        next
+        self.list_active.pop_front()
     }
 
     pub fn empty(&self) -> bool {

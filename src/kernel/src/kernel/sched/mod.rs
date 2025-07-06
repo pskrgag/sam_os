@@ -71,7 +71,7 @@ impl Scheduler {
         // Fix up queue based on recent events
         self.rq.move_by_pred(|x| x.state() == ThreadState::Running);
 
-        if let Some(cur) = current() {
+        if let Some(mut cur) = current() {
             match cur.state() {
                 ThreadState::Running => return, // Just timer tick
                 ThreadState::NeedResched => self.rq.add_running(cur.clone()),
@@ -79,16 +79,17 @@ impl Scheduler {
                 _ => panic!("Running scheduler in unexected state"),
             }
 
-            if let Some(next) = self.rq.pop_running() {
+            if let Some(mut next) = self.rq.pop_running() {
                 // println!("Switching {} ({:?}) --> {} ({:?})", cur.id(), cur.state(), next.id(), next.state());
 
                 next.set_state(ThreadState::Running);
 
                 unsafe {
                     let ctx = cur.ctx_mut();
+                    let next_clone = next.clone();
                     let ctx_next = next.ctx_mut();
 
-                    crate::arch::current::set_current(next.clone());
+                    crate::arch::current::set_current(next_clone);
 
                     switch_to(ctx as _, ctx_next as _);
                 }
@@ -104,15 +105,16 @@ impl Scheduler {
             }
 
             let mut ctx = Context::default(); // tmp storage
-            let next = self
+            let mut next = self
                 .rq
                 .pop_running()
                 .expect("Rq must not be empty at that moment");
-            let next_ctx = unsafe { next.ctx_mut() };
+            let next_clone = next.clone();
 
             next.set_state(ThreadState::Running);
+            let next_ctx = unsafe { next.ctx_mut() };
 
-            crate::arch::current::set_current(next.clone());
+            crate::arch::current::set_current(next_clone);
 
             // We come here only for 1st process, so we need to turn on irqs
             unsafe {

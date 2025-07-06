@@ -67,6 +67,7 @@ extern "C" fn start_kernel() -> ! {
     print!("{}", SAMOS_BANNER);
 
     #[cfg(test)]
+    #[allow(clippy::empty_loop)]
     {
         test_main();
         println!("Testing finishes!");
@@ -74,6 +75,7 @@ extern "C" fn start_kernel() -> ! {
     }
 
     #[cfg(not(test))]
+    #[allow(clippy::empty_loop)]
     {
         sched::init_userspace();
 
@@ -100,5 +102,6 @@ extern "C" fn cpu_reset() -> ! {
      * idle thread, so just loop until timer irq
      */
 
+    #[allow(clippy::empty_loop)]
     loop {}
 }

@@ -56,18 +56,18 @@ const PMR_PRIO: u32 = 0xF0;
 
 const IRQ_LINES: u32 = 256;
 
-struct GICC {
+struct Gicc {
     base: VirtAddr,
 }
 
-struct GICD {
+struct Gicd {
     base: VirtAddr,
 }
 
 // GICv2 only!
 pub struct Gic {
-    cpu: GICC,
-    dist: GICD,
+    cpu: Gicc,
+    dist: Gicd,
 }
 
 // TODO: Should it be per-cpu locked?
@@ -79,7 +79,7 @@ percpu_global!(
 fn write_to_reg<T>(base: VirtAddr, offset: usize, val: T) {
     unsafe {
         base.to_raw_mut::<T>()
-            .offset(offset as isize)
+            .add(offset)
             .write_volatile(val);
     };
 }
@@ -88,12 +88,12 @@ fn write_to_reg<T>(base: VirtAddr, offset: usize, val: T) {
 fn read_from_reg<T>(base: VirtAddr, offset: usize) -> T {
     unsafe {
         base.to_raw_mut::<T>()
-            .offset(offset as isize)
+            .add(offset)
             .read_volatile()
     }
 }
 
-impl GICC {
+impl Gicc {
     pub const fn default() -> Self {
         Self {
             base: VirtAddr::new(0),
@@ -112,7 +112,7 @@ impl GICC {
     }
 }
 
-impl GICD {
+impl Gicd {
     pub const fn default() -> Self {
         Self {
             base: VirtAddr::new(0),
@@ -207,8 +207,8 @@ impl GICD {
 impl Gic {
     pub const fn new() -> Self {
         Self {
-            dist: GICD::default(),
-            cpu: GICC::default(),
+            dist: Gicd::default(),
+            cpu: Gicc::default(),
         }
     }
 
@@ -216,8 +216,8 @@ impl Gic {
         let cpu = arch::gic_cpu();
         let dist = arch::gic_dist();
 
-        self.cpu = GICC::new(cpu.0)?;
-        self.dist = GICD::new(dist.0)?;
+        self.cpu = Gicc::new(cpu.0)?;
+        self.dist = Gicd::new(dist.0)?;
 
         // Turn off to start initialization
         self.dist.disable();

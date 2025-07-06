@@ -43,7 +43,7 @@ impl Thread {
         self.task.upgrade().unwrap()
     }
 
-    pub unsafe fn ctx_mut<'a>(self: &'a Arc<Thread>) -> &'a mut Context {
+    pub unsafe fn ctx_mut(self: &mut Arc<Thread>) -> &mut Context {
         let mut inner = self.inner.lock();
         let r = &mut inner.arch_ctx as *mut Context;
 

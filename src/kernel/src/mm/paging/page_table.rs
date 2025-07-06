@@ -66,7 +66,7 @@ impl PageTableBlock {
         PageTableEntry::from_bits(unsafe {
             self.addr
                 .to_raw_mut::<usize>()
-                .offset(index as isize)
+                .add(index)
                 .read_volatile()
         })
         .valid()
@@ -77,7 +77,7 @@ impl PageTableBlock {
 
         self.addr
             .to_raw_mut::<usize>()
-            .offset(index as isize)
+            .add(index)
             .write_volatile(entry.bits());
 
         core::arch::asm!("dsb ishst", "isb");
@@ -90,7 +90,7 @@ impl PageTableBlock {
             PageTableEntry::from_bits(
                 self.addr
                     .to_raw_mut::<usize>()
-                    .offset(index as isize)
+                    .add(index)
                     .read_volatile(),
             )
         }
@@ -112,7 +112,7 @@ impl PageTableBlock {
             PageTableEntry::from_bits(
                 self.addr
                     .to_raw::<usize>()
-                    .offset(index as isize)
+                    .add(index)
                     .read_volatile(),
             )
         };

@@ -12,7 +12,7 @@ pub unsafe fn backtrace(buf: &mut [VirtAddr], fp: VirtAddr) -> usize {
     let mut fp: *const FpEntry = fp.bits() as *const _;
     let mut num_entries = 0;
 
-    if buf.len() == 0 {
+    if buf.is_empty() {
         return 0;
     }
 

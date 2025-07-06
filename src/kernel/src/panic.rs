@@ -26,7 +26,6 @@ fn on_panic(info: &PanicInfo) -> ! {
 #[panic_handler]
 fn on_panic(info: &PanicInfo) -> ! {
     let mut bt = [VirtAddr::from(0); 50];
-    let bt_size: usize;
 
     unsafe {
         let fp: usize;
@@ -51,12 +50,12 @@ fn on_panic(info: &PanicInfo) -> ! {
         }
         core::arch::asm!("mov {}, fp", out(reg) fp);
 
-        bt_size = backtrace(&mut bt, VirtAddr::from(fp));
+        backtrace(&mut bt, VirtAddr::from(fp));
     };
 
     println!("Kernel backtrace");
-    for i in 0..bt_size {
-        println!("#{} [{:p}]", i, bt[i].to_raw::<usize>());
+    for i in bt {
+        println!("#{} [{:p}]", i, i.to_raw::<usize>());
     }
 
     loop {}

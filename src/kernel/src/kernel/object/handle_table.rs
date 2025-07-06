@@ -19,7 +19,7 @@ impl HandleTable {
     }
 
     pub fn add(&mut self, obj: Handle) -> HandleBase {
-        let key = obj.as_raw() as usize % MAX_HANDLES;
+        let key = obj.as_raw() % MAX_HANDLES;
         let start = key;
         let mut idx = start;
 
@@ -45,7 +45,7 @@ impl HandleTable {
         let mut idx = start;
 
         while {
-            let h = &mut self.table[idx as usize];
+            let h = &mut self.table[idx];
 
             if h.is_valid() && h.as_raw() == hdl {
                 *h = Handle::invalid();
@@ -65,7 +65,7 @@ impl HandleTable {
         let mut idx = start;
 
         while {
-            let h = &self.table[idx as usize];
+            let h = &self.table[idx];
 
             if h.is_valid() && h.as_raw() == hdl {
                 return h.obj::<T>();
@@ -85,7 +85,7 @@ impl HandleTable {
         let mut idx = start;
 
         while {
-            let h = &self.table[idx as usize];
+            let h = &self.table[idx];
 
             if h.is_valid() && h.as_raw() == hdl {
                 return h.obj_poly();

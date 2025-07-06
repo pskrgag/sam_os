@@ -37,7 +37,7 @@ impl ThreadInner {
     }
 
     pub fn setup_args(&mut self, args: &[usize]) {
-        if args.len() > 0 {
+        if !args.is_empty() {
             self.arch_ctx.x23 = args[0];
         }
 

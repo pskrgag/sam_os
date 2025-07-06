@@ -77,10 +77,7 @@ impl PageAlloc {
 
             /* We know it exists */
             let start = i.first_false_index().unwrap();
-            if start != 0 {
-                cont_pages = 0;
-                (bitmap, idx) = (Some(bitmap_idx), Some(start));
-            } else if idx.is_none() {
+            if start != 0 || idx.is_none() {
                 cont_pages = 0;
                 (bitmap, idx) = (Some(bitmap_idx), Some(start));
             }
@@ -114,14 +111,14 @@ impl PageAlloc {
         let (bitmap, idx) = ((pfn - self.start) / 64, (pfn - self.start) % 64);
 
         for i in 0..num {
-            self.pool[(bitmap + (idx + i) % 64) as usize].set(((idx + i) % 64) as usize, false);
+            self.pool[bitmap + (idx + i) % 64].set((idx + i) % 64, false);
         }
     }
 }
 
 pub fn init() {
     let alloc_start = PhysAddr::from(kernel::misc::image_end_rounded());
-    let alloc_size = arch::ram_size() as usize - kernel::misc::image_size();
+    let alloc_size = arch::ram_size() - kernel::misc::image_size();
 
     println!(
         "Page allocator start {:x} size {:x}",
@@ -129,5 +126,5 @@ pub fn init() {
         alloc_size
     );
 
-    *PAGE_ALLOC.lock() = PageAlloc::new(alloc_start, alloc_size as usize).unwrap();
+    *PAGE_ALLOC.lock() = PageAlloc::new(alloc_start, alloc_size).unwrap();
 }

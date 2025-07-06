@@ -5,8 +5,8 @@ pub use aarch64::*;
 
 #[derive(Copy, Clone)]
 pub enum MemoryType {
-    MEM,
-    DEVICE,
+    Mem,
+    Device,
 }
 
 #[derive(Clone)]

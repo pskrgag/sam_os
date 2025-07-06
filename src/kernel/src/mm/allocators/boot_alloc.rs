@@ -81,7 +81,7 @@ impl BootAlloc {
 
             if (*header).size > size && (*header).free {
                 let next_block = core::mem::transmute::<_, *mut FfHeader>(
-                    header_raw.offset((core::mem::size_of::<FfHeader>() + size) as isize),
+                    header_raw.add(core::mem::size_of::<FfHeader>() + size),
                 );
                 let new_block = FfHeader {
                     prev: NonNull::new(header),
@@ -100,7 +100,7 @@ impl BootAlloc {
                 (*header).size = size;
                 (*header).free = false;
 
-                return header_raw.offset(core::mem::size_of::<FfHeader>() as isize);
+                return header_raw.add(core::mem::size_of::<FfHeader>());
             }
 
             iter = (*header).next;

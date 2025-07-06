@@ -13,6 +13,7 @@ extern "C" {
 macro_rules! linker_var {
     ($a:expr) => {{
         #[allow(unused_unsafe)]
+        #[allow(clippy::macro_metavars_in_unsafe)]
         unsafe {
             &$a as *const usize as usize
         }

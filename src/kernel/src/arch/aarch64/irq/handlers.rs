@@ -98,7 +98,7 @@ pub extern "C" fn kern_sync64(
     elr_el1: VirtAddr,
     ctx: &mut ExceptionCtx,
 ) {
-    if fixup(elr_el1, ctx) == false {
+    if !fixup(elr_el1, ctx) {
         println!("!!! Kernel sync exception");
         println!("{:?}", ctx);
         println!(

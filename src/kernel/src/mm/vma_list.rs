@@ -9,9 +9,9 @@ pub(crate) struct MemRangeVma(MemRange<VirtAddr>);
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 enum VmaFlags {
-    VmaFree,
-    VmaInvalid,
-    VmaAllocated,
+    Free,
+    Invalid,
+    Allocated,
 }
 
 #[derive(Debug, Clone)]
@@ -148,7 +148,7 @@ impl Vma {
         Self {
             range,
             tp,
-            state: VmaFlags::VmaFree,
+            state: VmaFlags::Free,
             non_free_link: RBTreeLink::new(),
         }
     }
@@ -161,7 +161,7 @@ impl Vma {
         Self {
             range: MemRangeVma::new_fixed(0.into(), 0),
             tp: MappingType::USER_DEVICE,
-            state: VmaFlags::VmaInvalid,
+            state: VmaFlags::Invalid,
             non_free_link: RBTreeLink::new(),
         }
     }
@@ -223,19 +223,19 @@ impl Vma {
     }
 
     pub fn mark_allocated(&mut self) {
-        self.state = VmaFlags::VmaAllocated;
+        self.state = VmaFlags::Allocated;
     }
 
     pub fn is_free(&self) -> bool {
-        self.state == VmaFlags::VmaFree
+        self.state == VmaFlags::Free
     }
 
     pub fn is_valid(&self) -> bool {
-        self.state != VmaFlags::VmaInvalid
+        self.state != VmaFlags::Invalid
     }
 
     pub fn mark_free(&mut self) {
-        self.state = VmaFlags::VmaFree;
+        self.state = VmaFlags::Free;
     }
 
     pub fn contains_addr(&self, addr: VirtAddr) -> bool {
@@ -300,10 +300,9 @@ impl PartialOrd for MemRangeVma {
 }
 
 impl Ord for MemRangeVma {
+    #[allow(clippy::non_canonical_partial_ord_impl)]
     fn cmp(&self, other: &Self) -> Ordering {
-        if self.0.contains_addr(other.0.start()) {
-            Ordering::Equal
-        } else if other.0.contains_addr(self.0.start()) {
+        if self.0.contains_addr(other.0.start()) || other.0.contains_addr(self.0.start()) {
             Ordering::Equal
         } else {
             self.0.cmp(&other.0)

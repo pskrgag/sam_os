@@ -6,7 +6,7 @@ use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
 
 const EI_NIDENT: usize = 16;
-const ELF_MAGIC: [u8; 4] = [0x7f, 'E' as u8, 'L' as u8, 'F' as u8];
+const ELF_MAGIC: [u8; 4] = [0x7f, b'E', b'L', b'F'];
 
 #[allow(non_camel_case_types)]
 type Elf64_Addr = u64;

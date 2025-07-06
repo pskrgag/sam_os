@@ -122,13 +122,13 @@ impl SpinLockInner {
 
 impl<'a, T> Deref for SpinlockGuard<'a, T> {
     type Target = T;
-    fn deref<'b>(&'b self) -> &'b T {
+    fn deref(&self) -> &T {
         &*self.data
     }
 }
 
 impl<'a, T> DerefMut for SpinlockGuard<'a, T> {
-    fn deref_mut<'b>(&'b mut self) -> &'b mut T {
+    fn deref_mut(&mut self) -> &mut T {
         &mut *self.data
     }
 }

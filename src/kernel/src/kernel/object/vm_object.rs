@@ -23,7 +23,7 @@ pub struct VmObject {
 impl VmObjectInner {
     pub fn from_buffer(b: UserPtr<u8>, tp: MappingType, mut load_addr: VirtAddr) -> Option<Self> {
         let pages = ((load_addr.bits() + b.len()) >> PAGE_SHIFT)
-            - ((load_addr.bits() as usize) >> PAGE_SHIFT)
+            - (load_addr.bits() >> PAGE_SHIFT)
             + 1;
 
         let p: PhysAddr = page_allocator().alloc(pages)?;
@@ -45,9 +45,8 @@ impl VmObjectInner {
     }
 
     pub fn zeroed(size: usize, tp: MappingType, mut load_addr: VirtAddr) -> Option<Self> {
-        let pages = ((load_addr.bits() + size) >> PAGE_SHIFT)
-            - ((load_addr.bits() as usize) >> PAGE_SHIFT)
-            + 1;
+        let pages =
+            ((load_addr.bits() + size) >> PAGE_SHIFT) - (load_addr.bits() >> PAGE_SHIFT) + 1;
         let p = page_allocator().alloc(pages)?;
         let mut va = VirtAddr::from(p);
 

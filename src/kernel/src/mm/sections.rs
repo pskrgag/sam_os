@@ -102,7 +102,7 @@ pub fn remap_kernel() {
         (*tt)
             .map(
                 None,
-                MemRange::new(VirtAddr::from(i.start()), i.size() as usize),
+                MemRange::new(VirtAddr::from(i.start()), i.size()),
                 i.mapping_type(),
             )
             .expect("Failed to map kernel sections");

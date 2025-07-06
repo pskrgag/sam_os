@@ -94,7 +94,7 @@ impl Port {
             client_msg.set_reply_port(h.as_raw());
             task.handle_table().add(h);
 
-            self.queue.lock().push_back(client_msg.clone());
+            self.queue.lock().push_back(client_msg);
             t.wake();
 
             cur.wait_send();
