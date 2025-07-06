@@ -1,6 +1,5 @@
 use super::vm_object::VmObject;
 use crate::kernel::object::handle::Handle;
-use crate::kernel::sched::current;
 use crate::mm::paging::page_table::MmError;
 use crate::mm::user_buffer::UserPtr;
 use crate::mm::vms::VmsInner;
@@ -13,6 +12,11 @@ use rtl::vmm::{types::*, MappingType};
 #[derive(object)]
 pub struct Vms {
     inner: RwLock<VmsInner>,
+}
+
+pub enum VmoCreateArgs {
+    Backed(UserPtr<u8>, MappingType, VirtAddr),
+    Zeroed(usize, MappingType, VirtAddr),
 }
 
 impl Vms {
@@ -46,11 +50,12 @@ impl Vms {
         Ok(res)
     }
 
-    pub fn vm_free(&self, base: VirtAddr, size: usize) -> Result<usize, ()> {
+    pub fn vm_free(&self, base: VirtAddr, size: usize) -> Result<(), ErrorType> {
         let mut inner = self.inner.write();
-        inner.vm_free(MemRange::new(base, size))?;
 
-        Ok(0)
+        inner
+            .vm_free(MemRange::new(base, size))
+            .map_err(|_| ErrorType::INVALID_ARGUMENT)
     }
 
     pub fn base(&self) -> PhysAddr {
@@ -58,72 +63,27 @@ impl Vms {
         inner.ttbr0().unwrap()
     }
 
-    fn do_invoke(&self, args: &[usize]) -> Result<usize, ErrorType> {
-        use rtl::objects::vms::VmsInvoke;
-
-        match VmsInvoke::from_bits(args[0]).ok_or(ErrorType::NO_OPERATION)? {
-            VmsInvoke::ALLOCATE => match self.vm_allocate(args[1], args[2].into()) {
-                Ok(v) => Ok(v.into()),
-                Err(_) => Err(ErrorType::INVALID_ARGUMENT),
-            },
-            VmsInvoke::FREE => match self.vm_free(args[1].into(), args[2].into()) {
-                Ok(v) => Ok(v.into()),
-                Err(_) => Err(ErrorType::INVALID_ARGUMENT),
-            },
-            VmsInvoke::CREATE_VMO => {
-                use rtl::objects::vmo::VmoFlags;
-
-                let flags = VmoFlags::from_bits(args[5]).ok_or(ErrorType::INVALID_ARGUMENT)?;
-
-                let vmo = match flags {
-                    VmoFlags::BACKED => {
-                        let range = UserPtr::new_array(args[1] as *const u8, args[2]);
-                        VmObject::from_buffer(range, args[3].into(), args[4].into())
-                            .ok_or(ErrorType::NO_MEMORY)?
-                    }
-                    VmoFlags::ZEROED => VmObject::zeroed(args[2], args[3].into(), args[4].into())
-                        .ok_or(ErrorType::NO_MEMORY)?,
-                    _ => Err(ErrorType::INVALID_ARGUMENT)?,
-                };
-
-                let task = current().unwrap().task();
-                let mut table = task.handle_table();
-                let handle = Handle::new(vmo.clone());
-                let ret = handle.as_raw();
-
-                table.add(handle);
-
-                Ok(ret)
-            }
-            VmsInvoke::MAP_VMO => {
-                let task = current().unwrap().task();
-                let table = task.handle_table();
-
-                let vmo = table
-                    .find::<VmObject>(args[1])
-                    .ok_or(ErrorType::INVALID_ARGUMENT)?;
-                let ranges = vmo.as_ranges();
-
-                self.vm_map(ranges.0, ranges.1, vmo.mapping_type()).unwrap();
-
-                Ok(0)
-            }
-            VmsInvoke::MAP_PHYS => {
-                let pa: PhysAddr = args[1].into();
-                let size = args[2];
-                let mut inner = self.inner.write();
-
-                let va = inner
-                    .vm_map(
-                        MemRange::new(VirtAddr::new(0), size),
-                        MemRange::new(pa, size),
-                        MappingType::USER_DEVICE,
-                    )
-                    .unwrap();
-
-                Ok(va.into())
-            }
-            _ => Err(ErrorType::NO_OPERATION),
+    pub fn create_vmo(&self, args: VmoCreateArgs) -> Result<Handle, ErrorType> {
+        let vmo = match args {
+            VmoCreateArgs::Backed(back, mt, ptr) => VmObject::from_buffer(back, mt, ptr),
+            VmoCreateArgs::Zeroed(size, mt, ptr) => VmObject::zeroed(size, mt, ptr),
         }
+        .ok_or(ErrorType::NO_MEMORY)?;
+
+        Ok(Handle::new(vmo.clone()))
+    }
+
+    pub fn map_phys(&self, pa: PhysAddr, size: usize) -> Result<*mut u8, ErrorType> {
+        let mut inner = self.inner.write();
+
+        let va = inner
+            .vm_map(
+                MemRange::new(VirtAddr::new(0), size),
+                MemRange::new(pa, size),
+                MappingType::USER_DEVICE,
+            )
+            .unwrap();
+
+        Ok(va.to_raw_mut::<u8>())
     }
 }

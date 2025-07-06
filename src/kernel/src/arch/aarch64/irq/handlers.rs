@@ -155,10 +155,12 @@ pub extern "C" fn user_syscall(ctx: &mut ExceptionCtx) {
         ctx.x0,
         [ctx.x1, ctx.x2, ctx.x3, ctx.x4, ctx.x5, ctx.x6, ctx.x7],
     ) {
+        let num = a.number();
+
         match do_syscall(a) {
             Ok(s) => ctx.x0 = s,
             Err(err) => {
-                println!("err {:?}", err);
+                println!("err {:?} {:?}", err, num);
                 ctx.x0 = -(err.bits() as isize) as usize;
             }
         };

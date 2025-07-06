@@ -18,7 +18,7 @@ impl HandleTable {
         }
     }
 
-    pub fn add(&mut self, obj: Handle) {
+    pub fn add(&mut self, obj: Handle) -> HandleBase {
         let key = obj.as_raw() as usize % MAX_HANDLES;
         let start = key;
         let mut idx = start;
@@ -28,7 +28,7 @@ impl HandleTable {
 
             if !h.is_valid() {
                 *h = obj;
-                return;
+                return h.as_raw();
             }
 
             idx = (idx + 1) % MAX_HANDLES;

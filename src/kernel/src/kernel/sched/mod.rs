@@ -166,6 +166,6 @@ pub fn init_userspace() {
         init_thread.init_user(data.ep);
 
         init_task.add_initial_thread(init_thread, rtl::handle::HANDLE_INVALID);
-        init_task.start();
+        init_task.start_inner();
     }
 }

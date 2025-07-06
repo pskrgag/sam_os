@@ -6,7 +6,6 @@ use crate::vmm::vms::Vms;
 use alloc::string::String;
 use alloc::vec::Vec;
 use rtl::handle::Handle;
-use rtl::objects::task::TaskInvoke;
 use rtl::vmm::types::VirtAddr;
 
 pub struct Task {
@@ -64,8 +63,7 @@ impl Task {
     }
 
     pub fn start(&mut self, h: Handle) -> Option<()> {
-        Syscall::invoke(self.h, TaskInvoke::START.bits(), &[self.ep.into(), h]).ok()?;
-        Some(())
+        Syscall::task_start(self.h, self.ep, h).ok()
     }
 
     pub fn name(&self) -> &str {
@@ -73,8 +71,6 @@ impl Task {
     }
 
     pub fn vms(&self) -> Option<Vms> {
-        Some(Vms::new(
-            Syscall::invoke(self.h, TaskInvoke::GET_VMS.bits(), &[]).ok()?,
-        ))
+        Some(Vms::new(Syscall::task_get_vms().ok()?))
     }
 }

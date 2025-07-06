@@ -5,6 +5,6 @@ use libc::main;
 use rtl::handle::Handle;
 
 #[main]
-fn main(h: Handle) {
+fn main(_: Handle) {
     println!("Hello, world!");
 }

@@ -3,8 +3,6 @@ use crate::syscalls::Syscall;
 use rtl::error::*;
 use rtl::handle::Handle;
 use rtl::ipc::message::IpcMessage;
-use rtl::misc::ref_to_usize;
-use rtl::objects::port::PortInvoke;
 
 pub struct Port {
     h: Handle,
@@ -19,29 +17,17 @@ impl Port {
         factory().create_port()
     }
 
-    pub fn receive_data(&self, msg: &mut IpcMessage) -> Result<(), ErrorType> {
-        Syscall::invoke(self.h, PortInvoke::RECEIVE.bits(), &[ref_to_usize(msg)]).map(|_| ())
-    }
-
-    pub fn send_and_wait(
+    pub fn send_and_wait<'a>(
         &self,
         reply_port: Port,
-        msg: &IpcMessage,
-        reply: &mut IpcMessage,
+        msg: &'a IpcMessage<'a>,
+        reply: &'a mut IpcMessage<'a>,
     ) -> Result<(), ErrorType> {
-        Syscall::invoke(
-            self.h,
-            PortInvoke::SEND_AND_WAIT.bits(),
-            &[reply_port.handle(), ref_to_usize(msg), ref_to_usize(reply)],
-        )
-        .map(|_| ())
+        Syscall::port_send_wait(self.h, reply_port.handle(), msg, reply)
     }
 
-    pub fn call(&self, msg: &mut IpcMessage) -> Result<(), ErrorType> {
-        let p = Port::create().ok_or(ErrorType::NO_OPERATION)?;
-
-        msg.set_reply_port(p.handle());
-        Syscall::invoke(self.h, PortInvoke::CALL.bits(), &[ref_to_usize(msg)]).map(|_| ())
+    pub fn call<'a>(&self, msg: &'a mut IpcMessage<'a>) -> Result<(), ErrorType> {
+        Syscall::port_call(self.h, msg)
     }
 
     pub fn handle(&self) -> Handle {
@@ -51,6 +37,6 @@ impl Port {
 
 impl Drop for Port {
     fn drop(&mut self) {
-        Syscall::invoke(self.h, rtl::handle::HANDLE_CLOSE, &[]).unwrap();
+        Syscall::close_handle(self.h).unwrap();
     }
 }

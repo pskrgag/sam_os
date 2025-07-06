@@ -13,10 +13,6 @@ fn impl_kernel_object_macro(ast: &syn::DeriveInput) -> TokenStream {
             fn as_any(&self) -> &dyn core::any::Any {
                 self
             }
-
-            fn invoke(&self, args: &[usize]) -> Result<usize, rtl::error::ErrorType> {
-                self.do_invoke(args)
-            }
         }
 
         unsafe impl Send for #name { }

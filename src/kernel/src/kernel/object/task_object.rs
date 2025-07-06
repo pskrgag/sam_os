@@ -5,8 +5,8 @@ use crate::kernel::object::handle_table::HandleTable;
 use crate::kernel::object::thread_object::Thread;
 use crate::kernel::object::vms_object::Vms;
 use crate::kernel::tasks::task::TaskInner;
-use crate::sched::current;
 use rtl::error::ErrorType;
+use crate::kernel::object::KernelObject;
 use rtl::handle::HandleBase;
 use rtl::handle::HANDLE_INVALID;
 use rtl::vmm::types::VirtAddr;
@@ -92,55 +92,34 @@ impl Task {
         self.inner.lock().add_thread(t);
     }
 
-    pub fn start(&self) {
-        self.inner.lock().start()
+    pub fn start_inner(&self) {
+        self.inner.lock().start();
     }
 
-    fn do_invoke(&self, args: &[usize]) -> Result<usize, ErrorType> {
+    pub fn start(self: Arc<Self>, ep: VirtAddr, obj: Option<Arc<dyn KernelObject>>) -> Result<(), ErrorType> {
         use core::sync::atomic::{AtomicU16, Ordering};
-        use rtl::objects::task::TaskInvoke;
 
         static ID_THREAD: AtomicU16 = AtomicU16::new(1);
 
-        match TaskInvoke::from_bits(args[0]).ok_or(ErrorType::NO_OPERATION)? {
-            TaskInvoke::START => {
-                let ep: VirtAddr = args[1].into();
-                let h: HandleBase = args[2].into();
-                let curr = current().unwrap().task();
-                let cur_table = curr.handle_table();
-                let mut new_table = self.handle_table();
+        let init_thread = Thread::new(self.clone(), ID_THREAD.fetch_add(1, Ordering::Relaxed));
+        let mut boot_handle: HandleBase = HANDLE_INVALID;
+        let mut new_table = self.handle_table();
 
-                // ToDo: this is ugly as fuck
-                let s = cur_table.find::<Task>(self.self_handle).unwrap();
-                let init_thread = Thread::new(s.clone(), ID_THREAD.fetch_add(1, Ordering::Relaxed));
+        if let Some(obj) = obj {
+            let handle = Handle::new(obj);
 
-                let mut boot_handle: HandleBase = HANDLE_INVALID;
-
-                if h != HANDLE_INVALID {
-                    let obj = cur_table.find_poly(h).ok_or(ErrorType::INVALID_HANDLE)?;
-                    let handle = Handle::new(obj);
-
-                    boot_handle = handle.as_raw();
-                    new_table.add(handle);
-                }
-
-                init_thread.init_user(ep);
-                self.add_initial_thread(init_thread, boot_handle);
-
-                self.start();
-                Ok(0)
-            }
-            TaskInvoke::GET_VMS => {
-                let task = current().unwrap().task();
-                let mut table = task.handle_table();
-
-                let handle = Handle::new(self.vms.clone());
-                let ret = handle.as_raw();
-                table.add(handle);
-
-                Ok(ret)
-            }
-            _ => Err(ErrorType::NO_OPERATION),
+            boot_handle = handle.as_raw();
+            new_table.add(handle);
         }
+
+        init_thread.init_user(ep);
+        self.add_initial_thread(init_thread, boot_handle);
+
+        self.start_inner();
+        Ok(())
+    }
+
+    pub fn vms_handle(&self) -> HandleBase {
+        self.vms_handle
     }
 }

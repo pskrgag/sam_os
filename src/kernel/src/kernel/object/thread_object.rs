@@ -10,7 +10,6 @@ use alloc::sync::Weak;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use object_lib::object;
 use rtl::arch::PAGE_SIZE;
-use rtl::error::ErrorType;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
 
@@ -122,9 +121,5 @@ impl Thread {
         drop(inner);
 
         crate::sched::run();
-    }
-
-    fn do_invoke(&self, _args: &[usize]) -> Result<usize, ErrorType> {
-        todo!()
     }
 }

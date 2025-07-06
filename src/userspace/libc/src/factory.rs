@@ -3,7 +3,6 @@ use crate::syscalls::Syscall;
 use crate::task::Task;
 use alloc::string::ToString;
 use rtl::handle::Handle;
-use rtl::objects::factory::FactroryInvoke;
 
 pub static mut SELF_FACTORY: Factory = Factory::new(0);
 
@@ -18,20 +17,13 @@ impl Factory {
 
     pub fn create_task(&self, name: &str) -> Option<Task> {
         Some(Task::new(
-            Syscall::invoke(
-                self.h,
-                FactroryInvoke::CREATE_TASK.bits(),
-                &[name.as_ptr() as usize, name.len()],
-            )
-            .ok()?,
+            Syscall::create_task(self.h, name).ok()?,
             name.to_string(),
         ))
     }
 
     pub fn create_port(&self) -> Option<Port> {
-        Some(Port::new(
-            Syscall::invoke(self.h, FactroryInvoke::CREATE_PORT.bits(), &[]).ok()?,
-        ))
+        Some(Port::new(Syscall::create_port(self.h).ok()?))
     }
 }
 

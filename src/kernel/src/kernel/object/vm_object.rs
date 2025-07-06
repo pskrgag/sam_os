@@ -4,7 +4,6 @@ use crate::mm::user_buffer::UserPtr;
 use alloc::sync::Arc;
 use object_lib::object;
 use rtl::arch::{PAGE_SHIFT, PAGE_SIZE};
-use rtl::error::ErrorType;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
 
@@ -89,10 +88,6 @@ impl VmObject {
         let inner = self.inner.lock();
 
         inner.mt
-    }
-
-    fn do_invoke(&self, _args: &[usize]) -> Result<usize, ErrorType> {
-        todo!()
     }
 }
 

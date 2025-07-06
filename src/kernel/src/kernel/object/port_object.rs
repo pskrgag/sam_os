@@ -67,136 +67,129 @@ impl Port {
         Some(())
     }
 
-    fn do_invoke(&self, args: &[usize]) -> Result<usize, ErrorType> {
-        use rtl::objects::port::PortInvoke;
+    pub fn call(&self, mut client_msg_uptr: UserPtr<IpcMessage<'static>>) -> Result<(), ErrorType> {
+        let mut client_msg = copy_ipc_message_from_user(client_msg_uptr).ok_or(ErrorType::FAULT)?;
+        let cur = current().unwrap();
 
-        match PortInvoke::from_bits(args[0]).ok_or(ErrorType::NO_OPERATION)? {
-            PortInvoke::CALL => {
-                let mut client_msg_uptr = UserPtr::new(args[1] as *mut IpcMessage);
-                let mut client_msg =
-                    copy_ipc_message_from_user(client_msg_uptr).ok_or(ErrorType::FAULT)?;
-                let cur = current().unwrap();
+        // NOTE: Do not place it info if let Some() block, since rust does not drop the lock
+        // for some weird reason
+        let t = self.sleepers.lock().pop_front();
 
-                // NOTE: Do not place it info if let Some() block, since rust does not drop the lock
-                // for some weird reason
-                let t = self.sleepers.lock().pop_front();
-                if let Some(t) = t {
-                    let task = self.task.upgrade().ok_or(ErrorType::TASK_DEAD)?;
-                    let reply_port = current()
-                        .unwrap()
-                        .task()
-                        .handle_table()
-                        .find::<Self>(client_msg.reply_port())
-                        .ok_or(ErrorType::INVALID_HANDLE)?;
+        if let Some(t) = t {
+            let task = self.task.upgrade().ok_or(ErrorType::TASK_DEAD)?;
+            let reply_port = current()
+                .unwrap()
+                .task()
+                .handle_table()
+                .find::<Self>(client_msg.reply_port())
+                .ok_or(ErrorType::INVALID_HANDLE)?;
 
-                    reply_port.sleepers.lock().push_back(current().unwrap());
+            reply_port.sleepers.lock().push_back(current().unwrap());
 
-                    Self::transfer_handles_from_current(&task, client_msg.handles())
-                        .ok_or(ErrorType::INVALID_HANDLE)?;
+            Self::transfer_handles_from_current(&task, client_msg.handles())
+                .ok_or(ErrorType::INVALID_HANDLE)?;
 
-                    let h = Handle::new(reply_port.clone());
+            let h = Handle::new(reply_port.clone());
 
-                    client_msg.set_reply_port(h.as_raw());
-                    task.handle_table().add(h);
+            client_msg.set_reply_port(h.as_raw());
+            task.handle_table().add(h);
 
-                    self.queue.lock().push_back(client_msg.clone());
-                    t.wake();
+            self.queue.lock().push_back(client_msg.clone());
+            t.wake();
 
-                    cur.wait_send();
+            cur.wait_send();
 
-                    let server_msg = reply_port.queue.lock().pop_front().unwrap();
+            let server_msg = reply_port.queue.lock().pop_front().unwrap();
 
-                    if let Some(d) = client_msg.in_arena() {
-                        let mut ud = UserPtr::new_array(d.as_ptr(), d.len());
+            if let Some(d) = client_msg.in_arena() {
+                let mut ud = UserPtr::new_array(d.as_ptr(), d.len());
 
-                        if let Some(d1) = server_msg.out_arena() {
-                            ud.write_array(d1)?;
-                            unsafe { drop(Box::from_raw(d1)) };
-                        }
-                    }
-
-                    client_msg.add_handles(server_msg.handles());
-                    client_msg_uptr.write(&client_msg)?;
-
-                    return Ok(0);
-                } else {
-                    self.sleepers.lock().push_back(cur.clone());
-                    cur.wait_send();
-                    return self.do_invoke(args);
-                };
-            }
-            PortInvoke::SEND_AND_WAIT => {
-                let reply_port = args[1] as HandleBase;
-                let cur = current().unwrap();
-                let self_task = cur.task();
-                let mut self_table = self_task.handle_table();
-
-                let reply_port = self_table
-                    .find::<Self>(reply_port)
-                    .ok_or(ErrorType::INVALID_HANDLE)?;
-
-                let task = reply_port.task.upgrade().ok_or(ErrorType::TASK_DEAD)?;
-
-                self_table.remove(args[1]);
-                drop(self_table);
-
-                let user_msg = UserPtr::new(args[2] as *mut _);
-                let user_msg = copy_ipc_message_from_user(user_msg).ok_or(ErrorType::FAULT)?;
-
-                Self::transfer_handles_from_current(&task, user_msg.handles())
-                    .ok_or(ErrorType::INVALID_HANDLE)?;
-
-                reply_port.queue.lock().push_back(user_msg);
-                let sleep = reply_port.sleepers.lock().pop_front().unwrap();
-
-                sleep.wake();
-
-                self.do_invoke(&[PortInvoke::RECEIVE.bits(), args[3]])
-            }
-            PortInvoke::RECEIVE => {
-                let mut server_msg_uptr = UserPtr::new(args[1] as *mut _);
-                let mut server_msg =
-                    copy_ipc_message_from_user(server_msg_uptr).ok_or(ErrorType::FAULT)?;
-
-                let c = current().unwrap();
-
-                let client_msg;
-
-                if let Some(sender) = self.sleepers.lock().pop_front() {
-                    sender.wake();
+                if let Some(d1) = server_msg.out_arena() {
+                    ud.write_array(d1)?;
+                    unsafe { drop(Box::from_raw(d1)) };
                 }
-
-                loop {
-                    if let Some(m) = self.queue.lock().pop_front() {
-                        client_msg = m;
-                        break;
-                    }
-
-                    self.sleepers.lock().push_back(c.clone());
-                    c.wait_send();
-                }
-
-                // Copy arena data
-                if let Some(d) = server_msg.in_arena() {
-                    let mut ud = UserPtr::new_array(d.as_ptr(), d.len());
-
-                    if let Some(d1) = client_msg.out_arena() {
-                        ud.write_array(d1)?;
-                        unsafe { drop(Box::from_raw(d1)) };
-                    }
-                }
-
-                // Prepare message
-                server_msg.set_mid(client_msg.mid());
-                server_msg.set_reply_port(client_msg.reply_port());
-                server_msg.add_handles(client_msg.handles());
-
-                // Commit it to userspace
-                server_msg_uptr.write(&server_msg)?;
-
-                Ok(0)
             }
-            _ => Err(ErrorType::NO_OPERATION),
+
+            client_msg.add_handles(server_msg.handles());
+            client_msg_uptr.write(&client_msg)?;
+
+            Ok(())
+        } else {
+            self.sleepers.lock().push_back(cur.clone());
+            cur.wait_send();
+            self.call(client_msg_uptr)
         }
+    }
+
+    pub fn send_wait(
+        &self,
+        reply_port_handle: HandleBase,
+        user_msg_in: UserPtr<IpcMessage<'static>>,
+        user_msg_out: UserPtr<IpcMessage<'static>>,
+    ) -> Result<(), ErrorType> {
+        let cur = current().unwrap();
+        let self_task = cur.task();
+        let mut self_table = self_task.handle_table();
+
+        let reply_port = self_table
+            .find::<Self>(reply_port_handle)
+            .ok_or(ErrorType::INVALID_HANDLE)?;
+
+        let task = reply_port.task.upgrade().ok_or(ErrorType::TASK_DEAD)?;
+
+        self_table.remove(reply_port_handle);
+        drop(self_table);
+
+        let user_msg = copy_ipc_message_from_user(user_msg_in).ok_or(ErrorType::FAULT)?;
+
+        Self::transfer_handles_from_current(&task, user_msg.handles())
+            .ok_or(ErrorType::INVALID_HANDLE)?;
+
+        reply_port.queue.lock().push_back(user_msg);
+        let sleep = reply_port.sleepers.lock().pop_front().unwrap();
+
+        sleep.wake();
+        self.receive(user_msg_out)
+    }
+
+    pub fn receive(&self, mut server_msg_uptr: UserPtr<IpcMessage<'static>>) -> Result<(), ErrorType> {
+        let mut server_msg = copy_ipc_message_from_user(server_msg_uptr).ok_or(ErrorType::FAULT)?;
+
+        let c = current().unwrap();
+
+        let client_msg;
+
+        if let Some(sender) = self.sleepers.lock().pop_front() {
+            sender.wake();
+        }
+
+        loop {
+            if let Some(m) = self.queue.lock().pop_front() {
+                client_msg = m;
+                break;
+            }
+
+            self.sleepers.lock().push_back(c.clone());
+            c.wait_send();
+        }
+
+        // Copy arena data
+        if let Some(d) = server_msg.in_arena() {
+            let mut ud = UserPtr::new_array(d.as_ptr(), d.len());
+
+            if let Some(d1) = client_msg.out_arena() {
+                ud.write_array(d1)?;
+                unsafe { drop(Box::from_raw(d1)) };
+            }
+        }
+
+        // Prepare message
+        server_msg.set_mid(client_msg.mid());
+        server_msg.set_reply_port(client_msg.reply_port());
+        server_msg.add_handles(client_msg.handles());
+
+        // Commit it to userspace
+        server_msg_uptr.write(&server_msg)?;
+        Ok(())
     }
 }

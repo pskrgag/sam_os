@@ -1,9 +1,7 @@
-use crate::syscalls::Syscall;
+use crate::syscalls::{Syscall, VmoCreateArgs};
 use crate::vmm::vm_object::VmObject;
 use rtl::error::ErrorType;
 use rtl::handle::Handle;
-use rtl::objects::vmo::VmoFlags;
-use rtl::objects::vms::VmsInvoke;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
 
@@ -19,11 +17,11 @@ impl Vms {
     }
 
     pub fn vm_allocate(&self, size: usize, mt: MappingType) -> Result<*mut u8, ErrorType> {
-        Ok(Syscall::invoke(self.h, VmsInvoke::ALLOCATE.bits(), &[size, mt.bits()])? as *mut u8)
+        Syscall::vm_allocate(self.h, size, mt)
     }
 
-    pub fn vm_free(&self, addr: *mut u8, size: usize) -> Result<*mut u8, ErrorType> {
-        Ok(Syscall::invoke(self.h, VmsInvoke::FREE.bits(), &[addr as usize, size])? as *mut u8)
+    pub fn vm_free(&self, addr: *mut u8, size: usize) -> Result<(), ErrorType> {
+        Syscall::vm_free(self.h, addr, size)
     }
 
     pub fn create_vm_object(
@@ -32,19 +30,11 @@ impl Vms {
         tp: MappingType,
         load_addr: VirtAddr,
     ) -> Option<VmObject> {
-        let h: Handle = Syscall::invoke(
+        let h: Handle = Syscall::vm_create_vmo(
             self.h,
-            VmsInvoke::CREATE_VMO.bits(),
-            &[
-                b.as_ptr() as usize,
-                b.len(),
-                tp.into(),
-                load_addr.into(),
-                VmoFlags::BACKED.bits(),
-            ],
+            VmoCreateArgs::Backed(b.as_ptr(), b.len(), tp, load_addr),
         )
-        .ok()?
-        .into();
+        .ok()?;
 
         Some(VmObject::new(h))
     }
@@ -55,38 +45,20 @@ impl Vms {
         load_addr: VirtAddr,
         size: usize,
     ) -> Option<VmObject> {
-        let h: Handle = Syscall::invoke(
-            self.h,
-            VmsInvoke::CREATE_VMO.bits(),
-            &[
-                0,
-                size,
-                tp.into(),
-                load_addr.into(),
-                VmoFlags::ZEROED.bits(),
-            ],
-        )
-        .ok()?
-        .into();
+        let h: Handle =
+            Syscall::vm_create_vmo(self.h, VmoCreateArgs::Zeroed(size, tp, load_addr)).ok()?;
 
         Some(VmObject::new(h))
     }
 
     pub fn map_vm_object(&self, o: &VmObject) -> Option<()> {
-        Syscall::invoke(self.h, VmsInvoke::MAP_VMO.bits(), &[o.handle()]).ok()?;
-        Some(())
+        Syscall::vm_map_vmo(self.h, o.handle()).ok()
     }
 
     pub fn map_phys(&self, p: MemRange<PhysAddr>) -> Option<VirtAddr> {
-        Some(
-            Syscall::invoke(
-                self.h,
-                VmsInvoke::MAP_PHYS.bits(),
-                &[p.start().into(), p.size()],
-            )
-            .ok()?
-            .into(),
-        )
+        Syscall::vm_map_phys(self.h, p.start(), p.size())
+            .ok()
+            .map(|x| VirtAddr::from(x))
     }
 }
 
