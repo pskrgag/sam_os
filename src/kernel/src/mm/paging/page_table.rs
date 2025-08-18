@@ -249,11 +249,11 @@ impl PageTable {
         };
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn op_lvl<
         F: FnMut(&mut PageTableBlock, usize, PhysAddr, MappingType, usize, VirtAddr) + Copy, // Set leaf
         G: FnMut(&mut PageTableBlock, usize, usize) -> Result<PageTableBlock, ()> + Copy, // Process walk
     >(
-        &mut self,
         mut base: PageTableBlock,
         lvl: usize,
         v: &mut MemRange<VirtAddr>,
@@ -285,7 +285,7 @@ impl PageTable {
                     None => cb_b(&mut base, lvl, index)?,
                 };
 
-                self.op_lvl(next_block, lvl + 1, v, p, map, cb, cb_b, use_huge_pages)?;
+                Self::op_lvl(next_block, lvl + 1, v, p, map, cb, cb_b, use_huge_pages)?;
             } else {
                 assert!(p.start().is_aligned(order));
                 assert!(v.start().is_aligned(order));
@@ -314,7 +314,7 @@ impl PageTable {
             MemRange::new(PhysAddr::from(v.start()), v.size())
         };
 
-        self.op_lvl(
+        Self::op_lvl(
             self.lvl1(),
             1,
             &mut v,
@@ -340,7 +340,7 @@ impl PageTable {
 
         assert!(v.size() == p_range.size());
 
-        self.op_lvl(
+        Self::op_lvl(
             self.lvl1(),
             1,
             &mut v,
@@ -359,7 +359,7 @@ impl PageTable {
     ) -> Result<(), MmError> {
         let mut p = MemRange::new(PhysAddr::new(v.start().bits()), v.size());
 
-        self.op_lvl(
+        Self::op_lvl(
             self.lvl1(),
             1,
             &mut v,

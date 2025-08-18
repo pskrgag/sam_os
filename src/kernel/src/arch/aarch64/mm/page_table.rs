@@ -18,7 +18,7 @@ pub fn l3_linear_offset(va: VirtAddr) -> usize {
     (usize::from(va) >> 12) & (PT_LVL3_ENTIRES - 1)
 }
 
-pub unsafe fn set_kernel_page_table(base: PhysAddr) {
+pub unsafe fn set_kernel_page_table(base: PhysAddr) { unsafe {
     asm!("dsb   sy",
          "isb",
          "msr   TTBR1_EL1, {}",
@@ -28,4 +28,4 @@ pub unsafe fn set_kernel_page_table(base: PhysAddr) {
          "isb",
           in(reg) base.bits(),
     );
-}
+}}

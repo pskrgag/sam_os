@@ -29,6 +29,6 @@ pub fn mapping_type_to_flags(tp: MappingType) -> usize {
 }
 
 // TODO: less aggressive tlb maintainence (i.e last level flush with ASID support)
-pub unsafe fn flush_tlb_page_last(_v: VirtAddr) {
+pub unsafe fn flush_tlb_page_last(_v: VirtAddr) { unsafe {
     core::arch::asm!("tlbi       vmalle1");
-}
+}}

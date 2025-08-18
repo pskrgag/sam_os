@@ -1,7 +1,7 @@
 use crate::kernel::locking::spinlock::Spinlock;
 use core::{
     alloc::Layout,
-    mem::{size_of, size_of_val, transmute},
+    mem::{size_of, size_of_val},
     ptr::NonNull,
 };
 use rtl::arch::PAGE_SIZE;
@@ -51,7 +51,7 @@ impl BootAlloc {
 
     pub fn init(&mut self) {
         let mut tmp_head: NonNull<FfHeader> =
-            unsafe { NonNull::new(transmute::<_, _>(&self.pool)).unwrap() };
+            NonNull::new(self.pool.as_mut_ptr() as usize as *mut _).unwrap();
 
         Self::update_header_next(&mut tmp_head, None);
         Self::update_header_prev(&mut tmp_head, None);
@@ -68,79 +68,80 @@ impl BootAlloc {
     }
 
     pub unsafe fn alloc(&mut self, layout: Layout) -> *mut u8 {
-        let mut iter;
-        let size = layout.size();
+        unsafe {
+            let mut iter;
+            let size = layout.size();
 
-        iter = NonNull::new(unsafe {
-            core::mem::transmute::<_, *mut FfHeader>(self.pool.as_mut_ptr())
-        });
+            iter = NonNull::new(core::mem::transmute::<*mut u8, *mut FfHeader>(
+                self.pool.as_mut_ptr(),
+            ));
 
-        while iter.is_some() {
-            let header = iter.unwrap().as_mut() as *mut FfHeader;
-            let header_raw = header as *mut u8;
+            while iter.is_some() {
+                let header = iter.unwrap().as_mut() as *mut FfHeader;
+                let header_raw = header as *mut u8;
 
-            if (*header).size > size && (*header).free {
-                let next_block = core::mem::transmute::<_, *mut FfHeader>(
-                    header_raw.add(core::mem::size_of::<FfHeader>() + size),
-                );
-                let new_block = FfHeader {
-                    prev: NonNull::new(header),
-                    next: (*header).next,
-                    size: (*header).size - size - core::mem::size_of::<FfHeader>(),
-                    free: true,
-                };
+                if (*header).size > size && (*header).free {
+                    let next_block = core::mem::transmute::<*mut u8, *mut FfHeader>(
+                        header_raw.add(core::mem::size_of::<FfHeader>() + size),
+                    );
+                    let new_block = FfHeader {
+                        prev: NonNull::new(header),
+                        next: (*header).next,
+                        size: (*header).size - size - core::mem::size_of::<FfHeader>(),
+                        free: true,
+                    };
 
-                if new_block.next.is_some() {
-                    new_block.next.unwrap().as_mut().prev = NonNull::new(next_block as *mut _);
+                    if new_block.next.is_some() {
+                        new_block.next.unwrap().as_mut().prev = NonNull::new(next_block as *mut _);
+                    }
+
+                    *next_block = new_block;
+
+                    (*header).next = NonNull::new(next_block);
+                    (*header).size = size;
+                    (*header).free = false;
+
+                    return header_raw.add(core::mem::size_of::<FfHeader>());
                 }
 
-                *next_block = new_block;
-
-                (*header).next = NonNull::new(next_block);
-                (*header).size = size;
-                (*header).free = false;
-
-                return header_raw.add(core::mem::size_of::<FfHeader>());
+                iter = (*header).next;
             }
 
-            iter = (*header).next;
+            panic!("Builtin pool on static memory has excided. Consider increasing INIT_PAGE_POOL");
         }
-
-        panic!("Builtin pool on static memory has excided. Consider increasing INIT_PAGE_POOL");
     }
 
     pub unsafe fn free(&mut self, data: *mut u8) {
-        let cur_header = unsafe {
-            core::mem::transmute::<_, *mut FfHeader>(
+        unsafe {
+            let cur_header = core::mem::transmute::<*mut u8, *mut FfHeader>(
                 data.offset(-(core::mem::size_of::<FfHeader>() as isize)),
             )
             .as_mut()
-            .unwrap()
-        };
+            .unwrap();
 
-        let prev = cur_header.prev;
-        let next = cur_header.prev;
+            let prev = cur_header.prev;
+            let next = cur_header.prev;
 
-        if next.is_some()
-            && next.unwrap().as_mut().free
-            && prev.is_some()
-            && prev.unwrap().as_mut().free
+            if let Some(mut next) = next
+            && next.as_ref().free
+            && let Some(mut prev) = prev
+            && prev.as_ref().free
         {
-            prev.unwrap().as_mut().size = cur_header.size
+            prev.as_mut().size = cur_header.size
                 + core::mem::size_of::<FfHeader>() * 2
-                + next.unwrap().as_ref().size;
+                + next.as_ref().size;
 
-            if next.unwrap().as_mut().next.is_some() {
-                next.unwrap().as_mut().next.unwrap().as_mut().prev = cur_header.prev;
+            if next.as_mut().next.is_some() {
+                next.as_mut().next.unwrap().as_mut().prev = cur_header.prev;
             }
 
-            prev.unwrap().as_mut().next = next.unwrap().as_ref().next;
-        } else if prev.is_some() && prev.unwrap().as_ref().free {
-            prev.unwrap().as_mut().size += cur_header.size + core::mem::size_of::<FfHeader>();
-            prev.unwrap().as_mut().next = next;
+            prev.as_mut().next = next.as_ref().next;
+        } else if let Some(mut prev) = prev && prev.as_ref().free {
+            prev.as_mut().size += cur_header.size + core::mem::size_of::<FfHeader>();
+            prev.as_mut().next = next;
 
-            if next.is_some() {
-                next.unwrap().as_mut().prev = prev;
+            if let Some(mut next) = next {
+                next.as_mut().prev = Some(prev);
             }
         } else if let Some(mut next) = next && next.as_ref().free {
             let next = next.as_mut();
@@ -148,6 +149,7 @@ impl BootAlloc {
             cur_header.size += next.size + core::mem::size_of::<FfHeader>();
             cur_header.next = next.next;
             next.prev = NonNull::new(cur_header as *mut _);
+        }
         }
     }
 }

@@ -43,13 +43,13 @@ impl Thread {
         self.task.upgrade().unwrap()
     }
 
-    pub unsafe fn ctx_mut(self: &mut Arc<Thread>) -> &mut Context {
+    pub unsafe fn ctx_mut(self: &mut Arc<Thread>) -> &mut Context { unsafe {
         let mut inner = self.inner.lock();
         let r = &mut inner.arch_ctx as *mut Context;
 
         // TODO: smells like shit
         &mut *r
-    }
+    }}
 
     pub fn init_user(self: &Arc<Thread>, ep: VirtAddr) {
         let kernel_stack =

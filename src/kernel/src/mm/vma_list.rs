@@ -106,22 +106,20 @@ impl VmaList {
 
             vma_c.move_next();
 
-            if let Some(next) = vma_c.get() {
-                if next.is_free() {
+            if let Some(next) = vma_c.get()
+                && next.is_free() {
                     let next = vma_c.remove().unwrap();
                     v.merge(Rc::into_inner(next).unwrap()).unwrap();
                 }
-            }
 
             vma_c.move_prev();
             vma_c.move_prev();
 
-            if let Some(prev) = vma_c.get() {
-                if prev.is_free() {
+            if let Some(prev) = vma_c.get()
+                && prev.is_free() {
                     let prev = vma_c.remove().unwrap();
                     v.merge(Rc::into_inner(prev).unwrap()).unwrap();
                 }
-            }
 
             vma_c.replace_with(Rc::new(v)).unwrap();
             Some(())
@@ -291,16 +289,11 @@ impl PartialEq for MemRangeVma {
 
 impl PartialOrd for MemRangeVma {
     fn partial_cmp(&self, other: &MemRangeVma) -> Option<Ordering> {
-        if self.0.contains_addr(other.0.start()) {
-            Some(Ordering::Equal)
-        } else {
-            Some(self.0.cmp(&other.0))
-        }
+        Some(self.cmp(other))
     }
 }
 
 impl Ord for MemRangeVma {
-    #[allow(clippy::non_canonical_partial_ord_impl)]
     fn cmp(&self, other: &Self) -> Ordering {
         if self.0.contains_addr(other.0.start()) || other.0.contains_addr(self.0.start()) {
             Ordering::Equal
