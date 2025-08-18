@@ -32,7 +32,7 @@ impl<T> Spinlock<T> {
         }
     }
 
-    pub fn lock(&self) -> SpinlockGuard<T> {
+    pub fn lock<'a>(&'a self) -> SpinlockGuard<'a, T> {
         let my = self.inner.next.fetch_add(1, Ordering::Acquire);
 
         while self.inner.current.load(Ordering::Relaxed) != my {
@@ -45,7 +45,7 @@ impl<T> Spinlock<T> {
         }
     }
 
-    pub fn lock_irqsave(&self) -> SpinlockGuard<T> {
+    pub fn lock_irqsave<'a>(&'a self) -> SpinlockGuard<'a, T> {
         let my = self.inner.next.fetch_add(1, Ordering::Acquire);
 
         while self.inner.current.load(Ordering::Relaxed) != my {

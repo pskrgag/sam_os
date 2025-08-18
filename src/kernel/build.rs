@@ -1,27 +1,28 @@
 extern crate cc;
 
 fn main() {
-    let mut flag = None;
-    let c_path = "src/arch/aarch64/mm/higher_half.c";
-
-    if env!("BOARD_TYPE") == "qemu" {
-        flag = Some("-DCONFIG_BOARD_QEMU");
-    } else if env!("BOARD_TYPE") == "orpipc2" {
-        flag = Some("-DCONFIG_BOARD_ORPIPC2");
-    }
-
+    println!("cargo::rerun-if-changed=src/arch/aarch64/mm/higher_half.c");
+    println!("cargo::rerun-if-changed=src/kernel/src/arch/aarch64/aarch64-qemu.ld");
     println!(
         "cargo:rustc-link-arg-bin=sam_kernel=--script=src/kernel/src/arch/aarch64/aarch64-qemu.ld"
     );
-    println!("cargo:rerun-if-changed={c_path}");
+
+    let flag = if env!("BOARD_TYPE") == "qemu" {
+        "-DCONFIG_BOARD_QEMU"
+    } else if env!("BOARD_TYPE") == "orpipc2" {
+        "-DCONFIG_BOARD_ORPIPC2"
+    } else {
+        panic!("Unknown board");
+    };
 
     cc::Build::new()
-        .file(c_path)
+        .file("src/arch/aarch64/mm/higher_half.c")
         .compiler("clang")
         .flag("--target=aarch64")
         .flag("-fPIC")
         .flag("-O2")
+        .flag("-fno-tree-vectorize")
         .flag("-Wall")
-        .flag(flag.unwrap())
-        .compile("libfoo.a");
+        .flag(flag)
+        .compile("libboot.a");
 }

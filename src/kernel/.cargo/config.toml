@@ -4,3 +4,6 @@ rustflags = [
 	"-C", "force-frame-pointers",
 	"-C", "link-dead-code"
 ]
+
+[build]
+target = "aarch64-unknown-none-softfloat"

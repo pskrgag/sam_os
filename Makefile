@@ -18,7 +18,7 @@ clippy:
 	BOARD_TYPE=qemu cargo clippy -p sam_kernel --target aarch64-unknown-none-softfloat --features qemu
 
 qemu:
-	qemu-system-aarch64 -d mmu,guest_errors -D test.txt -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel $(BINARY)
+	qemu-system-aarch64 -d mmu,guest_errors -D test.txt -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel $(BINARY) -d int,mmu
 
 qemu_gdb:
 	qemu-system-aarch64 -machine virt -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel $(BINARY) -s -S

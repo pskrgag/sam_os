@@ -64,7 +64,7 @@ extern "C" fn start_kernel() -> ! {
 
     drivers::init();
 
-    print!("{}", SAMOS_BANNER);
+    print!("{SAMOS_BANNER}");
 
     #[cfg(test)]
     #[allow(clippy::empty_loop)]
