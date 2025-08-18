@@ -70,7 +70,7 @@ impl Task {
         self.id
     }
 
-    pub fn handle_table(&self) -> SpinlockGuard<HandleTable> {
+    pub fn handle_table<'a>(&'a self) -> SpinlockGuard<'a, HandleTable> {
         self.handles.lock()
     }
 

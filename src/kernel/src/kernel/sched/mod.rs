@@ -48,7 +48,7 @@ static INIT: &[u8] = include_bytes_align_as!(
 pub static mut IDLE_THREAD_STACK: [usize; 2] = [0, 0];
 
 #[inline]
-pub fn current() -> Option<&'static Thread> {
+pub fn current() -> Option<Arc<Thread>> {
     crate::arch::current::get_current()
 }
 

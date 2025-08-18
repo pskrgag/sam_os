@@ -53,7 +53,7 @@ impl<T> Spinlock<T> {
         }
     }
 
-    pub fn lock(&self) -> SpinlockGuard<T> {
+    pub fn lock<'a>(&'a self) -> SpinlockGuard<'a, T> {
         use crate::arch::current::get_current_raw;
 
         if let Some(cur) = get_current_raw() {
@@ -79,7 +79,7 @@ impl<T> Spinlock<T> {
         }
     }
 
-    pub fn lock_irqsave(&self) -> SpinlockGuard<T> {
+    pub fn lock_irqsave<'a>(&'a self) -> SpinlockGuard<'a, T> {
         use crate::arch::irq::interrupts::{disable_all, get_flags};
 
         let my = self.inner.next.fetch_add(1, Ordering::Acquire);
