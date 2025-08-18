@@ -49,7 +49,7 @@ static SAMOS_BANNER: &str = "
  *      2) MMMIO is mapped as 1 to 1
  *      3) 0xffffffffc0000000 and load_addr are mapped to load_addr via 1GB block
  */
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn start_kernel() -> ! {
     println!("Starting kernel...");
     arch::irq::handlers::set_up_vbar();
@@ -85,7 +85,7 @@ extern "C" fn start_kernel() -> ! {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn cpu_reset() -> ! {
     println!("Cpu {} started!", arch::cpuid::current_cpu());
 

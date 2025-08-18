@@ -8,7 +8,7 @@ use run_queue::RunQueue;
 
 pub mod run_queue;
 
-extern "C" {
+unsafe extern "C" {
     fn switch_to(from: *mut Context, to: *const Context);
 }
 
@@ -44,7 +44,7 @@ static INIT: &[u8] = include_bytes_align_as!(
 //
 // On cpu reset on non-boot cpus we need any sp, so we
 // steal sp from per-cpu idle thread
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub static mut IDLE_THREAD_STACK: [usize; 2] = [0, 0];
 
 #[inline]

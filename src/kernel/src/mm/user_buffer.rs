@@ -2,7 +2,7 @@ use alloc::boxed::Box;
 use alloc::vec;
 use rtl::error::ErrorType;
 
-extern "C" {
+unsafe extern "C" {
     fn arch_copy_from_user(from: usize, size: usize, to: usize) -> isize;
     fn arch_copy_to_user(from: usize, size: usize, to: usize) -> isize;
 }

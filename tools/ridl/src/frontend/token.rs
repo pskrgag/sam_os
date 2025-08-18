@@ -19,7 +19,7 @@ pub enum TokenType {
     Semicolumn,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Location {
     pub line: usize,
     pub pos: usize,
@@ -83,11 +83,5 @@ impl Token {
 impl PartialEq for Token {
     fn eq(&self, other: &Self) -> bool {
         self.tp == other.tp && self.string == other.string
-    }
-}
-
-impl Default for Location {
-    fn default() -> Self {
-        Self { line: 0, pos: 0 }
     }
 }

@@ -142,10 +142,12 @@ impl BootAlloc {
             if next.is_some() {
                 next.unwrap().as_mut().prev = prev;
             }
-        } else if next.is_some() && next.unwrap().as_ref().free {
-            cur_header.size += next.unwrap().as_ref().size + core::mem::size_of::<FfHeader>();
-            cur_header.next = next.unwrap().as_ref().next;
-            next.unwrap().as_mut().prev = NonNull::new(cur_header as *mut _);
+        } else if let Some(mut next) = next && next.as_ref().free {
+            let next = next.as_mut();
+
+            cur_header.size += next.size + core::mem::size_of::<FfHeader>();
+            cur_header.next = next.next;
+            next.prev = NonNull::new(cur_header as *mut _);
         }
     }
 }

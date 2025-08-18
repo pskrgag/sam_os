@@ -5,7 +5,7 @@ use crate::{
 
 pub static KERNEL_PAGE_TABLE: Spinlock<PageTable> = Spinlock::new(PageTable::default());
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub static mut PAGE_TABLE_BASE: usize = 0;
 
 pub fn init() {

@@ -26,21 +26,18 @@ pub struct Port {
 fn copy_ipc_message_from_user(
     user_msg: UserPtr<IpcMessage<'static>>,
 ) -> Option<IpcMessage<'static>> {
-    let user_msg = user_msg.read()?;
+    let mut user_msg = user_msg.read()?;
 
     let data = user_msg.out_arena();
-
-    // Simply move, by bit-copy all fields, which will preserve user-addresses inside slices
-    let mut msg = user_msg;
 
     if let Some(d) = data {
         let user_buffer = UserPtr::new_array(d.as_ptr(), d.len());
         let user_buffer = user_buffer.read_on_heap()?;
 
-        msg.set_out_arena(Box::leak(user_buffer));
+        user_msg.set_out_arena(Box::leak(user_buffer));
     }
 
-    Some(msg)
+    Some(user_msg)
 }
 
 impl Port {
@@ -99,7 +96,7 @@ impl Port {
 
             cur.wait_send();
 
-            let server_msg = reply_port.queue.lock().pop_front().unwrap();
+            let mut server_msg = reply_port.queue.lock().pop_front().unwrap();
 
             if let Some(d) = client_msg.in_arena() {
                 let mut ud = UserPtr::new_array(d.as_ptr(), d.len());
@@ -157,7 +154,7 @@ impl Port {
 
         let c = current().unwrap();
 
-        let client_msg;
+        let mut client_msg;
 
         if let Some(sender) = self.sleepers.lock().pop_front() {
             sender.wake();

@@ -9,7 +9,7 @@ pub enum ErrorKind {
 macro_rules! token_or_report {
     ($t:expr, $reporter:expr, $token:expr) => {
         if $t.is_none() {
-            $reporter.report(crate::error_reporter::ErrorKind::UnxpectedToken($token));
+            $reporter.report($crate::error_reporter::ErrorKind::UnxpectedToken($token));
             None
         } else {
             $t
@@ -21,7 +21,7 @@ macro_rules! token_or_report {
 macro_rules! type_or_report {
     ($t:expr, $reporter:expr, $token:expr) => {
         if $t.is_none() {
-            $reporter.report(crate::error_reporter::ErrorKind::UnknownType($token));
+            $reporter.report($crate::error_reporter::ErrorKind::UnknownType($token));
             None
         } else {
             $t

@@ -75,12 +75,14 @@ impl PageTableBlock {
     pub unsafe fn set_tte(&mut self, index: usize, entry: PageTableEntry) {
         assert!(index < 512);
 
-        self.addr
-            .to_raw_mut::<usize>()
-            .add(index)
-            .write_volatile(entry.bits());
+        unsafe {
+            self.addr
+                .to_raw_mut::<usize>()
+                .add(index)
+                .write_volatile(entry.bits());
 
-        core::arch::asm!("dsb ishst", "isb");
+            core::arch::asm!("dsb ishst", "isb");
+        }
     }
 
     pub fn get_tte(&mut self, index: usize) -> PageTableEntry {

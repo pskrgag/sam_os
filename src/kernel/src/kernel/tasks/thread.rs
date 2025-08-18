@@ -1,7 +1,7 @@
 use crate::{arch::regs::Context, mm::allocators::stack_alloc::StackLayout};
 use rtl::vmm::types::*;
 
-extern "C" {
+unsafe extern "C" {
     fn kernel_thread_entry_point();
     fn user_thread_entry_point();
 }

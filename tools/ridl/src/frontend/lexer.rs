@@ -107,44 +107,42 @@ impl<'a> Lexer<'a> {
         self.skip_whitespaces();
 
         match self.start_token() {
-            Some(c) => {
-                match c {
-                    b'{' => {
-                        let t = self.finish_token();
-                        return Some(Token::new(TokenType::LeftCurlParen, t.0, t.1));
+            Some(c) => match c {
+                b'{' => {
+                    let t = self.finish_token();
+                    Some(Token::new(TokenType::LeftCurlParen, t.0, t.1))
+                }
+                b'}' => {
+                    let t = self.finish_token();
+                    Some(Token::new(TokenType::RightCurlParen, t.0, t.1))
+                }
+                b'(' => {
+                    let t = self.finish_token();
+                    Some(Token::new(TokenType::LeftParen, t.0, t.1))
+                }
+                b')' => {
+                    let t = self.finish_token();
+                    Some(Token::new(TokenType::RightParen, t.0, t.1))
+                }
+                b',' => {
+                    let t = self.finish_token();
+                    Some(Token::new(TokenType::Comma, t.0, t.1))
+                }
+                b';' => {
+                    let t = self.finish_token();
+                    Some(Token::new(TokenType::Semicolumn, t.0, t.1))
+                },
+                other => {
+                    if other.is_ascii_alphabetic() {
+                        self.consume_word()
+                    } else if other.is_ascii_whitespace() {
+                        panic!("Should be skipped already");
+                    } else {
+                        None
                     }
-                    b'}' => {
-                        let t = self.finish_token();
-                        return Some(Token::new(TokenType::RightCurlParen, t.0, t.1));
-                    }
-                    b'(' => {
-                        let t = self.finish_token();
-                        return Some(Token::new(TokenType::LeftParen, t.0, t.1));
-                    }
-                    b')' => {
-                        let t = self.finish_token();
-                        return Some(Token::new(TokenType::RightParen, t.0, t.1));
-                    }
-                    b',' => {
-                        let t = self.finish_token();
-                        return Some(Token::new(TokenType::Comma, t.0, t.1));
-                    }
-                    b';' => {
-                        let t = self.finish_token();
-                        return Some(Token::new(TokenType::Semicolumn, t.0, t.1));
-                    }
-                    other => {
-                        if other.is_ascii_alphabetic() {
-                            return self.consume_word();
-                        } else if other.is_ascii_whitespace() {
-                            panic!("Should be skipped already");
-                        } else {
-                            return None;
-                        }
-                    }
-                };
-            }
-            _ => return None,
+                }
+            },
+            _ => None,
         }
     }
 }

@@ -1,5 +1,3 @@
-#![feature(let_chains)]
-
 use simplelog::*;
 use std::io::*;
 
@@ -7,9 +5,9 @@ use std::io::*;
 extern crate log;
 extern crate simplelog;
 
+mod ast;
 mod backend;
 mod frontend;
-mod ir;
 
 #[macro_use]
 mod error_reporter;
@@ -29,34 +27,32 @@ fn main() -> Result<()> {
     let args = std::env::args().collect::<Vec<_>>();
 
     if args.len() < 3 {
-        error!("Usage: {} <transport|server> <file to compile>", args[0]);
+        error!("Usage: {} <client|server> <file to compile>", args[0]);
         return Err(Error::new(ErrorKind::InvalidInput, ""));
     }
 
     let server = match args[1].as_str() {
-        "transport" => false,
+        "client" => false,
         "server" => true,
         _ => {
-            error!("Unknown mode {}. Supported <transport|server>", args[1]);
+            error!("Unknown mode {}. Supported <client|server>", args[1]);
             return Err(Error::new(ErrorKind::InvalidInput, ""));
         }
     };
 
     for i in &args[2..] {
         let source =
-            std::fs::read_to_string(i).expect(format!("Failed to read file '{}'", i).as_str());
+            std::fs::read_to_string(i).unwrap_or_else(|_| format!("Failed to read file '{}'", i));
         let reporter = error_reporter::ErrorReporter::new(source.as_bytes());
         let lexer = Lexer::new(source.as_bytes());
         let mut parser = Parser::new(lexer, &reporter);
 
-        let ir = parser
+        let ast = parser
             .parse()
-            .ok_or(Error::new(ErrorKind::Other, "Failed to parse source file"))?;
+            .ok_or(Error::other("Failed to parse source file"))?;
 
         if !server {
-            backend::compile_transport(&ir, &mut stdout(), "rust");
-        } else {
-            backend::compile_server(&ir, &mut stdout(), "rust");
+            backend::client::compile_client(ast, &mut std::io::stdout());
         }
     }
 

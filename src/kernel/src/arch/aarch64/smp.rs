@@ -1,7 +1,7 @@
 use core::arch::asm;
 use rtl::vmm::types::*;
 
-extern "C" {
+unsafe extern "C" {
     fn __reset();
 }
 

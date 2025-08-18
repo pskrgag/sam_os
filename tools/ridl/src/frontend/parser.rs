@@ -1,11 +1,11 @@
 use super::lexer::Lexer;
 use super::token::*;
 
+use crate::ast::argtype::Type;
+use crate::ast::function::{Argument, Function};
+use crate::ast::interface::Interface;
+use crate::ast::module::Module;
 use crate::error_reporter::ErrorReporter;
-use crate::ir::argtype::Type;
-use crate::ir::function::{Argument, Function};
-use crate::ir::interface::Interface;
-use crate::ir::IrObject;
 
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
@@ -105,7 +105,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_interface(&mut self) -> Option<Interface> {
-        let mut interface = Interface::new();
+        let name = self.consume_token_type(TokenType::TokenId(IdType::Identifier))?;
+        let mut interface = Interface::new(name.get_str().to_owned());
 
         self.consume_token_type(TokenType::LeftCurlParen)?;
 
@@ -132,12 +133,12 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> Option<Vec<Box<dyn IrObject>>> {
-        let mut v = Vec::<Box<dyn IrObject>>::new();
+    pub fn parse(&mut self) -> Option<Module> {
+        let mut v = Module::new();
         let t = self.consume_token_pred(|t| t.get_type() == TokenType::TokenId(IdType::Interface));
 
         match t {
-            Some(_) => v.push(Box::new(self.parse_interface()?)),
+            Some(_) => v.add_interface(self.parse_interface()?),
             None => {
                 error!("Failed to parse!");
                 return None;
@@ -155,7 +156,7 @@ mod test {
 
     #[test]
     fn test_empty_interface() {
-        let text = "interface { }";
+        let text = "interface test { }";
         let lexer = Lexer::new(text.as_bytes());
         let reporter = error_reporter::ErrorReporter::new(text.as_bytes());
         let mut parser = Parser::new(lexer, &reporter);
@@ -184,7 +185,7 @@ mod test {
 
     #[test]
     fn test_interface_with_simple_func() {
-        let text = "interface { Test(out I32 a); }";
+        let text = "interface test { Test(out I32 a); }";
         let lexer = Lexer::new(text.as_bytes());
         let reporter = error_reporter::ErrorReporter::new(text.as_bytes());
         let mut parser = Parser::new(lexer, &reporter);

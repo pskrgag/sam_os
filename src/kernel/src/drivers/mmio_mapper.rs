@@ -7,7 +7,7 @@ use rtl::misc::num_pages;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
 
-extern "C" {
+unsafe extern "C" {
     static mmio_start: usize;
     static mmio_end: usize;
 }

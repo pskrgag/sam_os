@@ -6,7 +6,7 @@ use rtl::vmm::MappingType;
 use alloc::vec;
 use alloc::vec::Vec;
 
-extern "C" {
+unsafe extern "C" {
     static stext: usize;
     static etext: usize;
 

@@ -7,7 +7,7 @@ use rtl::vmm::types::*;
 
 global_asm!(include_str!("interrupts.S"));
 
-extern "C" {
+unsafe extern "C" {
     static exception_vector: u64;
     static sfixup: usize;
     static efixup: usize;
@@ -91,7 +91,7 @@ fn fixup(v: VirtAddr, ctx: &mut ExceptionCtx) -> bool {
     found
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn kern_sync64(
     esr_el1: VirtAddr,
     far_el1: VirtAddr,
@@ -117,14 +117,14 @@ pub extern "C" fn kern_sync64(
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn kern_irq() {
     irq_dispatch();
 
     sched::run();
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn kern_exception_bug(esr_el1: usize, far_el1: usize, elr_el1: usize) -> ! {
     println!("Something weird happened");
     println!(
@@ -136,7 +136,7 @@ pub extern "C" fn kern_exception_bug(esr_el1: usize, far_el1: usize, elr_el1: us
     panic!();
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn user_sync(_ctx: &ExceptionCtx, esr_el1: usize, elr_el1: usize, far_el1: usize) {
     println!(
         "!!! Kernel sync from EL0    ESR_EL1 0x{:x}    ELR_EL1 0x{:x}    FAR_EL1 0x{:x}",
@@ -147,7 +147,7 @@ pub extern "C" fn user_sync(_ctx: &ExceptionCtx, esr_el1: usize, elr_el1: usize,
     panic!("Some user thread has panicked! No idea how to deal with it");
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn user_syscall(ctx: &mut ExceptionCtx) {
     use crate::kernel::syscalls::SyscallArgs;
 

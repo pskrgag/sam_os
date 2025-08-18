@@ -47,7 +47,7 @@ impl<'a> IpcMessage<'a> {
         self.in_data
     }
 
-    pub fn out_arena(&self) -> Option<&mut [u8]> {
+    pub fn out_arena(&mut self) -> Option<&mut [u8]> {
         if let Some(d) = self.out_data {
             Some(unsafe {
                 core::slice::from_raw_parts_mut(d.as_ptr() as usize as *mut u8, d.len())

@@ -2,7 +2,7 @@
 
 use rtl::vmm::types::*;
 
-extern "C" {
+unsafe extern "C" {
     static load_addr: usize;
     static start: usize;
     static mmio_end: usize;

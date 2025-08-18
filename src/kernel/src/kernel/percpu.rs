@@ -11,7 +11,7 @@ use spin::Once;
 // TODO: W/A. it should be read from dtb
 const NUM_CPUS: usize = 2;
 
-extern "C" {
+unsafe extern "C" {
     static sdatapercpu: usize;
     static edatapercpu: usize;
 }
@@ -28,25 +28,25 @@ pub struct PerCpu<T> {
 macro_rules! percpu_global {
     ($(#[$attr:meta])* static $N:ident : $T:ty = $e:expr;) => {
         use $crate::kernel::percpu::PerCpu;
-        #[link_section = ".percpu.data"]
+        #[unsafe(link_section = ".percpu.data")]
         $(#[$attr])* static $N : PerCpu<$T> = PerCpu::new($e);
     };
 
     ($(#[$attr:meta])* pub static $N:ident : $T:ty = $e:expr;) => {
         use $crate::kernel::percpu::PerCpu;
-        #[link_section = ".percpu.data"]
+        #[unsafe(link_section = ".percpu.data")]
         $(#[$attr])* pub static $N : PerCpu<$T> = PerCpu::new($e);
     };
 
     ($(#[$attr:meta])* pub static mut $N:ident : $T:ty = $e:expr;) => {
         use $crate::kernel::percpu::PerCpu;
-        #[link_section = ".percpu.data"]
+        #[unsafe(link_section = ".percpu.data")]
         $(#[$attr])* pub static mut $N : PerCpu<$T> = PerCpu::new($e);
     };
 
     ($(#[$attr:meta])* static mut $N:ident : $T:ty = $e:expr;) => {
         use $crate::kernel::percpu::PerCpu;
-        #[link_section = ".percpu.data"]
+        #[unsafe(link_section = ".percpu.data")]
         $(#[$attr])* static mut $N : PerCpu<$T> = PerCpu::new($e);
     };
 }
