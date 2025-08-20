@@ -85,9 +85,9 @@ SECTIONS
         edatapercpu = .;
     }
 
-    . = . + 0x20000;
+    . = . + 0x30000;
     . = ALIGN(16);
-    __STACK_START = .; /* Stack grows from here towards 0x0. */
+    __STACK_START = .;
 
     end = .;
     /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }

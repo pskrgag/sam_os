@@ -2,7 +2,8 @@
 #![no_std]
 
 use alloc::string::ToString;
-use libc::{main, task::Task};
+use libc::{main, port::Port, task::Task};
+use rtl::handle::Handle;
 
 static CPIO: &[u8] = include_bytes!("/tmp/archive.cpio");
 

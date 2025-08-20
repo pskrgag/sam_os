@@ -23,7 +23,10 @@ struct Arg {
 #[derive(Subcommand, Clone)]
 enum Commands {
     Build,
-    Run,
+    Run {
+        #[arg(short, long)]
+        gdb: bool,
+    },
 }
 
 fn main() {
@@ -41,8 +44,8 @@ fn main() {
 
     match args.command {
         Commands::Build => builder::build(&config).unwrap(),
-        Commands::Run => {
-            builder::run(config).unwrap();
+        Commands::Run { gdb } => {
+            builder::run(config, gdb).unwrap();
         }
     }
 }

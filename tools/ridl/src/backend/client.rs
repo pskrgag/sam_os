@@ -20,6 +20,16 @@ struct InterfaceCompiler<'a, W: Write> {
 }
 
 impl<'a, W: Write> InterfaceCompiler<'a, W> {
+    fn start_mod(&mut self) {
+        writeln!(self.buf, "#[allow(dead_code)]").unwrap();
+        writeln!(self.buf, "#[allow(non_snake_case)]").unwrap();
+        writeln!(self.buf, "mod bindings {{").unwrap();
+    }
+
+    fn end_mod(&mut self) {
+        writeln!(self.buf, "}}").unwrap();
+    }
+
     fn includes(&mut self) {
         writeln!(self.buf, "use rtl::handle::Handle;").unwrap();
         writeln!(self.buf, "use rtl::ipc::IpcMessage;").unwrap();
@@ -146,6 +156,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
     }
 
     pub fn compile(mut self) {
+        self.start_mod();
         self.includes();
         self.make_struct();
 
@@ -156,6 +167,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
         self.end_impl();
 
         self.produce_enums();
+        self.end_mod();
     }
 }
 

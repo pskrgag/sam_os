@@ -1,9 +1,0 @@
-[target.aarch64-unknown-none-softfloat]
-rustflags = [
-	"-C", "link-arg=--script=src/kernel/src/arch/aarch64/aarch64-qemu.ld",
-	"-C", "force-frame-pointers",
-	"-C", "link-dead-code"
-]
-
-[build]
-target = "aarch64-unknown-none-softfloat"

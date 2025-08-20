@@ -106,13 +106,6 @@ pub extern "C" fn kern_sync64(
             esr_el1, far_el1, elr_el1
         );
 
-        unsafe {
-            let tcr: u64;
-
-            asm!("mrs   {}, TCR_EL1", out(reg) tcr);
-            println!("TCR_EL1 {:x}", tcr);
-        };
-
         panic!("Unhandled kernel sync exception");
     }
 }

@@ -3,6 +3,16 @@ use std::{fs::OpenOptions, io::Write};
 
 static TARGET: &str = "aarch64-unknown-none-softfloat";
 
+fn binary(name: &str) -> String {
+    format!(
+        "{}{}{}{}{name}",
+        env!("CARGO_WORKSPACE_DIR"),
+        "/target/",
+        TARGET,
+        "/debug/",
+    )
+}
+
 fn build_component(c: &Component, b: &BuildScript) -> Result<(), String> {
     info!("[INFO]     Builing {:?}...", c.name);
 
@@ -47,18 +57,9 @@ fn build_kernel(b: &BuildScript) -> Result<(), String> {
 
 pub fn prepare_cpio(b: &Vec<Component>, to: &str) -> Result<(), String> {
     let mut files = Vec::with_capacity(b.len() - 1);
-    let bin_out = format!(
-        "{}{}{}{}",
-        env!("CARGO_WORKSPACE_DIR"),
-        "/target/",
-        TARGET,
-        "/debug/",
-    );
-
-    info!("{}", env!("CARGO_MANIFEST_DIR"));
 
     for c in b {
-        files.push(format!("{bin_out}/{}", c.name));
+        files.push(binary(c.name.as_str()));
     }
 
     let mut out = Vec::new();
@@ -108,24 +109,33 @@ pub fn build(c: &BuildScript) -> Result<(), String> {
     build_kernel(c)
 }
 
-pub fn run(c: BuildScript) -> Result<(), String> {
+pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
     build(&c)?;
 
     info!("[INFO]     Running example...");
+    let bin = binary("sam_kernel");
+    let mut args = vec![
+        "-machine",
+        "virt,gic-version=2",
+        "-m",
+        "2048M",
+        "-cpu",
+        "cortex-a53",
+        "-smp",
+        "2",
+        "-nographic",
+        "-kernel",
+        &bin,
+    ];
 
+    if gdb {
+        args.extend_from_slice(&["-s", "-S"]);
+    }
+
+    // qemu-system-aarch64 -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel
     run_prog(
-        "cargo",
-        &[
-            "run",
-            "-p",
-            "sam_kernel",
-            "--target",
-            TARGET,
-            "--color=always",
-            "--quiet",
-            "--features",
-            &c.board,
-        ],
+        "qemu-system-aarch64",
+        args.as_slice(),
         None,
         None,
         Some(&[("BOARD_TYPE", c.board.as_str())]),
