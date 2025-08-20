@@ -71,6 +71,6 @@ impl Task {
     }
 
     pub fn vms(&self) -> Option<Vms> {
-        Some(Vms::new(Syscall::task_get_vms().ok()?))
+        Some(Vms::new(Syscall::task_get_vms(self.h).ok()?))
     }
 }

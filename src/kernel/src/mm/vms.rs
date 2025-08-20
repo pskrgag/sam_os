@@ -23,8 +23,8 @@ impl VmsInner {
         }
     }
 
-    fn add_to_tree(&mut self, vma: Vma) -> Result<VirtAddr, ()> {
-        self.vmas.add_to_tree(vma)
+    fn add_to_tree(&mut self, vma: Vma) -> Result<VirtAddr, MmError> {
+        self.vmas.add_to_tree(vma).map_err(|_| MmError::Generic)
     }
 
     pub fn vm_map(
@@ -33,6 +33,9 @@ impl VmsInner {
         p: MemRange<PhysAddr>,
         tp: MappingType,
     ) -> Result<VirtAddr, MmError> {
+        assert!(v.start().is_page_aligned());
+        assert!(p.start().is_page_aligned());
+
         let va = self.add_to_tree(Vma::new(v.into(), tp))?;
 
         self.ttbr0
@@ -40,7 +43,6 @@ impl VmsInner {
             .unwrap()
             .map(Some(p), MemRange::new(va, v.size()), tp)?;
 
-        assert!(v.start().is_page_aligned());
         Ok(va)
     }
 

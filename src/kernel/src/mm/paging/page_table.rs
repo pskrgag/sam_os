@@ -15,16 +15,11 @@ pub enum MmError {
     InvalidAddr,
     NoMem,
     NotImpl,
+    NoTranslation,
 }
 
 impl From<MmError> for () {
     fn from(_value: MmError) -> Self {}
-}
-
-impl From<()> for MmError {
-    fn from(_value: ()) -> Self {
-        MmError::Generic
-    }
 }
 
 pub struct PageFlags {
@@ -64,10 +59,7 @@ impl PageTableBlock {
         assert!(index < 512);
 
         PageTableEntry::from_bits(unsafe {
-            self.addr
-                .to_raw_mut::<usize>()
-                .add(index)
-                .read_volatile()
+            self.addr.to_raw_mut::<usize>().add(index).read_volatile()
         })
         .valid()
     }
@@ -89,12 +81,7 @@ impl PageTableBlock {
         assert!(index < 512);
 
         unsafe {
-            PageTableEntry::from_bits(
-                self.addr
-                    .to_raw_mut::<usize>()
-                    .add(index)
-                    .read_volatile(),
-            )
+            PageTableEntry::from_bits(self.addr.to_raw_mut::<usize>().add(index).read_volatile())
         }
     }
 
@@ -111,12 +98,7 @@ impl PageTableBlock {
         assert!(!self.is_last());
 
         let entry_next = unsafe {
-            PageTableEntry::from_bits(
-                self.addr
-                    .to_raw::<usize>()
-                    .add(index)
-                    .read_volatile(),
-            )
+            PageTableEntry::from_bits(self.addr.to_raw::<usize>().add(index).read_volatile())
         };
 
         if entry_next.valid() {
@@ -216,9 +198,10 @@ impl PageTable {
         b: &mut PageTableBlock,
         lvl: usize,
         index: usize,
-    ) -> Result<PageTableBlock, ()> {
-        let new_page = page_allocator().alloc(1).ok_or(())?;
+    ) -> Result<PageTableBlock, MmError> {
+        let new_page = page_allocator().alloc(1).ok_or(MmError::NoMem)?;
         let mut va = VirtAddr::from(new_page);
+
         unsafe { va.as_slice_mut::<u8>(PAGE_SIZE).fill(0x00) };
 
         let new_entry = PageTableEntry::from_bits(PageFlags::table().bits() | new_page.get());
@@ -231,8 +214,8 @@ impl PageTable {
         _b: &mut PageTableBlock,
         _lvl: usize,
         _index: usize,
-    ) -> Result<PageTableBlock, ()> {
-        Err(())
+    ) -> Result<PageTableBlock, MmError> {
+        Err(MmError::NoTranslation)
     }
 
     fn clean_tte(
@@ -252,7 +235,7 @@ impl PageTable {
     #[allow(clippy::too_many_arguments)]
     fn op_lvl<
         F: FnMut(&mut PageTableBlock, usize, PhysAddr, MappingType, usize, VirtAddr) + Copy, // Set leaf
-        G: FnMut(&mut PageTableBlock, usize, usize) -> Result<PageTableBlock, ()> + Copy, // Process walk
+        G: FnMut(&mut PageTableBlock, usize, usize) -> Result<PageTableBlock, MmError> + Copy, // Process walk
     >(
         mut base: PageTableBlock,
         lvl: usize,

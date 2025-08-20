@@ -160,7 +160,7 @@ pub extern "C" fn user_syscall(ctx: &mut ExceptionCtx) {
         match do_syscall(a) {
             Ok(s) => ctx.x0 = s,
             Err(err) => {
-                println!("err {:?} {:?}", err, num);
+                println!("err {:?} {}", err, num.bits());
                 ctx.x0 = -(err.bits() as isize) as usize;
             }
         };

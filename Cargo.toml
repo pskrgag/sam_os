@@ -2,7 +2,7 @@
 members = [
 	"tools/ridl",
 	"src/rtl",
-	"src/kernel", "src/userspace/services/roottask",
+	"src/kernel", "src/userspace/services/roottask", "src/userspace/apps/client", "xtask",
 ]
 
-resolver = "1"
+resolver = "2"

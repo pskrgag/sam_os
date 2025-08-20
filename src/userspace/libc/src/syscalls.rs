@@ -30,9 +30,9 @@ pub enum Syscall<'a> {
     VmMapVmo(Handle, Handle),
     VmMapPhys(Handle, PhysAddr, usize),
     TaskStart(Handle, VirtAddr, Handle),
-    VmsHandle,
+    VmsHandle(Handle),
     CloseHandle(Handle),
-    PortCall(Handle, &'a mut IpcMessage<'a>),
+    PortCall(Handle, *mut IpcMessage<'a>),
     PortSendWait(Handle, Handle, &'a IpcMessage<'a>, &'a mut IpcMessage<'a>),
 }
 
@@ -78,15 +78,15 @@ impl<'a> Syscall<'a> {
         unsafe { syscall(Self::TaskStart(task, ep, boot_handle).as_args()).map(|_| ()) }
     }
 
-    pub fn task_get_vms() -> Result<Handle, ErrorType> {
-        unsafe { syscall(Self::VmsHandle.as_args()) }
+    pub fn task_get_vms(h: Handle) -> Result<Handle, ErrorType> {
+        unsafe { syscall(Self::VmsHandle(h).as_args()) }
     }
 
     pub fn close_handle(h: Handle) -> Result<(), ErrorType> {
         unsafe { syscall(Self::CloseHandle(h).as_args()).map(|_| ()) }
     }
 
-    pub fn port_call(h: Handle, msg: &'a mut IpcMessage<'a>) -> Result<(), ErrorType> {
+    pub fn port_call(h: Handle, msg: *mut IpcMessage<'a>) -> Result<(), ErrorType> {
         unsafe { syscall(Self::PortCall(h, msg).as_args()).map(|_| ()) }
     }
 
@@ -103,7 +103,7 @@ impl<'a> Syscall<'a> {
         match self {
             Syscall::Write(string) => [
                 SyscallList::SYS_WRITE.into(),
-                string.as_ptr() as *const u8 as usize,
+                string.as_ptr() as usize,
                 string.len(),
                 0,
                 0,
@@ -226,7 +226,7 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
-            Syscall::VmsHandle => [SyscallList::SYS_TASK_GET_VMS.into(), 0, 0, 0, 0, 0, 0, 0],
+            Syscall::VmsHandle(h) => [SyscallList::SYS_TASK_GET_VMS.into(), h, 0, 0, 0, 0, 0, 0],
             Syscall::Yield => [SyscallList::SYS_YIELD.into(), 0, 0, 0, 0, 0, 0, 0],
         }
     }

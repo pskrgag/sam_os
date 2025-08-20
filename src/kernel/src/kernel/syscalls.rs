@@ -6,6 +6,7 @@ use crate::{
             task_object::Task,
             vm_object::VmObject,
             vms_object::{VmoCreateArgs, Vms},
+            handle::Handle,
         },
         sched::current,
     },
@@ -15,7 +16,7 @@ use alloc::string::String;
 use alloc::string::ToString;
 use rtl::handle::{HandleBase, HANDLE_INVALID};
 use rtl::vmm::types::Address;
-use rtl::{error::ErrorType, syscalls::SyscallList, ipc::IpcMessage};
+use rtl::{error::ErrorType, ipc::IpcMessage, syscalls::SyscallList};
 
 pub struct SyscallArgs {
     number: SyscallList,
@@ -156,7 +157,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             let obj = if args.arg::<HandleBase>(1) != HANDLE_INVALID {
                 Some(
                     table
-                        .find_poly(args.arg(1))
+                        .find_poly(args.arg(2))
                         .ok_or(ErrorType::INVALID_HANDLE)?,
                 )
             } else {
@@ -165,19 +166,28 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
 
             task.start(args.arg(1), obj).map(|_| 0)
         }
-        SyscallList::SYS_TASK_GET_VMS => Ok(task.vms_handle()),
+        SyscallList::SYS_TASK_GET_VMS => {
+            let task = table
+                .find::<Task>(args.arg(0))
+                .ok_or(ErrorType::INVALID_HANDLE)?;
+            let vms = task.vms();
+            let handle = Handle::new(vms.clone());
+
+            Ok(table.add(handle))
+        },
         SyscallList::SYS_CLOSE_HANDLE => {
             table.remove(args.arg(0));
             Ok(0)
-        },
+        }
         SyscallList::SYS_PORT_CALL => {
             let port = table
                 .find::<Port>(args.arg(0))
                 .ok_or(ErrorType::INVALID_HANDLE)?;
 
             drop(table);
-            port.call(UserPtr::new(args.arg::<usize>(1) as *mut IpcMessage)).map(|_| 0)
-        },
+            port.call(UserPtr::new(args.arg::<usize>(1) as *mut IpcMessage))
+                .map(|_| 0)
+        }
         SyscallList::SYS_PORT_SEND_WAIT => {
             let port = table
                 .find::<Port>(args.arg(0))
@@ -187,7 +197,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
 
             drop(table);
             port.send_wait(args.arg(1), in_msg, out_msg).map(|_| 0)
-        },
+        }
         SyscallList::SYS_PORT_RECEIVE => {
             let port = table
                 .find::<Port>(args.arg(0))
@@ -196,7 +206,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
 
             drop(table);
             port.receive(in_msg).map(|_| 0)
-        },
+        }
         _ => Err(ErrorType::NO_OPERATION),
     }
 }

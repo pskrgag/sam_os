@@ -1,0 +1,5 @@
+name = "Test app"
+board = "qemu"
+
+[[component]]
+name = "client"

@@ -1,5 +1,5 @@
 [package]
-name = "roottask"
+name = "client"
 version = "0.1.0"
 edition = "2024"
 
@@ -8,7 +8,6 @@ libc = { path = "../../libc/" }
 rtl = { path = "../../../rtl/" }
 postcard = { version = "1", features = ["alloc"] }
 serde = { version = "1", default-features = false  }
-cpio_reader = "0.1.2"
 
 [build-dependencies]
 ridl = { path = "../../../../tools/ridl/" }

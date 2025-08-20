@@ -26,7 +26,7 @@ impl Port {
         Syscall::port_send_wait(self.h, reply_port.handle(), msg, reply)
     }
 
-    pub fn call<'a>(&self, msg: &'a mut IpcMessage<'a>) -> Result<(), ErrorType> {
+    pub fn call(&self, msg: &mut IpcMessage) -> Result<(), ErrorType> {
         Syscall::port_call(self.h, msg)
     }
 

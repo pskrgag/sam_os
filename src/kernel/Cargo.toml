@@ -9,7 +9,6 @@ edition = "2024"
 qemu = []
 orpipc2 = []
 
-
 [build-dependencies]
 cc = "1.0"
 

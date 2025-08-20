@@ -11,8 +11,8 @@ type MessageId = usize;
 pub struct IpcMessage<'a> {
     handles: [Handle; IPC_MAX_HANDLES],
     num_handles: usize,
-    in_data: Option<&'a [u8]>,
-    out_data: Option<&'a [u8]>,
+    pub in_data: Option<&'a [u8]>,
+    pub out_data: Option<&'a [u8]>,
     reply_port: Handle,
     mid: MessageId,
 }
