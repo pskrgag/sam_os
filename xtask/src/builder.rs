@@ -13,13 +13,13 @@ fn binary(name: &str) -> String {
     )
 }
 
-fn build_component(c: &Component, b: &BuildScript) -> Result<(), String> {
+fn build_component(c: &Component, b: &BuildScript, command: &str) -> Result<(), String> {
     info!("[INFO]     Builing {:?}...", c.name);
 
     run_prog(
         "cargo",
         &[
-            "build",
+            command,
             "-p",
             c.name.as_str(),
             "--target",
@@ -94,8 +94,12 @@ pub fn prepare_cpio(b: &Vec<Component>, to: &str) -> Result<(), String> {
 }
 
 pub fn build(c: &BuildScript) -> Result<(), String> {
+    build_impl(c, "build")
+}
+
+fn build_impl(c: &BuildScript, command: &str) -> Result<(), String> {
     for comp in &c.component {
-        build_component(comp, c)?;
+        build_component(comp, c, command)?;
     }
 
     prepare_cpio(&c.component, "/tmp/archive.cpio")?;
@@ -104,6 +108,7 @@ pub fn build(c: &BuildScript) -> Result<(), String> {
             name: "roottask".to_string(),
         },
         c,
+        command,
     )?;
 
     build_kernel(c)
@@ -140,4 +145,8 @@ pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
         None,
         Some(&[("BOARD_TYPE", c.board.as_str())]),
     )
+}
+
+pub fn clippy(c: BuildScript) -> Result<(), String> {
+    build_impl(&c, "clippy")
 }

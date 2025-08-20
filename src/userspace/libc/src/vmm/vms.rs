@@ -58,7 +58,7 @@ impl Vms {
     pub fn map_phys(&self, p: MemRange<PhysAddr>) -> Option<VirtAddr> {
         Syscall::vm_map_phys(self.h, p.start(), p.size())
             .ok()
-            .map(|x| VirtAddr::from(x))
+            .map(VirtAddr::from)
     }
 }
 

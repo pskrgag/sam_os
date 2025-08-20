@@ -27,6 +27,7 @@ enum Commands {
         #[arg(short, long)]
         gdb: bool,
     },
+    Clippy,
 }
 
 fn main() {
@@ -47,5 +48,6 @@ fn main() {
         Commands::Run { gdb } => {
             builder::run(config, gdb).unwrap();
         }
+        Commands::Clippy => builder::clippy(config).unwrap(),
     }
 }

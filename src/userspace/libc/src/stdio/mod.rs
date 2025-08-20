@@ -40,7 +40,7 @@ macro_rules! println {
 macro_rules! println_libc {
     () => (print!("\n"));
     ($fmt:expr, $($args:tt)*) => ({
-        crate::stdio::_print(format_args!(concat!($fmt, "\n"), $($args)*));
+        $crate::stdio::_print(format_args!(concat!($fmt, "\n"), $($args)*));
     })
 }
 
@@ -49,7 +49,7 @@ macro_rules! println_libc {
 macro_rules! println_libc_verbose {
     () => (print!("\n"));
     ($fmt:expr, $($args:tt)*) => ({
-        crate::stdio::_print(format_args!(concat!($fmt, "\n"), $($args)*));
+        $crate::stdio::_print(format_args!(concat!($fmt, "\n"), $($args)*));
     })
 }
 
