@@ -1,6 +1,6 @@
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter, Result};
 use strum_macros::Display;
-use std::fmt::{Result, Display, Formatter};
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct UserStruct {}
@@ -76,7 +76,7 @@ impl Display for Type {
                 };
 
                 write!(f, "{s}")
-            },
+            }
             _ => todo!(),
         }
     }

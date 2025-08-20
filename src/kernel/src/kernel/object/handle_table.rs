@@ -1,5 +1,5 @@
-use crate::kernel::object::handle::Handle;
 use crate::kernel::object::KernelObject;
+use crate::kernel::object::handle::Handle;
 use alloc::sync::Arc;
 use rtl::handle::HandleBase;
 

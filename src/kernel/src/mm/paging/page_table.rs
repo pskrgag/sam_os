@@ -1,13 +1,13 @@
 use crate::{
-    arch::mm::mmu::{self, *},
     arch::PT_LVL1_ENTIRES,
+    arch::mm::mmu::{self, *},
     arch::{self, mm::mmu_flags},
     mm::allocators::page_alloc::page_allocator,
 };
 use rtl::arch::PAGE_SIZE;
 
-use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
+use rtl::vmm::types::*;
 
 #[derive(Debug)]
 pub enum MmError {

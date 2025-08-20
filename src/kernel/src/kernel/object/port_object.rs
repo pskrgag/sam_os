@@ -149,7 +149,10 @@ impl Port {
         self.receive(user_msg_out)
     }
 
-    pub fn receive(&self, mut server_msg_uptr: UserPtr<IpcMessage<'static>>) -> Result<(), ErrorType> {
+    pub fn receive(
+        &self,
+        mut server_msg_uptr: UserPtr<IpcMessage<'static>>,
+    ) -> Result<(), ErrorType> {
         let mut server_msg = copy_ipc_message_from_user(server_msg_uptr).ok_or(ErrorType::FAULT)?;
 
         let c = current().unwrap();

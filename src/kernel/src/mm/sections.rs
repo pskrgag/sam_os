@@ -1,7 +1,7 @@
 use crate::mm::paging::kernel_page_table::kernel_page_table;
 use rtl::arch::PHYS_OFFSET;
-use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
+use rtl::vmm::types::*;
 
 use alloc::vec;
 use alloc::vec::Vec;

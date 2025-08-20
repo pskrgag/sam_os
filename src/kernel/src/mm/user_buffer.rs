@@ -55,16 +55,12 @@ impl<T> UserPtr<T> {
                 to.as_ptr() as _,
             );
 
-            if res == 0 {
-                Some(s)
-            } else {
-                None
-            }
+            if res == 0 { Some(s) } else { None }
         }
     }
 
     pub fn read(&self) -> Option<T> {
-        use core::mem::{size_of, MaybeUninit};
+        use core::mem::{MaybeUninit, size_of};
 
         let t = MaybeUninit::uninit();
 

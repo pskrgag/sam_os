@@ -131,7 +131,7 @@ impl<'a> Lexer<'a> {
                 b';' => {
                     let t = self.finish_token();
                     Some(Token::new(TokenType::Semicolumn, t.0, t.1))
-                },
+                }
                 other => {
                     if other.is_ascii_alphabetic() {
                         self.consume_word()

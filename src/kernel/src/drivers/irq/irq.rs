@@ -36,7 +36,8 @@ pub fn register_handler(irq: u32, func: fn(u32)) {
 pub fn init_secondary(irq: u32) {
     use crate::arch::cpuid::current_cpu;
 
-    GIC.per_cpu_var_get_mut().init_secondary(irq, current_cpu() as u32);
+    GIC.per_cpu_var_get_mut()
+        .init_secondary(irq, current_cpu() as u32);
 }
 
 pub fn irq_dispatch() {

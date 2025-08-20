@@ -2,8 +2,8 @@ use crate::mm::allocators::page_alloc::page_allocator;
 use alloc::vec::Vec;
 use core::mem::size_of;
 use rtl::arch::PAGE_SIZE;
-use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
+use rtl::vmm::types::*;
 
 const EI_NIDENT: usize = 16;
 const ELF_MAGIC: [u8; 4] = [0x7f, b'E', b'L', b'F'];

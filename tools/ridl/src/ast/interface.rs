@@ -8,7 +8,10 @@ pub struct Interface {
 
 impl Interface {
     pub fn new(name: String) -> Self {
-        Self { funcs: Vec::new(), name }
+        Self {
+            funcs: Vec::new(),
+            name,
+        }
     }
 
     pub fn add_func(&mut self, f: Function) {

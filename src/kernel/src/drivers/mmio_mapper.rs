@@ -4,8 +4,8 @@ use crate::arch::KERNEL_MMIO_BASE;
 use crate::kernel::locking::spinlock::Spinlock;
 use rtl::arch::PAGE_SIZE;
 use rtl::misc::num_pages;
-use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
+use rtl::vmm::types::*;
 
 unsafe extern "C" {
     static mmio_start: usize;

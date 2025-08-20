@@ -21,11 +21,7 @@ pub fn get_current_raw() -> Option<*mut Thread> {
         let raw: *mut Thread;
         asm!("mrs   {}, TPIDR_EL1", out(reg) raw);
 
-        if raw.is_null() {
-            None
-        } else {
-            Some(raw)
-        }
+        if raw.is_null() { None } else { Some(raw) }
     }
 }
 

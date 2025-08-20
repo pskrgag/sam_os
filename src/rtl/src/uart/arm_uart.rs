@@ -33,10 +33,7 @@ impl Uart {
     }
 
     pub fn enable(&mut self) {
-        self.write_reg(
-            Pl011::Rc as u8,
-            UART_CR_UARTEN | UART_CR_TXE | UART_CR_RXE,
-        );
+        self.write_reg(Pl011::Rc as u8, UART_CR_UARTEN | UART_CR_TXE | UART_CR_RXE);
     }
 
     pub fn init(base: VirtAddr) -> Self {
@@ -47,9 +44,7 @@ impl Uart {
 
     fn write_reg(&mut self, reg: u8, data: u32) {
         let ptr = self.base.to_raw_mut::<u32>();
-        unsafe {
-            ptr::write_volatile(ptr.add(reg as usize / size_of::<u32>()), data)
-        };
+        unsafe { ptr::write_volatile(ptr.add(reg as usize / size_of::<u32>()), data) };
     }
 
     fn read_reg(&self, reg: u8) -> u32 {

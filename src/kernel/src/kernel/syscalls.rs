@@ -2,11 +2,11 @@ use crate::{
     kernel::{
         object::{
             factory_object::Factory,
+            handle::Handle,
             port_object::Port,
             task_object::Task,
             vm_object::VmObject,
             vms_object::{VmoCreateArgs, Vms},
-            handle::Handle,
         },
         sched::current,
     },
@@ -14,7 +14,7 @@ use crate::{
 };
 use alloc::string::String;
 use alloc::string::ToString;
-use rtl::handle::{HandleBase, HANDLE_INVALID};
+use rtl::handle::{HANDLE_INVALID, HandleBase};
 use rtl::vmm::types::Address;
 use rtl::{error::ErrorType, ipc::IpcMessage, syscalls::SyscallList};
 
@@ -174,7 +174,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             let handle = Handle::new(vms.clone());
 
             Ok(table.add(handle))
-        },
+        }
         SyscallList::SYS_CLOSE_HANDLE => {
             table.remove(args.arg(0));
             Ok(0)

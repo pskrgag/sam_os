@@ -1,8 +1,8 @@
-use crate::arch::mm::page_table::set_kernel_page_table;
 use crate::arch::KERNEL_LINEAR_SPACE_END;
+use crate::arch::mm::page_table::set_kernel_page_table;
 use crate::mm::paging::kernel_page_table::kernel_page_table;
-use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
+use rtl::vmm::types::*;
 
 pub mod kernel_page_table;
 pub mod page_table;

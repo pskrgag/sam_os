@@ -57,9 +57,10 @@ impl<T> Spinlock<T> {
         use crate::arch::current::get_current_raw;
 
         if let Some(cur) = get_current_raw()
-            && cur == self.inner.t.load(Ordering::Relaxed) {
-                panic!("Deadlock");
-            }
+            && cur == self.inner.t.load(Ordering::Relaxed)
+        {
+            panic!("Deadlock");
+        }
 
         let my = self.inner.next.fetch_add(1, Ordering::Acquire);
 

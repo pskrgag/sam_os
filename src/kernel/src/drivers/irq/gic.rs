@@ -1,6 +1,6 @@
+use crate::percpu_global;
 use crate::{arch, drivers::mmio_mapper::MMIO_ALLOCATOR};
 use rtl::vmm::types::*;
-use crate::percpu_global;
 
 const GICD_CTLR: usize = 0x0;
 const GICC_CTLR: usize = 0x0;
@@ -78,19 +78,13 @@ percpu_global!(
 #[inline(never)]
 fn write_to_reg<T>(base: VirtAddr, offset: usize, val: T) {
     unsafe {
-        base.to_raw_mut::<T>()
-            .add(offset)
-            .write_volatile(val);
+        base.to_raw_mut::<T>().add(offset).write_volatile(val);
     };
 }
 
 #[inline(never)]
 fn read_from_reg<T>(base: VirtAddr, offset: usize) -> T {
-    unsafe {
-        base.to_raw_mut::<T>()
-            .add(offset)
-            .read_volatile()
-    }
+    unsafe { base.to_raw_mut::<T>().add(offset).read_volatile() }
 }
 
 impl Gicc {
@@ -256,7 +250,9 @@ impl Gic {
 }
 
 pub fn init() {
-    GIC.per_cpu_var_get_mut().init().expect("Failed to initalize GIC");
+    GIC.per_cpu_var_get_mut()
+        .init()
+        .expect("Failed to initalize GIC");
 
     println!("Gic initalized");
 }

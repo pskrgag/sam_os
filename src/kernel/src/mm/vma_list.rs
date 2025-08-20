@@ -1,8 +1,8 @@
 use alloc::rc::Rc;
 use core::cmp::Ordering;
-use intrusive_collections::{intrusive_adapter, rbtree::CursorMut, KeyAdapter, RBTree, RBTreeLink};
-use rtl::vmm::types::*;
+use intrusive_collections::{KeyAdapter, RBTree, RBTreeLink, intrusive_adapter, rbtree::CursorMut};
 use rtl::vmm::MappingType;
+use rtl::vmm::types::*;
 
 #[derive(Debug, Eq, Clone, Copy)]
 pub(crate) struct MemRangeVma(MemRange<VirtAddr>);
@@ -107,19 +107,21 @@ impl VmaList {
             vma_c.move_next();
 
             if let Some(next) = vma_c.get()
-                && next.is_free() {
-                    let next = vma_c.remove().unwrap();
-                    v.merge(Rc::into_inner(next).unwrap()).unwrap();
-                }
+                && next.is_free()
+            {
+                let next = vma_c.remove().unwrap();
+                v.merge(Rc::into_inner(next).unwrap()).unwrap();
+            }
 
             vma_c.move_prev();
             vma_c.move_prev();
 
             if let Some(prev) = vma_c.get()
-                && prev.is_free() {
-                    let prev = vma_c.remove().unwrap();
-                    v.merge(Rc::into_inner(prev).unwrap()).unwrap();
-                }
+                && prev.is_free()
+            {
+                let prev = vma_c.remove().unwrap();
+                v.merge(Rc::into_inner(prev).unwrap()).unwrap();
+            }
 
             vma_c.replace_with(Rc::new(v)).unwrap();
             Some(())
@@ -315,9 +317,10 @@ mod test {
     fn vma_list_empty() {
         let mut list = VmaList::new();
 
-        test_assert!(list
-            .free_range(MemRange::<VirtAddr>::max_user().size())
-            .is_some());
+        test_assert!(
+            list.free_range(MemRange::<VirtAddr>::max_user().size())
+                .is_some()
+        );
     }
 
     #[kernel_test]
@@ -339,12 +342,13 @@ mod test {
     fn vma_list_add_nofixed() {
         let mut list = VmaList::new();
 
-        test_assert!(list
-            .add_to_tree(Vma::new(
+        test_assert!(
+            list.add_to_tree(Vma::new(
                 MemRangeVma::new_fixed(VirtAddr::new(0), 0x1000),
                 MappingType::USER_DATA,
             ))
-            .is_ok());
+            .is_ok()
+        );
         test_assert_eq!(list.vma_list_sorted().len(), 2);
     }
 

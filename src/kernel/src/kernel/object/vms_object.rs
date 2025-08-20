@@ -7,7 +7,7 @@ use alloc::sync::Arc;
 use object_lib::object;
 use qrwlock::RwLock;
 use rtl::error::ErrorType;
-use rtl::vmm::{types::*, MappingType};
+use rtl::vmm::{MappingType, types::*};
 
 #[derive(object)]
 pub struct Vms {

@@ -123,33 +123,36 @@ impl BootAlloc {
             let next = cur_header.prev;
 
             if let Some(mut next) = next
-            && next.as_ref().free
-            && let Some(mut prev) = prev
-            && prev.as_ref().free
-        {
-            prev.as_mut().size = cur_header.size
-                + core::mem::size_of::<FfHeader>() * 2
-                + next.as_ref().size;
+                && next.as_ref().free
+                && let Some(mut prev) = prev
+                && prev.as_ref().free
+            {
+                prev.as_mut().size =
+                    cur_header.size + core::mem::size_of::<FfHeader>() * 2 + next.as_ref().size;
 
-            if next.as_mut().next.is_some() {
-                next.as_mut().next.unwrap().as_mut().prev = cur_header.prev;
+                if next.as_mut().next.is_some() {
+                    next.as_mut().next.unwrap().as_mut().prev = cur_header.prev;
+                }
+
+                prev.as_mut().next = next.as_ref().next;
+            } else if let Some(mut prev) = prev
+                && prev.as_ref().free
+            {
+                prev.as_mut().size += cur_header.size + core::mem::size_of::<FfHeader>();
+                prev.as_mut().next = next;
+
+                if let Some(mut next) = next {
+                    next.as_mut().prev = Some(prev);
+                }
+            } else if let Some(mut next) = next
+                && next.as_ref().free
+            {
+                let next = next.as_mut();
+
+                cur_header.size += next.size + core::mem::size_of::<FfHeader>();
+                cur_header.next = next.next;
+                next.prev = NonNull::new(cur_header as *mut _);
             }
-
-            prev.as_mut().next = next.as_ref().next;
-        } else if let Some(mut prev) = prev && prev.as_ref().free {
-            prev.as_mut().size += cur_header.size + core::mem::size_of::<FfHeader>();
-            prev.as_mut().next = next;
-
-            if let Some(mut next) = next {
-                next.as_mut().prev = Some(prev);
-            }
-        } else if let Some(mut next) = next && next.as_ref().free {
-            let next = next.as_mut();
-
-            cur_header.size += next.size + core::mem::size_of::<FfHeader>();
-            cur_header.next = next.next;
-            next.prev = NonNull::new(cur_header as *mut _);
-        }
         }
     }
 }
