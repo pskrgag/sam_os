@@ -27,7 +27,14 @@ impl Port {
     }
 
     pub fn call(&self, msg: &mut IpcMessage) -> Result<(), ErrorType> {
+        let p = Port::create().ok_or(ErrorType::NO_OPERATION)?;
+
+        msg.set_reply_port(p.handle());
         Syscall::port_call(self.h, msg)
+    }
+
+    pub fn receive(&self, msg: &mut IpcMessage) -> Result<usize, ErrorType> {
+        Syscall::port_receive(self.h, msg)
     }
 
     pub fn handle(&self) -> Handle {

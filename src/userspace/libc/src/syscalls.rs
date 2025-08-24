@@ -34,6 +34,7 @@ pub enum Syscall<'a> {
     CloseHandle(Handle),
     PortCall(Handle, *mut IpcMessage<'a>),
     PortSendWait(Handle, Handle, &'a IpcMessage<'a>, &'a mut IpcMessage<'a>),
+    PortReceive(Handle, *mut IpcMessage<'a>),
 }
 
 impl<'a> Syscall<'a> {
@@ -88,6 +89,10 @@ impl<'a> Syscall<'a> {
 
     pub fn port_call(h: Handle, msg: *mut IpcMessage<'a>) -> Result<(), ErrorType> {
         unsafe { syscall(Self::PortCall(h, msg).as_args()).map(|_| ()) }
+    }
+
+    pub fn port_receive(h: Handle, msg: *mut IpcMessage<'a>) -> Result<usize, ErrorType> {
+        unsafe { syscall(Self::PortReceive(h, msg).as_args()) }
     }
 
     pub fn port_send_wait(
@@ -208,6 +213,16 @@ impl<'a> Syscall<'a> {
             ],
             Syscall::PortCall(handle, msg) => [
                 SyscallList::SYS_PORT_CALL.into(),
+                handle,
+                msg as *mut _ as usize,
+                0,
+                0,
+                0,
+                0,
+                0,
+            ],
+            Syscall::PortReceive(handle, msg) => [
+                SyscallList::SYS_PORT_RECEIVE.into(),
                 handle,
                 msg as *mut _ as usize,
                 0,

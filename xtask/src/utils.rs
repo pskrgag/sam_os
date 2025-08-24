@@ -49,13 +49,10 @@ pub fn run_prog(
             .map_err(|x| format!("Failed to read cpio output {x}"))?;
     }
 
-    let _exit = child
+    let exit = child
         .wait()
         .map_err(|x| format!("Failed to run {name} {x}"))?;
 
-    // Cargo prints a lot of stuff to stderr for some reason, but I like to perverse warnings
-    // during build
-    // if !exit.success() {
     let mut err = Vec::new();
     child
         .stderr
@@ -63,11 +60,13 @@ pub fn run_prog(
         .unwrap()
         .read_to_end(&mut err)
         .map_err(|_| "Failed to read stderr of a process")?;
-
     std::io::stderr().write(err.as_slice()).unwrap();
 
-    // return Err(format!("{name} failed with: {exit}"));
-    // }
+    // Cargo prints a lot of stuff to stderr for some reason, but I like to perverse warnings
+    // during build
+    if !exit.success() {
+        return Err(format!("{name} failed with: {exit}"));
+    }
 
     Ok(())
 }

@@ -19,13 +19,19 @@ fn main(_: Handle) {
             i.name()
         };
 
-        println!("Creating");
         let mut task = Task::create_from_elf(elf, name.to_string()).expect("Failed to create task");
         task.start(p.handle()).unwrap();
 
         println!("Spawned '{}'", task.name())
     }
-    println!("Hello, world!");
+
+    let mut server = bindings::Hello::new(p.handle(), ())
+        .register_handler(|_: bindings::TestTx, _| {
+            return Ok(bindings::TestRx {});
+        });
+
+    println!("Starting server");
+    server.run();
 }
 
 include!(concat!(env!("OUT_DIR"), "/hello.rs"));

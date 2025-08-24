@@ -1,0 +1,3 @@
+interface Hello {
+	Test(in I32 a);
+}

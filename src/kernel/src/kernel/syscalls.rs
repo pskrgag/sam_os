@@ -196,7 +196,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             let out_msg = UserPtr::new(args.arg::<usize>(3) as *mut IpcMessage);
 
             drop(table);
-            port.send_wait(args.arg(1), in_msg, out_msg).map(|_| 0)
+            port.send_wait(args.arg(1), in_msg, out_msg)
         }
         SyscallList::SYS_PORT_RECEIVE => {
             let port = table
@@ -205,7 +205,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             let in_msg = UserPtr::new(args.arg::<usize>(1) as *mut IpcMessage);
 
             drop(table);
-            port.receive(in_msg).map(|_| 0)
+            port.receive(in_msg)
         }
         _ => Err(ErrorType::NO_OPERATION),
     }

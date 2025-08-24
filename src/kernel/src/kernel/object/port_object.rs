@@ -123,7 +123,7 @@ impl Port {
         reply_port_handle: HandleBase,
         user_msg_in: UserPtr<IpcMessage<'static>>,
         user_msg_out: UserPtr<IpcMessage<'static>>,
-    ) -> Result<(), ErrorType> {
+    ) -> Result<usize, ErrorType> {
         let cur = current().unwrap();
         let self_task = cur.task();
         let mut self_table = self_task.handle_table();
@@ -152,9 +152,9 @@ impl Port {
     pub fn receive(
         &self,
         mut server_msg_uptr: UserPtr<IpcMessage<'static>>,
-    ) -> Result<(), ErrorType> {
+    ) -> Result<usize, ErrorType> {
         let mut server_msg = copy_ipc_message_from_user(server_msg_uptr).ok_or(ErrorType::FAULT)?;
-
+        let mut arena_len = 0;
         let c = current().unwrap();
 
         let mut client_msg;
@@ -178,6 +178,7 @@ impl Port {
             let mut ud = UserPtr::new_array(d.as_ptr(), d.len());
 
             if let Some(d1) = client_msg.out_arena() {
+                arena_len = d1.len();
                 ud.write_array(d1)?;
                 unsafe { drop(Box::from_raw(d1)) };
             }
@@ -190,6 +191,6 @@ impl Port {
 
         // Commit it to userspace
         server_msg_uptr.write(&server_msg)?;
-        Ok(())
+        Ok(arena_len)
     }
 }
