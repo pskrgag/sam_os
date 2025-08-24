@@ -8,7 +8,7 @@ use rtl::handle::Handle;
 fn main(root: Handle) {
     println!("Hello, world!");
 
-    let mut client = bindings::Hello::new(root);
+    let client = bindings::Hello::new(root);
 
     client.Test(10).unwrap();
 }

@@ -27,11 +27,11 @@ fn main(_: Handle) {
 
     let mut server = bindings::Hello::new(p.handle(), ())
         .register_handler(|_: bindings::TestTx, _| {
-            return Ok(bindings::TestRx {});
+            Ok(bindings::TestRx {})
         });
 
     println!("Starting server");
-    server.run();
+    server.run().unwrap();
 }
 
 include!(concat!(env!("OUT_DIR"), "/hello.rs"));

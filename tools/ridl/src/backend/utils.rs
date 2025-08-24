@@ -21,6 +21,7 @@ pub fn start_mod<W: Write>(buf: &mut W) {
     writeln!(buf, "#[allow(unused_imports)]").unwrap();
     writeln!(buf, "#[allow(unreachable_patterns)]").unwrap();
     writeln!(buf, "#[allow(private_bounds)]").unwrap();
+    writeln!(buf, "#[allow(clippy::type_complexity)]").unwrap();
     writeln!(buf, "mod bindings {{").unwrap();
 }
 

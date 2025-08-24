@@ -52,10 +52,6 @@ impl Type {
         let kind = TypeKind::Builtin(*KEYWORDS.get(name.as_str())?);
         Some(Self { kind })
     }
-
-    pub fn kind(&self) -> TypeKind {
-        self.kind
-    }
 }
 
 impl Display for Type {

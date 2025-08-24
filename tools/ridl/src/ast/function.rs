@@ -43,10 +43,6 @@ impl Function {
     pub fn args(&self) -> &Vec<Argument> {
         &self.args
     }
-
-    pub fn uid(&self) -> u64 {
-        self.uid
-    }
 }
 
 impl Hash for Function {
