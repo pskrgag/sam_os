@@ -4,8 +4,10 @@ use std::collections::HashMap;
 pub enum IdType {
     Identifier,
     Interface,
+    Type,
     In,
     Out,
+    Sequence,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -15,8 +17,12 @@ pub enum TokenType {
     RightCurlParen,
     LeftParen,
     RightParen,
+    Less,
+    Greater,
     Comma,
+    Equal,
     Semicolumn,
+    Number(i64),
 }
 
 #[derive(Debug, Copy, Clone, Default)]
@@ -38,6 +44,8 @@ lazy_static::lazy_static! {
             ("interface", TokenType::TokenId(IdType::Interface)),
             ("in", TokenType::TokenId(IdType::In)),
             ("out", TokenType::TokenId(IdType::Out)),
+            ("type", TokenType::TokenId(IdType::Type)),
+            ("Sequence", TokenType::TokenId(IdType::Sequence)),
         ]);
 }
 
@@ -53,6 +61,19 @@ impl Token {
         Self {
             tp,
             string: string.to_owned(),
+            loc,
+        }
+    }
+
+    pub fn new_number(string: &[u8], loc: Location) -> Self {
+        let string = std::str::from_utf8(string)
+            .expect("Non utf8 source???")
+            .to_owned();
+        let num = string.parse().unwrap();
+
+        Self {
+            tp: TokenType::Number(num),
+            string,
             loc,
         }
     }

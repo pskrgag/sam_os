@@ -1,5 +1,6 @@
 use super::lexer::Lexer;
 use super::token::*;
+use std::collections::HashMap;
 
 use crate::ast::argtype::Type;
 use crate::ast::function::{Argument, Function};
@@ -10,15 +11,43 @@ use crate::error_reporter::ErrorReporter;
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
     reporter: &'a ErrorReporter<'a>,
+    aliases: HashMap<String, Type>,
+    lookahead: Option<Token>,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(lexer: Lexer<'a>, reporter: &'a ErrorReporter) -> Self {
-        Self { lexer, reporter }
+        Self {
+            lexer,
+            reporter,
+            aliases: HashMap::new(),
+            lookahead: None,
+        }
+    }
+
+    fn lookahead_token_type(&mut self, t: TokenType) -> Option<Token> {
+        self.lookahead_token_pred(|token| token.get_type() == t)
+    }
+
+    fn lookahead_token_pred<F: Fn(&Token) -> bool>(&mut self, f: F) -> Option<Token> {
+        if let Some(la) = self.lookahead.as_ref() {
+            return f(la).then_some(self.lookahead.take().unwrap());
+        }
+
+        let t = self.lexer.next()?;
+
+        if f(&t) {
+            Some(t)
+        } else {
+            assert!(self.lookahead.is_none());
+
+            self.lookahead = Some(t);
+            None
+        }
     }
 
     fn consume_token_pred<F: Fn(&Token) -> bool>(&mut self, f: F) -> Option<Token> {
-        let t = self.lexer.next()?;
+        let t = self.lookahead.take().or_else(|| self.lexer.next())?;
 
         if f(&t) {
             Some(t)
@@ -36,32 +65,47 @@ impl<'a> Parser<'a> {
         self.lexer.next_token()
     }
 
+    fn parse_type(&mut self) -> Option<Type> {
+        if let Some(tp) = self.lookahead_token_type(TokenType::TokenId(IdType::Identifier)) {
+            // There could be recursive aliases... Don't care for now
+            Type::new(tp.get_str().to_owned()).or(self.aliases.get(tp.get_str()).cloned())
+        } else if self
+            .lookahead_token_type(TokenType::TokenId(IdType::Sequence))
+            .is_some()
+        {
+            self.consume_token_type(TokenType::Less)?;
+
+            let inner = Box::new(self.parse_type()?);
+            self.consume_token_type(TokenType::Comma)?;
+            let count =
+                self.consume_token_pred(|x| matches!(x.get_type(), TokenType::Number(_)))?;
+            let count = match count.get_type() {
+                TokenType::Number(x) => x,
+                _ => panic!(""),
+            }
+            .try_into()
+            .unwrap();
+            self.consume_token_type(TokenType::Greater)?;
+
+            Some(Type::Sequence { inner, count })
+        } else {
+            println!("Failed to parse type!");
+            None
+        }
+    }
+
     fn parse_function_arg(&mut self) -> Option<Argument> {
         let arg_dir = self.consume_token_pred(|t| {
             t.get_type() == TokenType::TokenId(IdType::In)
                 || t.get_type() == TokenType::TokenId(IdType::Out)
         })?;
-        let arg_type = self.consume_token_type(TokenType::TokenId(IdType::Identifier))?;
+        let arg_type = self.parse_type()?;
         let name = self.consume_token_type(TokenType::TokenId(IdType::Identifier))?;
 
         if arg_dir.get_type() == TokenType::TokenId(IdType::In) {
-            Some(Argument::In(
-                crate::type_or_report!(
-                    Type::new(arg_type.get_str().to_owned()),
-                    &self.reporter,
-                    arg_type
-                )?,
-                name.get_str().to_owned(),
-            ))
+            Some(Argument::In(arg_type, name.get_str().to_owned()))
         } else {
-            Some(Argument::Out(
-                crate::type_or_report!(
-                    Type::new(arg_type.get_str().to_owned()),
-                    &self.reporter,
-                    arg_type
-                )?,
-                name.get_str().to_owned(),
-            ))
+            Some(Argument::Out(arg_type, name.get_str().to_owned()))
         }
     }
 
@@ -133,25 +177,43 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> Option<Module> {
-        let mut v = Module::new();
-        let t = self.consume_token_pred(|t| t.get_type() == TokenType::TokenId(IdType::Interface));
+    fn parse_aliases(&mut self) -> Option<HashMap<String, Type>> {
+        let mut map = HashMap::new();
 
-        match t {
-            Some(_) => v.add_interface(self.parse_interface()?),
-            None => {
-                error!("Failed to parse!");
-                return None;
-            }
+        while self
+            .lookahead_token_type(TokenType::TokenId(IdType::Type))
+            .is_some()
+        {
+            let name = self.consume_token_type(TokenType::TokenId(IdType::Identifier))?;
+            self.consume_token_type(TokenType::Equal)?;
+            let tp = self.parse_type()?;
+
+            self.consume_token_type(TokenType::Semicolumn)?;
+            map.insert(name.get_str().to_owned(), tp);
         }
 
-        Some(v)
+        Some(map)
+    }
+
+    pub fn parse(mut self) -> Option<Module> {
+        let mut mods = vec![];
+        self.aliases = self.parse_aliases()?;
+
+        if self
+            .consume_token_type(TokenType::TokenId(IdType::Interface))
+            .is_some()
+        {
+            mods.push(self.parse_interface()?);
+        }
+
+        Some(Module::new(self.aliases, mods))
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::ast::argtype::BuiltinTypes;
     use crate::error_reporter;
 
     #[test]
@@ -159,7 +221,7 @@ mod test {
         let text = "interface test { }";
         let lexer = Lexer::new(text.as_bytes());
         let reporter = error_reporter::ErrorReporter::new(text.as_bytes());
-        let mut parser = Parser::new(lexer, &reporter);
+        let parser = Parser::new(lexer, &reporter);
 
         assert!(parser.parse().is_some());
     }
@@ -177,7 +239,7 @@ mod test {
         for i in text {
             let lexer = Lexer::new(i.as_bytes());
             let reporter = error_reporter::ErrorReporter::new(i.as_bytes());
-            let mut parser = Parser::new(lexer, &reporter);
+            let parser = Parser::new(lexer, &reporter);
 
             assert!(parser.parse().is_none());
         }
@@ -188,8 +250,35 @@ mod test {
         let text = "interface test { Test(out I32 a); }";
         let lexer = Lexer::new(text.as_bytes());
         let reporter = error_reporter::ErrorReporter::new(text.as_bytes());
-        let mut parser = Parser::new(lexer, &reporter);
+        let parser = Parser::new(lexer, &reporter);
 
         assert!(parser.parse().is_some());
+    }
+
+    #[test]
+    fn test_sequence() {
+        let text = "type Name = Sequence<I32, 10>;";
+        let lexer = Lexer::new(text.as_bytes());
+        let reporter = error_reporter::ErrorReporter::new(text.as_bytes());
+        let parser = Parser::new(lexer, &reporter);
+
+        assert!(parser.parse().is_some());
+    }
+
+    #[test]
+    fn test_aliases() {
+        let text = "type Name = I32; interface test { Test(out Name a); }";
+        let lexer = Lexer::new(text.as_bytes());
+        let reporter = error_reporter::ErrorReporter::new(text.as_bytes());
+        let parser = Parser::new(lexer, &reporter);
+
+        let md = parser.parse().unwrap();
+        let arg = &md.interfaces()[0].functions()[0].args()[0];
+
+        // Check that alias is resolved
+        assert!(matches!(
+            arg,
+            Argument::Out(Type::Builtin(BuiltinTypes::I32), _)
+        ));
     }
 }

@@ -1,5 +1,5 @@
 use super::handle::Handle;
-use super::eort_object::Port;
+use super::port_object::Port;
 use super::task_object::Task;
 use crate::kernel::sched::current;
 use alloc::string::ToString;

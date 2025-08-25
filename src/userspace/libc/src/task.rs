@@ -74,3 +74,9 @@ impl Task {
         Some(Vms::new(Syscall::task_get_vms(self.h).ok()?))
     }
 }
+
+impl Drop for Task {
+    fn drop(&mut self) {
+        Syscall::close_handle(self.h).unwrap();
+    }
+}

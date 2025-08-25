@@ -28,7 +28,7 @@ fn main(_: Handle) {
     let mut server = bindings::Hello::new(p, ())
         .register_handler(|_: bindings::TestTx, _| Ok(bindings::TestRx { b: 100 }));
 
-    println!("Starting server");
+    println!("Starting nameserver...");
     server.run().unwrap();
 }
 

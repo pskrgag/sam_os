@@ -19,16 +19,15 @@ pub enum BuiltinTypes {
     Handle,
 }
 
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
-pub enum TypeKind {
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub enum Type {
     Builtin(BuiltinTypes),
+    Sequence {
+        inner: Box<Type>,
+        count: usize,
+    },
     #[allow(dead_code)]
     UserDefined(UserStruct),
-}
-
-#[derive(Clone, Debug, Hash)]
-pub struct Type {
-    kind: TypeKind,
 }
 
 lazy_static::lazy_static! {
@@ -49,15 +48,14 @@ lazy_static::lazy_static! {
 
 impl Type {
     pub fn new(name: String) -> Option<Self> {
-        let kind = TypeKind::Builtin(*KEYWORDS.get(name.as_str())?);
-        Some(Self { kind })
+        Some(Type::Builtin(*KEYWORDS.get(name.as_str())?))
     }
 }
 
 impl Display for Type {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        match self.kind {
-            TypeKind::Builtin(bt) => {
+        match self {
+            Self::Builtin(bt) => {
                 let s = match bt {
                     BuiltinTypes::U8 => "u8",
                     BuiltinTypes::I8 => "i8",

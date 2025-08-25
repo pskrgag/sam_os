@@ -28,7 +28,7 @@ impl<'a> Lexer<'a> {
 
         self.prev_token = Some(start);
         (
-            &self.source[start..self.parsed],
+            &self.source[start..self.parsed.min(self.source.len())],
             Location {
                 line: self.line,
                 pos: start,
@@ -94,6 +94,20 @@ impl<'a> Lexer<'a> {
         Some(Token::new_id(t.0, t.1))
     }
 
+    fn consume_number(&mut self) -> Option<Token> {
+        while let Some(s) = self.peek() {
+            if s.is_ascii_digit() {
+                self.consume();
+            } else {
+                self.unconsume();
+                break;
+            }
+        }
+
+        let t = self.finish_token();
+        Some(Token::new_number(t.0, t.1))
+    }
+
     #[cfg(test)]
     pub fn into_iter(self) -> Self {
         self
@@ -132,9 +146,23 @@ impl<'a> Lexer<'a> {
                     let t = self.finish_token();
                     Some(Token::new(TokenType::Semicolumn, t.0, t.1))
                 }
+                b'<' => {
+                    let t = self.finish_token();
+                    Some(Token::new(TokenType::Less, t.0, t.1))
+                }
+                b'>' => {
+                    let t = self.finish_token();
+                    Some(Token::new(TokenType::Greater, t.0, t.1))
+                }
+                b'=' => {
+                    let t = self.finish_token();
+                    Some(Token::new(TokenType::Equal, t.0, t.1))
+                }
                 other => {
                     if other.is_ascii_alphabetic() {
                         self.consume_word()
+                    } else if other.is_ascii_digit() {
+                        self.consume_number()
                     } else if other.is_ascii_whitespace() {
                         panic!("Should be skipped already");
                     } else {
@@ -313,6 +341,25 @@ mod test {
                 "}".as_bytes(),
                 Location::default(),
             ),
+        ];
+
+        assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);
+    }
+
+    #[test]
+    fn test_number() {
+        let text = "10";
+        let lexer = Lexer::new(text.as_bytes());
+        let expected = vec![
+            Token::new_number("10".as_bytes(), Location::default()),
+        ];
+
+        assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);
+
+        let text = "1212110";
+        let lexer = Lexer::new(text.as_bytes());
+        let expected = vec![
+            Token::new_number("1212110".as_bytes(), Location::default()),
         ];
 
         assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);

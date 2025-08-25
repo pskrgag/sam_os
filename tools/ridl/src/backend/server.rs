@@ -37,7 +37,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
 
         let mut in_msg = IpcMessage::new();
         let mut receive_buffer = [0u8; core::mem::size_of::<Tx>()];
-        let mut reply_vec = alloc::vec::Vec::new();
+        let mut reply_vec;
 
         in_msg.set_in_arena(receive_buffer.as_mut_slice());
 

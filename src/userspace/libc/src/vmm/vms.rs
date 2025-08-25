@@ -65,6 +65,12 @@ impl Vms {
 unsafe impl Send for Vms {}
 unsafe impl Sync for Vms {}
 
+impl Drop for Vms {
+    fn drop(&mut self) {
+        Syscall::close_handle(self.h).unwrap();
+    }
+}
+
 pub fn init_self_vms(h: Handle) {
     unsafe {
         SELF_VMS = Vms::new(h);

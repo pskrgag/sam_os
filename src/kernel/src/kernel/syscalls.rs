@@ -3,7 +3,7 @@ use crate::{
         object::{
             factory_object::Factory,
             handle::Handle,
-            eort_object::Port,
+            port_object::Port,
             task_object::Task,
             vm_object::VmObject,
             vms_object::{VmoCreateArgs, Vms},
