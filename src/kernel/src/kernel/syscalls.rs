@@ -3,7 +3,7 @@ use crate::{
         object::{
             factory_object::Factory,
             handle::Handle,
-            port_object::Port,
+            eort_object::Port,
             task_object::Task,
             vm_object::VmObject,
             vms_object::{VmoCreateArgs, Vms},
@@ -192,11 +192,10 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             let port = table
                 .find::<Port>(args.arg(0))
                 .ok_or(ErrorType::INVALID_HANDLE)?;
-            let in_msg = UserPtr::new(args.arg::<usize>(2) as *mut IpcMessage);
-            let out_msg = UserPtr::new(args.arg::<usize>(3) as *mut IpcMessage);
+            let msg = UserPtr::new(args.arg::<usize>(2) as *mut IpcMessage);
 
             drop(table);
-            port.send_wait(args.arg(1), in_msg, out_msg)
+            port.send_wait(args.arg(1), msg)
         }
         SyscallList::SYS_PORT_RECEIVE => {
             let port = table

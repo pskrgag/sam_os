@@ -25,10 +25,8 @@ fn main(_: Handle) {
         println!("Spawned '{}'", task.name())
     }
 
-    let mut server = bindings::Hello::new(p.handle(), ())
-        .register_handler(|_: bindings::TestTx, _| {
-            Ok(bindings::TestRx {})
-        });
+    let mut server = bindings::Hello::new(p, ())
+        .register_handler(|_: bindings::TestTx, _| Ok(bindings::TestRx { b: 100 }));
 
     println!("Starting server");
     server.run().unwrap();

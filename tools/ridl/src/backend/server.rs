@@ -1,8 +1,5 @@
 use super::utils;
-use crate::ast::{
-    interface::Interface,
-    module::Module,
-};
+use crate::ast::{interface::Interface, module::Module};
 use std::io::Write;
 use utils::{function_to_struct, Message};
 
@@ -23,8 +20,10 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
         for (num, func) in self.interface.functions().iter().enumerate() {
             let name = func.name();
             res.push_str(
-                format!("Tx::{name}(_) => self.handlers[{num}].as_mut().unwrap()(payload.clone()),\n")
-                    .as_str(),
+                format!(
+                    "Tx::{name}(_) => self.handlers[{num}].as_mut().unwrap()(payload.clone()),\n"
+                )
+                .as_str(),
             );
         }
 
@@ -35,19 +34,37 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
         write!(
             self.buf,
             r#"    pub fn run(&mut self) -> Result<(), ErrorType> {{
-        let mut message = IpcMessage::new();
+
+        let mut in_msg = IpcMessage::new();
         let mut receive_buffer = [0u8; core::mem::size_of::<Tx>()];
+        let mut reply_vec = alloc::vec::Vec::new();
 
-        message.set_in_arena(receive_buffer.as_mut_slice());
+        in_msg.set_in_arena(receive_buffer.as_mut_slice());
 
-        let size = Port::new(self.handle).receive(&mut message)?;
-        let payload: Tx = from_bytes(&receive_buffer[..size]).unwrap();
+        let mut size = self.port.receive(&mut in_msg)?;
 
-        match payload {{
-            {}
-        }}?;
+        loop {{
+            let payload: Tx = from_bytes(&in_msg.in_arena().unwrap()[..size]).unwrap();
+            let reply_port = in_msg.reply_port();
 
-        Ok(())
+            in_msg = IpcMessage::new();
+
+            let res = match payload {{
+                {}
+            }};
+
+            let reply = match res {{
+                Ok(e) => RxMessage::Ok(e),
+                Err(e) => RxMessage::Err(e.bits()),
+            }};
+
+            reply_vec = to_allocvec(&reply).unwrap();
+
+            in_msg.set_in_arena(receive_buffer.as_mut_slice());
+            in_msg.set_out_arena(reply_vec.as_slice());
+
+            size = self.port.send_and_wait(reply_port, &mut in_msg)?;
+        }}
     }}
 "#,
             self.match_payload(),
@@ -95,14 +112,14 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
             self.buf,
             r#"
 pub struct {name}<S> {{
-    handle: Handle,
+    port: Port,
     handlers: [Option<Box<dyn Fn(Tx) -> Result<Rx, ErrorType>>>; {num}],
     state: Arc<S>,
 }}
 
 impl<S: 'static> {name}<S> {{
-    pub fn new(handle: Handle, s: S) -> Self {{
-        Self {{ handle, handlers: [None; {num}], state: Arc::new(s), }}
+    pub fn new(port: Port, s: S) -> Self {{
+        Self {{ port, handlers: [None; {num}], state: Arc::new(s), }}
     }}
 "#
         )

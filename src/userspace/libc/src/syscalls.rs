@@ -33,7 +33,7 @@ pub enum Syscall<'a> {
     VmsHandle(Handle),
     CloseHandle(Handle),
     PortCall(Handle, *mut IpcMessage<'a>),
-    PortSendWait(Handle, Handle, &'a IpcMessage<'a>, &'a mut IpcMessage<'a>),
+    PortSendWait(Handle, Handle, *mut IpcMessage<'a>),
     PortReceive(Handle, *mut IpcMessage<'a>),
 }
 
@@ -98,10 +98,9 @@ impl<'a> Syscall<'a> {
     pub fn port_send_wait(
         h: Handle,
         reply_port: Handle,
-        in_msg: &'a IpcMessage<'a>,
-        out_msg: &'a mut IpcMessage<'a>,
-    ) -> Result<(), ErrorType> {
-        unsafe { syscall(Self::PortSendWait(h, reply_port, in_msg, out_msg).as_args()).map(|_| ()) }
+        msg: *mut IpcMessage<'a>,
+    ) -> Result<usize, ErrorType> {
+        unsafe { syscall(Self::PortSendWait(h, reply_port, msg).as_args()) }
     }
 
     pub fn as_args(self) -> [usize; 8] {
@@ -231,12 +230,12 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
-            Syscall::PortSendWait(handle, reply_port, in_msg, out_msg) => [
+            Syscall::PortSendWait(handle, reply_port, msg) => [
                 SyscallList::SYS_PORT_SEND_WAIT.into(),
                 handle,
                 reply_port,
-                in_msg as *const _ as usize,
-                out_msg as *mut _ as usize,
+                msg as *const _ as usize,
+                0,
                 0,
                 0,
                 0,

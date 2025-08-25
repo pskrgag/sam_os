@@ -35,29 +35,10 @@ pub fn includes<W: Write>(buf: &mut W) {
     writeln!(buf, "use rtl::error::ErrorType;").unwrap();
     writeln!(buf, "use serde::{{Deserialize, Serialize}};").unwrap();
     writeln!(buf, "use alloc::boxed::Box;").unwrap();
-    writeln!(buf, "use postcard::{{to_allocvec, from_bytes}};").unwrap();
+    writeln!(buf, "use postcard::{{to_allocvec, from_bytes, to_slice}};").unwrap();
     writeln!(buf, "use libc::port::Port;").unwrap();
     writeln!(buf, "use alloc::sync::Arc;").unwrap();
     writeln!(buf).unwrap();
-}
-
-pub fn make_struct<W: Write>(buf: &mut W, name: &str, extra: &str, extra_contructor: &str) {
-    writeln!(
-        buf,
-        "pub struct {} {{\n    handle: Handle, {extra}\n}}\n",
-        name,
-    )
-    .unwrap();
-    write!(buf, "impl {} {{", name).unwrap();
-    writeln!(
-        buf,
-        r#"
-    pub fn new(handle: Handle) -> Self {{
-        Self {{ handle, {extra_contructor} }}
-    }}
-"#,
-    )
-    .unwrap();
 }
 
 pub fn end_impl<W: Write>(buf: &mut W) {
@@ -78,7 +59,7 @@ fn produce_compound_enum<W: Write>(
     .unwrap();
 
     for data in &s.data {
-        writeln!(buf, "    {}: {}", data.0, data.1).unwrap();
+        writeln!(buf, "    pub {}: {}", data.0, data.1).unwrap();
     }
 
     writeln!(buf, "}}").unwrap();
@@ -109,9 +90,26 @@ impl TryInto<{name}{suffix}> for Tx {{
         writeln!(
             buf,
             r#"
+#[derive(Serialize, Deserialize, Debug, Clone)]
+enum RxMessage {{
+    Ok(Rx),
+    Err(usize),
+}}
+
 impl From<{name}{suffix}> for Rx {{
     fn from(value: {name}{suffix}) -> Self {{
         Self::{name}(value)
+    }}
+}}
+
+impl TryInto<{name}{suffix}> for Rx {{
+    type Error = ();
+
+    fn try_into(self) -> Result<{name}{suffix}, Self::Error> {{
+        match self {{
+            Self::{name}(e) => Ok(e),
+            _ => Err(()),
+        }}
     }}
 }}
 "#

@@ -17,13 +17,12 @@ impl Port {
         factory().create_port()
     }
 
-    pub fn send_and_wait<'a>(
+    pub fn send_and_wait(
         &self,
-        reply_port: Port,
-        msg: &'a IpcMessage<'a>,
-        reply: &'a mut IpcMessage<'a>,
-    ) -> Result<(), ErrorType> {
-        Syscall::port_send_wait(self.h, reply_port.handle(), msg, reply)
+        reply_port: Handle,
+        reply: &mut IpcMessage,
+    ) -> Result<usize, ErrorType> {
+        Syscall::port_send_wait(self.h, reply_port, reply)
     }
 
     pub fn call(&self, msg: &mut IpcMessage) -> Result<(), ErrorType> {

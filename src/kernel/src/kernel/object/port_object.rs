@@ -121,8 +121,7 @@ impl Port {
     pub fn send_wait(
         &self,
         reply_port_handle: HandleBase,
-        user_msg_in: UserPtr<IpcMessage<'static>>,
-        user_msg_out: UserPtr<IpcMessage<'static>>,
+        msg: UserPtr<IpcMessage<'static>>,
     ) -> Result<usize, ErrorType> {
         let cur = current().unwrap();
         let self_task = cur.task();
@@ -137,7 +136,7 @@ impl Port {
         self_table.remove(reply_port_handle);
         drop(self_table);
 
-        let user_msg = copy_ipc_message_from_user(user_msg_in).ok_or(ErrorType::FAULT)?;
+        let user_msg = copy_ipc_message_from_user(msg).ok_or(ErrorType::FAULT)?;
 
         Self::transfer_handles_from_current(&task, user_msg.handles())
             .ok_or(ErrorType::INVALID_HANDLE)?;
@@ -146,7 +145,7 @@ impl Port {
         let sleep = reply_port.sleepers.lock().pop_front().unwrap();
 
         sleep.wake();
-        self.receive(user_msg_out)
+        self.receive(msg)
     }
 
     pub fn receive(

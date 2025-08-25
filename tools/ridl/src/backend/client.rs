@@ -33,10 +33,15 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
         message.set_out_arena(data_vec.as_slice());
         message.set_in_arena(receive_buffer.as_mut_slice());
 
-        Port::new(self.handle).call(&mut message)?;
+        self.port.call(&mut message)?;
 
-        let res = from_bytes(message.in_data.unwrap()).unwrap();
-        Ok(res)"#,
+        let res: RxMessage = from_bytes(message.in_data.unwrap()).unwrap();
+
+        match res {{
+            RxMessage::Ok(e) => Ok(e.try_into().unwrap()),
+            RxMessage::Err(e) => Err(e.into()),
+        }}
+"#,
                 f.name(),
                 f.name(),
                 f.name(),
@@ -60,10 +65,29 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
         utils::produce_enums(self.buf, &self.messages);
     }
 
+    fn make_struct(&mut self) {
+        let name = self.interface.name();
+
+        writeln!(
+            self.buf,
+            r#"
+pub struct {name} {{
+    port: Port,
+}}
+
+impl {name} {{
+    pub fn new(port: Port) -> Self {{
+        Self {{ port }}
+    }}
+"#
+        )
+        .unwrap()
+    }
+
     pub fn compile(mut self) {
         utils::start_mod(self.buf);
         utils::includes(self.buf);
-        utils::make_struct(self.buf, self.interface.name(), "", "");
+        self.make_struct();
 
         for func in self.interface.functions() {
             self.compile_function(func);
