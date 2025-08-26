@@ -21,7 +21,7 @@ pub fn generate_client<I: AsRef<Path>, O: AsRef<Path>>(idl: I, out: O) -> Result
         .unwrap_or_else(|_| format!("Failed to read file '{:?}'", idl.as_ref()));
     let reporter = error_reporter::ErrorReporter::new(source.as_bytes());
     let lexer = Lexer::new(source.as_bytes());
-    let mut parser = Parser::new(lexer, &reporter);
+    let parser = Parser::new(lexer, &reporter);
 
     let ast = parser
         .parse()
@@ -42,7 +42,7 @@ pub fn generate_server<I: AsRef<Path>, O: AsRef<Path>>(idl: I, out: O) -> Result
         .unwrap_or_else(|_| format!("Failed to read file '{:?}'", idl.as_ref()));
     let reporter = error_reporter::ErrorReporter::new(source.as_bytes());
     let lexer = Lexer::new(source.as_bytes());
-    let mut parser = Parser::new(lexer, &reporter);
+    let parser = Parser::new(lexer, &reporter);
 
     let ast = parser
         .parse()

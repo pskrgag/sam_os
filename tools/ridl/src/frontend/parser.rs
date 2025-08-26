@@ -206,7 +206,7 @@ impl<'a> Parser<'a> {
             mods.push(self.parse_interface()?);
         }
 
-        Some(Module::new(self.aliases, mods))
+        Some(Module::new(mods))
     }
 }
 

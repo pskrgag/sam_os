@@ -66,14 +66,14 @@ impl Type {
                     BuiltinTypes::Handle => "Handle",
                 };
 
-                format!("{s}")
+                s.to_string()
             }
             Self::Sequence { inner, .. } => {
                 if **inner != Self::Builtin(BuiltinTypes::Char) {
                     format!("&[{}]", inner.as_wire())
                 } else {
                     // Special case, since &[char] != &str in rust
-                    format!("&str")
+                    "&str".to_string()
                 }
             }
             _ => todo!(),
@@ -96,7 +96,7 @@ impl Type {
                     BuiltinTypes::Handle => "Handle",
                 };
 
-                format!("{s}")
+                s.to_string()
             }
             Self::Sequence { inner, count } => format!("[{}; {count}]", inner.as_wire()),
             _ => todo!(),

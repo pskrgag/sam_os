@@ -4,8 +4,9 @@ use crate::syscalls_aarch64::*;
 #[cfg(target_arch = "x86_64")]
 use crate::syscalls_x86_64::*;
 
+use super::handle::Handle;
 use rtl::error::ErrorType;
-use rtl::handle::Handle;
+use rtl::handle::Handle as RawHandle;
 use rtl::ipc::IpcMessage;
 use rtl::objects::vmo::VmoFlags;
 use rtl::syscalls::SyscallList;
@@ -22,19 +23,19 @@ pub enum VmoCreateArgs {
 pub enum Syscall<'a> {
     Write(&'a str),
     Yield,
-    CreatePort(Handle),
-    CreateTask(Handle, &'a str),
-    VmAllocate(Handle, usize, MappingType),
-    VmFree(Handle, *mut u8, usize),
-    VmCreateVmo(Handle, VmoCreateArgs),
-    VmMapVmo(Handle, Handle),
-    VmMapPhys(Handle, PhysAddr, usize),
-    TaskStart(Handle, VirtAddr, Handle),
-    VmsHandle(Handle),
-    CloseHandle(Handle),
-    PortCall(Handle, *mut IpcMessage<'a>),
-    PortSendWait(Handle, Handle, *mut IpcMessage<'a>),
-    PortReceive(Handle, *mut IpcMessage<'a>),
+    CreatePort(RawHandle),
+    CreateTask(RawHandle, &'a str),
+    VmAllocate(RawHandle, usize, MappingType),
+    VmFree(RawHandle, *mut u8, usize),
+    VmCreateVmo(RawHandle, VmoCreateArgs),
+    VmMapVmo(RawHandle, RawHandle),
+    VmMapPhys(RawHandle, PhysAddr, usize),
+    TaskStart(RawHandle, VirtAddr, RawHandle),
+    VmsHandle(RawHandle),
+    CloseHandle(RawHandle),
+    PortCall(RawHandle, *mut IpcMessage<'a>),
+    PortSendWait(RawHandle, RawHandle, *mut IpcMessage<'a>),
+    PortReceive(RawHandle, *mut IpcMessage<'a>),
 }
 
 impl<'a> Syscall<'a> {
@@ -47,60 +48,60 @@ impl<'a> Syscall<'a> {
         unsafe { syscall(Self::Yield.as_args()).unwrap() };
     }
 
-    pub fn create_port(h: Handle) -> Result<Handle, ErrorType> {
-        unsafe { syscall(Self::CreatePort(h).as_args()) }
+    pub fn create_port(h: &Handle) -> Result<Handle, ErrorType> {
+        unsafe { syscall(Self::CreatePort(h.as_raw()).as_args()).map(Handle::new) }
     }
 
-    pub fn create_task(h: Handle, name: &'a str) -> Result<Handle, ErrorType> {
-        unsafe { syscall(Self::CreateTask(h, name).as_args()) }
+    pub fn create_task(h: &Handle, name: &'a str) -> Result<Handle, ErrorType> {
+        unsafe { syscall(Self::CreateTask(h.as_raw(), name).as_args()).map(Handle::new) }
     }
 
-    pub fn vm_allocate(h: Handle, size: usize, mt: MappingType) -> Result<*mut u8, ErrorType> {
-        unsafe { syscall(Self::VmAllocate(h, size, mt).as_args()).map(|x| x as *mut u8) }
+    pub fn vm_allocate(h: &Handle, size: usize, mt: MappingType) -> Result<*mut u8, ErrorType> {
+        unsafe { syscall(Self::VmAllocate(h.as_raw(), size, mt).as_args()).map(|x| x as *mut u8) }
     }
 
-    pub fn vm_free(h: Handle, ptr: *mut u8, size: usize) -> Result<(), ErrorType> {
-        unsafe { syscall(Self::VmFree(h, ptr, size).as_args()).map(|_| ()) }
+    pub fn vm_free(h: &Handle, ptr: *mut u8, size: usize) -> Result<(), ErrorType> {
+        unsafe { syscall(Self::VmFree(h.as_raw(), ptr, size).as_args()).map(|_| ()) }
     }
 
-    pub fn vm_create_vmo(h: Handle, args: VmoCreateArgs) -> Result<Handle, ErrorType> {
-        unsafe { syscall(Self::VmCreateVmo(h, args).as_args()) }
+    pub fn vm_create_vmo(h: &Handle, args: VmoCreateArgs) -> Result<Handle, ErrorType> {
+        unsafe { syscall(Self::VmCreateVmo(h.as_raw(), args).as_args()).map(Handle::new) }
     }
 
-    pub fn vm_map_vmo(vms: Handle, vmo: Handle) -> Result<(), ErrorType> {
-        unsafe { syscall(Self::VmMapVmo(vms, vmo).as_args()).map(|_| ()) }
+    pub fn vm_map_vmo(vms: &Handle, vmo: &Handle) -> Result<(), ErrorType> {
+        unsafe { syscall(Self::VmMapVmo(vms.as_raw(), vmo.as_raw()).as_args()).map(|_| ()) }
     }
 
-    pub fn vm_map_phys(vms: Handle, pa: PhysAddr, size: usize) -> Result<*mut u8, ErrorType> {
-        unsafe { syscall(Self::VmMapPhys(vms, pa, size).as_args()).map(|x| x as _) }
+    pub fn vm_map_phys(vms: &Handle, pa: PhysAddr, size: usize) -> Result<*mut u8, ErrorType> {
+        unsafe { syscall(Self::VmMapPhys(vms.as_raw(), pa, size).as_args()).map(|x| x as _) }
     }
 
-    pub fn task_start(task: Handle, ep: VirtAddr, boot_handle: Handle) -> Result<(), ErrorType> {
-        unsafe { syscall(Self::TaskStart(task, ep, boot_handle).as_args()).map(|_| ()) }
+    pub fn task_start(task: &Handle, ep: VirtAddr, boot_handle: &Handle) -> Result<(), ErrorType> {
+        unsafe { syscall(Self::TaskStart(task.as_raw(), ep, boot_handle.as_raw()).as_args()).map(|_| ()) }
     }
 
-    pub fn task_get_vms(h: Handle) -> Result<Handle, ErrorType> {
-        unsafe { syscall(Self::VmsHandle(h).as_args()) }
+    pub fn task_get_vms(h: &Handle) -> Result<Handle, ErrorType> {
+        unsafe { syscall(Self::VmsHandle(h.as_raw()).as_args()).map(Handle::new) }
     }
 
-    pub fn close_handle(h: Handle) -> Result<(), ErrorType> {
+    pub fn close_handle(h: RawHandle) -> Result<(), ErrorType> {
         unsafe { syscall(Self::CloseHandle(h).as_args()).map(|_| ()) }
     }
 
-    pub fn port_call(h: Handle, msg: *mut IpcMessage<'a>) -> Result<(), ErrorType> {
-        unsafe { syscall(Self::PortCall(h, msg).as_args()).map(|_| ()) }
+    pub fn port_call(h: &Handle, msg: *mut IpcMessage<'a>) -> Result<(), ErrorType> {
+        unsafe { syscall(Self::PortCall(h.as_raw(), msg).as_args()).map(|_| ()) }
     }
 
-    pub fn port_receive(h: Handle, msg: *mut IpcMessage<'a>) -> Result<usize, ErrorType> {
-        unsafe { syscall(Self::PortReceive(h, msg).as_args()) }
+    pub fn port_receive(h: &Handle, msg: *mut IpcMessage<'a>) -> Result<usize, ErrorType> {
+        unsafe { syscall(Self::PortReceive(h.as_raw(), msg).as_args()) }
     }
 
     pub fn port_send_wait(
-        h: Handle,
+        h: &Handle,
         reply_port: Handle,
         msg: *mut IpcMessage<'a>,
     ) -> Result<usize, ErrorType> {
-        unsafe { syscall(Self::PortSendWait(h, reply_port, msg).as_args()) }
+        unsafe { syscall(Self::PortSendWait(h.as_raw(), reply_port.as_raw(), msg).as_args()) }
     }
 
     pub fn as_args(self) -> [usize; 8] {

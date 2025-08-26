@@ -2,6 +2,7 @@ use crate::frontend::token::Token;
 
 pub enum ErrorKind {
     UnxpectedToken(Token),
+    #[allow(dead_code)]
     UnknownType(Token),
 }
 

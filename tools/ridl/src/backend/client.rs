@@ -1,11 +1,6 @@
 use super::utils::{function_to_struct, Message};
 use crate::{
-    ast::{
-        argtype::{BuiltinTypes, Type},
-        function::Function,
-        interface::Interface,
-        module::Module,
-    },
+    ast::{argtype::Type, function::Function, interface::Interface, module::Module},
     backend::utils,
 };
 use std::io::Write;
@@ -99,7 +94,7 @@ impl {name} {{
         if a.as_mut().len() < slice.len() {{
             Err(())
         }} else {{
-            (&mut a[..slice.len()]).clone_from_slice(slice);
+            (a[..slice.len()]).clone_from_slice(slice);
             Ok(a)
         }}
      }}

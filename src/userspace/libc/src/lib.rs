@@ -10,6 +10,7 @@ pub mod stdio;
 pub mod syscalls;
 pub mod task;
 pub mod vmm;
+pub mod handle;
 
 pub use rustrt::*;
 

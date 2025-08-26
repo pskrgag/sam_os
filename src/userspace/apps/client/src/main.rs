@@ -1,15 +1,15 @@
 #![no_main]
 #![no_std]
 
+use libc::handle::Handle;
 use libc::{main, port::Port};
-use rtl::handle::Handle;
 
 #[main]
 fn main(root: Handle) {
     println!("Hello, world!");
 
-    let client = bindings::Hello::new(Port::new(root));
-    let res = client.Test(10, "test str").unwrap();
+    let client = bindings::NameServer::new(Port::new(root));
+    let res = client.Register("test str", 10).unwrap();
 
     println!("{:?}", res);
 }

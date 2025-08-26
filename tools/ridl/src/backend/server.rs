@@ -63,7 +63,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
             in_msg.set_in_arena(receive_buffer.as_mut_slice());
             in_msg.set_out_arena(reply_vec.as_slice());
 
-            size = self.port.send_and_wait(reply_port, &mut in_msg)?;
+            size = self.port.send_and_wait(libc::handle::Handle::new(reply_port), &mut in_msg)?;
         }}
     }}
 "#,

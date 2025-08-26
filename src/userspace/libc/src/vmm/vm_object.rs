@@ -1,5 +1,4 @@
-use rtl::handle::Handle;
-use crate::syscalls::Syscall;
+use crate::handle::Handle;
 
 pub struct VmObject {
     h: Handle,
@@ -10,13 +9,7 @@ impl VmObject {
         Self { h }
     }
 
-    pub fn handle(&self) -> Handle {
-        self.h
-    }
-}
-
-impl Drop for VmObject {
-    fn drop(&mut self) {
-        Syscall::close_handle(self.h).unwrap();
+    pub fn handle(&self) -> &Handle {
+        &self.h
     }
 }
