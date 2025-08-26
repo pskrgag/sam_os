@@ -25,8 +25,10 @@ fn main(_: Handle) {
         println!("Spawned '{}'", task.name())
     }
 
-    let mut server = bindings::Hello::new(p, ())
-        .register_handler(|_: bindings::TestTx, _| Ok(bindings::TestRx { b: 100 }));
+    let mut server = bindings::Hello::new(p, ()).register_handler(|t: bindings::TestTx, _| {
+        println!("{:?}", core::str::from_utf8(&t.name).unwrap());
+        Ok(bindings::TestRx { b: 100 })
+    });
 
     println!("Starting nameserver...");
     server.run().unwrap();

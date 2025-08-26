@@ -9,7 +9,7 @@ fn main(root: Handle) {
     println!("Hello, world!");
 
     let client = bindings::Hello::new(Port::new(root));
-    let res = client.Test(10).unwrap();
+    let res = client.Test(10, "test str").unwrap();
 
     println!("{:?}", res);
 }

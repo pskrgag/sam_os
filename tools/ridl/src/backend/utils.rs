@@ -54,12 +54,12 @@ fn produce_compound_enum<W: Write>(
 ) {
     writeln!(
         buf,
-        "#[derive(Serialize, Deserialize, Debug, Clone)]\npub struct {name}{suffix} {{",
+        "#[derive(Serialize, Deserialize, Debug, Clone, Default)]\npub struct {name}{suffix} {{",
     )
     .unwrap();
 
     for data in &s.data {
-        writeln!(buf, "    pub {}: {}", data.0, data.1).unwrap();
+        writeln!(buf, "    pub {}: {},", data.0, data.1.as_wire()).unwrap();
     }
 
     writeln!(buf, "}}").unwrap();

@@ -1,0 +1,5 @@
+type Name = Sequence<Char, 20>;
+
+interface Hello {
+	Test(in I32 a, out I32 b, in Name name);
+}

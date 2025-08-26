@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter, Result};
 use strum_macros::Display;
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
@@ -15,7 +14,7 @@ pub enum BuiltinTypes {
     I32,
     U64,
     I64,
-    String,
+    Char,
     Handle,
 }
 
@@ -41,7 +40,7 @@ lazy_static::lazy_static! {
             ("U32", BuiltinTypes::U32),
             ("I64", BuiltinTypes::I64),
             ("U64", BuiltinTypes::U64),
-            ("String", BuiltinTypes::String),
+            ("Char", BuiltinTypes::Char),
             ("Handle", BuiltinTypes::Handle),
         ]);
 }
@@ -50,10 +49,8 @@ impl Type {
     pub fn new(name: String) -> Option<Self> {
         Some(Type::Builtin(*KEYWORDS.get(name.as_str())?))
     }
-}
 
-impl Display for Type {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    pub fn as_arg(&self) -> String {
         match self {
             Self::Builtin(bt) => {
                 let s = match bt {
@@ -65,12 +62,43 @@ impl Display for Type {
                     BuiltinTypes::I32 => "i32",
                     BuiltinTypes::U64 => "u64",
                     BuiltinTypes::I64 => "i64",
+                    BuiltinTypes::Char => "u8",
                     BuiltinTypes::Handle => "Handle",
-                    BuiltinTypes::String => "String",
                 };
 
-                write!(f, "{s}")
+                format!("{s}")
             }
+            Self::Sequence { inner, .. } => {
+                if **inner != Self::Builtin(BuiltinTypes::Char) {
+                    format!("&[{}]", inner.as_wire())
+                } else {
+                    // Special case, since &[char] != &str in rust
+                    format!("&str")
+                }
+            }
+            _ => todo!(),
+        }
+    }
+
+    pub fn as_wire(&self) -> String {
+        match self {
+            Self::Builtin(bt) => {
+                let s = match bt {
+                    BuiltinTypes::U8 => "u8",
+                    BuiltinTypes::I8 => "i8",
+                    BuiltinTypes::U16 => "u16",
+                    BuiltinTypes::I16 => "i16",
+                    BuiltinTypes::U32 => "u32",
+                    BuiltinTypes::I32 => "i32",
+                    BuiltinTypes::U64 => "u64",
+                    BuiltinTypes::I64 => "i64",
+                    BuiltinTypes::Char => "u8",
+                    BuiltinTypes::Handle => "Handle",
+                };
+
+                format!("{s}")
+            }
+            Self::Sequence { inner, count } => format!("[{}; {count}]", inner.as_wire()),
             _ => todo!(),
         }
     }
