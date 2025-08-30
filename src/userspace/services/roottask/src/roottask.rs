@@ -1,0 +1,42 @@
+use super::bindings;
+use alloc::{collections::btree_map::BTreeMap, string::String};
+use libc::{handle::Handle, port::Port};
+use rtl::{error::ErrorType, locking::spinlock::Spinlock};
+
+#[derive(Default)]
+struct NameServer {
+    table: BTreeMap<String, Handle>,
+}
+
+pub fn start(p: Port) {
+    let mut server = bindings::NameServer::new(p, Spinlock::new(NameServer::default()))
+        .register_handler(|t: bindings::RegisterTx, roottask| {
+            let mut roottask = roottask.lock();
+
+            if roottask.table.get(&t.name).is_some() {
+                return Err(ErrorType::ALREADY_EXIST);
+            }
+
+            println!("Registering {:?}", &t.name);
+            roottask.table.insert(t.name, t.handle);
+
+            Ok(bindings::RegisterRx {})
+        })
+        .register_handler(|t: bindings::GetTx, roottask| {
+            let roottask = roottask.lock();
+
+            println!("Getting {:?}", &t.name);
+            if let Some(h) = roottask.table.get(&t.name) {
+                let h = h.clone_handle().unwrap();
+
+                Ok(bindings::GetRx {
+                    handle: h.clone_handle().unwrap(),
+                })
+            } else {
+                Err(ErrorType::NOT_FOUND)
+            }
+        });
+
+    println!("Starting nameserver...");
+    server.run().unwrap();
+}

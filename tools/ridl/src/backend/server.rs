@@ -129,7 +129,7 @@ pub struct {name}<S> {{
 
 impl<S: 'static> {name}<S> {{
     pub fn new(port: Port, s: S) -> Self {{
-        Self {{ port, handlers: [None; {num}], state: Arc::new(s), }}
+        Self {{ port, handlers: [const {{ None }}; {num}], state: Arc::new(s), }}
     }}
 "#
         )

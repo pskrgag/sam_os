@@ -6,6 +6,8 @@ use libc::{handle::Handle, main, port::Port, task::Task};
 
 static CPIO: &[u8] = include_bytes!("/tmp/archive.cpio");
 
+mod roottask;
+
 #[main]
 fn main(_: Handle) {
     let p = Port::create().unwrap();
@@ -24,14 +26,7 @@ fn main(_: Handle) {
         println!("Spawned '{}'", task.name())
     }
 
-    let mut server =
-        bindings::NameServer::new(p, ()).register_handler(|t: bindings::RegisterTx, _| {
-            println!("{:?}", &t.name);
-            Ok(bindings::RegisterRx { test: 1234 })
-        });
-
-    println!("Starting nameserver...");
-    server.run().unwrap();
+    roottask::start(p);
 }
 
 include!(concat!(env!("OUT_DIR"), "/hello.rs"));

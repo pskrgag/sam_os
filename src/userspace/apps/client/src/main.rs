@@ -11,6 +11,7 @@ fn main(root: Handle) {
 
     let client = bindings::NameServer::new(Port::new(root));
     let res = client.Register("test str", server.handle()).unwrap();
+    let res = client.Get("test str").unwrap();
 
     println!("{:?}", res);
 }

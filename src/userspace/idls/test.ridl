@@ -1,5 +1,6 @@
 type Name = Sequence<Char, 20>;
 
 interface NameServer {
-	Register(in Name name, in Handle handle, out I32 test);
+	Register(in Name name, in Handle handle);
+	Get(in Name name, out Handle handle);
 }

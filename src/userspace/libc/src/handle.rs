@@ -16,7 +16,7 @@ impl Handle {
         self.0
     }
 
-    pub fn clone(&self) -> Result<Self, ErrorType> {
+    pub fn clone_handle(&self) -> Result<Self, ErrorType> {
         Syscall::clone_handle(self)
     }
 }

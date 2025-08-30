@@ -179,12 +179,6 @@ impl TryInto<{tx}> for Tx {{
         writeln!(
             buf,
             r#"
-#[derive(Serialize, Deserialize, Debug, Clone)]
-enum RxMessage {{
-    Ok(Rx),
-    Err(usize),
-}}
-
 impl From<{rx}> for Rx {{
     fn from(value: {rx}) -> Self {{
         Self::{name}(value)
@@ -221,7 +215,7 @@ fn produce_final_enum<W: Write>(buf: &mut W, data: &Vec<Message>, tx: bool) {
     .unwrap();
 
     for msg in data {
-        writeln!(buf, "    {}({}{})", msg.name, msg.name, wire_suffix).unwrap();
+        writeln!(buf, "    {}({}{}),", msg.name, msg.name, wire_suffix).unwrap();
     }
 
     writeln!(buf, "}}").unwrap();
@@ -329,6 +323,12 @@ pub trait WireToPublic<T>: Sized {{
 
 pub trait PublicToWire<T>: Sized {{
     fn try_to_wire(self, _message: &mut IpcMessage) -> Result<T, ()>;
+}}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+enum RxMessage {{
+    Ok(Rx),
+    Err(usize),
 }}
 "#
     )

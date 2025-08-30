@@ -8,11 +8,13 @@ bitflags! {
         const OK = 0;
         const INVALID_ARGUMENT = 1;
         const NO_OPERATION = 2;
-        const FAULT = 4;
-        const NO_MEMORY = 8;
-        const INVALID_HANDLE = 16;
-        const TASK_DEAD = 32;
-        const TRY_AGAIN = 64;
+        const FAULT = 3;
+        const NO_MEMORY = 4;
+        const INVALID_HANDLE = 5;
+        const TASK_DEAD = 6;
+        const TRY_AGAIN = 7;
+        const ALREADY_EXIST = 8;
+        const NOT_FOUND = 9;
     }
 }
 

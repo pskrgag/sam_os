@@ -43,7 +43,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
         let res: RxMessage = from_bytes(message.in_data.unwrap()).unwrap();
 
         let wire: {name}RxWire = match res {{
-            RxMessage::Ok(e) => Ok::<RegisterRxWire, ErrorType>(e.try_into().unwrap()),
+            RxMessage::Ok(e) => Ok::<{name}RxWire, ErrorType>(e.try_into().unwrap()),
             RxMessage::Err(e) => Err(e.into()),
         }}?;
 

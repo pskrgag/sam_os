@@ -250,7 +250,7 @@ impl<'a> Syscall<'a> {
             ],
             Syscall::VmsHandle(h) => [SyscallList::SYS_TASK_GET_VMS.into(), h, 0, 0, 0, 0, 0, 0],
             Syscall::Yield => [SyscallList::SYS_YIELD.into(), 0, 0, 0, 0, 0, 0, 0],
-            Syscall::CloneHandle(h) => [SyscallList::SYS_CLOSE_HANDLE.into(), h, 0, 0, 0, 0, 0, 0],
+            Syscall::CloneHandle(h) => [SyscallList::SYS_CLONE_HANDLE.into(), h, 0, 0, 0, 0, 0, 0],
         }
     }
 }
