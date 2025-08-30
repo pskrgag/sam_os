@@ -13,7 +13,7 @@ pub fn start(p: Port) {
         .register_handler(|t: bindings::RegisterTx, roottask| {
             let mut roottask = roottask.lock();
 
-            if roottask.table.get(&t.name).is_some() {
+            if roottask.table.contains_key(&t.name) {
                 return Err(ErrorType::ALREADY_EXIST);
             }
 

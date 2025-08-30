@@ -11,7 +11,8 @@ impl Handle {
         Self(h)
     }
 
-    /// SAFETY: don't use it, unless you know what you are doing
+    /// # SAFETY
+    /// don't use it, unless you know what you are doing
     pub unsafe fn as_raw(&self) -> handle::Handle {
         self.0
     }
