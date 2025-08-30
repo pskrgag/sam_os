@@ -1,8 +1,9 @@
 use super::syscalls::Syscall;
-use rtl::handle;
+use rtl::{error::ErrorType, handle};
 
 /// Owning RAII wrapper around handle
 #[repr(transparent)]
+#[derive(Debug)]
 pub struct Handle(handle::Handle);
 
 impl Handle {
@@ -10,8 +11,13 @@ impl Handle {
         Self(h)
     }
 
-    pub(crate) unsafe fn as_raw(&self) -> handle::Handle {
+    /// SAFETY: don't use it, unless you know what you are doing
+    pub unsafe fn as_raw(&self) -> handle::Handle {
         self.0
+    }
+
+    pub fn clone(&self) -> Result<Self, ErrorType> {
+        Syscall::clone_handle(self)
     }
 }
 

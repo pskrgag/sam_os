@@ -1,6 +1,11 @@
 use super::utils::{function_to_struct, Message};
 use crate::{
-    ast::{argtype::Type, function::Function, interface::Interface, module::Module},
+    ast::{
+        argtype::{BuiltinTypes, Type},
+        function::Function,
+        interface::Interface,
+        module::Module,
+    },
     backend::utils,
 };
 use std::io::Write;
@@ -26,9 +31,9 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                 self.buf,
                 r#") -> Result<{name}Rx, ErrorType> {{
         let mut message = IpcMessage::new();
-        let data = Tx::{name}({name}Tx {{ {} }});
+        let data = Tx::{name}({wire_name_tx} {{ {} }});
         let data_vec = to_allocvec(&data).unwrap();
-        let mut receive_buffer = [0u8; core::mem::size_of::<{name}Tx>()];
+        let mut receive_buffer = [0u8; core::mem::size_of::<{wire_name_tx}>()];
 
         message.set_out_arena(data_vec.as_slice());
         message.set_in_arena(receive_buffer.as_mut_slice());
@@ -37,10 +42,12 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
 
         let res: RxMessage = from_bytes(message.in_data.unwrap()).unwrap();
 
-        match res {{
-            RxMessage::Ok(e) => Ok(e.try_into().unwrap()),
+        let wire: {name}RxWire = match res {{
+            RxMessage::Ok(e) => Ok::<RegisterRxWire, ErrorType>(e.try_into().unwrap()),
             RxMessage::Err(e) => Err(e.into()),
-        }}
+        }}?;
+
+        Ok(wire.try_to_public(&message).unwrap())
 "#,
                 msg.tx
                     .data
@@ -48,15 +55,20 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                     .map(|x| match &x.1 {
                         Type::Sequence { .. } => {
                             format!(
-                                "{name}: Self::clone_into_array({name}.as_bytes()).unwrap()",
+                                "{name}: clone_into_array({name}.as_bytes()).unwrap()",
                                 name = x.0
                             )
                         }
+                        Type::Builtin(BuiltinTypes::Handle) => format!(
+                            "{name}: message.add_handle(unsafe {{ {name}.as_raw() }})",
+                            name = x.0
+                        ),
                         _ => x.0.clone(),
                     })
                     .collect::<Vec<_>>()
                     .join(", "),
                 name = f.name(),
+                wire_name_tx = utils::wire_type_tx(f.name()),
             )
             .unwrap();
 
@@ -84,20 +96,6 @@ impl {name} {{
     pub fn new(port: Port) -> Self {{
         Self {{ port }}
     }}
-
-    fn clone_into_array<T, const N: usize>(slice: &[T]) -> Result<[T; N], ()>
-    where
-        T: Clone + Default + Copy
-    {{
-        let mut a = [T::default(); N];
-
-        if a.as_mut().len() < slice.len() {{
-            Err(())
-        }} else {{
-            (a[..slice.len()]).clone_from_slice(slice);
-            Ok(a)
-        }}
-     }}
 "#
         )
         .unwrap()

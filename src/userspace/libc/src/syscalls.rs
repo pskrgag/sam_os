@@ -36,6 +36,7 @@ pub enum Syscall<'a> {
     PortCall(RawHandle, *mut IpcMessage<'a>),
     PortSendWait(RawHandle, RawHandle, *mut IpcMessage<'a>),
     PortReceive(RawHandle, *mut IpcMessage<'a>),
+    CloneHandle(RawHandle),
 }
 
 impl<'a> Syscall<'a> {
@@ -77,7 +78,9 @@ impl<'a> Syscall<'a> {
     }
 
     pub fn task_start(task: &Handle, ep: VirtAddr, boot_handle: &Handle) -> Result<(), ErrorType> {
-        unsafe { syscall(Self::TaskStart(task.as_raw(), ep, boot_handle.as_raw()).as_args()).map(|_| ()) }
+        unsafe {
+            syscall(Self::TaskStart(task.as_raw(), ep, boot_handle.as_raw()).as_args()).map(|_| ())
+        }
     }
 
     pub fn task_get_vms(h: &Handle) -> Result<Handle, ErrorType> {
@@ -94,6 +97,10 @@ impl<'a> Syscall<'a> {
 
     pub fn port_receive(h: &Handle, msg: *mut IpcMessage<'a>) -> Result<usize, ErrorType> {
         unsafe { syscall(Self::PortReceive(h.as_raw(), msg).as_args()) }
+    }
+
+    pub fn clone_handle(h: &Handle) -> Result<Handle, ErrorType> {
+        unsafe { syscall(Self::CloneHandle(h.as_raw()).as_args()).map(Handle::new) }
     }
 
     pub fn port_send_wait(
@@ -243,6 +250,7 @@ impl<'a> Syscall<'a> {
             ],
             Syscall::VmsHandle(h) => [SyscallList::SYS_TASK_GET_VMS.into(), h, 0, 0, 0, 0, 0, 0],
             Syscall::Yield => [SyscallList::SYS_YIELD.into(), 0, 0, 0, 0, 0, 0, 0],
+            Syscall::CloneHandle(h) => [SyscallList::SYS_CLOSE_HANDLE.into(), h, 0, 0, 0, 0, 0, 0],
         }
     }
 }

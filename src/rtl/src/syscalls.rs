@@ -18,6 +18,7 @@ bitflags! {
         const SYS_PORT_CALL = 13;
         const SYS_PORT_SEND_WAIT = 14;
         const SYS_PORT_RECEIVE = 15;
+        const SYS_CLONE_HANDLE = 16;
     }
 }
 

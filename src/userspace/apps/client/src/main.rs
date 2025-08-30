@@ -6,10 +6,11 @@ use libc::{main, port::Port};
 
 #[main]
 fn main(root: Handle) {
+    let server = Port::create().unwrap();
     println!("Hello, world!");
 
     let client = bindings::NameServer::new(Port::new(root));
-    let res = client.Register("test str", 10).unwrap();
+    let res = client.Register("test str", server.handle()).unwrap();
 
     println!("{:?}", res);
 }

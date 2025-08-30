@@ -14,7 +14,7 @@ use crate::{
 };
 use alloc::string::String;
 use alloc::string::ToString;
-use rtl::handle::{HANDLE_INVALID, HandleBase};
+use rtl::handle::{HandleBase, HANDLE_INVALID};
 use rtl::vmm::types::Address;
 use rtl::{error::ErrorType, ipc::IpcMessage, syscalls::SyscallList};
 
@@ -205,6 +205,14 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
 
             drop(table);
             port.receive(in_msg)
+        }
+        SyscallList::SYS_CLONE_HANDLE => {
+            let obj = table
+                .find_poly(args.arg(0))
+                .ok_or(ErrorType::INVALID_HANDLE)?;
+            let handle = Handle::new(obj.clone());
+
+            Ok(table.add(handle))
         }
         _ => Err(ErrorType::NO_OPERATION),
     }

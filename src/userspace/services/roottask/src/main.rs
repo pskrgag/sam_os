@@ -2,7 +2,7 @@
 #![no_std]
 
 use alloc::string::ToString;
-use libc::{main, port::Port, task::Task, handle::Handle};
+use libc::{handle::Handle, main, port::Port, task::Task};
 
 static CPIO: &[u8] = include_bytes!("/tmp/archive.cpio");
 
@@ -24,10 +24,11 @@ fn main(_: Handle) {
         println!("Spawned '{}'", task.name())
     }
 
-    let mut server = bindings::NameServer::new(p, ()).register_handler(|t: bindings::RegisterTx, _| {
-        println!("{:?}", core::str::from_utf8(&t.name).unwrap());
-        Ok(bindings::RegisterRx {})
-    });
+    let mut server =
+        bindings::NameServer::new(p, ()).register_handler(|t: bindings::RegisterTx, _| {
+            println!("{:?}", &t.name);
+            Ok(bindings::RegisterRx { test: 1234 })
+        });
 
     println!("Starting nameserver...");
     server.run().unwrap();

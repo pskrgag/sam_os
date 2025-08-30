@@ -1,4 +1,4 @@
-use super::{interface::Interface};
+use super::interface::Interface;
 
 #[derive(Debug)]
 pub struct Module {

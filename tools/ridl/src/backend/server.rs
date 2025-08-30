@@ -21,7 +21,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
             let name = func.name();
             res.push_str(
                 format!(
-                    "Tx::{name}(_) => self.handlers[{num}].as_mut().unwrap()(payload.clone()),\n"
+                    "Tx::{name}(_) => self.handlers[{num}].as_mut().unwrap()(payload.clone(), &in_msg, &mut out_msg),\n"
                 )
                 .as_str(),
             );
@@ -46,12 +46,13 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
         loop {{
             let payload: Tx = from_bytes(&in_msg.in_arena().unwrap()[..size]).unwrap();
             let reply_port = in_msg.reply_port();
-
-            in_msg = IpcMessage::new();
+            let mut out_msg = IpcMessage::new();
 
             let res = match payload {{
                 {}
             }};
+
+            in_msg = out_msg;
 
             let reply = match res {{
                 Ok(e) => RxMessage::Ok(e),
@@ -84,17 +85,26 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
         f: F,
     ) -> Self
     where
-        Tx: TryInto<M>,
-        Rx: From<<M as Message>::Reply>,
-        <Tx as TryInto<M>>::Error: core::fmt::Debug,
+        Tx: TryInto<<M as Message>::Wire>,
+        <M as Message>::Wire: WireMessage,
+        <M as Message>::Wire: WireToPublic<M>,
+        <M as Message>::Reply: Message,
+        <M as Message>::Reply: PublicToWire<<<M as Message>::Reply as Message>::Wire>,
+        <Tx as TryInto<<M as Message>::Wire>>::Error: core::fmt::Debug,
+        Rx: From<<<M as Message>::Reply as Message>::Wire>,
+        // <M as Message>::Reply: Message,
+        // <<M as Message>::Reply as Message>::Wire: TryInto<Rx>,
     {{
         let state = self.state.clone();
 
-        self.handlers[M::NUMBER] =
-            Some(Box::new(move |message: Tx| {{
-                let inner: M = message.try_into().unwrap();
-                let out = f(inner, state.clone())?;
-                Ok(Rx::from(out))
+        self.handlers[<M as Message>::Wire::NUMBER] =
+            Some(Box::new(move |message: Tx, in_msg: &IpcMessage, out_msg: &mut IpcMessage| {{
+                let wire: <M as Message>::Wire = message.try_into().unwrap();
+                let public = wire.try_to_public(in_msg).unwrap();
+                let out = f(public, state.clone())?;
+                let wire: <<M as Message>::Reply as Message>::Wire = out.try_to_wire(out_msg).unwrap();
+
+                Ok(Rx::from(<<<M as Message>::Reply as Message>::Wire as TryInto<_>>::try_into(wire).unwrap()))
             }}));
 
         self
@@ -113,7 +123,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
             r#"
 pub struct {name}<S> {{
     port: Port,
-    handlers: [Option<Box<dyn Fn(Tx) -> Result<Rx, ErrorType>>>; {num}],
+    handlers: [Option<Box<dyn Fn(Tx, &IpcMessage, &mut IpcMessage) -> Result<Rx, ErrorType>>>; {num}],
     state: Arc<S>,
 }}
 

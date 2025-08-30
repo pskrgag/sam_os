@@ -63,7 +63,7 @@ impl Type {
                     BuiltinTypes::U64 => "u64",
                     BuiltinTypes::I64 => "i64",
                     BuiltinTypes::Char => "u8",
-                    BuiltinTypes::Handle => "Handle",
+                    BuiltinTypes::Handle => "&Handle",
                 };
 
                 s.to_string()
@@ -74,6 +74,35 @@ impl Type {
                 } else {
                     // Special case, since &[char] != &str in rust
                     "&str".to_string()
+                }
+            }
+            _ => todo!(),
+        }
+    }
+
+    pub fn as_public(&self) -> String {
+        match self {
+            Self::Builtin(bt) => {
+                let s = match bt {
+                    BuiltinTypes::U8 => "u8",
+                    BuiltinTypes::I8 => "i8",
+                    BuiltinTypes::U16 => "u16",
+                    BuiltinTypes::I16 => "i16",
+                    BuiltinTypes::U32 => "u32",
+                    BuiltinTypes::I32 => "i32",
+                    BuiltinTypes::U64 => "u64",
+                    BuiltinTypes::I64 => "i64",
+                    BuiltinTypes::Char => "u8",
+                    BuiltinTypes::Handle => "Handle",
+                };
+
+                s.to_string()
+            }
+            Self::Sequence { inner, .. } => {
+                if **inner != Self::Builtin(BuiltinTypes::Char) {
+                    format!("Vec<{}>", inner.as_wire())
+                } else {
+                    "String".to_string()
                 }
             }
             _ => todo!(),
@@ -93,12 +122,12 @@ impl Type {
                     BuiltinTypes::U64 => "u64",
                     BuiltinTypes::I64 => "i64",
                     BuiltinTypes::Char => "u8",
-                    BuiltinTypes::Handle => "Handle",
+                    BuiltinTypes::Handle => "usize",
                 };
 
                 s.to_string()
             }
-            Self::Sequence { inner, count } => format!("[{}; {count}]", inner.as_wire()),
+            Self::Sequence { inner, count } => format!("(usize, [{}; {count}])", inner.as_wire()),
             _ => todo!(),
         }
     }
