@@ -78,6 +78,10 @@ impl Task {
         self.vms.clone()
     }
 
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
     pub fn add_thread(&self, t: Arc<Thread>) {
         self.inner.lock().add_thread(t);
     }

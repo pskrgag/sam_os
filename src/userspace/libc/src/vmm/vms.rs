@@ -29,14 +29,13 @@ impl Vms {
         b: &[u8],
         tp: MappingType,
         load_addr: VirtAddr,
-    ) -> Option<VmObject> {
+    ) -> Result<VmObject, ErrorType> {
         let h: Handle = Syscall::vm_create_vmo(
             &self.h,
             VmoCreateArgs::Backed(b.as_ptr(), b.len(), tp, load_addr),
-        )
-        .ok()?;
+        )?;
 
-        Some(VmObject::new(h))
+        Ok(VmObject::new(h))
     }
 
     pub fn create_vm_object_zeroed(
@@ -44,15 +43,15 @@ impl Vms {
         tp: MappingType,
         load_addr: VirtAddr,
         size: usize,
-    ) -> Option<VmObject> {
+    ) -> Result<VmObject, ErrorType> {
         let h: Handle =
-            Syscall::vm_create_vmo(&self.h, VmoCreateArgs::Zeroed(size, tp, load_addr)).ok()?;
+            Syscall::vm_create_vmo(&self.h, VmoCreateArgs::Zeroed(size, tp, load_addr))?;
 
-        Some(VmObject::new(h))
+        Ok(VmObject::new(h))
     }
 
-    pub fn map_vm_object(&self, o: &VmObject) -> Option<()> {
-        Syscall::vm_map_vmo(&self.h, o.handle()).ok()
+    pub fn map_vm_object(&self, o: &VmObject) -> Result<(), ErrorType> {
+        Syscall::vm_map_vmo(&self.h, o.handle())
     }
 
     pub fn map_phys(&self, p: MemRange<PhysAddr>) -> Option<VirtAddr> {

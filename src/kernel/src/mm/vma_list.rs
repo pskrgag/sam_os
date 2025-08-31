@@ -1,143 +1,155 @@
+use alloc::collections::BTreeSet;
 use alloc::rc::Rc;
 use core::cmp::Ordering;
-use intrusive_collections::{KeyAdapter, RBTree, RBTreeLink, intrusive_adapter, rbtree::CursorMut};
-use rtl::vmm::MappingType;
+use core::ops::{Deref, DerefMut};
 use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 
 #[derive(Debug, Eq, Clone, Copy)]
 pub(crate) struct MemRangeVma(MemRange<VirtAddr>);
 
+impl Deref for MemRangeVma {
+    type Target = MemRange<VirtAddr>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for MemRangeVma {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 enum VmaFlags {
-    Free,
     Invalid,
     Allocated,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq)]
 pub struct Vma {
     pub(crate) range: MemRangeVma,
     pub(crate) tp: MappingType,
     state: VmaFlags,
-    pub(crate) non_free_link: RBTreeLink,
 }
 
 pub struct VmaList {
-    list: RBTree<VmaAdapter>,
+    occupied: BTreeSet<Vma>,
+    free: BTreeSet<MemRangeVma>,
 }
 
-intrusive_adapter!(VmaAdapter = Rc<Vma>: Vma { non_free_link: RBTreeLink });
+impl MemRangeVma {
+    pub fn invalid() -> Self {
+        Self(MemRange::new(VirtAddr::from(usize::MAX), 0))
+    }
 
-impl<'a> KeyAdapter<'a> for VmaAdapter {
-    type Key = MemRangeVma;
+    pub fn is_valid(&self) -> bool {
+        self.start() != usize::MAX.into()
+    }
 
-    fn get_key(&self, x: &'a Vma) -> Self::Key {
-        x.range
+    pub fn split_at(mut self, addr: VirtAddr, size: usize) -> [MemRangeVma; 3] {
+        let range = self.0;
+        let start = range.start();
+        let isize = range.size();
+
+        assert!(self.0.contains_addr(addr));
+        assert!(self != Self::invalid());
+
+        // Split at 3
+        if addr != range.start() && addr.bits() != range.start() + range.size() - size {
+            self = Self(MemRange::new(start, addr - start));
+
+            let mut vma_middle = Self::new_fixed(addr, size);
+
+            let vma_higer = MemRangeVma::new_fixed(
+                VirtAddr::new(addr + size),
+                isize - self.0.size() - vma_middle.0.size(),
+            );
+
+            [self, vma_middle, vma_higer]
+        } else if addr == range.start() {
+            let vma_lower = MemRangeVma::new_fixed(addr, size);
+
+            self = MemRangeVma::new_fixed(VirtAddr::new(addr + size), range.size() - size);
+
+            [vma_lower, self, Self::invalid()]
+        } else {
+            self = MemRangeVma::new_fixed(range.start(), range.size() - size);
+
+            let vma_higer = MemRangeVma::new_fixed(addr, size);
+            [self, vma_higer, Self::invalid()]
+        }
     }
 }
 
-// TODO: all these APIs are pure garbage and need rework one day
 impl VmaList {
     #[cfg(test)]
     pub fn vma_list_sorted(&self) -> alloc::vec::Vec<Vma> {
-        self.list.iter().map(|x| x.clone()).collect()
+        self.occupied.iter().map(|x| x.clone()).collect()
     }
 
     pub fn new() -> Self {
-        let mut list = RBTree::new(VmaAdapter::new());
-
-        list.insert(Rc::new(Vma::default_user()));
-        Self { list }
-    }
-
-    fn find_vma_addr(&mut self, addr: VirtAddr) -> CursorMut<'_, VmaAdapter> {
-        self.list.find_mut(&MemRangeVma(MemRange::new(addr, 1)))
+        Self {
+            free: BTreeSet::from([MemRangeVma::max_user()]),
+            occupied: BTreeSet::new(),
+        }
     }
 
     pub fn add_to_tree(&mut self, vma: Vma) -> Result<VirtAddr, ()> {
-        let addr = if !vma.is_fixed() {
-            vma.start()
+        let mut vma = vma;
+
+        let range = if !vma.is_fixed() {
+            let range = self.free_range(vma.size(), None).ok_or(())?;
+
+            // Update range with new address
+            vma.range = MemRangeVma(MemRange {
+                start: range.start(),
+                size: vma.size(),
+            });
+
+            range
         } else {
-            self.free_range(vma.size()).ok_or(())?.start()
+            self.free_range(vma.size(), Some(vma.range.0.start))
+                .ok_or(())?
         };
-        let size = vma.size();
 
-        let mut vma_c = self.find_vma_addr(addr);
+        let splitted = range.split_at(vma.start(), vma.size());
 
-        // 1. Get VMA that holds an address
-        if let Some(vma) = vma_c.get() {
-            // 2. Check that VMA is free
-            if !vma.is_free() {
-                return Err(());
+        for i in splitted {
+            if i.start() == vma.start() {
+                assert!(self.occupied.insert(vma.clone()));
+            } else if i.is_valid() {
+                assert!(!i.start().is_null());
+                // TODO: Handle contiguous regions to fix fragmentation
+                self.free.insert(i);
             }
-
-            // 3. Split if needed
-            if vma.size() != size {
-                let flags = vma.map_flags();
-                let clone = vma_c.remove().unwrap();
-                let arr = Rc::into_inner(clone).unwrap().split_at(addr, size, flags);
-
-                for i in arr.into_iter() {
-                    if !i.is_valid() {
-                        break;
-                    }
-
-                    self.list.insert(Rc::new(i));
-                }
-            } else {
-                let mut allocated = vma_c.get().unwrap().clone();
-
-                allocated.mark_allocated();
-                vma_c.replace_with(Rc::new(allocated)).unwrap();
-            }
-
-            Ok(addr)
-        } else {
-            Err(())
         }
+
+        Ok(vma.start())
     }
 
-    pub fn mark_free(&mut self, vma: Vma) -> Option<()> {
-        let mut vma_c = self.find_vma_addr(vma.start());
+    pub fn free(&mut self, vma: Vma) -> Option<()> {
+        todo!()
+    }
 
-        if let Some(vma) = vma_c.get() {
-            let mut v = vma.clone();
-            v.mark_free();
-
-            vma_c.move_next();
-
-            if let Some(next) = vma_c.get()
-                && next.is_free()
-            {
-                let next = vma_c.remove().unwrap();
-                v.merge(Rc::into_inner(next).unwrap()).unwrap();
-            }
-
-            vma_c.move_prev();
-            vma_c.move_prev();
-
-            if let Some(prev) = vma_c.get()
-                && prev.is_free()
-            {
-                let prev = vma_c.remove().unwrap();
-                v.merge(Rc::into_inner(prev).unwrap()).unwrap();
-            }
-
-            vma_c.replace_with(Rc::new(v)).unwrap();
-            Some(())
+    fn free_range(&mut self, size: usize, addr: Option<VirtAddr>) -> Option<MemRangeVma> {
+        if let Some(addr) = addr {
+            Some(
+                self.free
+                    .take(&MemRangeVma(MemRange::new(addr, 1)))?
+                    .clone(),
+            )
         } else {
+            for i in &self.free {
+                if i.0.size >= size {
+                    return Some(self.free.take(&MemRangeVma(i.0)).unwrap().clone());
+                }
+            }
+
             None
         }
-    }
-
-    fn free_range(&self, size: usize) -> Option<MemRange<VirtAddr>> {
-        for i in &self.list {
-            if i.is_free() && i.size() >= size {
-                return Some(MemRange::new(i.start(), size));
-            }
-        }
-
-        None
     }
 }
 
@@ -148,8 +160,15 @@ impl Vma {
         Self {
             range,
             tp,
-            state: VmaFlags::Free,
-            non_free_link: RBTreeLink::new(),
+            state: VmaFlags::Allocated,
+        }
+    }
+
+    fn from_range(r: MemRange<VirtAddr>) -> Self {
+        Self {
+            range: MemRangeVma(r),
+            tp: MappingType::NONE,
+            state: VmaFlags::Invalid,
         }
     }
 
@@ -162,7 +181,6 @@ impl Vma {
             range: MemRangeVma::new_fixed(0.into(), 0),
             tp: MappingType::USER_DEVICE,
             state: VmaFlags::Invalid,
-            non_free_link: RBTreeLink::new(),
         }
     }
 
@@ -184,58 +202,12 @@ impl Vma {
         }
     }
 
-    pub fn split_at(mut self, addr: VirtAddr, size: usize, tp: MappingType) -> [Vma; 3] {
-        let range = self.range.0;
-        let start = range.start();
-        let isize = range.size();
-
-        // Split at 3
-        if addr != range.start() && addr.bits() != range.start() + range.size() - size {
-            self.range = MemRangeVma(MemRange::new(start, addr - start));
-
-            let mut vma_middle = Vma::new(MemRangeVma::new_fixed(addr, size), tp);
-
-            let vma_higer = Vma::new(
-                MemRangeVma::new_fixed(
-                    VirtAddr::new(addr + size),
-                    isize - self.size() - vma_middle.size(),
-                ),
-                self.tp,
-            );
-
-            vma_middle.mark_allocated();
-
-            [self, vma_middle, vma_higer]
-        } else if addr == range.start() {
-            let mut vma_lower = Vma::new(MemRangeVma::new_fixed(addr, size), tp);
-
-            self.range = MemRangeVma::new_fixed(VirtAddr::new(addr + size), range.size() - size);
-
-            vma_lower.mark_allocated();
-            [vma_lower, self, Vma::invalid()]
-        } else {
-            self.range = MemRangeVma::new_fixed(range.start(), range.size() - size);
-
-            let mut vma_higer = Vma::new(MemRangeVma::new_fixed(addr, size), tp);
-            vma_higer.mark_allocated();
-            [self, vma_higer, Vma::invalid()]
-        }
-    }
-
     pub fn mark_allocated(&mut self) {
         self.state = VmaFlags::Allocated;
     }
 
-    pub fn is_free(&self) -> bool {
-        self.state == VmaFlags::Free
-    }
-
     pub fn is_valid(&self) -> bool {
         self.state != VmaFlags::Invalid
-    }
-
-    pub fn mark_free(&mut self) {
-        self.state = VmaFlags::Free;
     }
 
     pub fn contains_addr(&self, addr: VirtAddr) -> bool {
@@ -259,7 +231,7 @@ impl Vma {
     }
 
     pub fn is_fixed(&self) -> bool {
-        self.range.0.start().is_null()
+        !self.range.0.start().is_null()
     }
 }
 
@@ -305,6 +277,24 @@ impl Ord for MemRangeVma {
     }
 }
 
+impl PartialEq for Vma {
+    fn eq(&self, other: &Self) -> bool {
+        self.range.eq(&other.range)
+    }
+}
+
+impl PartialOrd for Vma {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.range.partial_cmp(&other.range)
+    }
+}
+
+impl Ord for Vma {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.range.cmp(&other.range)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -317,10 +307,9 @@ mod test {
     fn vma_list_empty() {
         let mut list = VmaList::new();
 
-        test_assert!(
-            list.free_range(MemRange::<VirtAddr>::max_user().size())
-                .is_some()
-        );
+        test_assert!(list
+            .free_range(MemRange::<VirtAddr>::max_user().size())
+            .is_some());
     }
 
     #[kernel_test]
@@ -342,13 +331,12 @@ mod test {
     fn vma_list_add_nofixed() {
         let mut list = VmaList::new();
 
-        test_assert!(
-            list.add_to_tree(Vma::new(
+        test_assert!(list
+            .add_to_tree(Vma::new(
                 MemRangeVma::new_fixed(VirtAddr::new(0), 0x1000),
                 MappingType::USER_DATA,
             ))
-            .is_ok()
-        );
+            .is_ok());
         test_assert_eq!(list.vma_list_sorted().len(), 2);
     }
 
@@ -365,7 +353,7 @@ mod test {
         test_assert!(va.is_ok());
         test_assert!(list.add_to_tree(vma.clone()).is_err());
 
-        list.mark_free(vma.clone());
+        list.free(vma.clone());
         test_assert_eq!(list.vma_list_sorted().len(), 1);
 
         test_assert!(list.add_to_tree(vma).is_ok());

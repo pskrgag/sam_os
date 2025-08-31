@@ -3,3 +3,6 @@ board = "qemu"
 
 [[component]]
 name = "client"
+
+[[component]]
+name = "mmc"

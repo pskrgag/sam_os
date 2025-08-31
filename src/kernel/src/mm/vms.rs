@@ -4,7 +4,7 @@ use crate::mm::{
     vma_list::{MemRangeVma, Vma, VmaList},
 };
 use rtl::arch::*;
-use rtl::vmm::{MappingType, types::*};
+use rtl::vmm::{types::*, MappingType};
 
 pub struct VmsInner {
     size: usize,
@@ -84,7 +84,7 @@ impl VmsInner {
         assert!(range.size().is_page_aligned());
 
         self.vmas
-            .mark_free(Vma::new(range.into(), MappingType::USER_DATA))
+            .free(Vma::new(range.into(), MappingType::USER_DATA))
             .ok_or(())?;
 
         self.ttbr0.as_mut().unwrap().free(range, |pa, device| {

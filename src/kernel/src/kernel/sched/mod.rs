@@ -94,9 +94,7 @@ impl Scheduler {
                     switch_to(ctx as _, ctx_next as _);
                 }
             } else if cur.state() == ThreadState::WaitingMessage {
-                println!("WTF");
-                crate::drivers::timer::disable();
-                unsafe { core::arch::asm!("wfi") };
+                panic!("WTF");
             }
         } else {
             // If there is nothing to switch to, then do nothing

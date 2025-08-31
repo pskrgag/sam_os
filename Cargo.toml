@@ -2,7 +2,7 @@
 members = [
 	"tools/ridl",
 	"src/rtl",
-	"src/kernel", "src/userspace/services/roottask", "src/userspace/apps/client", "xtask",
+	"src/kernel", "src/userspace/services/roottask", "src/userspace/apps/client", "xtask", "src/userspace/services/mmc",
 ]
 
 resolver = "2"

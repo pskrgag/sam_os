@@ -60,7 +60,8 @@ pub fn run_prog(
         .unwrap()
         .read_to_end(&mut err)
         .map_err(|_| "Failed to read stderr of a process")?;
-    std::io::stderr().write(err.as_slice()).unwrap();
+
+    std::io::stderr().write_all(err.as_slice()).unwrap();
 
     // Cargo prints a lot of stuff to stderr for some reason, but I like to perverse warnings
     // during build

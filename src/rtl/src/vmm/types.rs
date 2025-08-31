@@ -19,8 +19,8 @@ pub struct Pfn(usize);
 
 #[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
 pub struct MemRange<T: Address + core::fmt::Debug> {
-    start: T,
-    size: usize,
+    pub start: T,
+    pub size: usize,
 }
 
 impl<T: Address + Debug> core::fmt::Debug for MemRange<T> {
@@ -257,6 +257,10 @@ impl VirtAddr {
 
     pub fn to_raw_mut<T>(&self) -> *mut T {
         self.0 as *mut T
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.0 == 0
     }
 
     /// # Safety

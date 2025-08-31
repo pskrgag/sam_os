@@ -59,6 +59,7 @@ SECTIONS
         sdata = .;
         *(.data .data.*)
 
+        . = ALIGN(8);
         sfixup = .;
         *(.fixup)
         efixup = .;
@@ -85,9 +86,19 @@ SECTIONS
         edatapercpu = .;
     }
 
-    . = . + 0x30000;
+    .guard_page (NOLOAD):
+    {
+         SKIP(4096)
+    } :data
+
+    . = . + 0x50000;
     . = ALIGN(16);
     __STACK_START = .;
+
+    .guard_page (NOLOAD):
+    {
+         SKIP(4096)
+    } :data
 
     end = .;
     /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }

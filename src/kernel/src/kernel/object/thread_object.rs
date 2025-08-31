@@ -14,7 +14,7 @@ use rtl::vmm::MappingType;
 use rtl::vmm::types::*;
 
 const USER_THREAD_STACK_PAGES: usize = 20;
-const KERNEL_STACK_PAGES: usize = 10;
+const KERNEL_STACK_PAGES: usize = 50;
 const RR_TICKS: usize = 10;
 
 #[derive(object)]

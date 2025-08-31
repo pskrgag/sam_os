@@ -2,6 +2,7 @@
 use crate::arch::{backtrace::backtrace, irq::interrupts::disable_all};
 
 use core::panic::PanicInfo;
+use crate::alloc::borrow::ToOwned;
 
 #[cfg(not(test))]
 use rtl::vmm::types::*;
@@ -32,12 +33,12 @@ fn on_panic(info: &PanicInfo) -> ! {
 
         disable_all();
         let id = if let Some(c) = crate::sched::current() {
-            c.id()
+            c.task().name().to_owned()
         } else {
-            u16::MAX
+            "kernel".to_owned()
         };
         println!("--- cut here ---");
-        println!("Kernel Panic! In context of {}", id);
+        println!("Kernel Panic! In context of '{}'", id);
 
         println!("{}", info.message());
 
@@ -54,8 +55,8 @@ fn on_panic(info: &PanicInfo) -> ! {
     };
 
     println!("Kernel backtrace");
-    for i in bt {
-        println!("#{} [{:p}]", i, i.to_raw::<usize>());
+    for (i, addr) in bt.iter().take_while(|x| !x.is_null()).enumerate() {
+        println!("#{} [{:p}]", i, addr.to_raw::<usize>());
     }
 
     loop {}

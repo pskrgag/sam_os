@@ -66,7 +66,7 @@ pub fn prepare_cpio(b: &Vec<Component>, to: &str) -> Result<(), String> {
 
     run_prog(
         "cpio",
-        &["-ocv"],
+        &["-oc"],
         Some(
             files
                 .iter()
@@ -123,7 +123,7 @@ pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
         "-machine",
         "virt,gic-version=2",
         "-m",
-        "2048M",
+        "1G",
         "-cpu",
         "cortex-a53",
         "-smp",

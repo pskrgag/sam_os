@@ -11,7 +11,6 @@ const PF_X: u32 = 0x1;
 
 use alloc::vec::Vec;
 
-// ToDo: support any endian?
 pub struct Elf<'a> {
     raw: &'a [u8],
     elf_data: ElfBytes<'a, LittleEndian>,
@@ -45,8 +44,8 @@ impl<'a> Elf<'a> {
         (self.elf_data.ehdr.e_entry as usize).into()
     }
 
-    pub fn program_header_to_data(&self, h: ProgramHeader) -> Option<&'a [u8]> {
-        Some(&self.raw[h.p_offset as usize..(h.p_offset + h.p_filesz) as usize])
+    pub fn program_header_to_data(&self, h: ProgramHeader) -> &'a [u8] {
+        &self.raw[h.p_offset as usize..(h.p_offset + h.p_filesz) as usize]
     }
 
     pub fn program_header_to_mapping_type(h: ProgramHeader) -> MappingType {

@@ -147,7 +147,7 @@ impl<'a> Syscall<'a> {
                 SyscallList::SYS_CREATE_TASK.into(),
                 handle,
                 name.as_ptr() as usize,
-                0,
+                name.len(),
                 0,
                 0,
                 0,
@@ -164,10 +164,10 @@ impl<'a> Syscall<'a> {
                 0,
             ],
             Syscall::VmCreateVmo(handle, args) => match args {
-                VmoCreateArgs::Backed(adr, size, mt, load_addr) => [
+                VmoCreateArgs::Backed(addr, size, mt, load_addr) => [
                     SyscallList::SYS_CREATE_VMO.into(),
                     handle,
-                    adr as usize,
+                    addr as usize,
                     size,
                     mt.into(),
                     load_addr.into(),

@@ -1,3 +1,4 @@
+use super::handle::Handle;
 use crate::elf::Elf;
 use crate::factory::factory;
 use crate::syscalls::Syscall;
@@ -5,8 +6,8 @@ use crate::vmm::vms::vms;
 use crate::vmm::vms::Vms;
 use alloc::string::String;
 use alloc::vec::Vec;
+use rtl::error::ErrorType;
 use rtl::vmm::types::VirtAddr;
-use super::handle::Handle;
 
 pub struct Task {
     name: String,
@@ -27,15 +28,15 @@ impl Task {
         self.ep = ep;
     }
 
-    pub fn create_from_elf(elf_data: &[u8], name: String) -> Option<Self> {
-        let elf = Elf::new(elf_data)?;
-        let ph = elf.program_headers()?;
+    pub fn create_from_elf(elf_data: &[u8], name: String) -> Result<Self, ErrorType> {
+        let elf = Elf::new(elf_data).ok_or(ErrorType::INVALID_ARGUMENT)?;
+        let ph = elf.program_headers().ok_or(ErrorType::INVALID_ARGUMENT)?;
         let mut h = Vec::with_capacity(ph.len());
 
         for i in ph {
             let vm = if i.p_filesz != 0 {
                 vms().create_vm_object(
-                    elf.program_header_to_data(i)?,
+                    elf.program_header_to_data(i),
                     Elf::program_header_to_mapping_type(i),
                     VirtAddr::from(i.p_vaddr as usize),
                 )?
@@ -51,15 +52,14 @@ impl Task {
         }
 
         let mut new_task = factory().create_task(name.as_str())?;
-        let vms = new_task.vms()?;
+        let vms = new_task.vms().unwrap();
 
         for i in h {
             vms.map_vm_object(&i)?;
         }
 
         new_task.set_ep(elf.entry_point());
-
-        Some(new_task)
+        Ok(new_task)
     }
 
     pub fn start(&mut self, h: &Handle) -> Option<()> {

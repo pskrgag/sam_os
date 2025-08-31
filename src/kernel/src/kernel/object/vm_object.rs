@@ -4,8 +4,8 @@ use crate::mm::user_buffer::UserPtr;
 use alloc::sync::Arc;
 use object_lib::object;
 use rtl::arch::{PAGE_SHIFT, PAGE_SIZE};
-use rtl::vmm::MappingType;
 use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 
 #[derive(Debug)]
 struct VmObjectInner {
