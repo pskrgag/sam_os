@@ -55,7 +55,7 @@ impl Vms {
 
         inner
             .vm_free(MemRange::new(base, size))
-            .map_err(|_| ErrorType::INVALID_ARGUMENT)
+            .map_err(|_| ErrorType::InvalidArgument)
     }
 
     pub fn base(&self) -> PhysAddr {
@@ -68,7 +68,7 @@ impl Vms {
             VmoCreateArgs::Backed(back, mt, ptr) => VmObject::from_buffer(back, mt, ptr),
             VmoCreateArgs::Zeroed(size, mt, ptr) => VmObject::zeroed(size, mt, ptr),
         }
-        .ok_or(ErrorType::NO_MEMORY)?;
+        .ok_or(ErrorType::NoMemory)?;
 
         Ok(Handle::new(vmo.clone()))
     }

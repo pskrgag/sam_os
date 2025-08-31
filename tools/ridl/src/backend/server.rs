@@ -56,7 +56,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
 
             let reply = match res {{
                 Ok(e) => RxMessage::Ok(e),
-                Err(e) => RxMessage::Err(e.bits()),
+                Err(e) => RxMessage::Err(e as usize),
             }};
 
             reply_vec = to_allocvec(&reply).unwrap();

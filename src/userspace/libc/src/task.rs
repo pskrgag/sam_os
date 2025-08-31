@@ -29,8 +29,8 @@ impl Task {
     }
 
     pub fn create_from_elf(elf_data: &[u8], name: String) -> Result<Self, ErrorType> {
-        let elf = Elf::new(elf_data).ok_or(ErrorType::INVALID_ARGUMENT)?;
-        let ph = elf.program_headers().ok_or(ErrorType::INVALID_ARGUMENT)?;
+        let elf = Elf::new(elf_data).ok_or(ErrorType::InvalidArgument)?;
+        let ph = elf.program_headers().ok_or(ErrorType::InvalidArgument)?;
         let mut h = Vec::with_capacity(ph.len());
 
         for i in ph {

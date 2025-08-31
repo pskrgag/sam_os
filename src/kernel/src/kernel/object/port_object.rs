@@ -65,7 +65,7 @@ impl Port {
     }
 
     pub fn call(&self, mut client_msg_uptr: UserPtr<IpcMessage<'static>>) -> Result<(), ErrorType> {
-        let mut client_msg = copy_ipc_message_from_user(client_msg_uptr).ok_or(ErrorType::FAULT)?;
+        let mut client_msg = copy_ipc_message_from_user(client_msg_uptr).ok_or(ErrorType::Fault)?;
         let cur = current().unwrap();
 
         // NOTE: Do not place it info if let Some() block, since rust does not drop the lock
@@ -73,18 +73,18 @@ impl Port {
         let t = self.sleepers.lock().pop_front();
 
         if let Some(t) = t {
-            let task = self.task.upgrade().ok_or(ErrorType::TASK_DEAD)?;
+            let task = self.task.upgrade().ok_or(ErrorType::TaskDead)?;
             let reply_port = current()
                 .unwrap()
                 .task()
                 .handle_table()
                 .find::<Self>(client_msg.reply_port())
-                .ok_or(ErrorType::INVALID_HANDLE)?;
+                .ok_or(ErrorType::InvalidHandle)?;
 
             reply_port.sleepers.lock().push_back(current().unwrap());
 
             Self::transfer_handles_from_current(&task, client_msg.handles())
-                .ok_or(ErrorType::INVALID_HANDLE)?;
+                .ok_or(ErrorType::InvalidHandle)?;
 
             let h = Handle::new(reply_port.clone());
 
@@ -129,17 +129,17 @@ impl Port {
 
         let reply_port = self_table
             .find::<Self>(reply_port_handle)
-            .ok_or(ErrorType::INVALID_HANDLE)?;
+            .ok_or(ErrorType::InvalidHandle)?;
 
-        let task = reply_port.task.upgrade().ok_or(ErrorType::TASK_DEAD)?;
+        let task = reply_port.task.upgrade().ok_or(ErrorType::TaskDead)?;
 
         self_table.remove(reply_port_handle);
         drop(self_table);
 
-        let user_msg = copy_ipc_message_from_user(msg).ok_or(ErrorType::FAULT)?;
+        let user_msg = copy_ipc_message_from_user(msg).ok_or(ErrorType::Fault)?;
 
         Self::transfer_handles_from_current(&task, user_msg.handles())
-            .ok_or(ErrorType::INVALID_HANDLE)?;
+            .ok_or(ErrorType::InvalidHandle)?;
 
         reply_port.queue.lock().push_back(user_msg);
         let sleep = reply_port.sleepers.lock().pop_front().unwrap();
@@ -152,7 +152,7 @@ impl Port {
         &self,
         mut server_msg_uptr: UserPtr<IpcMessage<'static>>,
     ) -> Result<usize, ErrorType> {
-        let mut server_msg = copy_ipc_message_from_user(server_msg_uptr).ok_or(ErrorType::FAULT)?;
+        let mut server_msg = copy_ipc_message_from_user(server_msg_uptr).ok_or(ErrorType::Fault)?;
         let mut arena_len = 0;
         let c = current().unwrap();
 

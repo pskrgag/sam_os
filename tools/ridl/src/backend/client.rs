@@ -44,7 +44,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
 
         let wire: {name}RxWire = match res {{
             RxMessage::Ok(e) => Ok::<{name}RxWire, ErrorType>(e.try_into().unwrap()),
-            RxMessage::Err(e) => Err(e.into()),
+            RxMessage::Err(e) => Err(unsafe {{ core::mem::transmute::<_, ErrorType>(e) }}),
         }}?;
 
         Ok(wire.try_to_public(&message).unwrap())

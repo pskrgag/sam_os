@@ -153,12 +153,12 @@ pub extern "C" fn user_syscall(ctx: &mut ExceptionCtx) {
         match do_syscall(a) {
             Ok(s) => ctx.x0 = s,
             Err(err) => {
-                println!("err {} {}", err.bits(), num.bits());
-                ctx.x0 = -(err.bits() as isize) as usize;
+                println!("err {:?} {}", err, num.bits());
+                ctx.x0 = -(err as isize) as usize;
             }
         };
     } else {
         use rtl::error::ErrorType;
-        ctx.x0 = (-(ErrorType::NO_OPERATION.bits() as isize)) as usize;
+        ctx.x0 = (-(ErrorType::NoOperation as isize)) as usize;
     }
 }

@@ -19,7 +19,7 @@ pub unsafe fn syscall(args: [usize; 8]) -> Result<usize, ErrorType> {
     );
 
     if ret < 0 {
-        Err(ErrorType::from_bits((-ret) as usize).unwrap())
+        Err(core::mem::transmute::<_, ErrorType>(-ret))
     } else {
         Ok(ret as usize)
     }

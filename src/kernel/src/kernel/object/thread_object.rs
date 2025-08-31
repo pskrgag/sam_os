@@ -10,8 +10,8 @@ use alloc::sync::Weak;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use object_lib::object;
 use rtl::arch::PAGE_SIZE;
-use rtl::vmm::MappingType;
 use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 
 const USER_THREAD_STACK_PAGES: usize = 20;
 const KERNEL_STACK_PAGES: usize = 50;

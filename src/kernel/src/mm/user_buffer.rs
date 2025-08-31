@@ -90,7 +90,7 @@ impl<T> UserPtr<T> {
             if res == 0 {
                 Ok(())
             } else {
-                Err(ErrorType::FAULT)
+                Err(ErrorType::Fault)
             }
         }
     }
@@ -105,7 +105,7 @@ impl<T> UserPtr<T> {
             if res == 0 {
                 Ok(())
             } else {
-                Err(ErrorType::FAULT)
+                Err(ErrorType::Fault)
             }
         }
     }

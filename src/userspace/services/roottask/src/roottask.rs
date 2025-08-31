@@ -14,7 +14,7 @@ pub fn start(p: Port) {
             let mut roottask = roottask.lock();
 
             if roottask.table.contains_key(&t.name) {
-                return Err(ErrorType::ALREADY_EXIST);
+                return Err(ErrorType::AlreadyExists);
             }
 
             println!("Registering {:?}", &t.name);
@@ -33,7 +33,7 @@ pub fn start(p: Port) {
                     handle: h.clone_handle().unwrap(),
                 })
             } else {
-                Err(ErrorType::NOT_FOUND)
+                Err(ErrorType::NotFound)
             }
         });
 

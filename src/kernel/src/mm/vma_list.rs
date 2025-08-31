@@ -1,5 +1,4 @@
 use alloc::collections::BTreeSet;
-use alloc::rc::Rc;
 use core::cmp::Ordering;
 use core::ops::{Deref, DerefMut};
 use rtl::vmm::types::*;
@@ -61,7 +60,7 @@ impl MemRangeVma {
         if addr != range.start() && addr.bits() != range.start() + range.size() - size {
             self = Self(MemRange::new(start, addr - start));
 
-            let mut vma_middle = Self::new_fixed(addr, size);
+            let vma_middle = Self::new_fixed(addr, size);
 
             let vma_higer = MemRangeVma::new_fixed(
                 VirtAddr::new(addr + size),
