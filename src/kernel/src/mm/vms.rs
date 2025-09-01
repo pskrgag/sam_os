@@ -5,6 +5,7 @@ use crate::mm::{
 };
 use rtl::arch::*;
 use rtl::vmm::{types::*, MappingType};
+use rtl::error::ErrorType;
 
 pub struct VmsInner {
     size: usize,
@@ -79,19 +80,17 @@ impl VmsInner {
         Ok(ret)
     }
 
-    pub fn vm_free(&mut self, range: MemRange<VirtAddr>) -> Result<(), ()> {
+    pub fn vm_free(&mut self, range: MemRange<VirtAddr>) -> Result<(), ErrorType> {
         assert!(range.start().is_page_aligned());
         assert!(range.size().is_page_aligned());
 
-        self.vmas
-            .free(Vma::new(range.into(), MappingType::USER_DATA))
-            .ok_or(())?;
+        self.vmas.free(range)?;
 
         self.ttbr0.as_mut().unwrap().free(range, |pa, device| {
             if !device {
                 page_allocator().free(pa, 1);
             }
-        })?;
+        }).expect("Failed to free memory");
 
         Ok(())
     }

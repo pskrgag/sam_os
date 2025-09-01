@@ -1,6 +1,7 @@
 use alloc::collections::BTreeSet;
 use core::cmp::Ordering;
 use core::ops::{Deref, DerefMut};
+use rtl::error::ErrorType;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
 
@@ -34,9 +35,50 @@ pub struct Vma {
     state: VmaFlags,
 }
 
+#[derive(Debug)]
+struct FreeRegions(BTreeSet<MemRangeVma>);
+
+impl FreeRegions {
+    fn find_by_size(&mut self, size: usize) -> Option<MemRangeVma> {
+        for i in &self.0 {
+            if i.0.size >= size {
+                return Some(self.0.take(&MemRangeVma(i.0)).unwrap().clone());
+            }
+        }
+
+        None
+    }
+
+    fn find_by_addr(&mut self, addr: VirtAddr) -> Option<MemRangeVma> {
+        Some(self.0.take(&MemRangeVma(MemRange::new(addr, 1)))?.clone())
+    }
+
+    fn insert(&mut self, range: MemRangeVma) {
+        assert!(range.start().is_page_aligned());
+        assert!(range.size().is_page_aligned());
+
+        if let Some(mut prev) = self.0.take(&MemRangeVma(MemRange::new(
+            (range.start() - 1.into()).into(),
+            1,
+        ))) {
+            prev.size += range.size;
+            self.insert(prev)
+        } else if let Some(mut next) = self.0.take(&MemRangeVma(MemRange::new(
+            (range.start() + VirtAddr::new(1)).into(),
+            1,
+        ))) {
+            next.start = range.start;
+            next.size += range.size;
+            self.insert(next)
+        } else {
+            self.0.insert(range);
+        }
+    }
+}
+
 pub struct VmaList {
     occupied: BTreeSet<Vma>,
-    free: BTreeSet<MemRangeVma>,
+    free: FreeRegions,
 }
 
 impl MemRangeVma {
@@ -91,7 +133,7 @@ impl VmaList {
 
     pub fn new() -> Self {
         Self {
-            free: BTreeSet::from([MemRangeVma::max_user()]),
+            free: FreeRegions(BTreeSet::from([MemRangeVma::max_user()])),
             occupied: BTreeSet::new(),
         }
     }
@@ -100,7 +142,7 @@ impl VmaList {
         let mut vma = vma;
 
         let range = if !vma.is_fixed() {
-            let range = self.free_range(vma.size(), None).ok_or(())?;
+            let range = self.find_free_range(vma.size(), None).ok_or(())?;
 
             // Update range with new address
             vma.range = MemRangeVma(MemRange {
@@ -110,7 +152,7 @@ impl VmaList {
 
             range
         } else {
-            self.free_range(vma.size(), Some(vma.range.0.start))
+            self.find_free_range(vma.size(), Some(vma.range.0.start))
                 .ok_or(())?
         };
 
@@ -121,7 +163,6 @@ impl VmaList {
                 assert!(self.occupied.insert(vma.clone()));
             } else if i.is_valid() {
                 assert!(!i.start().is_null());
-                // TODO: Handle contiguous regions to fix fragmentation
                 self.free.insert(i);
             }
         }
@@ -129,25 +170,36 @@ impl VmaList {
         Ok(vma.start())
     }
 
-    pub fn free(&mut self, vma: Vma) -> Option<()> {
-        todo!()
-    }
+    pub fn free(&mut self, range: MemRange<VirtAddr>) -> Result<(), ErrorType> {
+        let vma = self
+            .occupied
+            .take(&Vma::from_range(range))
+            .ok_or(ErrorType::NotFound)?;
 
-    fn free_range(&mut self, size: usize, addr: Option<VirtAddr>) -> Option<MemRangeVma> {
-        if let Some(addr) = addr {
-            Some(
-                self.free
-                    .take(&MemRangeVma(MemRange::new(addr, 1)))?
-                    .clone(),
-            )
-        } else {
-            for i in &self.free {
-                if i.0.size >= size {
-                    return Some(self.free.take(&MemRangeVma(i.0)).unwrap().clone());
+        if vma.range.0 != range {
+            let split = vma.range.split_at(range.start(), range.size());
+
+            for i in split {
+                if i.start() == vma.start() {
+                    self.free.insert(vma.range.clone());
+                } else if i.is_valid() {
+                    self.occupied.insert(Vma {
+                        range: i,
+                        tp: vma.tp,
+                        state: vma.state,
+                    });
                 }
             }
+        }
 
-            None
+        Ok(())
+    }
+
+    fn find_free_range(&mut self, size: usize, addr: Option<VirtAddr>) -> Option<MemRangeVma> {
+        if let Some(addr) = addr {
+            self.free.find_by_addr(addr)
+        } else {
+            self.free.find_by_size(size)
         }
     }
 }
@@ -307,7 +359,7 @@ mod test {
         let mut list = VmaList::new();
 
         test_assert!(list
-            .free_range(MemRange::<VirtAddr>::max_user().size())
+            .find_free_range(MemRange::<VirtAddr>::max_user().size())
             .is_some());
     }
 

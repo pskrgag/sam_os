@@ -208,6 +208,14 @@ impl Sub for VirtAddr {
     }
 }
 
+impl Add for VirtAddr {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self::Output {
+        Self(self.0 + other.0)
+    }
+}
+
 impl Add<usize> for VirtAddr {
     type Output = usize;
 
