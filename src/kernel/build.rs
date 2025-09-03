@@ -20,8 +20,9 @@ fn main() {
         .compiler("clang")
         .flag("--target=aarch64")
         .flag("-fPIC")
-        .flag("-O2")
+        .flag("-O3")
         .flag("-fno-tree-vectorize")
+        .flag("-mgeneral-regs-only")
         .flag("-Wall")
         .flag(flag)
         .compile("libboot.a");

@@ -1,7 +1,20 @@
-.section ".text.boot"
+.extern end, start
 
+.section ".text.boot"
 .global __start
 __start:
+	nop
+	b	_start
+	.quad	0				// Image load offset from start of RAM, little-endian
+	.quad	(__end - __start)			// Effective size of kernel image, little-endian
+	.quad	(1 << 1) | (1 << 3)		// Informative flags, little-endian
+	.quad	0				// reserved
+	.quad	0				// reserved
+	.quad	0				// reserved
+	.ascii	"ARM\x64"			// Magic number
+	.quad	0
+
+_start:
 	mrs	x0, CurrentEl
 	cmp	x0, #(1 << 2)
 	b.eq	el1_1
@@ -26,18 +39,55 @@ __start:
 
 	isb
 	eret
+
+/*
+ uint64_t r_offset;
+ uint64_t r_info;
+ int64_t r_addend;
+*/
+
 el1_1:
+	// Apply relocation
+	adr	x0, _rela_begin
+	adr	x1, _rela_end
+	adr	x2, __start
+
+loop:
+	cmp	x0, x1
+	b.eq	crt0
+
+	ldr	x3, [x0]	// r_offset
+	ldr	x4, [x0, #16]	// r_addend
+	add	x3, x2, x3	// x3 = load_addr + r_offset
+	ldr	x5, [x3]
+	add	x5, x4, x4
+	str	x5, [x3]
+
+	add	x0, x0, 24
+	b	loop
+
+crt0:
 	adrp	x0, __STACK_START
 	add	x0, x0, #:lo12:__STACK_START
 	mov	sp, x0
 
+	mov	x0, x2
+
+	// Calculate image size
+	adrp	x1, __end
+	add	x1, x1, #:lo12:__end
+	sub	x1, x1, x0
+
+	// Jump to C
 	b	map
+
+	ret
 
 .global __reset
 __reset:
 	mrs	x0, MPIDR_EL1
-	and     x8, x0, #0xffffffffff
-	and     x0, x8, #0xffffffff00ffffff
+	and	x8, x0, #0xffffffffff
+	and	x0, x8, #0xffffffff00ffffff
 
 	// Load stack array
 	adrp	x1, IDLE_THREAD_STACK

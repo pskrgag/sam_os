@@ -1,7 +1,8 @@
+use crate::arch::mm::layout::image_to_phys;
 use crate::mm::paging::kernel_page_table::kernel_page_table;
 use rtl::arch::PHYS_OFFSET;
-use rtl::vmm::MappingType;
 use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 
 use alloc::vec;
 use alloc::vec::Vec;
@@ -91,22 +92,27 @@ pub fn remap_kernel() {
     println!("Kernel map:");
 
     for i in array {
+        let va = VirtAddr::from(i.start());
+        let pa = image_to_phys(va);
+
         println!(
             "{}\t\t[0x{:x} -> 0x{:x}] (size 0x{:x})",
             i.name(),
-            i.start() - PHYS_OFFSET,
-            i.start(),
+            pa,
+            va,
             i.size()
         );
 
         (*tt)
             .map(
-                None,
-                MemRange::new(VirtAddr::from(i.start()), i.size()),
+                Some(MemRange::new(pa, i.size())),
+                MemRange::new(va, i.size()),
                 i.mapping_type(),
             )
             .expect("Failed to map kernel sections");
     }
+
+    (*tt).walk(VirtAddr::new(0xffffffa000000000));
 
     println!("Remaped kernel image");
 }

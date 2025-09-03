@@ -23,7 +23,7 @@ pub mod timer;
 
 use core::arch::global_asm;
 use core::mem;
-
+use rtl::vmm::types::PhysAddr;
 use rtl::arch::PAGE_SIZE;
 use rtl::arch::PHYS_OFFSET;
 
@@ -41,10 +41,6 @@ pub const KERNEL_AS_END: usize = usize::MAX;
 pub const KERNEL_LINEAR_SPACE_SIZE: usize = 10 << 30;
 pub const KERNEL_LINEAR_SPACE_BEGIN: usize = PHYS_OFFSET;
 pub const KERNEL_LINEAR_SPACE_END: usize = KERNEL_LINEAR_SPACE_BEGIN + KERNEL_LINEAR_SPACE_SIZE;
-
-pub const KERNEL_MMIO_BASE: usize = KERNEL_LINEAR_SPACE_END + PAGE_SIZE * 10;
-
-sa::const_assert!(KERNEL_MMIO_BASE > usize::MAX - (1 << (64 - 25)));
 
 // TODO: dtb
 pub const NUM_CPUS: usize = 2;
@@ -71,6 +67,11 @@ pub fn time_since_start() -> f64 {
     }
 
     cntpct as f64 / cntfrq as f64
+}
+
+pub fn init(load_addr: PhysAddr) {
+    irq::handlers::set_up_vbar();
+    mm::layout::init(load_addr);
 }
 
 global_asm!(include_str!("boot.s"));

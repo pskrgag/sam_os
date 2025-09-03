@@ -4,8 +4,8 @@ use crate::{
 };
 
 use rtl::arch::PAGE_SIZE;
-use rtl::vmm::MappingType;
 use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 use spin::Once;
 
 // TODO: W/A. it should be read from dtb
@@ -119,7 +119,7 @@ impl<T> PerCpu<T> {
     }
 
     // SAFETY: caller should know what he is doing, percpu vars are expected to be touched
-    // only by owner cpu. IOW caller takes care of syncronization and possible side-effects
+    // only by owner cpu. IOW caller takes care of synchronization and possible side-effects
     pub unsafe fn for_each_cpu<F: Fn(&T)>(&self, visiter: F) {
         for i in 0..NUM_CPUS {
             visiter(percpu_n!(self.data, i));

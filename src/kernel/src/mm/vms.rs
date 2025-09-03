@@ -1,11 +1,12 @@
 use crate::mm::{
     allocators::page_alloc::page_allocator,
+    layout::{vmm_range, LayoutEntry},
     paging::page_table::{MmError, PageTable},
     vma_list::{MemRangeVma, Vma, VmaList},
 };
 use rtl::arch::*;
-use rtl::vmm::{types::*, MappingType};
 use rtl::error::ErrorType;
+use rtl::vmm::{types::*, MappingType};
 
 pub struct VmsInner {
     size: usize,
@@ -20,6 +21,15 @@ impl VmsInner {
             start: VirtAddr::from(0x0),
             size: usize::MAX,
             ttbr0: Some(PageTable::new().unwrap()), // ToDo remove unwrap()
+            vmas: VmaList::new(),
+        }
+    }
+
+    pub fn new_kernel() -> Self {
+        Self {
+            start: VirtAddr::from(vmm_range(LayoutEntry::VmAlloc).start()),
+            size: usize::MAX,
+            ttbr0: None,
             vmas: VmaList::new(),
         }
     }
@@ -86,11 +96,15 @@ impl VmsInner {
 
         self.vmas.free(range)?;
 
-        self.ttbr0.as_mut().unwrap().free(range, |pa, device| {
-            if !device {
-                page_allocator().free(pa, 1);
-            }
-        }).expect("Failed to free memory");
+        self.ttbr0
+            .as_mut()
+            .unwrap()
+            .free(range, |pa, device| {
+                if !device {
+                    page_allocator().free(pa, 1);
+                }
+            })
+            .expect("Failed to free memory");
 
         Ok(())
     }

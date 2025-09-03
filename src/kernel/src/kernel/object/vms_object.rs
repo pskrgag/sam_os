@@ -26,6 +26,12 @@ impl Vms {
         })
     }
 
+    pub fn new_kernel() -> Arc<Self> {
+        Arc::new(Self {
+            inner: RwLock::new(VmsInner::new_kernel()),
+        })
+    }
+
     pub fn vm_map(
         &self,
         v: MemRange<VirtAddr>,

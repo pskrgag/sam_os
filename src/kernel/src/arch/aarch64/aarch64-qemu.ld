@@ -2,8 +2,6 @@ ENTRY(__start)
 
 PAGE_SIZE = 4096;
 
-load_addr = 0x40000000;
-
 #if defined(CONFIG_BOARD_QEMU)
 mmio_base = 0x08000000;
 #elif defined(CONFIG_BOARD_ORPIPC2)
@@ -18,23 +16,25 @@ SECTIONS
 {
     . = kernel_virtual_base;
     start = .;
-    .text : AT(load_addr)
+
+    .boot :
     {
-        stext = .;
         *(.text.boot)
-        //. = ALIGN(PAGE_SIZE);
-        *(.data.boot)
-        . = ALIGN(PAGE_SIZE); /* Here boot code ends */
-        __BOOT_END = .; // __BOOT_END must be 4KiB aligned
-        __RO_START = .;
-        *(.text .text.*)
-	. = ALIGN(4096);
-        etext = .;
     }
 
-    .vectors ALIGN(2048):
+    .rela :
     {
-        KEEP(*(.vectors))
+        _rela_begin = .;
+        *(.rela.dyn)
+        _rela_end = .;
+    }
+
+    .text ALIGN(4096):
+    {
+        stext = .;
+        *(.text .text.*)
+        . = ALIGN(4096);
+        etext = .;
     }
 
     .rodata ALIGN(16):
@@ -50,11 +50,7 @@ SECTIONS
        erodata = .;
     }
 
-    . = ALIGN(PAGE_SIZE); /* Fill up to page size */
-    __RO_END = .; /* __RO_END must be 4KiB aligned */
-    __DATA_START = .; /* __DATA_START must be 4KiB aligned */
-
-    .data : /* @todo align data to 4K -- it's already aligned up to __RO_END marker now */
+    .data ALIGN(4096):
     {
         sdata = .;
         *(.data .data.*)
@@ -72,9 +68,8 @@ SECTIONS
     {
         sbss = .;
         *(.bss .bss.*)
-        /* *(COMMON) */
         FILL(0x00)
-        . = ALIGN(PAGE_SIZE); /* Align up to page size */
+        . = ALIGN(PAGE_SIZE);
         ebss = .;
     }
 
@@ -82,7 +77,7 @@ SECTIONS
     {
         sdatapercpu = .;
         *(.percpu.data)
-        . = ALIGN(PAGE_SIZE); /* Align up to page size */
+        . = ALIGN(PAGE_SIZE);
         edatapercpu = .;
     }
 
@@ -100,11 +95,7 @@ SECTIONS
          SKIP(4096)
     } :data
 
-    end = .;
+    . = ALIGN(2 << 20);
+    __end = .;
     /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
-
-    . = ALIGN(PAGE_SIZE);
-    mmio_start = .;
-    . += 0x00040000;
-    mmio_end = .;
 }

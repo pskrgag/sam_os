@@ -12,6 +12,8 @@
 #![test_runner(crate::tests::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+use rtl::vmm::types::PhysAddr;
+
 extern crate alloc;
 
 #[macro_use]
@@ -43,6 +45,10 @@ static SAMOS_BANNER: &str = "
                                                
 ";
 
+unsafe extern "C" {
+    static __start: usize;
+}
+
 /* At this point we have:
  *
  *      1) MMU is turned on
@@ -50,9 +56,10 @@ static SAMOS_BANNER: &str = "
  *      3) 0xffffffffc0000000 and load_addr are mapped to load_addr via 1GB block
  */
 #[unsafe(no_mangle)]
-extern "C" fn start_kernel() -> ! {
-    println!("Starting kernel...");
-    arch::irq::handlers::set_up_vbar();
+extern "C" fn start_kernel(load_addr: PhysAddr) -> ! {
+    println!("Starting kernel... {:x}", load_addr);
+
+    arch::init(load_addr);
 
     // allocators + paging
     mm::init();

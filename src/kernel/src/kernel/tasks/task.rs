@@ -10,6 +10,7 @@ pub struct TaskInner {
 }
 
 static INIT_TASK: Once<Arc<Task>> = Once::new();
+static KERNEL_TASK: Once<Arc<Task>> = Once::new();
 
 impl TaskInner {
     pub fn new_user() -> Self {
@@ -29,6 +30,11 @@ impl TaskInner {
 }
 
 pub fn init_task() -> Arc<Task> {
-    INIT_TASK.call_once(|| Task::new("init task".into()));
+    INIT_TASK.call_once(|| Task::new("init".into()));
+    INIT_TASK.get().unwrap().clone()
+}
+
+pub fn kernel_task() -> Arc<Task> {
+    INIT_TASK.call_once(|| Task::new_kernel());
     INIT_TASK.get().unwrap().clone()
 }

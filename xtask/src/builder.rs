@@ -13,6 +13,16 @@ fn binary(name: &str) -> String {
     )
 }
 
+fn kernel_binary(name: &str) -> String {
+    format!(
+        "{}{}{}{}{name}.bin",
+        env!("CARGO_WORKSPACE_DIR"),
+        "/target/",
+        TARGET,
+        "/debug/",
+    )
+}
+
 fn build_component(c: &Component, b: &BuildScript, command: &str) -> Result<(), String> {
     info!("[INFO]     Builing {:?}...", c.name);
 
@@ -52,6 +62,19 @@ fn build_kernel(b: &BuildScript) -> Result<(), String> {
         None,
         None,
         Some(&[("BOARD_TYPE", b.board.as_str())]),
+    )?;
+
+    run_prog(
+        "llvm-objcopy",
+        &[
+            "-O",
+            "binary",
+            &binary("sam_kernel"),
+            &format!("{}.bin", binary("sam_kernel")),
+        ],
+        None,
+        None,
+        None,
     )
 }
 
@@ -118,7 +141,7 @@ pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
     build(&c)?;
 
     info!("[INFO]     Running example...");
-    let bin = binary("sam_kernel");
+    let bin = kernel_binary("sam_kernel");
     let mut args = vec![
         "-machine",
         "virt,gic-version=2",
@@ -126,11 +149,15 @@ pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
         "1G",
         "-cpu",
         "cortex-a53",
-        "-smp",
-        "2",
+        // "-smp",
+        // "2",
         "-nographic",
         "-kernel",
         &bin,
+        "-d",
+        "int",
+        "-D",
+        "log1",
     ];
 
     if gdb {

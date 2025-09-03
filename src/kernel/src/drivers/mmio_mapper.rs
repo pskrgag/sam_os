@@ -1,11 +1,11 @@
 use crate::mm::paging::kernel_page_table::kernel_page_table;
 
-use crate::arch::KERNEL_MMIO_BASE;
 use crate::kernel::locking::spinlock::Spinlock;
+use crate::mm::layout::{vmm_range, LayoutEntry};
 use rtl::arch::PAGE_SIZE;
 use rtl::misc::num_pages;
-use rtl::vmm::MappingType;
 use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 
 unsafe extern "C" {
     static mmio_start: usize;
@@ -32,8 +32,8 @@ impl MmioAllocator {
 
     pub fn new() -> Self {
         Self {
-            start: KERNEL_MMIO_BASE.into(),
-            pages: num_pages(linker_var!(mmio_end) - linker_var!(mmio_start)),
+            start: vmm_range(LayoutEntry::Mmio).start(),
+            pages: num_pages(vmm_range(LayoutEntry::Mmio).size()),
             offset: 0,
         }
     }
