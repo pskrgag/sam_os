@@ -37,7 +37,7 @@ struct Aligned;
 #[cfg(not(test))]
 static INIT: &[u8] = include_bytes_align_as!(
     Aligned,
-    "../../../../../target/aarch64-unknown-none-softfloat/debug/roottask"
+    "../../../../target/aarch64-unknown-none-softfloat/debug/roottask"
 );
 
 // Simple, Simple, Simple

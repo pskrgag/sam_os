@@ -78,6 +78,26 @@ fn build_kernel(b: &BuildScript) -> Result<(), String> {
     )
 }
 
+fn build_loader(b: &BuildScript) -> Result<(), String> {
+    info!("[INFO]     Builing loader...");
+
+    run_prog(
+        "cargo",
+        &[
+            "build",
+            "-p",
+            "loader",
+            "--target",
+            TARGET,
+            "--color=always",
+            "--quiet",
+        ],
+        None,
+        None,
+        Some(&[("BOARD_TYPE", b.board.as_str())]),
+    )
+}
+
 pub fn prepare_cpio(b: &Vec<Component>, to: &str) -> Result<(), String> {
     let mut files = Vec::with_capacity(b.len() - 1);
 
@@ -134,7 +154,8 @@ fn build_impl(c: &BuildScript, command: &str) -> Result<(), String> {
         command,
     )?;
 
-    build_kernel(c)
+    build_kernel(c)?;
+    build_loader(c)
 }
 
 pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {

@@ -1,5 +1,5 @@
 [package]
-name = "roottask"
+name = "mmc"
 version = "0.1.0"
 edition = "2024"
 
@@ -11,4 +11,4 @@ serde = { version = "1", default-features = false  }
 cpio_reader = "0.1.2"
 
 [build-dependencies]
-ridl = { path = "../../../../tools/ridl/" }
+ridl = { path = "../../../tools/ridl" }

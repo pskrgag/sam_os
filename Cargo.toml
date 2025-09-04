@@ -1,8 +1,13 @@
 [workspace]
 members = [
 	"tools/ridl",
-	"src/rtl",
-	"src/kernel", "src/userspace/services/roottask", "src/userspace/apps/client", "xtask", "src/userspace/services/mmc",
+	"rtl",
+	"kernel",
+	"userspace/services/roottask",
+	"userspace/apps/client",
+	"xtask",
+	"userspace/services/mmc", 
+	"loader",
 ]
 
 resolver = "2"
