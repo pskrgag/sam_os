@@ -4,4 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+fdt = { version = "0.1.5", features = ["pretty-printing"] }
+linkme = { version = "0.3.33", features = ["used_linker"] }
 rtl = { path = "../rtl" }
+
+[[bin]]
+name = "loader"

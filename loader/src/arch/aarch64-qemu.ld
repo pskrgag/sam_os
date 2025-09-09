@@ -1,7 +1,5 @@
 ENTRY(__start)
 
-kernel_virtual_base = 0xffffffa000000000;
-
 PHDRS
 {
    text PT_LOAD FLAGS(5);
@@ -11,24 +9,34 @@ PHDRS
 
 SECTIONS
 {
-    start = 0;
+    .text_boot :
+    {
+        *(.text.boot)
+    } :text
+
+    .rela :
+    {
+        _rela_begin = .;
+        *(.rela.*)
+        _rela_end = .;
+    } :rodata
 
     .text :
     {
         *(.text .text.*)
     } :text
 
-    .rela :
-    {
-        _rela_begin = .;
-        *(.rela.dyn)
-        _rela_end = .;
-    } :rodata
-
     .rodata :
     {
         *(.rodata .rodata.*)
-        *(.kernel_tests)
+
+        . = ALIGN(16);
+        __start_linkme_UARTS = .;
+        KEEP(*(linkme_UARTS))
+        __stop_linkme_UARTS = .;
+
+        __start_linkm2_UARTS = .;
+        __stop_linkm2_UARTS = .;
     } :rodata
 
     .data :

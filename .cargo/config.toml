@@ -10,4 +10,6 @@ CARGO_WORKSPACE_DIR = { value = "", relative = true, force = true }
 [build]
 rustflags = [
 	"-C", "force-frame-pointers",
+	"-C", "link-dead-code",
 ]
+# target = "aarch64-unknown-none-softfloat"

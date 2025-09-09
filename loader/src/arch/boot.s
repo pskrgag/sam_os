@@ -15,6 +15,8 @@ __start:
 	.quad	0
 
 _start:
+	mov	x10, x0
+
 	mrs	x0, CurrentEl
 	cmp	x0, #(1 << 2)
 	b.eq	el1_1
@@ -60,7 +62,7 @@ loop:
 	ldr	x4, [x0, #16]	// r_addend
 	add	x3, x2, x3	// x3 = load_addr + r_offset
 	ldr	x5, [x3]
-	add	x5, x4, x4
+	add	x5, x2, x4	// add r_addend
 	str	x5, [x3]
 
 	add	x0, x0, 24
@@ -71,12 +73,7 @@ crt0:
 	add	x0, x0, #:lo12:__stack_start
 	mov	sp, x0
 
-	mov	x0, x2
-
-	// Calculate image size
-	adrp	x1, __end
-	add	x1, x1, #:lo12:__end
-	sub	x1, x1, x0
+	mov	x0, x10
 
 	// Jump to C
 	b	main

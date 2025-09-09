@@ -60,11 +60,7 @@ impl UartTrait for Uart {
 
     fn read_bytes(&mut self, bytes: &mut [u8]) {
         for i in bytes {
-            if env!("BOARD_TYPE") == "qemu" {
-                while self.read_reg(Pl011::Fr as u8) & UARTFR_RXFE > 0 {}
-            } else if env!("BOARD_TYPE") == "orpipc2" {
-                while self.read_reg(UartOpri::Lsr as u8) & 0x1 == 0 {}
-            }
+            while self.read_reg(Pl011::Fr as u8) & UARTFR_RXFE > 0 {}
 
             *i = self.read_reg(Pl011::Dr as u8) as u8;
         }
@@ -72,10 +68,6 @@ impl UartTrait for Uart {
 
     fn write_bytes(&mut self, b: &[u8]) {
         for i in b {
-            if env!("BOARD_TYPE") == "orpipc2" {
-                while self.read_reg(UartOpri::Lsr as u8) & 0x40 == 0 {}
-            }
-
             self.write_reg(Pl011::Dr as u8, *i as u32);
 
             if *i == b'\n' {

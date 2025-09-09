@@ -16,7 +16,7 @@ pub struct Spinlock<T> {
     val: UnsafeCell<T>,
 }
 
-pub struct SpinlockGuard<'a, T: 'a> {
+pub struct SpinlockGuard<'a, T: 'a + ?Sized> {
     lock: &'a SpinLockInner,
     data: &'a mut T,
 }
@@ -79,7 +79,7 @@ impl<'a, T> DerefMut for SpinlockGuard<'a, T> {
     }
 }
 
-impl<'a, T> Drop for SpinlockGuard<'a, T> {
+impl<'a, T: ?Sized> Drop for SpinlockGuard<'a, T> {
     fn drop(&mut self) {
         self.lock.unlock();
     }

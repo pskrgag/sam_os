@@ -91,10 +91,27 @@ fn build_loader(b: &BuildScript) -> Result<(), String> {
             TARGET,
             "--color=always",
             "--quiet",
+            "-Z",
+            "build-std=core"
         ],
         None,
         None,
-        Some(&[("BOARD_TYPE", b.board.as_str())]),
+        Some(&[
+            ("RUSTFLAGS", "-C relocation-model=pie"),
+        ]),
+    )?;
+
+    run_prog(
+        "llvm-objcopy",
+        &[
+            "-O",
+            "binary",
+            &binary("loader"),
+            &format!("{}.bin", binary("loader")),
+        ],
+        None,
+        None,
+        None,
     )
 }
 
