@@ -21,9 +21,12 @@ SECTIONS
         _rela_end = .;
     } :rodata
 
-    .text :
+    .text ALIGN(4096):
     {
+        _text_begin = .;
         *(.text .text.*)
+        . = ALIGN(4096);
+        _text_end = .;
     } :text
 
     .rodata :
@@ -49,11 +52,11 @@ SECTIONS
         *(.bss .bss.*)
     } :data
 
-
     . = . + 0x50000;
     . = ALIGN(16);
     __stack_start = .;
 
+    . = ALIGN(4096);
     __end = .;
     /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }

@@ -381,10 +381,6 @@ impl PageTable {
 }
 
 impl PageTableEntry {
-    pub fn valid_block() -> Self {
-        Self(mmu_flags::BLOCK_ACCESS_FLAG | mmu_flags::BLOCK_VALID)
-    }
-
     pub fn bits(&self) -> usize {
         self.0
     }

@@ -44,3 +44,23 @@ pub fn ref_mut_to_usize<T>(rf: &mut T) -> usize {
 pub unsafe fn usize_to_ref<T>(v: usize) -> &'static T {
     &*(v as *const u8 as *const T)
 }
+
+#[repr(C)]
+pub struct AlignedAs<Align, Bytes: ?Sized> {
+    pub _align: [Align; 0],
+    pub bytes: Bytes,
+}
+
+#[macro_export]
+macro_rules! include_bytes_align_as {
+    ($align_ty:ty, $path:expr) => {{
+        // const block expression to encapsulate the static
+
+        static ALIGNED: &rtl::misc::AlignedAs<$align_ty, [u8]> = &rtl::misc::AlignedAs {
+            _align: [],
+            bytes: *include_bytes!($path),
+        };
+
+        &ALIGNED.bytes
+    }};
+}

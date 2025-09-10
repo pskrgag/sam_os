@@ -1,0 +1,64 @@
+use crate::mm::{
+    alloc::alloc_pages,
+    page_table::{PagePerms, PageTable},
+};
+use elf::{
+    abi::{PF_R, PF_W, PF_X, PT_LOAD},
+    endian::LittleEndian,
+    ElfBytes,
+};
+use rtl::arch::PAGE_SIZE;
+use rtl::vmm::types::{Address, MemRange, PhysAddr, VirtAddr};
+
+#[repr(align(0x1000))]
+struct Aligned;
+
+static KERNEL_BIN: &[u8] = rtl::include_bytes_align_as!(Aligned, env!("KERNEL_PATH"));
+
+// Maps kernel and returns address of page table base
+pub fn map_kernel(tt: &mut PageTable) {
+    let elf =
+        ElfBytes::<LittleEndian>::minimal_parse(KERNEL_BIN).expect("Failed to parse kernel elf");
+    let phys_base = KERNEL_BIN.as_ptr();
+
+    for seg in elf
+        .segments()
+        .unwrap()
+        .into_iter()
+        .filter(|phdr| phdr.p_type == PT_LOAD)
+    {
+        let base = seg.p_vaddr;
+        let size = seg.p_memsz;
+        let mut virt_range = MemRange::new(VirtAddr::new(base as usize), size as usize);
+
+        virt_range.align_page();
+
+        let mut phys_range = if seg.p_filesz != 0 {
+            MemRange::new(
+                PhysAddr::new(unsafe { phys_base.add(seg.p_offset as usize) } as usize),
+                seg.p_filesz as usize,
+            )
+        } else {
+            MemRange::new(
+                alloc_pages(seg.p_memsz as usize / PAGE_SIZE).unwrap(),
+                seg.p_memsz as usize,
+            )
+        };
+
+        phys_range.align_page();
+
+        let perms = if seg.p_flags == PF_W | PF_R {
+            PagePerms::ReadWrite
+        } else if seg.p_flags == PF_X | PF_R {
+            PagePerms::Execute
+        } else if seg.p_flags == PF_R {
+            PagePerms::Read
+        } else {
+            panic!("Unknown elf permissions");
+        };
+
+        tt.map_pages(virt_range, phys_range, perms);
+    }
+
+    println!("Mapped kernel image");
+}

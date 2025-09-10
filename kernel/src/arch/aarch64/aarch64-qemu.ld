@@ -3,6 +3,14 @@ ENTRY(__start)
 PAGE_SIZE = 4096;
 kernel_virtual_base = 0xffffffa000000000;
 
+PHDRS
+{
+   text PT_LOAD FLAGS(5);
+   rodata PT_LOAD FLAGS(6);
+   data PT_LOAD FLAGS(4);
+}
+
+
 SECTIONS
 {
     . = kernel_virtual_base;
@@ -11,24 +19,24 @@ SECTIONS
     .boot :
     {
         *(.text.boot)
-    }
+    } :text
 
     .rela :
     {
         _rela_begin = .;
         *(.rela.dyn)
         _rela_end = .;
-    }
+    } :text
 
-    .text ALIGN(4096):
+    .text ALIGN(PAGE_SIZE):
     {
         stext = .;
         *(.text .text.*)
-        . = ALIGN(4096);
+        . = ALIGN(PAGE_SIZE);
         etext = .;
-    }
+    } :text
 
-    .rodata ALIGN(16):
+    .rodata ALIGN(PAGE_SIZE):
     {
         srodata = .;
         *(.rodata .rodata.*)
@@ -39,9 +47,9 @@ SECTIONS
 
        . = ALIGN(4096);
        erodata = .;
-    }
+    } :rodata
 
-    .data ALIGN(4096):
+    .data ALIGN(PAGE_SIZE):
     {
         sdata = .;
         *(.data .data.*)
@@ -53,7 +61,7 @@ SECTIONS
 
         . = ALIGN(4096);
         edata = .;
-    }
+    } :data
 
     .bss ALIGN(4096) (NOLOAD):
     {
@@ -62,7 +70,7 @@ SECTIONS
         FILL(0x00)
         . = ALIGN(PAGE_SIZE);
         ebss = .;
-    }
+    } :data
 
     .data.percpu ALIGN(4096):
     {
@@ -70,11 +78,11 @@ SECTIONS
         *(.percpu.data)
         . = ALIGN(PAGE_SIZE);
         edatapercpu = .;
-    }
+    } :data
 
     .guard_page (NOLOAD):
     {
-         SKIP(4096)
+         SKIP(PAGE_SIZE)
     } :data
 
     . = . + 0x50000;
@@ -83,7 +91,7 @@ SECTIONS
 
     .guard_page (NOLOAD):
     {
-         SKIP(4096)
+         SKIP(PAGE_SIZE)
     } :data
 
     . = ALIGN(2 << 20);

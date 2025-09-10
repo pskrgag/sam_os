@@ -10,12 +10,17 @@ mod arch;
 #[macro_use]
 mod log;
 mod drivers;
+mod kernel;
+mod mm;
 
 #[unsafe(no_mangle)]
 extern "C" fn main(fdt: PhysAddr) {
     let fdt = unsafe { Fdt::from_ptr(fdt.bits() as *const _) }.unwrap();
 
     drivers::uart::probe(&fdt);
+
+    let mut tt = mm::init(&fdt);
+    kernel::map_kernel(&mut tt);
 
     loop {}
 }

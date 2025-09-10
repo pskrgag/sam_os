@@ -92,12 +92,13 @@ fn build_loader(b: &BuildScript) -> Result<(), String> {
             "--color=always",
             "--quiet",
             "-Z",
-            "build-std=core"
+            "build-std=core",
         ],
         None,
         None,
         Some(&[
             ("RUSTFLAGS", "-C relocation-model=pie"),
+            ("KERNEL_PATH", &binary("sam_kernel")),
         ]),
     )?;
 

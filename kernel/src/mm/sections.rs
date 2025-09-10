@@ -1,6 +1,5 @@
 use crate::arch::mm::layout::image_to_phys;
 use crate::mm::paging::kernel_page_table::kernel_page_table;
-use rtl::arch::PHYS_OFFSET;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
 

@@ -1,29 +1,10 @@
 use super::{UartProbe, UARTS};
-use core::fmt::{Arguments, Result, Write};
+use core::fmt::{Result, Write};
 use fdt::node::FdtNode;
 use linkme::distributed_slice;
 use rtl::uart::{arm_uart::Uart, UartTrait};
 use rtl::vmm::types::VirtAddr;
-
-use core::cell::UnsafeCell;
-
-pub struct FakeLock<T> {
-    val: UnsafeCell<T>,
-}
-
-impl<T> FakeLock<T> {
-    pub const fn new(val: T) -> Self {
-        Self {
-            val: UnsafeCell::new(val),
-        }
-    }
-
-    pub fn get(&self) -> &mut T {
-        unsafe { &mut *self.val.get() }
-    }
-}
-
-unsafe impl<T> Sync for FakeLock<T> {}
+use rtl::locking::fakelock::FakeLock;
 
 struct Pl031(Uart);
 
@@ -40,10 +21,6 @@ fn probe(node: &FdtNode) -> Option<*mut dyn Write> {
 pub fn probe_hack() -> Option<*mut dyn Write> {
     *BACKEND.get() = Pl031(Uart::default(0x09000000.into()));
     Some(BACKEND.get())
-}
-
-pub fn pprint(args: Arguments) {
-    BACKEND.get().write_fmt(args).unwrap()
 }
 
 impl Write for Pl031 {
