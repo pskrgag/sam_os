@@ -1,5 +1,5 @@
 use crate::percpu_global;
-use crate::{arch, drivers::mmio_mapper::MMIO_ALLOCATOR};
+use loader_protocol::{DeviceKind, LoaderArg};
 use rtl::vmm::types::*;
 
 const GICD_CTLR: usize = 0x0;
@@ -95,7 +95,7 @@ impl Gicc {
     }
 
     pub fn new(base: PhysAddr) -> Option<Self> {
-        let cpu_va = MMIO_ALLOCATOR.lock().iomap(base, 1)?;
+        let cpu_va = 0.into();
         Some(Self { base: cpu_va })
     }
 
@@ -118,7 +118,7 @@ impl Gicd {
     }
 
     pub fn new(base: PhysAddr) -> Option<Self> {
-        let dist_va = MMIO_ALLOCATOR.lock().iomap(base, 1)?;
+        let dist_va = 0.into();
         Some(Self { base: dist_va })
     }
 
@@ -206,12 +206,12 @@ impl Gic {
         }
     }
 
-    fn init(&mut self) -> Option<()> {
-        let cpu = arch::gic_cpu();
-        let dist = arch::gic_dist();
+    fn init(&mut self, arg: &LoaderArg) -> Option<()> {
+        let cpu = arg.get_device(DeviceKind::GicCpu).unwrap();
+        let dist = arg.get_device(DeviceKind::GicDist).unwrap();
 
-        self.cpu = Gicc::new(cpu.0)?;
-        self.dist = Gicd::new(dist.0)?;
+        self.cpu = Gicc::new(cpu.0.into())?;
+        self.dist = Gicd::new(dist.0.into())?;
 
         // Turn off to start initialization
         self.dist.disable();
@@ -249,9 +249,9 @@ impl Gic {
     }
 }
 
-pub fn init() {
+pub fn init(arg: &LoaderArg) {
     GIC.per_cpu_var_get_mut()
-        .init()
+        .init(arg)
         .expect("Failed to initalize GIC");
 
     println!("Gic initalized");

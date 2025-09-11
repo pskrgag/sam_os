@@ -11,5 +11,6 @@ pub enum LayoutEntry {
 }
 
 pub fn vmm_range(e: LayoutEntry) -> MemRange<VirtAddr> {
-    VMM_LAYOUT[e as usize]
+    // VMM_LAYOUT[e as usize]
+    todo!()
 }

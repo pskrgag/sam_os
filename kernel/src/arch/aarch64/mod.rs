@@ -23,7 +23,6 @@ pub mod timer;
 
 use core::arch::global_asm;
 use core::mem;
-use rtl::vmm::types::PhysAddr;
 use rtl::arch::PAGE_SIZE;
 use rtl::arch::PHYS_OFFSET;
 
@@ -69,9 +68,8 @@ pub fn time_since_start() -> f64 {
     cntpct as f64 / cntfrq as f64
 }
 
-pub fn init(load_addr: PhysAddr) {
+pub fn init() {
     irq::handlers::set_up_vbar();
-    mm::layout::init(load_addr);
 }
 
 global_asm!(include_str!("boot.s"));

@@ -12,8 +12,6 @@
 #![test_runner(crate::tests::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-use rtl::vmm::types::PhysAddr;
-
 extern crate alloc;
 
 #[macro_use]
@@ -57,9 +55,11 @@ unsafe extern "C" {
  */
 #[unsafe(no_mangle)]
 extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
-    drivers::init(prot);
+    drivers::init_logging(prot);
 
-    arch::init(0x0.into());
+    println!("Booting kernel...");
+
+    arch::init();
 
     // allocators + paging
     mm::init();
@@ -67,6 +67,7 @@ extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
     // --- Kernel is fine grained mapped ---
     // all wild accesses will cause exception
 
+    drivers::init(prot);
     kernel::percpu::init_percpu();
 
     print!("{SAMOS_BANNER}");

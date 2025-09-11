@@ -1,5 +1,4 @@
 use crate::arch::uart_base;
-use crate::drivers::mmio_mapper::MMIO_ALLOCATOR;
 use crate::kernel::locking::spinlock::Spinlock;
 use core::fmt;
 use rtl::uart::Uart as BackendUart;

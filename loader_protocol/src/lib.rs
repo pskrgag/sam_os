@@ -8,6 +8,8 @@ pub const MAX_DEVICES: usize = 10;
 #[derive(Debug, PartialEq)]
 pub enum DeviceKind {
     Uart,
+    GicDist,
+    GicCpu,
 }
 
 #[derive(Debug)]

@@ -11,11 +11,3 @@ pub const fn ram_base() -> PhysAddr {
 pub const fn ram_size() -> usize {
     0x02000000
 }
-
-pub const fn gic_dist() -> (PhysAddr, usize) {
-    (PhysAddr::new(0x08000000), 0x1000)
-}
-
-pub const fn gic_cpu() -> (PhysAddr, usize) {
-    (PhysAddr::new(0x08010000), 0x1000)
-}
