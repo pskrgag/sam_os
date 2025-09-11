@@ -1,4 +1,4 @@
-use crate::mm::page_table::PagePerms;
+use crate::mm::page_table::{PageKind, PagePerms};
 use rtl::vmm::types::{Address, PhysAddr, VirtAddr};
 
 pub const PTE_COUNT: usize = 512;
@@ -13,6 +13,8 @@ const AP_UN_KRO: usize = 0b10;
 const PXN: usize = 1 << 53;
 // User execute never
 const UXN: usize = 1 << 54;
+// Access bit
+const ACCESS_BIT: usize = 1 << 10;
 
 const PAGE_ENTRY_FLAGS_MASK: usize = 0xFFF0_0000_0000_0FFF;
 
@@ -50,18 +52,26 @@ impl Pte {
         Self(TABLE_VALID | next.bits())
     }
 
-    pub fn make(pa: PhysAddr, perms: PagePerms) -> Self {
+    pub fn make(pa: PhysAddr, perms: PagePerms, kind: PageKind) -> Self {
         const fn ap(perms: usize) -> usize {
             (perms << 6) as usize
+        }
+        const fn mair(idx: u8) -> usize {
+            (idx << 2) as usize
         }
 
         let perms = match perms {
             PagePerms::Read => ap(AP_UN_KRO) | PXN,
             PagePerms::ReadWrite => ap(AP_UN_KRW) | PXN,
-            PagePerms::Execute => ap(AP_UN_KRO) | PXN,
+            PagePerms::Execute => ap(AP_UN_KRO),
         };
 
-        Self(perms | pa.bits() | 0b01)
+        let atts = match kind {
+            PageKind::Normal => mair(0),
+            PageKind::Device => mair(1),
+        };
+
+        Self(perms | ACCESS_BIT | atts | pa.bits() | 0b11)
     }
 
     pub fn bits(&self) -> usize {

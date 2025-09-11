@@ -180,7 +180,7 @@ pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
     build(&c)?;
 
     info!("[INFO]     Running example...");
-    let bin = kernel_binary("sam_kernel");
+    let bin = kernel_binary("loader");
     let mut args = vec![
         "-machine",
         "virt,gic-version=2",

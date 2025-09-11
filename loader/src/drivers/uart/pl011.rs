@@ -2,9 +2,11 @@ use super::{UartProbe, UARTS};
 use core::fmt::{Result, Write};
 use fdt::node::FdtNode;
 use linkme::distributed_slice;
+use loader_protocol::{DeviceKind, DeviceMapping, LoaderArg};
+use rtl::arch::PAGE_SIZE;
+use rtl::locking::fakelock::FakeLock;
 use rtl::uart::{arm_uart::Uart, UartTrait};
 use rtl::vmm::types::VirtAddr;
-use rtl::locking::fakelock::FakeLock;
 
 struct Pl031(Uart);
 
@@ -18,9 +20,17 @@ fn probe(node: &FdtNode) -> Option<*mut dyn Write> {
     Some(BACKEND.get())
 }
 
-pub fn probe_hack() -> Option<*mut dyn Write> {
-    *BACKEND.get() = Pl031(Uart::default(0x09000000.into()));
-    Some(BACKEND.get())
+fn map(node: &FdtNode, arg: &mut LoaderArg) {
+    let mut reg = node.reg().unwrap();
+    let reg = reg.next().unwrap();
+
+    arg.devices.push(DeviceMapping {
+        base: reg.starting_address as usize,
+        size: PAGE_SIZE,
+        kind: DeviceKind::Uart,
+    }).expect("Too many devices");
+
+    println!("Mapped pl031");
 }
 
 impl Write for Pl031 {
@@ -34,4 +44,5 @@ impl Write for Pl031 {
 static PL031: UartProbe = UartProbe {
     compatible: "arm,pl011",
     probe,
+    map,
 };

@@ -118,6 +118,10 @@ impl<T: Copy + Address + From<usize> + Ord + core::fmt::Debug> MemRange<T> {
         Self::new(T::from(USER_AS_START), USER_AS_SIZE)
     }
 
+    pub fn end(&self) -> T {
+        T::from(self.start.bits() + self.size)
+    }
+
     pub fn contains_addr(&self, addr: T) -> bool {
         self.start <= addr && self.start.bits() + self.size > addr.bits()
     }

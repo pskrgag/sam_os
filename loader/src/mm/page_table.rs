@@ -6,11 +6,17 @@ pub struct PageTable {
     base: *mut Pte,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum PagePerms {
     Read,
     ReadWrite,
     Execute,
+}
+
+#[derive(Copy, Clone)]
+pub enum PageKind {
+    Normal,
+    Device,
 }
 
 impl PageTable {
@@ -31,6 +37,7 @@ impl PageTable {
         va: &mut MemRange<VirtAddr>,
         pa: &mut MemRange<PhysAddr>,
         perms: PagePerms,
+        kind: PageKind,
         lvl: usize,
     ) {
         let order = lvl_to_size(lvl);
@@ -43,19 +50,19 @@ impl PageTable {
             if lvl != PAGE_TABLE_LEVELS {
                 if pte.is_valid() {
                     let next = pte.pa().bits() as *mut _;
-                    Self::map_lvl(next, va, pa, perms, lvl + 1);
+                    Self::map_lvl(next, va, pa, perms, kind, lvl + 1);
                 } else {
                     let next = alloc_pages(1).expect("Failed to allocate memory for page table");
                     let next_pte = Pte::new_non_leaf(next);
 
                     unsafe { base.add(idx).write(next_pte) };
 
-                    Self::map_lvl(next.bits() as *mut _, va, pa, perms, lvl + 1);
+                    Self::map_lvl(next.bits() as *mut _, va, pa, perms, kind, lvl + 1);
                 }
             } else {
                 assert!(!pte.is_valid());
 
-                unsafe { base.add(idx).write(Pte::make(pa.start(), perms)) };
+                unsafe { base.add(idx).write(Pte::make(pa.start(), perms, kind)) };
                 pa.truncate(size);
                 va.truncate(size);
             }
@@ -69,6 +76,7 @@ impl PageTable {
         mut va: MemRange<VirtAddr>,
         mut pa: MemRange<PhysAddr>,
         perms: PagePerms,
+        kind: PageKind,
     ) {
         assert!(va.size() == pa.size());
         assert!(va.start().is_page_aligned());
@@ -76,7 +84,7 @@ impl PageTable {
         assert!(pa.size().is_page_aligned());
         assert!(pa.start().is_page_aligned());
 
-        Self::map_lvl(self.base, &mut va, &mut pa, perms, 1)
+        Self::map_lvl(self.base, &mut va, &mut pa, perms, kind, 1)
     }
 
     pub fn base(&self) -> PhysAddr {

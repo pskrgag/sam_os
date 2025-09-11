@@ -3,8 +3,8 @@ ENTRY(__start)
 PHDRS
 {
    text PT_LOAD FLAGS(5);
-   rodata PT_LOAD FLAGS(6);
-   data PT_LOAD FLAGS(4);
+   rodata PT_LOAD FLAGS(4);
+   data PT_LOAD FLAGS(6);
 }
 
 SECTIONS
@@ -53,9 +53,6 @@ SECTIONS
     } :data
 
     . = . + 0x50000;
-    . = ALIGN(16);
-    __stack_start = .;
-
     . = ALIGN(4096);
     __end = .;
     /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }

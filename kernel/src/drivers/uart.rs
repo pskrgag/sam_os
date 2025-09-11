@@ -17,14 +17,9 @@ impl fmt::Write for Uart {
     }
 }
 
-pub fn remap() {
+pub fn remap(base: VirtAddr) {
     let mut p = UART.lock();
-    let ptr = MMIO_ALLOCATOR
-        .lock()
-        .iomap(PhysAddr::new(p.base().bits()), 1)
-        .expect("Failed to remap uart");
-
-    *p = BackendUart::default(ptr);
+    *p = BackendUart::default(base);
 }
 
 pub fn uart() -> Uart {

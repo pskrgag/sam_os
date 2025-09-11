@@ -56,10 +56,10 @@ unsafe extern "C" {
  *      3) 0xffffffffc0000000 and load_addr are mapped to load_addr via 1GB block
  */
 #[unsafe(no_mangle)]
-extern "C" fn start_kernel(load_addr: PhysAddr) -> ! {
-    println!("Starting kernel... {:x}", load_addr);
+extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
+    drivers::init(prot);
 
-    arch::init(load_addr);
+    arch::init(0x0.into());
 
     // allocators + paging
     mm::init();
@@ -68,8 +68,6 @@ extern "C" fn start_kernel(load_addr: PhysAddr) -> ! {
     // all wild accesses will cause exception
 
     kernel::percpu::init_percpu();
-
-    drivers::init();
 
     print!("{SAMOS_BANNER}");
 

@@ -69,8 +69,8 @@ loop:
 	b	loop
 
 crt0:
-	adrp	x0, __stack_start
-	add	x0, x0, #:lo12:__stack_start
+	adrp	x0, __end
+	add	x0, x0, #:lo12:__end 
 	mov	sp, x0
 
 	mov	x0, x10

@@ -6,8 +6,8 @@ kernel_virtual_base = 0xffffffa000000000;
 PHDRS
 {
    text PT_LOAD FLAGS(5);
-   rodata PT_LOAD FLAGS(6);
-   data PT_LOAD FLAGS(4);
+   rodata PT_LOAD FLAGS(4);
+   data PT_LOAD FLAGS(6);
 }
 
 
@@ -85,9 +85,12 @@ SECTIONS
          SKIP(PAGE_SIZE)
     } :data
 
-    . = . + 0x50000;
-    . = ALIGN(16);
-    __STACK_START = .;
+    .stack :
+    {
+         . = . + 0x50000;
+         . = ALIGN(16);
+         __STACK_START = .;
+    } :data
 
     .guard_page (NOLOAD):
     {

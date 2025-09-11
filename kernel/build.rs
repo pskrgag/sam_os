@@ -1,5 +1,3 @@
-extern crate cc;
-
 fn main() {
     println!("cargo::rerun-if-changed=src/arch/aarch64/mm/higher_half.c");
     println!("cargo::rerun-if-changed=src/arch/aarch64/aarch64-qemu.ld");
@@ -14,16 +12,4 @@ fn main() {
     } else {
         panic!("Unknown board");
     };
-
-    cc::Build::new()
-        .file("src/arch/aarch64/mm/higher_half.c")
-        .compiler("clang")
-        .flag("--target=aarch64")
-        .flag("-fPIC")
-        .flag("-O3")
-        .flag("-fno-tree-vectorize")
-        .flag("-mgeneral-regs-only")
-        .flag("-Wall")
-        .flag(flag)
-        .compile("libboot.a");
 }

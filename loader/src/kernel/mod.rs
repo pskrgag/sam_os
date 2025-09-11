@@ -1,6 +1,6 @@
 use crate::mm::{
     alloc::alloc_pages,
-    page_table::{PagePerms, PageTable},
+    page_table::{PageKind, PagePerms, PageTable},
 };
 use elf::{
     abi::{PF_R, PF_W, PF_X, PT_LOAD},
@@ -14,12 +14,16 @@ use rtl::vmm::types::{Address, MemRange, PhysAddr, VirtAddr};
 struct Aligned;
 
 static KERNEL_BIN: &[u8] = rtl::include_bytes_align_as!(Aligned, env!("KERNEL_PATH"));
+static mut KERNEL_VIRT_END: Option<usize> = None;
+static mut KERNEL_EP: Option<usize> = None;
 
 // Maps kernel and returns address of page table base
 pub fn map_kernel(tt: &mut PageTable) {
     let elf =
         ElfBytes::<LittleEndian>::minimal_parse(KERNEL_BIN).expect("Failed to parse kernel elf");
     let phys_base = KERNEL_BIN.as_ptr();
+
+    unsafe { KERNEL_EP = Some(elf.ehdr.e_entry as usize) };
 
     for seg in elf
         .segments()
@@ -57,8 +61,24 @@ pub fn map_kernel(tt: &mut PageTable) {
             panic!("Unknown elf permissions");
         };
 
-        tt.map_pages(virt_range, phys_range, perms);
+        let end = virt_range.end();
+
+        unsafe {
+            KERNEL_VIRT_END = KERNEL_VIRT_END
+                .map(|x| x.max(end.bits()))
+                .or_else(|| Some(end.bits()));
+        }
+
+        tt.map_pages(virt_range, phys_range, perms, PageKind::Normal);
     }
 
     println!("Mapped kernel image");
+}
+
+pub fn kernel_ep() -> VirtAddr {
+    unsafe { VirtAddr::new(KERNEL_EP.unwrap()) }
+}
+
+pub fn mmio_start() -> VirtAddr {
+    unsafe { VirtAddr::new(KERNEL_VIRT_END.unwrap()) }
 }

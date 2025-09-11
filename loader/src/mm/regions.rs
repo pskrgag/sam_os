@@ -33,11 +33,6 @@ impl MemoryRegion {
         let size = self.count * PAGE_SIZE;
         let end = start + size;
 
-        println!(
-            "{:x} {:x} {:x} {:x}",
-            self.start, size, reg_start, reg_size
-        );
-
         assert!(size.is_page_aligned());
         assert!(reg_start.is_page_aligned());
 

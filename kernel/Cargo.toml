@@ -21,6 +21,7 @@ spin = {version = "0.9.4", default-features = false, features = ["once"] }
 object_lib = { path = "src/kernel/object/object_lib" }
 rtl = { path = "../rtl", features = ["kernel"] }
 static_assertions = "1.1.0"
+loader_protocol = { path = "../loader_protocol" }
 
 [dev-dependencies]
 test_macros = {path = "./src/tests/test_macros/"}

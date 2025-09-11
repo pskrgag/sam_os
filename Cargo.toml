@@ -7,7 +7,7 @@ members = [
 	"userspace/apps/client",
 	"xtask",
 	"userspace/services/mmc", 
-	"loader",
+	"loader", "loader_protocol",
 ]
 
 resolver = "2"

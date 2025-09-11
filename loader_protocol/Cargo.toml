@@ -1,0 +1,8 @@
+[package]
+name = "loader_protocol"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+heapless = { version = "0.9.1", features = ["serde"] }
+rtl = { path = "../rtl" }

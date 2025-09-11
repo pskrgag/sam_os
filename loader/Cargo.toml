@@ -4,12 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-cortex-a = "8.1.1"
+aarch64-cpu = "10.0.0"
 elf = { version = "0.8.0", default-features = false }
 fdt = { version = "0.1.5", features = ["pretty-printing"] }
 heapless = { version = "0.9.1", features = ["serde"] }
 linkme = { version = "0.3.33", features = ["used_linker"] }
 rtl = { path = "../rtl" }
+loader_protocol = { path = "../loader_protocol" }
 
 [[bin]]
 name = "loader"
