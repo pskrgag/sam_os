@@ -1,6 +1,7 @@
 use fdt::Fdt;
 use page_table::{PageKind, PagePerms, PageTable};
 use rtl::vmm::types::{MemRange, PhysAddr, VirtAddr};
+use rtl::linker_var;
 
 pub mod alloc;
 pub mod page_table;
@@ -22,17 +23,6 @@ unsafe extern "C" {
     static _text_begin: usize;
     static __end: usize;
     static _text_end: usize;
-}
-
-#[macro_export]
-macro_rules! linker_var {
-    ($a:expr) => {{
-        #[allow(unused_unsafe)]
-        #[allow(clippy::macro_metavars_in_unsafe)]
-        unsafe {
-            &$a as *const usize as usize
-        }
-    }};
 }
 
 fn map_self_stack(table: &mut PageTable) {

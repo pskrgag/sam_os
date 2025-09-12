@@ -1,6 +1,3 @@
-#[cfg(all(feature = "qemu", feature = "orpipc2"))]
-compile_error!("Please choose one board");
-
 pub mod backtrace;
 pub mod context;
 pub mod cpuid;

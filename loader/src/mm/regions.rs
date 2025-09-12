@@ -1,4 +1,4 @@
-use crate::linker_var;
+use rtl::linker_var;
 use fdt::Fdt;
 use heapless::Vec;
 use rtl::arch::{PAGE_SHIFT, PAGE_SIZE};

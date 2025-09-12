@@ -56,8 +56,6 @@ fn build_kernel(b: &BuildScript) -> Result<(), String> {
             TARGET,
             "--color=always",
             "--quiet",
-            "--features",
-            &b.board,
         ],
         None,
         None,

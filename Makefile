@@ -9,13 +9,13 @@ roottask:
 	BOARD_TYPE=qemu cargo build -p roottask --target aarch64-unknown-none-softfloat
 
 test_kernel: roottask
-	BOARD_TYPE=qemu cargo test -p sam_kernel --target aarch64-unknown-none-softfloat --features qemu
+	BOARD_TYPE=qemu cargo test -p sam_kernel --target aarch64-unknown-none-softfloat
 
 run: roottask
-	BOARD_TYPE=qemu cargo run -p sam_kernel --target aarch64-unknown-none-softfloat --features qemu
+	BOARD_TYPE=qemu cargo run -p sam_kernel --target aarch64-unknown-none-softfloat
 
 clippy:
-	BOARD_TYPE=qemu cargo clippy -p sam_kernel --target aarch64-unknown-none-softfloat --features qemu
+	BOARD_TYPE=qemu cargo clippy -p sam_kernel --target aarch64-unknown-none-softfloat
 
 qemu:
 	qemu-system-aarch64 -d mmu,guest_errors -D test.txt -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel $(BINARY) -d int,mmu
