@@ -25,6 +25,8 @@ extern "C" fn main(fdt_base: PhysAddr) {
     let mut tt = mm::init(&fdt);
     kernel::map_kernel(&mut tt);
 
+    mm::layout::init_layout(&mut protocol);
+
     drivers::map(&fdt, &mut protocol);
     let arg0 = protocol::prepare(fdt_base, protocol, &mut tt);
 

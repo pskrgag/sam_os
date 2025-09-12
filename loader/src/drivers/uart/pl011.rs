@@ -7,6 +7,7 @@ use rtl::arch::PAGE_SIZE;
 use rtl::locking::fakelock::FakeLock;
 use rtl::uart::{arm_uart::Uart, UartTrait};
 use rtl::vmm::types::VirtAddr;
+use core::ops::DerefMut;
 
 struct Pl031(Uart);
 
@@ -17,7 +18,7 @@ fn probe(node: &FdtNode) -> Option<*mut dyn Write> {
     let reg = reg.next().unwrap();
 
     *BACKEND.get() = Pl031(Uart::default(reg.starting_address.into()));
-    Some(BACKEND.get())
+    Some(BACKEND.get().deref_mut())
 }
 
 fn map(node: &FdtNode, arg: &mut LoaderArg) {

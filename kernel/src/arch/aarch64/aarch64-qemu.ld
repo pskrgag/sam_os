@@ -21,24 +21,14 @@ SECTIONS
         *(.text.boot)
     } :text
 
-    .rela :
-    {
-        _rela_begin = .;
-        *(.rela.dyn)
-        _rela_end = .;
-    } :text
-
     .text ALIGN(PAGE_SIZE):
     {
-        stext = .;
         *(.text .text.*)
         . = ALIGN(PAGE_SIZE);
-        etext = .;
     } :text
 
     .rodata ALIGN(PAGE_SIZE):
     {
-        srodata = .;
         *(.rodata .rodata.*)
 
         skerneltests = .;
@@ -46,12 +36,10 @@ SECTIONS
         ekerneltests = .;
 
        . = ALIGN(4096);
-       erodata = .;
     } :rodata
 
     .data ALIGN(PAGE_SIZE):
     {
-        sdata = .;
         *(.data .data.*)
 
         . = ALIGN(8);
@@ -60,16 +48,13 @@ SECTIONS
         efixup = .;
 
         . = ALIGN(4096);
-        edata = .;
     } :data
 
-    .bss ALIGN(4096) (NOLOAD):
+    .bss ALIGN(4096) :
     {
-        sbss = .;
         *(.bss .bss.*)
         FILL(0x00)
         . = ALIGN(PAGE_SIZE);
-        ebss = .;
     } :data
 
     .data.percpu ALIGN(4096):

@@ -2,7 +2,7 @@
 use crate::arch::{backtrace::backtrace, irq::interrupts::disable_all};
 
 use core::panic::PanicInfo;
-use crate::alloc::borrow::ToOwned;
+use heapless::String;
 
 #[cfg(not(test))]
 use rtl::vmm::types::*;
@@ -32,10 +32,10 @@ fn on_panic(info: &PanicInfo) -> ! {
         let fp: usize;
 
         disable_all();
-        let id = if let Some(c) = crate::sched::current() {
-            c.task().name().to_owned()
+        let id: String<100> = if let Some(c) = crate::sched::current() {
+            c.task().name().try_into().unwrap()
         } else {
-            "kernel".to_owned()
+            "kernel".try_into().unwrap()
         };
         println!("--- cut here ---");
         println!("Kernel Panic! In context of '{}'", id);

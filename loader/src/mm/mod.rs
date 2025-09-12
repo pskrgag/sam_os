@@ -5,6 +5,7 @@ use rtl::vmm::types::{MemRange, PhysAddr, VirtAddr};
 pub mod alloc;
 pub mod page_table;
 pub mod regions;
+pub mod layout;
 
 pub fn init(fdt: &Fdt) -> PageTable {
     regions::init(fdt);

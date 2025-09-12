@@ -94,9 +94,8 @@ impl Gicc {
         }
     }
 
-    pub fn new(base: PhysAddr) -> Option<Self> {
-        let cpu_va = 0.into();
-        Some(Self { base: cpu_va })
+    pub fn new(base: VirtAddr) -> Self {
+        Self { base }
     }
 
     pub fn init(&mut self) {
@@ -117,9 +116,8 @@ impl Gicd {
         write_to_reg::<u32>(self.base, 0, 0);
     }
 
-    pub fn new(base: PhysAddr) -> Option<Self> {
-        let dist_va = 0.into();
-        Some(Self { base: dist_va })
+    pub fn new(base: VirtAddr) -> Self {
+        Self { base: base }
     }
 
     pub fn init(&mut self) {
@@ -210,8 +208,8 @@ impl Gic {
         let cpu = arg.get_device(DeviceKind::GicCpu).unwrap();
         let dist = arg.get_device(DeviceKind::GicDist).unwrap();
 
-        self.cpu = Gicc::new(cpu.0.into())?;
-        self.dist = Gicd::new(dist.0.into())?;
+        self.cpu = Gicc::new(cpu.0.into());
+        self.dist = Gicd::new(dist.0.into());
 
         // Turn off to start initialization
         self.dist.disable();

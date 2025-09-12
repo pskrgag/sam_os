@@ -78,7 +78,3 @@ pub fn map_kernel(tt: &mut PageTable) {
 pub fn kernel_ep() -> VirtAddr {
     unsafe { VirtAddr::new(KERNEL_EP.unwrap()) }
 }
-
-pub fn mmio_start() -> VirtAddr {
-    unsafe { VirtAddr::new(KERNEL_VIRT_END.unwrap()) }
-}

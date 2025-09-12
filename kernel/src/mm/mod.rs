@@ -9,6 +9,5 @@ pub fn init() {
     allocators::boot_alloc::init();
     allocators::page_alloc::init();
     paging::kernel_page_table::init();
-    paging::init_linear_map();
     allocators::slab::init_kernel_slabs();
 }

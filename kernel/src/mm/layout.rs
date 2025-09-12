@@ -1,16 +1,17 @@
-use crate::arch::mm::layout::VMM_LAYOUT;
-use rtl::vmm::types::{VirtAddr, MemRange};
+use heapless::Vec;
+use rtl::vmm::types::{MemRange, VirtAddr};
+use spin::Once;
 
-#[repr(usize)]
-pub enum LayoutEntry {
-    Image = 0,
-    Mmio = 1,
-    Fixmap = 2,
-    VmAlloc = 3,
-    Count = 4,
+use loader_protocol::{LoaderArg, VmmLayoutEntry, VmmLayoutKind, MAX_VMM_REGIONS};
+
+static VMM_LAYOUT: Once<Vec<VmmLayoutEntry, MAX_VMM_REGIONS>> = Once::new();
+
+pub fn vmm_range(kind: VmmLayoutKind) -> MemRange<VirtAddr> {
+    let entry = &VMM_LAYOUT.get().unwrap()[kind as usize];
+
+    MemRange::new(VirtAddr::from(entry.base), entry.size)
 }
 
-pub fn vmm_range(e: LayoutEntry) -> MemRange<VirtAddr> {
-    // VMM_LAYOUT[e as usize]
-    todo!()
+pub fn init(arg: &LoaderArg) {
+    VMM_LAYOUT.call_once(|| arg.vmm_layout.clone());
 }

@@ -1,9 +1,10 @@
 use crate::mm::{
     allocators::page_alloc::page_allocator,
-    layout::{vmm_range, LayoutEntry},
+    layout::vmm_range,
     paging::page_table::{MmError, PageTable},
     vma_list::{MemRangeVma, Vma, VmaList},
 };
+use loader_protocol::VmmLayoutKind;
 use rtl::arch::*;
 use rtl::error::ErrorType;
 use rtl::vmm::{types::*, MappingType};
@@ -27,7 +28,7 @@ impl VmsInner {
 
     pub fn new_kernel() -> Self {
         Self {
-            start: VirtAddr::from(vmm_range(LayoutEntry::VmAlloc).start()),
+            start: VirtAddr::from(vmm_range(VmmLayoutKind::VmAlloc).start()),
             size: usize::MAX,
             ttbr0: None,
             vmas: VmaList::new(),

@@ -4,6 +4,7 @@ use heapless::Vec;
 use rtl::arch::{PAGE_SHIFT, PAGE_SIZE};
 use rtl::locking::fakelock::FakeLock;
 use rtl::vmm::types::{Address, PhysAddr};
+use core::ops::DerefMut;
 
 unsafe extern "C" {
     static __start: usize;
@@ -84,5 +85,5 @@ pub fn init(fdt: &Fdt) {
 }
 
 pub fn regions() -> &'static mut Vec<MemoryRegion, 10> {
-    MEM_REGIONS.get()
+    unsafe { &mut *(MEM_REGIONS.get().deref_mut() as *mut _) }
 }
