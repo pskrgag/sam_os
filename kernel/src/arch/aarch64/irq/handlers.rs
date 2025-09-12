@@ -1,7 +1,7 @@
 use crate::drivers::irq::irq::irq_dispatch;
 use crate::kernel::sched;
 use crate::kernel::syscalls::do_syscall;
-use crate::linker_var;
+use rtl::linker_var;
 use core::arch::{asm, global_asm};
 use rtl::vmm::types::*;
 

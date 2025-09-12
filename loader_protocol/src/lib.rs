@@ -1,10 +1,11 @@
 #![no_std]
 
 use heapless::Vec;
-use rtl::vmm::types::VirtAddr;
+use rtl::vmm::types::{MemRange, PhysAddr, VirtAddr};
 
 pub const MAX_DEVICES: usize = 10;
 pub const MAX_VMM_REGIONS: usize = 10;
+pub const MAX_PMM_REGIONS: usize = 10;
 
 #[derive(Debug, PartialEq)]
 pub enum DeviceKind {
@@ -43,6 +44,7 @@ pub struct LoaderArg {
     pub fdt_base: usize,
     pub devices: Vec<DeviceMapping, MAX_DEVICES>,
     pub vmm_layout: Vec<VmmLayoutEntry, MAX_VMM_REGIONS>,
+    pub pmm_layout: Vec<MemRange<PhysAddr>, MAX_VMM_REGIONS>,
 }
 
 impl LoaderArg {

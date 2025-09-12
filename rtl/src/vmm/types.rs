@@ -13,7 +13,7 @@ pub struct PhysAddr(usize);
 #[repr(transparent)]
 pub struct VirtAddr(usize);
 
-#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug)]
 #[repr(transparent)]
 pub struct Pfn(usize);
 

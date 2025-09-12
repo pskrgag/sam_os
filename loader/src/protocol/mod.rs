@@ -1,6 +1,7 @@
 use crate::mm::{
     alloc::alloc_pages,
     page_table::{PageKind, PagePerms, PageTable},
+    regions::regions,
 };
 use loader_protocol::{LoaderArg, VmmLayoutKind};
 use rtl::arch::PAGE_SIZE;
@@ -28,6 +29,8 @@ pub fn prepare(fdt: PhysAddr, mut arg: LoaderArg, tt: &mut PageTable) -> VirtAdd
     let page = alloc_pages(1).unwrap();
     let arg_addr = arg.get_vmm_base(VmmLayoutKind::LoaderArg).unwrap().0;
 
+    prepare_pmm(&mut arg);
+
     *unsafe { &mut *(page.bits() as *mut LoaderArg) } = arg;
 
     tt.map_pages(
@@ -38,4 +41,10 @@ pub fn prepare(fdt: PhysAddr, mut arg: LoaderArg, tt: &mut PageTable) -> VirtAdd
     );
 
     arg_addr.into()
+}
+
+fn prepare_pmm(arg: &mut LoaderArg) {
+    for reg in regions() {
+        arg.pmm_layout.push(MemRange::new(reg.start, reg.count * PAGE_SIZE)).unwrap();
+    }
 }

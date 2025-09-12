@@ -1,15 +1,21 @@
-use crate::{arch, kernel, kernel::locking::spinlock::*};
+use crate::{kernel::locking::spinlock::*};
 use alloc::vec::Vec;
 use bitmaps::Bitmap;
+use loader_protocol::{LoaderArg, MAX_PMM_REGIONS};
 use rtl::arch::PAGE_SIZE;
 use rtl::vmm::types::*;
 
-pub struct PageAlloc {
+#[derive(Debug)]
+pub struct Region {
     pool: Vec<Bitmap<64>>,
     start: Pfn,
 }
 
-unsafe impl Send for PageAlloc {}
+pub struct PageAlloc {
+    regions: heapless::Vec<Region, MAX_PMM_REGIONS>,
+}
+
+unsafe impl Send for Region {}
 
 pub static PAGE_ALLOC: Spinlock<PageAlloc> = Spinlock::new(PageAlloc::default());
 
@@ -18,6 +24,28 @@ pub fn page_allocator() -> SpinlockGuard<'static, PageAlloc> {
 }
 
 impl PageAlloc {
+    pub const fn default() -> Self {
+        Self {
+            regions: heapless::Vec::new(),
+        }
+    }
+
+    pub fn alloc(&mut self, num: usize) -> Option<PhysAddr> {
+        for i in &mut self.regions {
+            if let Some(addr) = i.alloc(num) {
+                return Some(addr);
+            }
+        }
+
+        None
+    }
+
+    pub fn free(&mut self, _start: PhysAddr, _num: usize) {
+        todo!()
+    }
+}
+
+impl Region {
     pub const fn default() -> Self {
         Self {
             start: Pfn::new(0x0),
@@ -32,8 +60,6 @@ impl PageAlloc {
         for _ in 0..pool_size {
             pool.push(Bitmap::<64>::new());
         }
-
-        println!("Page allocator initialized: phys size {:x}", size);
 
         Some(Self {
             pool,
@@ -116,15 +142,14 @@ impl PageAlloc {
     }
 }
 
-pub fn init() {
-    let alloc_start = PhysAddr::from(kernel::misc::image_end_rounded());
-    let alloc_size = arch::ram_size() - kernel::misc::image_size();
+pub fn init(arg: &LoaderArg) {
+    let mut allocator = PAGE_ALLOC.lock();
 
-    println!(
-        "Page allocator start {:x} size {:x}",
-        alloc_start.get(),
-        alloc_size
-    );
-
-    *PAGE_ALLOC.lock() = PageAlloc::new(alloc_start, alloc_size).unwrap();
+    for reg in &arg.pmm_layout {
+        println!("Page allocator region {:x} size {:x}", reg.start, reg.size);
+        allocator
+            .regions
+            .push(Region::new(reg.start, reg.size).unwrap())
+            .expect("Too many physical regions");
+    }
 }

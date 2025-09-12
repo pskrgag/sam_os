@@ -1,13 +1,3 @@
-#[cfg(feature = "qemu")]
-pub mod qemu;
-#[cfg(feature = "qemu")]
-pub use qemu::config::*;
-
-#[cfg(feature = "orpipc2")]
-pub mod orpipc2;
-#[cfg(feature = "orpipc2")]
-pub use orpipc2::config::*;
-
 #[cfg(all(feature = "qemu", feature = "orpipc2"))]
 compile_error!("Please choose one board");
 

@@ -62,7 +62,7 @@ extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
     arch::init();
 
     // allocators + paging
-    mm::init();
+    mm::init(prot);
 
     // --- Kernel is fine grained mapped ---
     // all wild accesses will cause exception
