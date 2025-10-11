@@ -1,4 +1,4 @@
-use fdt::{node::FdtNode, Fdt};
+use fdt::{Fdt, node::FdtNode};
 use linkme::distributed_slice;
 use loader_protocol::LoaderArg;
 

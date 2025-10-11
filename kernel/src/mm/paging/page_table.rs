@@ -1,13 +1,10 @@
 use crate::{
-    arch::PT_LVL1_ENTIRES,
     arch::mm::mmu::{self, *},
     arch::{self, mm::mmu_flags},
     mm::allocators::page_alloc::page_allocator,
 };
-use rtl::arch::PAGE_SIZE;
-
-use rtl::vmm::MappingType;
 use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 
 #[derive(Debug)]
 pub enum MmError {
@@ -87,6 +84,7 @@ impl PageTableBlock {
 
     pub fn index_of(&self, addr: VirtAddr) -> usize {
         match self.lvl {
+            0 => arch::mm::page_table::l0_linear_offset(addr),
             1 => arch::mm::page_table::l1_linear_offset(addr),
             2 => arch::mm::page_table::l2_linear_offset(addr),
             3 => arch::mm::page_table::l3_linear_offset(addr),
@@ -138,8 +136,14 @@ impl PageTable {
         }
     }
 
+    pub unsafe fn from(base: PhysAddr) -> Self {
+        Self {
+            base: VirtAddr::from(base),
+        }
+    }
+
     pub fn walk(&mut self, va: VirtAddr) {
-        let mut base = self.lvl1();
+        let mut base = self.lvl0();
 
         for _ in 0..2 {
             let index = base.index_of(va);
@@ -162,9 +166,6 @@ impl PageTable {
         let new_table = Self {
             base: VirtAddr::from(base),
         };
-
-        let mut va = VirtAddr::from(base);
-        unsafe { va.as_slice_mut::<u8>(PAGE_SIZE).fill(0x00) };
 
         Some(new_table)
     }
@@ -200,10 +201,6 @@ impl PageTable {
         index: usize,
     ) -> Result<PageTableBlock, MmError> {
         let new_page = page_allocator().alloc(1).ok_or(MmError::NoMem)?;
-        let mut va = VirtAddr::from(new_page);
-
-        unsafe { va.as_slice_mut::<u8>(PAGE_SIZE).fill(0x00) };
-
         let new_entry = PageTableEntry::from_bits(PageFlags::table().bits() | new_page.get());
 
         unsafe { b.set_tte(index, new_entry) };
@@ -247,10 +244,11 @@ impl PageTable {
         use_huge_pages: bool,
     ) -> Result<VirtAddr, MmError> {
         let order = match lvl {
+            0 => 39,
             1 => 30,
             2 => 21,
             3 => 12,
-            _ => panic!("Kernel supports 3 lvl page table"),
+            _ => panic!("Kernel supports 4 lvl page table"),
         };
         let size = 1 << order;
         let res = v.start();
@@ -285,11 +283,12 @@ impl PageTable {
         Ok(res)
     }
 
-    pub fn map_hugepages(
+    fn map_internal(
         &mut self,
         p: Option<MemRange<PhysAddr>>,
         mut v: MemRange<VirtAddr>,
         m_type: MappingType,
+        hp: bool,
     ) -> Result<VirtAddr, MmError> {
         let mut p_range = if let Some(pr) = p {
             pr
@@ -298,41 +297,33 @@ impl PageTable {
         };
 
         Self::op_lvl(
-            self.lvl1(),
-            1,
+            self.lvl0(),
+            0,
             &mut v,
             &mut p_range,
             m_type,
             Self::set_leaf_tte,
             Self::allocate_new_block,
-            true,
+            hp,
         )
+    }
+
+    pub fn map_hugepages(
+        &mut self,
+        p: Option<MemRange<PhysAddr>>,
+        v: MemRange<VirtAddr>,
+        m_type: MappingType,
+    ) -> Result<VirtAddr, MmError> {
+        self.map_internal(p, v, m_type, true)
     }
 
     pub fn map(
         &mut self,
         p: Option<MemRange<PhysAddr>>,
-        mut v: MemRange<VirtAddr>,
+        v: MemRange<VirtAddr>,
         m_type: MappingType,
     ) -> Result<VirtAddr, MmError> {
-        let mut p_range = if let Some(pr) = p {
-            pr
-        } else {
-            MemRange::new(PhysAddr::from(v.start()), v.size())
-        };
-
-        assert!(v.size() == p_range.size());
-
-        Self::op_lvl(
-            self.lvl1(),
-            1,
-            &mut v,
-            &mut p_range,
-            m_type,
-            Self::set_leaf_tte,
-            Self::allocate_new_block,
-            false,
-        )
+        self.map_internal(p, v, m_type, false)
     }
 
     pub fn free<F: Fn(PhysAddr, bool)>(
@@ -343,8 +334,8 @@ impl PageTable {
         let mut p = MemRange::new(PhysAddr::new(v.start().bits()), v.size());
 
         Self::op_lvl(
-            self.lvl1(),
-            1,
+            self.lvl0(),
+            0,
             &mut v,
             &mut p,
             MappingType::NONE,
@@ -370,13 +361,8 @@ impl PageTable {
     }
 
     #[inline]
-    fn entries_per_lvl(&self) -> usize {
-        PT_LVL1_ENTIRES
-    }
-
-    #[inline]
-    fn lvl1(&self) -> PageTableBlock {
-        PageTableBlock::new(self.base, 1)
+    fn lvl0(&self) -> PageTableBlock {
+        PageTableBlock::new(self.base, 0)
     }
 }
 

@@ -4,8 +4,8 @@ use crate::mm::user_buffer::UserPtr;
 use alloc::sync::Arc;
 use object_lib::object;
 use rtl::arch::{PAGE_SHIFT, PAGE_SIZE};
-use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
+use rtl::vmm::types::*;
 
 #[derive(Debug)]
 struct VmObjectInner {
@@ -28,8 +28,6 @@ impl VmObjectInner {
         let p: PhysAddr = page_allocator().alloc(pages)?;
         let mut va = VirtAddr::from(p);
 
-        unsafe { va.as_slice_mut::<u8>(pages * PAGE_SIZE).fill(0x00) };
-
         let range = unsafe { va.as_slice_at_offset_mut::<u8>(b.len(), load_addr.page_offset()) };
 
         let s = b.read_to(range);
@@ -47,9 +45,6 @@ impl VmObjectInner {
         let pages =
             ((load_addr.bits() + size) >> PAGE_SHIFT) - (load_addr.bits() >> PAGE_SHIFT) + 1;
         let p = page_allocator().alloc(pages)?;
-        let mut va = VirtAddr::from(p);
-
-        unsafe { va.as_slice_mut::<u8>(pages * PAGE_SIZE).fill(0x00) };
 
         Some(Self {
             start: p,

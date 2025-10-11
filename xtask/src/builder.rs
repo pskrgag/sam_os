@@ -13,9 +13,9 @@ fn binary(name: &str) -> String {
     )
 }
 
-fn kernel_binary(name: &str) -> String {
+fn loader_binary() -> String {
     format!(
-        "{}{}{}{}{name}.bin",
+        "{}{}{}{}loader.bin",
         env!("CARGO_WORKSPACE_DIR"),
         "/target/",
         TARGET,
@@ -43,7 +43,7 @@ fn build_component(c: &Component, b: &BuildScript, command: &str) -> Result<(), 
     )
 }
 
-fn build_kernel(b: &BuildScript) -> Result<(), String> {
+fn build_kernel(_b: &BuildScript) -> Result<(), String> {
     info!("[INFO]     Builing kernel...");
 
     run_prog(
@@ -56,27 +56,16 @@ fn build_kernel(b: &BuildScript) -> Result<(), String> {
             TARGET,
             "--color=always",
             "--quiet",
+            // "-Z",
+            // "build-std=core,alloc",
         ],
         None,
         None,
-        Some(&[("BOARD_TYPE", b.board.as_str())]),
-    )?;
-
-    run_prog(
-        "llvm-objcopy",
-        &[
-            "-O",
-            "binary",
-            &binary("sam_kernel"),
-            &format!("{}.bin", binary("sam_kernel")),
-        ],
-        None,
-        None,
-        None,
+        Some(&[("RUSTFLAGS", "-C force-frame-pointers")]),
     )
 }
 
-fn build_loader(b: &BuildScript) -> Result<(), String> {
+fn build_loader(_b: &BuildScript) -> Result<(), String> {
     info!("[INFO]     Builing loader...");
 
     run_prog(
@@ -97,6 +86,7 @@ fn build_loader(b: &BuildScript) -> Result<(), String> {
         Some(&[
             ("RUSTFLAGS", "-C relocation-model=pie"),
             ("KERNEL_PATH", &binary("sam_kernel")),
+            ("INIT_TASK_PATH", &binary("roottask")),
         ]),
     )?;
 
@@ -178,7 +168,7 @@ pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
     build(&c)?;
 
     info!("[INFO]     Running example...");
-    let bin = kernel_binary("loader");
+    let bin = loader_binary();
     let mut args = vec![
         "-machine",
         "virt,gic-version=2",
@@ -186,8 +176,6 @@ pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
         "1G",
         "-cpu",
         "cortex-a53",
-        // "-smp",
-        // "2",
         "-nographic",
         "-kernel",
         &bin,

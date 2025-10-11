@@ -1,6 +1,7 @@
-use crate::percpu_global;
+use crate::kernel::locking::spinlock::Spinlock;
 use loader_protocol::{DeviceKind, LoaderArg};
 use rtl::vmm::types::*;
+use spin::Once;
 
 const GICD_CTLR: usize = 0x0;
 const GICC_CTLR: usize = 0x0;
@@ -70,19 +71,14 @@ pub struct Gic {
     dist: Gicd,
 }
 
-// TODO: Should it be per-cpu locked?
-percpu_global!(
-    pub static GIC: Gic = Gic::new();
-);
+pub static GIC: Once<Spinlock<Gic>> = Once::new();
 
-#[inline(never)]
 fn write_to_reg<T>(base: VirtAddr, offset: usize, val: T) {
     unsafe {
         base.to_raw_mut::<T>().add(offset).write_volatile(val);
     };
 }
 
-#[inline(never)]
 fn read_from_reg<T>(base: VirtAddr, offset: usize) -> T {
     unsafe { base.to_raw_mut::<T>().add(offset).read_volatile() }
 }
@@ -117,7 +113,7 @@ impl Gicd {
     }
 
     pub fn new(base: VirtAddr) -> Self {
-        Self { base: base }
+        Self { base }
     }
 
     pub fn init(&mut self) {
@@ -197,29 +193,23 @@ impl Gicd {
 }
 
 impl Gic {
-    pub const fn new() -> Self {
-        Self {
-            dist: Gicd::default(),
-            cpu: Gicc::default(),
-        }
-    }
-
-    fn init(&mut self, arg: &LoaderArg) -> Option<()> {
+    fn new(arg: &LoaderArg) -> Option<Self> {
         let cpu = arg.get_device(DeviceKind::GicCpu).unwrap();
         let dist = arg.get_device(DeviceKind::GicDist).unwrap();
 
-        self.cpu = Gicc::new(cpu.0.into());
-        self.dist = Gicd::new(dist.0.into());
+        let mut s = Self {
+            cpu: Gicc::new(cpu.0.into()),
+            dist: Gicd::new(dist.0.into()),
+        };
 
         // Turn off to start initialization
-        self.dist.disable();
+        s.dist.disable();
 
-        self.dist.init();
-        self.cpu.init();
+        s.dist.init();
+        s.cpu.init();
 
-        self.dist.enable();
-
-        Some(())
+        s.dist.enable();
+        Some(s)
     }
 
     pub fn enable_irq(&mut self, num: u32) {
@@ -248,9 +238,10 @@ impl Gic {
 }
 
 pub fn init(arg: &LoaderArg) {
-    GIC.per_cpu_var_get_mut()
-        .init(arg)
-        .expect("Failed to initalize GIC");
+    GIC.call_once(|| {
+        arm_gic::irq_enable();
+        Spinlock::new(Gic::new(arg).unwrap())
+    });
 
     println!("Gic initalized");
 }

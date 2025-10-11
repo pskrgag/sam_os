@@ -62,6 +62,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "arm-gic"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc8a5b06c02f993e98b0b3eb95c3acefb6889cc33a630621fb3e6c564502c2b0"
+dependencies = [
+ "bitflags 2.9.4",
+ "safe-mmio",
+ "thiserror",
+ "zerocopy",
+]
+
+[[package]]
 name = "atomic-polyfill"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -403,12 +415,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lock_free_buddy_allocator"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2b8256be05fb9612e0276693020bed985954c9e5c621f4ec6edec822af6b13b"
-
-[[package]]
 name = "log"
 version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -557,17 +563,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 
 [[package]]
+name = "safe-mmio"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db02a82ad13df46afeba34a4e54065fa912308b9101b060e4422898eac0e06f6"
+dependencies = [
+ "zerocopy",
+]
+
+[[package]]
 name = "sam_kernel"
 version = "0.1.0"
 dependencies = [
+ "arm-gic",
  "bitflags 1.3.2",
  "bitmaps",
+ "elf 0.8.0",
  "heapless 0.9.1",
  "loader_protocol",
- "lock_free_buddy_allocator",
  "object_lib",
  "qrwlock",
  "rtl",
+ "safe-mmio",
  "spin",
  "static_assertions",
  "test_macros",
@@ -997,4 +1014,24 @@ dependencies = [
  "serde",
  "simplelog",
  "toml",
+]
+
+[[package]]
+name = "zerocopy"
+version = "0.8.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0894878a5fa3edfd6da3f88c4805f4c8558e2b996227a3d864f47fe11e38282c"
+dependencies = [
+ "zerocopy-derive",
+]
+
+[[package]]
+name = "zerocopy-derive"
+version = "0.8.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "88d2b8d9c68ad2b9e4340d7832716a4d21a22a1154777ad56ea55c51a9cf3831"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
 ]

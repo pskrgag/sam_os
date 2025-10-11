@@ -1,7 +1,6 @@
 use crate::{kernel::locking::spinlock::Spinlock, mm::allocators::page_alloc::page_allocator};
 
 use core::alloc::Layout;
-use rtl::arch::PAGE_SIZE;
 use rtl::vmm::alloc::BackendAllocator;
 use rtl::vmm::slab::SlabAllocator;
 use rtl::vmm::types::*;
@@ -29,9 +28,7 @@ unsafe impl Sync for PMMBackend {}
 impl BackendAllocator for PMMBackend {
     fn allocate(&self, num_pages: usize) -> Option<*mut u8> {
         let pa = page_allocator().alloc(num_pages)?;
-        let mut va = VirtAddr::from(pa);
-
-        unsafe { va.as_slice_mut::<u8>(PAGE_SIZE).fill(0x00) };
+        let va = VirtAddr::from(pa);
 
         Some(va.to_raw_mut::<u8>())
     }

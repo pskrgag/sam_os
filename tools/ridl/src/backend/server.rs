@@ -1,7 +1,7 @@
 use super::utils;
 use crate::ast::{interface::Interface, module::Module};
 use std::io::Write;
-use utils::{function_to_struct, Message};
+use utils::{Message, function_to_struct};
 
 struct InterfaceCompiler<'a, W: Write> {
     interface: &'a Interface,

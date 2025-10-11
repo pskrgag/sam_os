@@ -4,9 +4,9 @@ use crate::{
 };
 
 use rtl::arch::PAGE_SIZE;
+use rtl::linker_var;
 use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
-use rtl::linker_var;
 use spin::Once;
 
 // TODO: W/A. it should be read from dtb
@@ -138,7 +138,9 @@ pub fn init_percpu() -> Option<()> {
     assert!(per_cpu_size % PAGE_SIZE == 0);
 
     let pages = (per_cpu_size / PAGE_SIZE) * NUM_CPUS;
-    let pa: PhysAddr = page_allocator().alloc(pages)?;
+    let pa: PhysAddr = page_allocator()
+        .alloc(pages)
+        .expect("Failed to allocate memory for per-cpu");
 
     PER_CPU_BASE.call_once(|| VirtAddr::from(pa));
     PER_CPU_SIZE.call_once(|| per_cpu_size);

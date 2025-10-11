@@ -350,17 +350,13 @@ mod test {
     fn test_number() {
         let text = "10";
         let lexer = Lexer::new(text.as_bytes());
-        let expected = vec![
-            Token::new_number("10".as_bytes(), Location::default()),
-        ];
+        let expected = vec![Token::new_number("10".as_bytes(), Location::default())];
 
         assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);
 
         let text = "1212110";
         let lexer = Lexer::new(text.as_bytes());
-        let expected = vec![
-            Token::new_number("1212110".as_bytes(), Location::default()),
-        ];
+        let expected = vec![Token::new_number("1212110".as_bytes(), Location::default())];
 
         assert_eq!(lexer.into_iter().collect::<Vec<_>>(), expected);
     }

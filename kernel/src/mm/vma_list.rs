@@ -2,8 +2,8 @@ use alloc::collections::BTreeSet;
 use core::cmp::Ordering;
 use core::ops::{Deref, DerefMut};
 use rtl::error::ErrorType;
-use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
+use rtl::vmm::types::*;
 
 #[derive(Debug, Eq, Clone, Copy)]
 pub(crate) struct MemRangeVma(MemRange<VirtAddr>);
@@ -358,9 +358,10 @@ mod test {
     fn vma_list_empty() {
         let mut list = VmaList::new();
 
-        test_assert!(list
-            .find_free_range(MemRange::<VirtAddr>::max_user().size())
-            .is_some());
+        test_assert!(
+            list.find_free_range(MemRange::<VirtAddr>::max_user().size())
+                .is_some()
+        );
     }
 
     #[kernel_test]
@@ -382,12 +383,13 @@ mod test {
     fn vma_list_add_nofixed() {
         let mut list = VmaList::new();
 
-        test_assert!(list
-            .add_to_tree(Vma::new(
+        test_assert!(
+            list.add_to_tree(Vma::new(
                 MemRangeVma::new_fixed(VirtAddr::new(0), 0x1000),
                 MappingType::USER_DATA,
             ))
-            .is_ok());
+            .is_ok()
+        );
         test_assert_eq!(list.vma_list_sorted().len(), 2);
     }
 

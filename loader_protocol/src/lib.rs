@@ -17,11 +17,12 @@ pub enum DeviceKind {
 #[derive(Debug, PartialEq, Clone)]
 #[repr(usize)]
 pub enum VmmLayoutKind {
+    LinearMap,
     Image,
     Mmio,
-    Fixmap,
     LoaderArg,
     VmAlloc,
+    Count,
 }
 
 #[derive(Debug)]
@@ -42,6 +43,8 @@ pub struct VmmLayoutEntry {
 pub struct LoaderArg {
     pub tt_base: usize,
     pub fdt_base: usize,
+    pub init_virt_task_base: (usize, usize),
+    pub init_phys_task_base: (usize, usize),
     pub devices: Vec<DeviceMapping, MAX_DEVICES>,
     pub vmm_layout: Vec<VmmLayoutEntry, MAX_VMM_REGIONS>,
     pub pmm_layout: Vec<MemRange<PhysAddr>, MAX_VMM_REGIONS>,

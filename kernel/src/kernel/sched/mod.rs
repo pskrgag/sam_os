@@ -2,7 +2,7 @@ use crate::kernel::object::thread_object::Thread;
 use crate::percpu_global;
 use crate::{arch::irq::interrupts, arch::regs::Context, kernel::tasks::thread::ThreadState};
 #[cfg(not(test))]
-use crate::{kernel::elf::parse_elf, kernel::tasks::task::init_task};
+use crate::{kernel::elf::parse_initial_task, kernel::tasks::task::init_task};
 use alloc::sync::Arc;
 use run_queue::RunQueue;
 
@@ -11,15 +11,6 @@ pub mod run_queue;
 unsafe extern "C" {
     fn switch_to(from: *mut Context, to: *const Context);
 }
-
-#[repr(align(0x1000))]
-struct Aligned;
-
-#[cfg(not(test))]
-static INIT: &[u8] = rtl::include_bytes_align_as!(
-    Aligned,
-    "../../../../target/aarch64-unknown-none-softfloat/debug/roottask"
-);
 
 // Simple, Simple, Simple
 //
@@ -123,13 +114,12 @@ pub fn add_thread(t: Arc<Thread>) {
     scheduler.add_thread(t);
 }
 
-pub fn init_userspace() {
+pub fn init_userspace(_prot: &loader_protocol::LoaderArg) {
     #[cfg(not(test))]
     {
-        use rtl::vmm::types::*;
-        assert!((INIT.as_ptr() as usize).is_page_aligned());
+        let prot = _prot;
 
-        let data = parse_elf(INIT).expect("Failed to parse elf");
+        let data = parse_initial_task(prot).unwrap();
         let init_task = init_task();
 
         let init_thread = Thread::new(init_task.clone(), 0);
@@ -137,9 +127,11 @@ pub fn init_userspace() {
         let init_vms = init_task.vms();
 
         for mut i in data.regions {
-            i.0.align_page();
-            i.1.align_page();
-            init_vms.vm_map(i.0, i.1, i.2).expect("Failed to map");
+            println!("{:?} {:?} {:?}", i.va, i.pa, i.tp);
+
+            i.va.align_page();
+            i.pa.align_page();
+            init_vms.vm_map(i.va, i.pa, i.tp).expect("Failed to map");
         }
 
         init_thread.init_user(data.ep);

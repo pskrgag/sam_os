@@ -4,7 +4,7 @@ use core::arch::asm;
 pub struct ArmSystemTimer;
 
 pub const TIMER_IRQ_NUM: u32 = 30;
-pub static SYSTEM_TIMER: ArmSystemTimer = ArmSystemTimer {};
+pub static SYSTEM_TIMER: ArmSystemTimer = ArmSystemTimer;
 
 impl SystemTimer for ArmSystemTimer {
     fn enable(&self) {

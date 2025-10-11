@@ -15,18 +15,10 @@ use rtl::arch::PHYS_OFFSET;
 
 extern crate static_assertions as sa;
 
-pub const PT_LVL1_ENTIRES: usize = PAGE_SIZE / mem::size_of::<u64>();
-pub const PT_LVL2_ENTIRES: usize = PAGE_SIZE / mem::size_of::<u64>();
-pub const PT_LVL3_ENTIRES: usize = PAGE_SIZE / mem::size_of::<u64>();
-
+pub const PTE_PER_PAGE: usize = PAGE_SIZE / mem::size_of::<u64>();
 pub const TCR_SZ_SHIFT: u64 = 39;
 
 pub const KERNEL_AS_END: usize = usize::MAX;
-
-/// Let it be 126gb
-pub const KERNEL_LINEAR_SPACE_SIZE: usize = 10 << 30;
-pub const KERNEL_LINEAR_SPACE_BEGIN: usize = PHYS_OFFSET;
-pub const KERNEL_LINEAR_SPACE_END: usize = KERNEL_LINEAR_SPACE_BEGIN + KERNEL_LINEAR_SPACE_SIZE;
 
 // TODO: dtb
 pub const NUM_CPUS: usize = 2;
@@ -55,8 +47,9 @@ pub fn time_since_start() -> f64 {
     cntpct as f64 / cntfrq as f64
 }
 
-pub fn init() {
+pub fn init(arg: &loader_protocol::LoaderArg) {
     irq::handlers::set_up_vbar();
+    crate::drivers::irq::gic::init(arg);
 }
 
 global_asm!(include_str!("boot.s"));

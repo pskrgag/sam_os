@@ -2,7 +2,7 @@ use crate::mm::page_table::{PageKind, PagePerms};
 use rtl::vmm::types::{Address, PhysAddr, VirtAddr};
 
 pub const PTE_COUNT: usize = 512;
-pub const PAGE_TABLE_LEVELS: usize = 3;
+pub const PAGE_TABLE_LAST_LVL: usize = 3;
 const TABLE_VALID: usize = 0b11;
 
 // Kernel RW
@@ -21,17 +21,19 @@ const PAGE_ENTRY_FLAGS_MASK: usize = 0xFFF0_0000_0000_0FFF;
 #[repr(transparent)]
 pub struct Pte(usize);
 
-pub fn lvl_to_size(lvl: usize) -> usize {
+pub fn lvl_to_order(lvl: usize) -> usize {
     match lvl {
+        0 => 39,
         1 => 30,
         2 => 21,
         3 => 12,
-        _ => panic!("Only 3 levels are supported {:?}", lvl),
+        _ => panic!("Only 4 levels are supported {:?}", lvl),
     }
 }
 
 pub fn va_to_index(va: VirtAddr, lvl: usize) -> usize {
     match lvl {
+        0 => (usize::from(va) >> 39) & (PTE_COUNT - 1),
         1 => (usize::from(va) >> 30) & (PTE_COUNT - 1),
         2 => (usize::from(va) >> 21) & (PTE_COUNT - 1),
         3 => (usize::from(va) >> 12) & (PTE_COUNT - 1),

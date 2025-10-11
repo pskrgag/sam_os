@@ -1,12 +1,13 @@
 use fdt::Fdt;
 use page_table::{PageKind, PagePerms, PageTable};
-use rtl::vmm::types::{MemRange, PhysAddr, VirtAddr};
 use rtl::linker_var;
+use rtl::vmm::types::{MemRange, PhysAddr, VirtAddr};
 
 pub mod alloc;
+pub mod layout;
+pub mod linear_map;
 pub mod page_table;
 pub mod regions;
-pub mod layout;
 
 pub fn init(fdt: &Fdt) -> PageTable {
     regions::init(fdt);
@@ -16,6 +17,7 @@ pub fn init(fdt: &Fdt) -> PageTable {
 
     // Since we use aarch64-cpu crate we have to map stack to be able to call these cute functions
     map_self_stack(&mut table);
+
     table
 }
 

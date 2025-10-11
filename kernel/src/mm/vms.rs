@@ -7,7 +7,7 @@ use crate::mm::{
 use loader_protocol::VmmLayoutKind;
 use rtl::arch::*;
 use rtl::error::ErrorType;
-use rtl::vmm::{types::*, MappingType};
+use rtl::vmm::{MappingType, types::*};
 
 pub struct VmsInner {
     size: usize,
@@ -73,9 +73,6 @@ impl VmsInner {
             } else {
                 return Err(());
             };
-            let mut va = VirtAddr::from(p);
-
-            unsafe { va.as_slice_mut::<u8>(PAGE_SIZE).fill(0x00) };
 
             // ToDo: clean up in case of an error
             self.ttbr0.as_mut().unwrap().map(

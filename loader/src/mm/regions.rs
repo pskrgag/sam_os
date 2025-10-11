@@ -1,17 +1,17 @@
-use rtl::linker_var;
+use core::ops::DerefMut;
 use fdt::Fdt;
 use heapless::Vec;
 use rtl::arch::{PAGE_SHIFT, PAGE_SIZE};
+use rtl::linker_var;
 use rtl::locking::fakelock::FakeLock;
 use rtl::vmm::types::{Address, PhysAddr};
-use core::ops::DerefMut;
 
 unsafe extern "C" {
     static __start: usize;
     static __end: usize;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MemoryRegion {
     pub start: PhysAddr,
     pub count: usize,
@@ -55,14 +55,11 @@ impl MemoryRegion {
     }
 }
 
-static MEM_REGIONS: FakeLock<Vec<MemoryRegion, 10>> = FakeLock::new(Vec::new());
+static ALLOC_MEM_REGIONS: FakeLock<Vec<MemoryRegion, 3>> = FakeLock::new(Vec::new());
+static PHYSICAL_REGION: FakeLock<Option<MemoryRegion>> = FakeLock::new(None);
 
 fn add_region(reg: MemoryRegion) {
-    println!(
-        "Found free memory region [start: {:x}, pages: {:x}]",
-        reg.start, reg.count
-    );
-    MEM_REGIONS.get().push(reg).unwrap();
+    ALLOC_MEM_REGIONS.get().push(reg).unwrap();
 }
 
 pub fn init(fdt: &Fdt) {
@@ -71,10 +68,19 @@ pub fn init(fdt: &Fdt) {
     let image_size = linker_var!(__end) - image_start.bits();
 
     for reg in mem.regions() {
+        println!(
+            "Found free memory region [start: {:x}, size: {:x}]",
+            reg.starting_address as usize,
+            reg.size.unwrap()
+        );
+
         let mut reg = MemoryRegion {
             start: (reg.starting_address as usize).into(),
             count: reg.size.unwrap() >> PAGE_SHIFT,
         };
+
+        assert!(PHYSICAL_REGION.get().is_none());
+        *PHYSICAL_REGION.get() = Some(reg.clone());
 
         if reg.contains(image_start) {
             reg.exclude(image_start, image_size).map(|x| add_region(x));
@@ -84,6 +90,10 @@ pub fn init(fdt: &Fdt) {
     }
 }
 
-pub fn regions() -> &'static mut Vec<MemoryRegion, 10> {
-    unsafe { &mut *(MEM_REGIONS.get().deref_mut() as *mut _) }
+pub fn whole_ram() -> MemoryRegion {
+    PHYSICAL_REGION.get().clone().unwrap()
+}
+
+pub fn regions() -> &'static mut Vec<MemoryRegion, 3> {
+    unsafe { &mut *(ALLOC_MEM_REGIONS.get().deref_mut() as *mut _) }
 }

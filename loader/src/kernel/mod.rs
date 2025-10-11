@@ -3,18 +3,17 @@ use crate::mm::{
     page_table::{PageKind, PagePerms, PageTable},
 };
 use elf::{
+    ElfBytes,
     abi::{PF_R, PF_W, PF_X, PT_LOAD},
     endian::LittleEndian,
-    ElfBytes,
 };
 use rtl::arch::PAGE_SIZE;
-use rtl::vmm::types::{Address, MemRange, PhysAddr, VirtAddr};
+use rtl::vmm::types::{MemRange, PhysAddr, VirtAddr};
 
 #[repr(align(0x1000))]
 struct Aligned;
 
 static KERNEL_BIN: &[u8] = rtl::include_bytes_align_as!(Aligned, env!("KERNEL_PATH"));
-static mut KERNEL_VIRT_END: Option<usize> = None;
 static mut KERNEL_EP: Option<usize> = None;
 
 // Maps kernel and returns address of page table base
@@ -24,6 +23,8 @@ pub fn map_kernel(tt: &mut PageTable) {
     let phys_base = KERNEL_BIN.as_ptr();
 
     unsafe { KERNEL_EP = Some(elf.ehdr.e_entry as usize) };
+
+    // TODO: Check that KERNEL_EP is indeed lies in Image range
 
     for seg in elf
         .segments()
@@ -60,14 +61,6 @@ pub fn map_kernel(tt: &mut PageTable) {
         } else {
             panic!("Unknown elf permissions");
         };
-
-        let end = virt_range.end();
-
-        unsafe {
-            KERNEL_VIRT_END = KERNEL_VIRT_END
-                .map(|x| x.max(end.bits()))
-                .or_else(|| Some(end.bits()));
-        }
 
         tt.map_pages(virt_range, phys_range, perms, PageKind::Normal);
     }

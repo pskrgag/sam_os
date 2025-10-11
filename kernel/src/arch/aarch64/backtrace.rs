@@ -1,8 +1,9 @@
 use rtl::vmm::types::*;
 
 #[repr(C)]
+#[derive(Debug)]
 struct FpEntry {
-    next: usize,
+    next: *const FpEntry,
     addr: usize,
 }
 
@@ -19,7 +20,7 @@ pub unsafe fn backtrace(buf: &mut [VirtAddr], fp: VirtAddr) -> usize {
 
         while fp as usize != 0
             && (fp as usize).is_multiple_of(8)
-            && (*fp).next != 0
+            && !(*fp).next.is_null()
             && (*fp).addr != 0
             && num_entries < buf.len()
         {

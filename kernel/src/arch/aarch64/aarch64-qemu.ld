@@ -1,7 +1,7 @@
 ENTRY(__start)
 
 PAGE_SIZE = 4096;
-kernel_virtual_base = 0xffffffa000000000;
+kernel_virtual_base = 0xFFFF800000000000;
 
 PHDRS
 {
@@ -50,10 +50,9 @@ SECTIONS
         . = ALIGN(4096);
     } :data
 
-    .bss ALIGN(4096) :
+    .bss ALIGN(4096) (NOLOAD):
     {
         *(.bss .bss.*)
-        FILL(0x00)
         . = ALIGN(PAGE_SIZE);
     } :data
 

@@ -16,25 +16,21 @@ pub fn init() {
     SYSTEM_TIMER.reprogram();
     SYSTEM_TIMER.enable();
 
-    unsafe {
-        crate::arch::irq::enable_all();
-    }
-
     irq::register_handler(TIMER_IRQ_NUM, timer_dispatch);
 }
 
 pub fn init_secondary() {
-    SYSTEM_TIMER.reprogram();
-    SYSTEM_TIMER.enable();
-
-    irq::init_secondary(30);
+    // SYSTEM_TIMER.reprogram();
+    // SYSTEM_TIMER.enable();
+    //
+    // // irq::init_secondary(30);
 }
 
 pub fn reprogram() {
     SYSTEM_TIMER.reprogram();
 }
 
-fn timer_dispatch(_: u32) {
+pub fn timer_dispatch(_: u32) {
     if let Some(cur) = current() {
         cur.tick();
     }

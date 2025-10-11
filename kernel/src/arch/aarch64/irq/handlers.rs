@@ -1,14 +1,15 @@
 use crate::drivers::irq::irq::irq_dispatch;
 use crate::kernel::sched;
 use crate::kernel::syscalls::do_syscall;
-use rtl::linker_var;
 use core::arch::{asm, global_asm};
+use rtl::linker_var;
 use rtl::vmm::types::*;
+use crate::arch::backtrace::backtrace;
 
 global_asm!(include_str!("interrupts.S"));
 
 unsafe extern "C" {
-    static exception_vector: u64;
+    static exception_vector: usize;
     static sfixup: usize;
     static efixup: usize;
 }
@@ -21,7 +22,7 @@ struct FixupEntry {
 }
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct ExceptionCtx {
     pub x0: usize,
     pub x1: usize,
@@ -70,7 +71,7 @@ pub fn set_up_vbar() {
     unsafe {
         asm!("msr VBAR_EL1, {}",
              "isb",
-            in(reg) &exception_vector);
+            in(reg) linker_var!(exception_vector));
     }
 }
 
@@ -106,7 +107,18 @@ pub extern "C" fn kern_sync64(
             esr_el1, far_el1, elr_el1
         );
 
-        panic!("Unhandled kernel sync exception");
+        let mut bt = [VirtAddr::new(0); 50];
+
+        unsafe { backtrace(&mut bt, VirtAddr::new(ctx.fp())) };
+
+        println!("--- cut here ---");
+        println!("Kernel backtrace");
+
+        for (i, addr) in bt.iter().take_while(|x| !x.is_null()).enumerate() {
+            println!("#{} [{:p}]", i, addr.to_raw::<usize>());
+        }
+
+        loop {}
     }
 }
 
@@ -153,7 +165,7 @@ pub extern "C" fn user_syscall(ctx: &mut ExceptionCtx) {
         match do_syscall(a) {
             Ok(s) => ctx.x0 = s,
             Err(err) => {
-                println!("err {:?} {}", err, num.bits());
+                println!("err {:?} {:?}", err, num);
                 ctx.x0 = -(err as isize) as usize;
             }
         };

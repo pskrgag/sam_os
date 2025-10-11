@@ -2,7 +2,7 @@ use heapless::Vec;
 use rtl::vmm::types::{MemRange, VirtAddr};
 use spin::Once;
 
-use loader_protocol::{LoaderArg, VmmLayoutEntry, VmmLayoutKind, MAX_VMM_REGIONS};
+use loader_protocol::{LoaderArg, MAX_VMM_REGIONS, VmmLayoutEntry, VmmLayoutKind};
 
 static VMM_LAYOUT: Once<Vec<VmmLayoutEntry, MAX_VMM_REGIONS>> = Once::new();
 

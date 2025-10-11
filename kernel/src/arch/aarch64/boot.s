@@ -8,9 +8,8 @@ __start:
 	mov	sp, x1
 
 	// Jump to Rust
-	b	start_kernel
-
-	ret
+	bl	start_kernel
+	b	.
 
 // .global __reset
 // __reset:

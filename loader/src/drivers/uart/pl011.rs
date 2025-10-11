@@ -1,13 +1,13 @@
-use super::{UartProbe, UARTS};
+use super::{UARTS, UartProbe};
 use core::fmt::{Result, Write};
+use core::ops::DerefMut;
 use fdt::node::FdtNode;
 use linkme::distributed_slice;
 use loader_protocol::{DeviceKind, DeviceMapping, LoaderArg};
 use rtl::arch::PAGE_SIZE;
 use rtl::locking::fakelock::FakeLock;
-use rtl::uart::{arm_uart::Uart, UartTrait};
+use rtl::uart::{UartTrait, arm_uart::Uart};
 use rtl::vmm::types::VirtAddr;
-use core::ops::DerefMut;
 
 struct Pl031(Uart);
 
@@ -25,11 +25,13 @@ fn map(node: &FdtNode, arg: &mut LoaderArg) {
     let mut reg = node.reg().unwrap();
     let reg = reg.next().unwrap();
 
-    arg.devices.push(DeviceMapping {
-        base: reg.starting_address as usize,
-        size: PAGE_SIZE,
-        kind: DeviceKind::Uart,
-    }).expect("Too many devices");
+    arg.devices
+        .push(DeviceMapping {
+            base: reg.starting_address as usize,
+            size: PAGE_SIZE,
+            kind: DeviceKind::Uart,
+        })
+        .expect("Too many devices");
 
     println!("Mapped pl031");
 }

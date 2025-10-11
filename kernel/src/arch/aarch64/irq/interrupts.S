@@ -3,7 +3,7 @@
 .endmacro
 
 .macro SAFE_CTX
-	sub	sp, sp, #264
+	sub	sp, sp, #272
 	stp	x0, x1, [sp, #0]
 	stp	x2, x3, [sp, #16]
 	stp	x4, x5, [sp, #32]
@@ -34,7 +34,7 @@
 
 .macro RESTORE_CTX
 	ldp	x0, x1, [sp, #240]
-	ldr	x2, [sp, #256]
+	ldp	x2, x30, [sp, #256]
 
 	msr	ELR_EL1, x0
 	msr	SPSR_EL1, x1
@@ -55,9 +55,8 @@
 	ldp	x24, x25, [sp, #192]
 	ldp	x26, x27, [sp, #208]
 	ldp	x28, x29, [sp, #224]
-	ldr	x30, [sp, #264]
 
-	add	sp, sp, #264
+	add	sp, sp, #272
 .endmacro
 
 .section ".text"

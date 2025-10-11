@@ -1,4 +1,4 @@
-use super::{IrqProbe, IRQS};
+use super::{IRQS, IrqProbe};
 use fdt::node::FdtNode;
 use linkme::distributed_slice;
 use loader_protocol::{DeviceKind, DeviceMapping, LoaderArg};
@@ -16,7 +16,7 @@ fn map(node: &FdtNode, arg: &mut LoaderArg) {
         })
         .expect("Too many devices");
 
-    let reg = iter.next().unwrap();
+    let reg = iter.next().expect("Expect CPU and DIST in GIC FDT Node");
 
     arg.devices
         .push(DeviceMapping {

@@ -4,7 +4,6 @@
 use libc::{handle::Handle, main};
 
 #[main]
-fn main(_: Handle) {
-}
+fn main(_: Handle) {}
 
 // include!(concat!(env!("OUT_DIR"), "/hello.rs"));

@@ -1,2 +1,2 @@
-pub mod spinlock;
 pub mod fakelock;
+pub mod spinlock;

@@ -1,4 +1,5 @@
-use crate::{kernel::locking::spinlock::*};
+use crate::kernel::locking::spinlock::*;
+use crate::mm::memset_pages;
 use alloc::vec::Vec;
 use bitmaps::Bitmap;
 use loader_protocol::{LoaderArg, MAX_PMM_REGIONS};
@@ -33,6 +34,7 @@ impl PageAlloc {
     pub fn alloc(&mut self, num: usize) -> Option<PhysAddr> {
         for i in &mut self.regions {
             if let Some(addr) = i.alloc(num) {
+                unsafe { memset_pages(addr, num) };
                 return Some(addr);
             }
         }
@@ -41,7 +43,7 @@ impl PageAlloc {
     }
 
     pub fn free(&mut self, _start: PhysAddr, _num: usize) {
-        todo!()
+        // todo!()
     }
 }
 

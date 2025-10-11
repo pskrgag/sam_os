@@ -58,17 +58,11 @@ extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
     drivers::init_logging(prot);
 
     println!("Booting kernel...");
+    arch::init(prot);
 
-    arch::init();
-
-    // allocators + paging
     mm::init(prot);
-
-    // --- Kernel is fine grained mapped ---
-    // all wild accesses will cause exception
-
-    drivers::init(prot);
     kernel::percpu::init_percpu();
+    drivers::init(prot);
 
     print!("{SAMOS_BANNER}");
 
@@ -83,10 +77,9 @@ extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
     #[cfg(not(test))]
     #[allow(clippy::empty_loop)]
     {
-        sched::init_userspace();
+        sched::init_userspace(prot);
 
-        // arch::smp::bring_up_cpus();
-
+        #[allow(clippy::empty_loop)]
         loop {}
     }
 }

@@ -1,4 +1,4 @@
-use super::utils::{function_to_struct, Message};
+use super::utils::{Message, function_to_struct};
 use crate::{
     ast::{
         argtype::{BuiltinTypes, Type},

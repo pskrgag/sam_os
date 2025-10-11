@@ -3,9 +3,9 @@
 #![feature(used_with_arg)]
 
 use core::panic::PanicInfo;
-use rtl::vmm::types::{PhysAddr, Address};
 use fdt::Fdt;
 use loader_protocol::LoaderArg;
+use rtl::vmm::types::{Address, PhysAddr};
 
 mod arch;
 #[macro_use]
@@ -23,9 +23,11 @@ extern "C" fn main(fdt_base: PhysAddr) {
     drivers::uart::probe(&fdt);
 
     let mut tt = mm::init(&fdt);
-    kernel::map_kernel(&mut tt);
 
     mm::layout::init_layout(&mut protocol);
+    kernel::map_kernel(&mut tt);
+
+    mm::linear_map::map_linear(&mut tt, &protocol);
 
     drivers::map(&fdt, &mut protocol);
     let arg0 = protocol::prepare(fdt_base, protocol, &mut tt);

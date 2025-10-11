@@ -26,7 +26,7 @@ pub struct SyscallArgs {
 impl SyscallArgs {
     pub fn new(number: usize, args: [usize; 7]) -> Option<Self> {
         Some(Self {
-            number: SyscallList::from_bits(number)?,
+            number: SyscallList::try_from(number).unwrap(),
             args,
         })
     }

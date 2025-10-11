@@ -5,12 +5,12 @@ extern crate alloc;
 pub mod allocator;
 pub mod elf;
 pub mod factory;
+pub mod handle;
 pub mod port;
 pub mod stdio;
 pub mod syscalls;
 pub mod task;
 pub mod vmm;
-pub mod handle;
 
 pub use rustrt::*;
 

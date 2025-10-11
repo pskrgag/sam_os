@@ -1,208 +1,91 @@
 use crate::mm::allocators::page_alloc::page_allocator;
 use alloc::vec::Vec;
-use core::mem::size_of;
+use elf::{
+    abi::{PF_R, PF_W, PF_X, PT_LOAD},
+    endian::LittleEndian,
+    ElfBytes,
+};
 use rtl::arch::PAGE_SIZE;
-use rtl::vmm::MappingType;
 use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 
-const EI_NIDENT: usize = 16;
-const ELF_MAGIC: [u8; 4] = [0x7f, b'E', b'L', b'F'];
-
-#[allow(non_camel_case_types)]
-type Elf64_Addr = u64;
-#[allow(non_camel_case_types)]
-type Elf64_Half = u16;
-#[allow(non_camel_case_types)]
-type Elf64_SHalf = i16;
-#[allow(non_camel_case_types)]
-type Elf64_Off = u64;
-#[allow(non_camel_case_types)]
-type Elf64_Sword = i32;
-#[allow(non_camel_case_types)]
-type Elf64_Word = u32;
-#[allow(non_camel_case_types)]
-type Elf64_Xword = u64;
-#[allow(non_camel_case_types)]
-type Elf64_Sxword = i64;
-
-const ET_EXEC: Elf64_Half = 2;
-const ELFCLASS64: u8 = 2;
-const EM_AARCH64: Elf64_Half = 183;
-
-const PT_LOAD: Elf64_Word = 1;
-
-const PF_R: u32 = 0x4;
-const PF_W: u32 = 0x2;
-const PF_X: u32 = 0x1;
-
-#[repr(C, packed)]
-#[derive(Copy, Clone)]
-struct ElfHeader {
-    e_ident: [u8; EI_NIDENT],
-    e_type: Elf64_Half,
-    e_machine: Elf64_Half,
-    e_version: Elf64_Word,
-    e_entry: Elf64_Addr,
-    e_phoff: Elf64_Off,
-    e_shoff: Elf64_Off,
-    e_flags: Elf64_Word,
-    e_ehsize: Elf64_Half,
-    e_phentsize: Elf64_Half,
-    e_phnum: Elf64_Half,
-    e_shentsize: Elf64_Half,
-    e_shnum: Elf64_Half,
-    e_shstrndx: Elf64_Half,
-}
-
-#[repr(C, packed)]
-#[derive(Copy, Clone)]
-struct ElfIdent {
-    magic: [u8; 4],
-    class: u8,
-    data: u8,
-    version: u8,
-    os_abi: u8,
-    os_abi_ver: u8,
-    pad: [u8; 7],
-}
-
-#[repr(C, packed)]
-#[derive(Copy, Clone)]
-struct ElfPhdr {
-    p_type: Elf64_Word,
-    p_flags: Elf64_Word,
-    p_offset: Elf64_Off,
-    p_vaddr: Elf64_Addr,
-    p_paddr: Elf64_Addr,
-    p_filesz: Elf64_Xword,
-    p_memsz: Elf64_Xword,
-    p_align: Elf64_Xword,
+#[derive(Debug)]
+pub struct Segment {
+    pub va: MemRange<VirtAddr>,
+    pub pa: MemRange<PhysAddr>,
+    pub tp: MappingType,
 }
 
 #[derive(Debug)]
 pub struct ElfData {
-    pub regions: Vec<(MemRange<VirtAddr>, MemRange<PhysAddr>, MappingType)>,
+    pub regions: Vec<Segment>,
     pub ep: VirtAddr,
 }
 
-fn read_data<T: Sized + Copy>(data: &mut &[u8]) -> T {
-    unsafe {
-        let ptr = (*data).as_ptr() as *const T;
+pub fn parse_initial_task(prot: &loader_protocol::LoaderArg) -> Option<ElfData> {
+    let elf_data = unsafe {
+        core::slice::from_raw_parts(
+            prot.init_virt_task_base.0 as *const u8,
+            prot.init_virt_task_base.1,
+        )
+    };
+    let elf =
+        ElfBytes::<LittleEndian>::minimal_parse(elf_data).expect("Failed to parse kernel elf");
+    let mut secs = Vec::new();
 
-        *data = &data[size_of::<T>()..];
+    for seg in elf
+        .segments()
+        .unwrap()
+        .into_iter()
+        .filter(|phdr| phdr.p_type == PT_LOAD)
+    {
+        let base = seg.p_vaddr;
+        let size = seg.p_memsz;
+        let mut virt_range = MemRange::new(VirtAddr::new(base as usize), size as usize);
 
-        *ptr
-    }
-}
+        virt_range.align_page();
 
-fn check_ident(ident: &[u8; 16]) -> Option<()> {
-    let ident: ElfIdent = unsafe { core::ptr::read(ident.as_ptr() as *const _) };
+        let phys_range = {
+            let new_pages = MemRange::new(
+                page_allocator()
+                    .alloc(virt_range.size() as usize / PAGE_SIZE)
+                    .unwrap(),
+                virt_range.size(),
+            );
 
-    match ident.magic {
-        ELF_MAGIC => Some(()),
-        _ => None,
-    }?;
+            if seg.p_memsz != 0 {
+                let mut start = VirtAddr::from(new_pages.start());
+                let start = unsafe { start.as_slice_mut::<u8>(virt_range.size()) };
+                let elf_range =
+                    seg.p_offset as usize..seg.p_offset as usize + seg.p_filesz as usize;
+                let slice_range = (seg.p_vaddr as usize).page_offset()
+                    ..(seg.p_vaddr as usize).page_offset() + seg.p_filesz as usize;
 
-    match ident.class {
-        ELFCLASS64 => Some(()),
-        _ => None,
-    }?;
+                start[slice_range].copy_from_slice(&elf_data[elf_range])
+            }
 
-    match ident.class {
-        ELFCLASS64 => Some(()),
-        _ => None,
-    }?;
-
-    Some(())
-}
-
-fn check_header(data: &mut &[u8]) -> Option<ElfHeader> {
-    let header = read_data::<ElfHeader>(data);
-
-    check_ident(&header.e_ident)?;
-
-    match header.e_type {
-        ET_EXEC => Some(()),
-        _ => None,
-    }?;
-
-    match header.e_machine {
-        EM_AARCH64 => Some(()),
-        _ => None,
-    }?;
-
-    Some(header)
-}
-
-fn flags_to_mt(flags: Elf64_Word) -> MappingType {
-    if flags & PF_W != 0 {
-        MappingType::USER_DATA
-    } else if flags & PF_X != 0 {
-        MappingType::USER_TEXT
-    } else {
-        MappingType::USER_DATA_RO
-    }
-}
-
-// TODO: that shit needs rework
-fn parse_program_headers(
-    data: &mut &[u8],
-    header: &ElfHeader,
-) -> Option<Vec<(MemRange<VirtAddr>, MemRange<PhysAddr>, MappingType)>> {
-    let mut vec = Vec::new();
-    let mut data = &data[header.e_phoff as usize - core::mem::size_of::<ElfHeader>()..];
-
-    // I have no time to refactor it. Leaving as is for now, since i test IPC
-    let base_pa = PhysAddr::from(VirtAddr::from_raw((*data).as_ptr()))
-        - PhysAddr::from(core::mem::size_of::<ElfHeader>());
-
-    assert!(base_pa.is_page_aligned());
-
-    for _ in 0..header.e_phnum {
-        let pheader = read_data::<ElfPhdr>(&mut data);
-
-        if pheader.p_type != PT_LOAD {
-            continue;
-        }
-
-        let size = *(pheader.p_memsz as usize + pheader.p_vaddr as usize
-            - *(pheader.p_vaddr as usize).round_down_page())
-        .round_up_page();
-
-        // Handle bss properly
-        let p_range = if pheader.p_memsz != pheader.p_filesz {
-            let pages = *(size as usize).round_up_page() / PAGE_SIZE;
-            let p = page_allocator().alloc(pages).unwrap();
-            let mut va = VirtAddr::from(p);
-
-            unsafe { va.as_slice_mut::<u8>(pages * PAGE_SIZE).fill(0x00) };
-            MemRange::new(p, size)
-        } else {
-            MemRange::new(
-                *(base_pa + PhysAddr::from(pheader.p_offset as usize)).round_down_page(),
-                size,
-            )
+            new_pages
         };
 
-        vec.push((
-            MemRange::new(
-                *VirtAddr::from(pheader.p_vaddr as usize).round_down_page(),
-                size,
-            ),
-            p_range,
-            flags_to_mt(pheader.p_flags),
-        ));
+        let perms = if seg.p_flags == PF_W | PF_R {
+            MappingType::USER_DATA
+        } else if seg.p_flags == PF_X | PF_R {
+            MappingType::USER_TEXT
+        } else if seg.p_flags == PF_R {
+            MappingType::USER_DATA_RO
+        } else {
+            panic!("Unknown elf permissions");
+        };
+
+        secs.push(Segment {
+            va: virt_range,
+            pa: phys_range,
+            tp: perms,
+        });
     }
-
-    Some(vec)
-}
-
-pub fn parse_elf(mut data: &[u8]) -> Option<ElfData> {
-    let header = check_header(&mut data)?;
-    let secs = parse_program_headers(&mut data, &header)?;
 
     Some(ElfData {
         regions: secs,
-        ep: (header.e_entry as usize).into(),
+        ep: (elf.ehdr.e_entry as usize).into(),
     })
 }
