@@ -25,7 +25,5 @@ fn impl_test_macro(f: ItemFn) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn kernel_test(_attribute: TokenStream, item: TokenStream) -> TokenStream {
-    let expanded = impl_test_macro(syn::parse_macro_input!(item));
-
-    TokenStream::from(expanded)
+    impl_test_macro(syn::parse_macro_input!(item))
 }

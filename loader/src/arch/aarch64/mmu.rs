@@ -66,7 +66,7 @@ impl Pte {
             PagePerms::Read => ap(AP_UN_KRO) | PXN,
             PagePerms::ReadWrite => ap(AP_UN_KRW) | PXN,
             PagePerms::Execute => ap(AP_UN_KRO),
-        };
+        } | UXN;
 
         let atts = match kind {
             PageKind::Normal => mair(0),

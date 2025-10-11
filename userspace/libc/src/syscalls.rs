@@ -114,7 +114,7 @@ impl<'a> Syscall<'a> {
     pub fn as_args(self) -> [usize; 8] {
         match self {
             Syscall::Write(string) => [
-                SyscallList::SYS_WRITE.into(),
+                SyscallList::Write.into(),
                 string.as_ptr() as usize,
                 string.len(),
                 0,
@@ -123,18 +123,11 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
-            Syscall::CreatePort(handle) => [
-                SyscallList::SYS_CREATE_PORT.into(),
-                handle,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-            ],
+            Syscall::CreatePort(handle) => {
+                [SyscallList::CreatePort.into(), handle, 0, 0, 0, 0, 0, 0]
+            }
             Syscall::VmAllocate(handle, size, tp) => [
-                SyscallList::SYS_VM_ALLOCATE.into(),
+                SyscallList::VmAllocate.into(),
                 handle,
                 size,
                 tp.into(),
@@ -144,7 +137,7 @@ impl<'a> Syscall<'a> {
                 0,
             ],
             Syscall::CreateTask(handle, name) => [
-                SyscallList::SYS_CREATE_TASK.into(),
+                SyscallList::CreateTask.into(),
                 handle,
                 name.as_ptr() as usize,
                 name.len(),
@@ -154,7 +147,7 @@ impl<'a> Syscall<'a> {
                 0,
             ],
             Syscall::VmFree(handle, ptr, size) => [
-                SyscallList::SYS_VM_FREE.into(),
+                SyscallList::VmFree.into(),
                 handle,
                 ptr as usize,
                 size,
@@ -165,7 +158,7 @@ impl<'a> Syscall<'a> {
             ],
             Syscall::VmCreateVmo(handle, args) => match args {
                 VmoCreateArgs::Backed(addr, size, mt, load_addr) => [
-                    SyscallList::SYS_CREATE_VMO.into(),
+                    SyscallList::CreateVmo.into(),
                     handle,
                     addr as usize,
                     size,
@@ -175,7 +168,7 @@ impl<'a> Syscall<'a> {
                     0,
                 ],
                 VmoCreateArgs::Zeroed(size, mt, load_addr) => [
-                    SyscallList::SYS_CREATE_VMO.into(),
+                    SyscallList::CreateVmo.into(),
                     handle,
                     0,
                     size,
@@ -185,11 +178,9 @@ impl<'a> Syscall<'a> {
                     0,
                 ],
             },
-            Syscall::VmMapVmo(vms, vmo) => {
-                [SyscallList::SYS_MAP_VMO.into(), vms, vmo, 0, 0, 0, 0, 0]
-            }
+            Syscall::VmMapVmo(vms, vmo) => [SyscallList::MapVmo.into(), vms, vmo, 0, 0, 0, 0, 0],
             Syscall::TaskStart(handle, ep, boot_handle) => [
-                SyscallList::SYS_TASK_START.into(),
+                SyscallList::TaskStart.into(),
                 handle,
                 ep.into(),
                 boot_handle,
@@ -199,7 +190,7 @@ impl<'a> Syscall<'a> {
                 0,
             ],
             Syscall::VmMapPhys(vms, pa, size) => [
-                SyscallList::SYS_MAP_PHYS.into(),
+                SyscallList::MapPhys.into(),
                 vms,
                 pa.into(),
                 size,
@@ -208,18 +199,11 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
-            Syscall::CloseHandle(handle) => [
-                SyscallList::SYS_CLOSE_HANDLE.into(),
-                handle,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-            ],
+            Syscall::CloseHandle(handle) => {
+                [SyscallList::CloseHandle.into(), handle, 0, 0, 0, 0, 0, 0]
+            }
             Syscall::PortCall(handle, msg) => [
-                SyscallList::SYS_PORT_CALL.into(),
+                SyscallList::PortCall.into(),
                 handle,
                 msg as *mut _ as usize,
                 0,
@@ -229,7 +213,7 @@ impl<'a> Syscall<'a> {
                 0,
             ],
             Syscall::PortReceive(handle, msg) => [
-                SyscallList::SYS_PORT_RECEIVE.into(),
+                SyscallList::PortReceive.into(),
                 handle,
                 msg as *mut _ as usize,
                 0,
@@ -239,7 +223,7 @@ impl<'a> Syscall<'a> {
                 0,
             ],
             Syscall::PortSendWait(handle, reply_port, msg) => [
-                SyscallList::SYS_PORT_SEND_WAIT.into(),
+                SyscallList::PortSendWait.into(),
                 handle,
                 reply_port,
                 msg as *const _ as usize,
@@ -248,9 +232,9 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
-            Syscall::VmsHandle(h) => [SyscallList::SYS_TASK_GET_VMS.into(), h, 0, 0, 0, 0, 0, 0],
-            Syscall::Yield => [SyscallList::SYS_YIELD.into(), 0, 0, 0, 0, 0, 0, 0],
-            Syscall::CloneHandle(h) => [SyscallList::SYS_CLONE_HANDLE.into(), h, 0, 0, 0, 0, 0, 0],
+            Syscall::VmsHandle(h) => [SyscallList::TaskGetVms.into(), h, 0, 0, 0, 0, 0, 0],
+            Syscall::Yield => [SyscallList::Yield.into(), 0, 0, 0, 0, 0, 0, 0],
+            Syscall::CloneHandle(h) => [SyscallList::CloseHandle.into(), h, 0, 0, 0, 0, 0, 0],
         }
     }
 }

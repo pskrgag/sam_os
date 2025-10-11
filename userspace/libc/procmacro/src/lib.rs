@@ -24,8 +24,7 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
         extern crate alloc;
 
         #[no_mangle]
-        pub extern "C" fn _start(vms_handle: rtl::handle::HandleBase, self_handle: rtl::handle::HandleBase,
-                                 factory_handle: rtl::handle::HandleBase, boot_handle: rtl::handle::HandleBase) {
+        pub extern "C" fn _start(vms_handle: rtl::handle::HandleBase, factory_handle: rtl::handle::HandleBase, boot_handle: rtl::handle::HandleBase) {
             libc::vmm::vms::init_self_vms(libc::handle::Handle::new(vms_handle));
             libc::factory::init_self_factory(libc::handle::Handle::new(factory_handle));
             libc::init().unwrap();

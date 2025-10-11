@@ -1,5 +1,4 @@
 use super::vm_object::VmObject;
-use crate::kernel::object::handle::Handle;
 use crate::mm::paging::page_table::MmError;
 use crate::mm::user_buffer::UserPtr;
 use crate::mm::vms::VmsInner;
@@ -69,14 +68,12 @@ impl Vms {
         inner.ttbr0().unwrap()
     }
 
-    pub fn create_vmo(&self, args: VmoCreateArgs) -> Result<Handle, ErrorType> {
-        let vmo = match args {
+    pub fn create_vmo(&self, args: VmoCreateArgs) -> Result<Arc<VmObject>, ErrorType> {
+        match args {
             VmoCreateArgs::Backed(back, mt, ptr) => VmObject::from_buffer(back, mt, ptr),
             VmoCreateArgs::Zeroed(size, mt, ptr) => VmObject::zeroed(size, mt, ptr),
         }
-        .ok_or(ErrorType::NoMemory)?;
-
-        Ok(Handle::new(vmo.clone()))
+        .ok_or(ErrorType::NoMemory)
     }
 
     pub fn map_phys(&self, pa: PhysAddr, size: usize) -> Result<*mut u8, ErrorType> {

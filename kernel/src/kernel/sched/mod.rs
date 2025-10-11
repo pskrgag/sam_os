@@ -127,8 +127,6 @@ pub fn init_userspace(_prot: &loader_protocol::LoaderArg) {
         let init_vms = init_task.vms();
 
         for mut i in data.regions {
-            println!("{:?} {:?} {:?}", i.va, i.pa, i.tp);
-
             i.va.align_page();
             i.pa.align_page();
             init_vms.vm_map(i.va, i.pa, i.tp).expect("Failed to map");

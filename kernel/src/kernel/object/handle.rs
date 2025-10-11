@@ -6,15 +6,18 @@ use rtl::handle::HandleBase;
 // ToDo: rigths
 pub struct Handle {
     obj: Option<Arc<dyn KernelObject>>,
+    base: HandleBase,
 }
+
+static_assertions::const_assert!(core::mem::size_of::<Arc<i32>>() == 8);
 
 impl Handle {
     pub const fn invalid() -> Self {
-        Self { obj: None }
+        Self { obj: None, base: 0 }
     }
 
-    pub fn new(o: Arc<dyn KernelObject>) -> Self {
-        Self { obj: Some(o) }
+    pub fn new(o: Arc<dyn KernelObject>, base: HandleBase) -> Self {
+        Self { obj: Some(o), base }
     }
 
     pub const fn is_valid(&self) -> bool {

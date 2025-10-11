@@ -11,7 +11,6 @@ pub mod timer;
 use core::arch::global_asm;
 use core::mem;
 use rtl::arch::PAGE_SIZE;
-use rtl::arch::PHYS_OFFSET;
 
 extern crate static_assertions as sa;
 

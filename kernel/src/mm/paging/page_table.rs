@@ -3,8 +3,8 @@ use crate::{
     arch::{self, mm::mmu_flags},
     mm::allocators::page_alloc::page_allocator,
 };
-use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
+use rtl::vmm::types::*;
 
 #[derive(Debug)]
 pub enum MmError {

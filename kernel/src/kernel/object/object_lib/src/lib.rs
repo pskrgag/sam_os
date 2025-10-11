@@ -17,12 +17,6 @@ fn impl_kernel_object_macro(ast: &syn::DeriveInput) -> TokenStream {
 
         unsafe impl Send for #name { }
         unsafe impl Sync for #name { }
-
-        impl Drop for #name {
-            fn drop(&mut self) {
-                // panic!();
-            }
-        }
     };
 
     gen.into()

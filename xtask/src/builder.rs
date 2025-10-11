@@ -179,10 +179,6 @@ pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
         "-nographic",
         "-kernel",
         &bin,
-        "-d",
-        "int",
-        "-D",
-        "log1",
     ];
 
     if gdb {
@@ -190,13 +186,7 @@ pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
     }
 
     // qemu-system-aarch64 -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel
-    run_prog(
-        "qemu-system-aarch64",
-        args.as_slice(),
-        None,
-        None,
-        Some(&[("BOARD_TYPE", c.board.as_str())]),
-    )
+    run_prog("qemu-system-aarch64", args.as_slice(), None, None, None)
 }
 
 pub fn clippy(c: BuildScript) -> Result<(), String> {

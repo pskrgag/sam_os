@@ -23,22 +23,22 @@ fn on_panic(info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[cfg(not(test))]
 #[panic_handler]
 fn on_panic(info: &PanicInfo) -> ! {
     let mut bt = [VirtAddr::from(0); 50];
 
+    println!("panic");
     unsafe {
         let fp: usize;
 
         disable_all();
-        let id: String<100> = if let Some(c) = crate::sched::current() {
-            c.task().name().try_into().unwrap()
+        let id: Result<String<100>, _> = if let Some(c) = crate::sched::current() {
+            c.task().name().try_into()
         } else {
-            "kernel".try_into().unwrap()
+            "kernel".try_into()
         };
         println!("--- cut here ---");
-        println!("Kernel Panic! In context of '{}'", id);
+        println!("Kernel Panic! In context of '{:?}'", id);
 
         println!("{}", info.message());
 

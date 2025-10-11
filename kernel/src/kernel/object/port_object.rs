@@ -1,4 +1,3 @@
-use super::handle::Handle;
 use super::task_object::Task;
 use super::thread_object::Thread;
 use crate::kernel::locking::spinlock::Spinlock;
@@ -56,9 +55,8 @@ impl Port {
         for i in h {
             // TODO remove handles in case of an error
             let h = cur_table.find_poly(*i)?;
-            let new_h = Handle::new(h);
 
-            to.handle_table().add(new_h);
+            to.handle_table().add(h);
         }
 
         Some(())
@@ -86,10 +84,8 @@ impl Port {
             Self::transfer_handles_from_current(&task, client_msg.handles())
                 .ok_or(ErrorType::InvalidHandle)?;
 
-            let h = Handle::new(reply_port.clone());
-
-            client_msg.set_reply_port(h.as_raw());
-            task.handle_table().add(h);
+            client_msg.set_reply_port(client_msg.reply_port());
+            task.handle_table().add(reply_port.clone());
 
             self.queue.lock().push_back(client_msg);
             t.wake();

@@ -2,7 +2,6 @@ use crate::{
     kernel::{
         object::{
             factory_object::Factory,
-            handle::Handle,
             port_object::Port,
             task_object::Task,
             vm_object::VmObject,
@@ -14,7 +13,7 @@ use crate::{
 };
 use alloc::string::String;
 use alloc::string::ToString;
-use rtl::handle::{HandleBase, HANDLE_INVALID};
+use rtl::handle::{HANDLE_INVALID, HandleBase};
 use rtl::vmm::types::Address;
 use rtl::{error::ErrorType, ipc::IpcMessage, syscalls::SyscallList};
 
@@ -60,23 +59,22 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
     let mut table = task.handle_table();
 
     match args.number() {
-        SyscallList::SYS_WRITE => unsafe {
+        SyscallList::Write => unsafe {
             do_write(core::slice::from_raw_parts(
                 args.arg::<usize>(0) as *const u8,
                 args.arg(1),
             ))
         },
-        SyscallList::SYS_CREATE_TASK => {
+        SyscallList::CreateTask => {
             let name = read_user_string(args.arg(1), args.arg(2))?;
 
             let factory = table
                 .find::<Factory>(args.arg(0))
                 .ok_or(ErrorType::InvalidHandle)?;
 
-            let handle = factory.create_task(name.as_str())?;
-            Ok(table.add(handle))
+            Ok(table.add(factory.create_task(name.as_str())?))
         }
-        SyscallList::SYS_CREATE_PORT => {
+        SyscallList::CreatePort => {
             let factory = table
                 .find::<Factory>(args.arg(0))
                 .ok_or(ErrorType::InvalidHandle)?;
@@ -84,7 +82,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             let handle = factory.create_port()?;
             Ok(table.add(handle))
         }
-        SyscallList::SYS_VM_ALLOCATE => {
+        SyscallList::VmAllocate => {
             let vms = table
                 .find::<Vms>(args.arg(0))
                 .ok_or(ErrorType::InvalidHandle)?;
@@ -93,14 +91,14 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 .map(|x| x.bits())
                 .map_err(|_| ErrorType::NoMemory)
         }
-        SyscallList::SYS_VM_FREE => {
+        SyscallList::VmFree => {
             let vms = table
                 .find::<Vms>(args.arg(0))
                 .ok_or(ErrorType::InvalidHandle)?;
 
             vms.vm_free(args.arg(1), args.arg(2)).map(|_| 0)
         }
-        SyscallList::SYS_CREATE_VMO => {
+        SyscallList::CreateVmo => {
             use rtl::objects::vmo::VmoFlags;
 
             let vms = table
@@ -118,11 +116,9 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 _ => Err(ErrorType::InvalidArgument)?,
             };
 
-            let handle = vms.create_vmo(vmo_args)?;
-
-            Ok(table.add(handle))
+            Ok(table.add(vms.create_vmo(vmo_args)?))
         }
-        SyscallList::SYS_MAP_VMO => {
+        SyscallList::MapVmo => {
             let vms = table
                 .find::<Vms>(args.arg(0))
                 .ok_or(ErrorType::InvalidHandle)?;
@@ -136,20 +132,20 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 .map(|x| x.into())
                 .map_err(|_| ErrorType::InvalidArgument)
         }
-        SyscallList::SYS_MAP_PHYS => {
+        SyscallList::MapPhys => {
             let vms = table
                 .find::<Vms>(args.arg(0))
                 .ok_or(ErrorType::InvalidHandle)?;
 
             vms.map_phys(args.arg(1), args.arg(2)).map(|x| x as usize)
         }
-        SyscallList::SYS_YIELD => {
+        SyscallList::Yield => {
             let thread = current().unwrap();
             thread.self_yield();
 
             Ok(0)
         }
-        SyscallList::SYS_TASK_START => {
+        SyscallList::TaskStart => {
             let task = table
                 .find::<Task>(args.arg(0))
                 .ok_or(ErrorType::InvalidHandle)?;
@@ -166,20 +162,15 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
 
             task.start(args.arg(1), obj).map(|_| 0)
         }
-        SyscallList::SYS_TASK_GET_VMS => {
+        SyscallList::TaskGetVms => {
             let task = table
                 .find::<Task>(args.arg(0))
                 .ok_or(ErrorType::InvalidHandle)?;
             let vms = task.vms();
-            let handle = Handle::new(vms.clone());
 
-            Ok(table.add(handle))
+            Ok(table.add(vms))
         }
-        SyscallList::SYS_CLOSE_HANDLE => {
-            table.remove(args.arg(0));
-            Ok(0)
-        }
-        SyscallList::SYS_PORT_CALL => {
+        SyscallList::PortCall => {
             let port = table
                 .find::<Port>(args.arg(0))
                 .ok_or(ErrorType::InvalidHandle)?;
@@ -188,7 +179,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             port.call(UserPtr::new(args.arg::<usize>(1) as *mut IpcMessage))
                 .map(|_| 0)
         }
-        SyscallList::SYS_PORT_SEND_WAIT => {
+        SyscallList::PortSendWait => {
             let port = table
                 .find::<Port>(args.arg(0))
                 .ok_or(ErrorType::InvalidHandle)?;
@@ -197,7 +188,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             drop(table);
             port.send_wait(args.arg(1), msg)
         }
-        SyscallList::SYS_PORT_RECEIVE => {
+        SyscallList::PortReceive => {
             let port = table
                 .find::<Port>(args.arg(0))
                 .ok_or(ErrorType::InvalidHandle)?;
@@ -206,13 +197,12 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             drop(table);
             port.receive(in_msg)
         }
-        SyscallList::SYS_CLONE_HANDLE => {
-            let obj = table
-                .find_poly(args.arg(0))
-                .ok_or(ErrorType::InvalidHandle)?;
-            let handle = Handle::new(obj.clone());
-
-            Ok(table.add(handle))
+        SyscallList::CloseHandle => {
+            if table.remove(args.arg(0)) {
+                Ok(0)
+            } else {
+                Err(ErrorType::InvalidHandle)
+            }
         }
         _ => Err(ErrorType::NoOperation),
     }

@@ -23,9 +23,12 @@ fn main(_: Handle) {
         };
 
         let mut task = Task::create_from_elf(elf, name.to_string()).expect("Failed to create task");
-        task.start(p.handle()).unwrap();
 
-        println!("Spawned '{}'", task.name())
+        task.start(p.handle()).unwrap();
+        println!("Spawned '{}'", task.name());
+
+        // Don't drop the last reference, since it will close a task
+        core::mem::forget(task);
     }
 
     roottask::start(p);

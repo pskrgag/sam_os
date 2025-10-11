@@ -5,8 +5,8 @@ use crate::{
 
 use rtl::arch::PAGE_SIZE;
 use rtl::linker_var;
-use rtl::vmm::types::*;
 use rtl::vmm::MappingType;
+use rtl::vmm::types::*;
 use spin::Once;
 
 // TODO: W/A. it should be read from dtb

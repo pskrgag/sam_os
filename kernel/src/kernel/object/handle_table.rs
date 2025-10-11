@@ -1,5 +1,6 @@
 use crate::kernel::object::KernelObject;
 use crate::kernel::object::handle::Handle;
+use alloc::collections::btree_map::BTreeMap;
 use alloc::sync::Arc;
 use rtl::handle::HandleBase;
 
@@ -8,94 +9,42 @@ const MAX_HANDLES: usize = 25;
 // This is SHIT! Must be replaced with radix trie-like stuff,
 // but for my own sake, I will leave it as simple array
 pub struct HandleTable {
-    table: [Handle; MAX_HANDLES],
+    table: BTreeMap<HandleBase, Handle>,
+    id: usize,
 }
 
 impl HandleTable {
     pub fn new() -> Self {
         Self {
-            table: unsafe { make_array!(MAX_HANDLES, |_i| Handle::invalid()) },
+            table: BTreeMap::new(),
+            id: 0,
         }
     }
 
-    pub fn add(&mut self, obj: Handle) -> HandleBase {
-        let key = obj.as_raw() % MAX_HANDLES;
-        let start = key;
-        let mut idx = start;
+    fn allocate_id(&mut self) -> HandleBase {
+        let res = self.id;
 
-        while {
-            let h = &mut self.table[idx];
-
-            if !h.is_valid() {
-                *h = obj;
-                return h.as_raw();
-            }
-
-            idx = (idx + 1) % MAX_HANDLES;
-            idx != start
-        } {}
-
-        panic!("Please refactor me...");
+        self.id += 1;
+        res
     }
 
-    pub fn remove(&mut self, hdl: HandleBase) {
-        let key = hdl % MAX_HANDLES;
+    pub fn add(&mut self, obj: Arc<dyn KernelObject>) -> HandleBase {
+        let res = self.allocate_id();
 
-        let start = key;
-        let mut idx = start;
-
-        while {
-            let h = &mut self.table[idx];
-
-            if h.is_valid() && h.as_raw() == hdl {
-                *h = Handle::invalid();
-                return;
-            }
-
-            idx = (idx + 1) % MAX_HANDLES;
-            idx != start
-        } {}
+        self.table.insert(res, Handle::new(obj, res));
+        res
     }
 
-    // ToDo factor out finding loop into own function
+    pub fn remove(&mut self, hdl: HandleBase) -> bool {
+        self.table.remove(&hdl).is_some()
+    }
+
     pub fn find<T: KernelObject + Sized + 'static>(&self, hdl: HandleBase) -> Option<Arc<T>> {
-        let key = hdl % MAX_HANDLES;
-
-        let start = key;
-        let mut idx = start;
-
-        while {
-            let h = &self.table[idx];
-
-            if h.is_valid() && h.as_raw() == hdl {
-                return h.obj::<T>();
-            }
-
-            idx = (idx + 1) % MAX_HANDLES;
-            idx != start
-        } {}
-
-        None
+        self.table.get(&hdl).and_then(|x| x.obj::<T>())
     }
 
     pub fn find_poly(&self, hdl: HandleBase) -> Option<Arc<dyn KernelObject>> {
-        let key = hdl % MAX_HANDLES;
-
-        let start = key;
-        let mut idx = start;
-
-        while {
-            let h = &self.table[idx];
-
-            if h.is_valid() && h.as_raw() == hdl {
-                return h.obj_poly();
-            }
-
-            idx = (idx + 1) % MAX_HANDLES;
-            idx != start
-        } {}
-
-        None
+        self.table.get(&hdl).and_then(|x| x.obj_poly())
     }
 }
 

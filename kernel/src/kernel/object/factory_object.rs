@@ -1,4 +1,3 @@
-use super::handle::Handle;
 use super::port_object::Port;
 use super::task_object::Task;
 use crate::kernel::sched::current;
@@ -17,16 +16,13 @@ impl Factory {
         Arc::new(Self {})
     }
 
-    pub fn create_task(&self, name: &str) -> Result<Handle, ErrorType> {
-        let new_task = Task::new(name.to_string());
-
-        Ok(Handle::new(new_task.clone()))
+    pub fn create_task(&self, name: &str) -> Result<Arc<Task>, ErrorType> {
+        Ok(Task::new(name.to_string()))
     }
 
-    pub fn create_port(&self) -> Result<Handle, ErrorType> {
+    pub fn create_port(&self) -> Result<Arc<Port>, ErrorType> {
         let task = current().unwrap().task();
-        let port = Port::new(task.clone());
 
-        Ok(Handle::new(port.clone()))
+        Ok(Port::new(task.clone()))
     }
 }

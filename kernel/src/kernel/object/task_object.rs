@@ -1,7 +1,6 @@
 use crate::kernel::locking::spinlock::*;
 use crate::kernel::object::KernelObject;
 use crate::kernel::object::factory_object::Factory;
-use crate::kernel::object::handle::Handle;
 use crate::kernel::object::handle_table::HandleTable;
 use crate::kernel::object::thread_object::Thread;
 use crate::kernel::object::vms_object::Vms;
@@ -24,11 +23,6 @@ pub struct Task {
     vms: Arc<Vms>,
     handles: Spinlock<HandleTable>,
     factory: Arc<Factory>,
-
-    // Cache handles to pass them as args
-    vms_handle: HandleBase,
-    self_handle: HandleBase,
-    factory_handle: HandleBase,
 }
 
 impl Task {
@@ -40,44 +34,18 @@ impl Task {
             vms: Vms::new_kernel(),
             handles: Spinlock::new(HandleTable::new()),
             factory: Factory::new(),
-            vms_handle: HANDLE_INVALID,
-            self_handle: HANDLE_INVALID,
-            factory_handle: HANDLE_INVALID,
         })
     }
 
     pub fn new(name: String) -> Arc<Task> {
-        let mut s = Arc::new(Self {
+        Arc::new(Self {
             inner: Spinlock::new(TaskInner::new_user()),
             name,
             id: 0,
             vms: Vms::new_user(),
             handles: Spinlock::new(HandleTable::new()),
             factory: Factory::new(),
-            vms_handle: HANDLE_INVALID,
-            self_handle: HANDLE_INVALID,
-            factory_handle: HANDLE_INVALID,
-        });
-
-        let handle = Handle::new(s.clone());
-        unsafe {
-            Arc::get_mut_unchecked(&mut s).self_handle = handle.as_raw();
-        }
-        s.handle_table().add(handle);
-
-        let handle = Handle::new(s.vms.clone());
-        unsafe {
-            Arc::get_mut_unchecked(&mut s).vms_handle = handle.as_raw();
-        }
-        s.handle_table().add(handle);
-
-        let handle = Handle::new(s.factory.clone());
-        unsafe {
-            Arc::get_mut_unchecked(&mut s).factory_handle = handle.as_raw();
-        }
-        s.handle_table().add(handle);
-
-        s
+        })
     }
 
     pub fn id(&self) -> u32 {
@@ -100,11 +68,12 @@ impl Task {
         self.inner.lock().add_thread(t);
     }
 
-    pub fn add_initial_thread(&self, t: Arc<Thread>, boot_handle: HandleBase) {
+    pub fn add_initial_thread(self: &Arc<Self>, t: Arc<Thread>, boot_handle: HandleBase) {
+        let mut table = self.handle_table();
+
         t.setup_args(&[
-            self.vms_handle,
-            self.self_handle,
-            self.factory_handle,
+            table.add(self.vms()),
+            table.add(self.factory.clone()),
             boot_handle,
         ]);
         self.inner.lock().add_thread(t);
@@ -125,13 +94,10 @@ impl Task {
 
         let init_thread = Thread::new(self.clone(), ID_THREAD.fetch_add(1, Ordering::Relaxed));
         let mut boot_handle: HandleBase = HANDLE_INVALID;
-        let mut new_table = self.handle_table();
 
         if let Some(obj) = obj {
-            let handle = Handle::new(obj);
-
-            boot_handle = handle.as_raw();
-            new_table.add(handle);
+            let mut new_table = self.handle_table();
+            boot_handle = new_table.add(obj);
         }
 
         init_thread.init_user(ep);
@@ -142,6 +108,6 @@ impl Task {
     }
 
     pub fn vms_handle(&self) -> HandleBase {
-        self.vms_handle
+        self.handle_table().add(self.vms())
     }
 }
