@@ -168,7 +168,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 .ok_or(ErrorType::InvalidHandle)?;
             let vms = task.vms();
 
-            Ok(table.add(vms))
+            Ok(table.add(vms.clone()))
         }
         SyscallList::PortCall => {
             let port = table

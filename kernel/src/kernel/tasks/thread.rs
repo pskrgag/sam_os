@@ -1,4 +1,4 @@
-use crate::{arch::regs::Context, mm::allocators::stack_alloc::StackLayout};
+use crate::arch::regs::Context;
 use rtl::vmm::types::*;
 
 unsafe extern "C" {
@@ -24,7 +24,7 @@ pub enum ThreadType {
 pub struct ThreadInner {
     pub(crate) arch_ctx: Context,
     pub(crate) state: ThreadState,
-    stack: Option<StackLayout>,
+    stack: VirtAddr,
 }
 
 impl ThreadInner {
@@ -32,7 +32,7 @@ impl ThreadInner {
         Self {
             state: ThreadState::Initialized,
             arch_ctx: Context::default(),
-            stack: None,
+            stack: VirtAddr::new(0),
         }
     }
 
@@ -60,19 +60,18 @@ impl ThreadInner {
 
     pub fn init_user(
         &mut self,
-        stack: StackLayout,
+        stack: VirtAddr,
         func: VirtAddr,
         user_stack: VirtAddr,
         ttbr0: usize,
     ) {
-        self.arch_ctx.x21 = user_stack.bits();
+        self.arch_ctx.x21 = user_stack.into();
         self.arch_ctx.lr = (user_thread_entry_point as *const fn()) as usize;
         self.arch_ctx.x20 = func.bits();
-        self.arch_ctx.x19 = stack.stack_head().into();
-        self.arch_ctx.x22 = stack.stack_head().into();
+        self.arch_ctx.x19 = stack.into();
         self.arch_ctx.ttbr0 = ttbr0;
 
-        self.stack = Some(stack);
+        self.stack = stack;
 
         self.state = ThreadState::Initialized;
     }

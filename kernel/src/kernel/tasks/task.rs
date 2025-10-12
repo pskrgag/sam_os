@@ -35,6 +35,6 @@ pub fn init_task() -> Arc<Task> {
 }
 
 pub fn kernel_task() -> Arc<Task> {
-    INIT_TASK.call_once(|| Task::new_kernel());
-    INIT_TASK.get().unwrap().clone()
+    KERNEL_TASK.call_once(|| Task::new_kernel());
+    KERNEL_TASK.get().unwrap().clone()
 }

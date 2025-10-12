@@ -39,10 +39,10 @@ impl Vms {
     ) -> Result<VirtAddr, MmError> {
         let mut inner = self.inner.write();
 
-        assert!(v.start().is_page_aligned());
-        assert!(p.start().is_page_aligned());
-        assert!(p.size().is_page_aligned());
-        assert!(v.size().is_page_aligned());
+        debug_assert!(v.start().is_page_aligned());
+        debug_assert!(p.start().is_page_aligned());
+        debug_assert!(p.size().is_page_aligned());
+        debug_assert!(v.size().is_page_aligned());
 
         inner.vm_map(v, p, tp)
     }
@@ -51,7 +51,7 @@ impl Vms {
         let mut inner = self.inner.write();
         let res = inner.vm_allocate(size, tp)?;
 
-        assert!(res.is_page_aligned());
+        debug_assert!(res.is_page_aligned());
         Ok(res)
     }
 
@@ -65,6 +65,7 @@ impl Vms {
 
     pub fn base(&self) -> PhysAddr {
         let inner = self.inner.read();
+
         inner.ttbr0().unwrap()
     }
 

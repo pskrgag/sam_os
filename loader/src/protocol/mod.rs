@@ -14,7 +14,7 @@ static INIT_TASK: &[u8] = rtl::include_bytes_align_as!(Aligned, env!("INIT_TASK_
 pub fn prepare(fdt: PhysAddr, mut arg: LoaderArg, tt: &mut PageTable) -> VirtAddr {
     let mut mmio_start = arg.get_vmm_base(VmmLayoutKind::Mmio).unwrap().0;
 
-    arg.tt_base = tt as *mut _ as usize;
+    arg.tt_base = tt.base().into();
     arg.fdt_base = fdt.bits();
 
     for dev in &mut arg.devices {

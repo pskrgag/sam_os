@@ -1,17 +1,15 @@
 use crate::kernel::object::task_object::Task;
 use crate::kernel::sched::add_thread;
+use crate::kernel::tasks::task::kernel_task;
 use crate::kernel::tasks::thread::{ThreadInner, ThreadState};
-use crate::{
-    arch::regs::Context, kernel::locking::spinlock::Spinlock,
-    mm::allocators::stack_alloc::StackLayout,
-};
+use crate::{arch::regs::Context, kernel::locking::spinlock::Spinlock};
 use alloc::sync::Arc;
 use alloc::sync::Weak;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use object_lib::object;
 use rtl::arch::PAGE_SIZE;
-use rtl::vmm::MappingType;
 use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 
 const USER_THREAD_STACK_PAGES: usize = 50;
 const KERNEL_STACK_PAGES: usize = 100;
@@ -54,9 +52,13 @@ impl Thread {
     }
 
     pub fn init_user(self: &Arc<Thread>, ep: VirtAddr) {
-        let kernel_stack =
-            StackLayout::new(KERNEL_STACK_PAGES).expect("Failed to allocate kernel stack");
-        let vms = self.task.upgrade().unwrap().vms();
+        let kernel_stack = kernel_task()
+            .vms()
+            .vm_allocate(KERNEL_STACK_PAGES * PAGE_SIZE, MappingType::KERNEL_DATA)
+            .expect("Failed to allocate kernel stack");
+
+        let task = self.task.upgrade().unwrap();
+        let vms = task.vms();
         let user_stack = vms
             .vm_allocate(USER_THREAD_STACK_PAGES * PAGE_SIZE, MappingType::USER_DATA)
             .expect("Failed to allocate user stack");
@@ -64,7 +66,7 @@ impl Thread {
         let mut inner = self.inner.lock();
 
         inner.init_user(
-            kernel_stack,
+            VirtAddr::from(kernel_stack.bits() + KERNEL_STACK_PAGES * PAGE_SIZE),
             ep,
             VirtAddr::from(user_stack.bits() + USER_THREAD_STACK_PAGES * PAGE_SIZE),
             vms.base().bits(),

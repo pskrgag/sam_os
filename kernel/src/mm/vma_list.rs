@@ -2,8 +2,8 @@ use alloc::collections::BTreeSet;
 use core::cmp::Ordering;
 use core::ops::{Deref, DerefMut};
 use rtl::error::ErrorType;
-use rtl::vmm::MappingType;
 use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 
 #[derive(Debug, Eq, Clone, Copy)]
 pub(crate) struct MemRangeVma(MemRange<VirtAddr>);
@@ -131,9 +131,16 @@ impl VmaList {
         self.occupied.iter().map(|x| x.clone()).collect()
     }
 
-    pub fn new() -> Self {
+    pub fn new_user() -> Self {
         Self {
             free: FreeRegions(BTreeSet::from([MemRangeVma::max_user()])),
+            occupied: BTreeSet::new(),
+        }
+    }
+
+    pub fn new_kernel() -> Self {
+        Self {
+            free: FreeRegions(BTreeSet::from([MemRangeVma::max_kernel()])),
             occupied: BTreeSet::new(),
         }
     }
@@ -296,7 +303,11 @@ impl MemRangeVma {
     }
 
     pub fn max_user() -> Self {
-        Self(MemRange::max_user())
+        Self(super::layout::vmm_range(loader_protocol::VmmLayoutKind::User))
+    }
+
+    pub fn max_kernel() -> Self {
+        Self(super::layout::vmm_range(loader_protocol::VmmLayoutKind::VmAlloc))
     }
 }
 
@@ -358,10 +369,9 @@ mod test {
     fn vma_list_empty() {
         let mut list = VmaList::new();
 
-        test_assert!(
-            list.find_free_range(MemRange::<VirtAddr>::max_user().size())
-                .is_some()
-        );
+        test_assert!(list
+            .find_free_range(MemRange::<VirtAddr>::max_user().size())
+            .is_some());
     }
 
     #[kernel_test]
@@ -383,13 +393,12 @@ mod test {
     fn vma_list_add_nofixed() {
         let mut list = VmaList::new();
 
-        test_assert!(
-            list.add_to_tree(Vma::new(
+        test_assert!(list
+            .add_to_tree(Vma::new(
                 MemRangeVma::new_fixed(VirtAddr::new(0), 0x1000),
                 MappingType::USER_DATA,
             ))
-            .is_ok()
-        );
+            .is_ok());
         test_assert_eq!(list.vma_list_sorted().len(), 2);
     }
 

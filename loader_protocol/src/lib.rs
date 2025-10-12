@@ -22,6 +22,8 @@ pub enum VmmLayoutKind {
     Mmio,
     LoaderArg,
     VmAlloc,
+    PerCpu,
+    User,
     Count,
 }
 

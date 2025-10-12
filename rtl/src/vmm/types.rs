@@ -1,4 +1,4 @@
-use crate::arch::{self, USER_AS_SIZE, USER_AS_START};
+use crate::arch;
 use core::ops::Add;
 use core::{
     fmt::{self, Debug},
@@ -112,10 +112,6 @@ impl<T: Copy + Address + From<usize> + Ord + core::fmt::Debug> MemRange<T> {
         } else {
             false
         }
-    }
-
-    pub fn max_user() -> Self {
-        Self::new(T::from(USER_AS_START), USER_AS_SIZE)
     }
 
     pub fn end(&self) -> T {

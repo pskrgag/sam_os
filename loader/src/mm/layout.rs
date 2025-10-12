@@ -27,6 +27,16 @@ static KERNEL_LAYOUT: [VmmLayoutEntry; VmmLayoutKind::Count as usize] = [
         size: 0x100000000000,
         kind: VmmLayoutKind::VmAlloc,
     },
+    VmmLayoutEntry {
+        base: 0xFFFFD00000000000,
+        size: 0x100000000000,
+        kind: VmmLayoutKind::PerCpu,
+    },
+    VmmLayoutEntry {
+        base: 0x10000,
+        size: 1 << 39,
+        kind: VmmLayoutKind::User,
+    },
 ];
 
 pub fn init_layout(arg: &mut LoaderArg) {

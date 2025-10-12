@@ -12,24 +12,10 @@ use core::arch::global_asm;
 use core::mem;
 use rtl::arch::PAGE_SIZE;
 
-extern crate static_assertions as sa;
-
-pub const PTE_PER_PAGE: usize = PAGE_SIZE / mem::size_of::<u64>();
-pub const TCR_SZ_SHIFT: u64 = 39;
-
-pub const KERNEL_AS_END: usize = usize::MAX;
+pub const PTE_PER_PAGE: usize = PAGE_SIZE / mem::size_of::<usize>();
 
 // TODO: dtb
 pub const NUM_CPUS: usize = 2;
-
-pub const fn user_as_start() -> usize {
-    PAGE_SIZE
-}
-
-pub const fn user_as_size() -> usize {
-    1 << 39
-}
-
 pub const PAGE_TABLE_LVLS: u8 = 3;
 
 pub fn time_since_start() -> f64 {

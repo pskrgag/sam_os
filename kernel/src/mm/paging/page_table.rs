@@ -3,8 +3,8 @@ use crate::{
     arch::{self, mm::mmu_flags},
     mm::allocators::page_alloc::page_allocator,
 };
-use rtl::vmm::MappingType;
 use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 
 #[derive(Debug)]
 pub enum MmError {
@@ -93,16 +93,18 @@ impl PageTableBlock {
     }
 
     pub fn next(&self, index: usize) -> Option<Self> {
-        assert!(!self.is_last());
-
-        let entry_next = unsafe {
-            PageTableEntry::from_bits(self.addr.to_raw::<usize>().add(index).read_volatile())
-        };
-
-        if entry_next.valid() {
-            Some(Self::new(VirtAddr::from(entry_next.addr()), self.lvl + 1))
-        } else {
+        if self.is_last() {
             None
+        } else {
+            let entry_next = unsafe {
+                PageTableEntry::from_bits(self.addr.to_raw::<usize>().add(index).read_volatile())
+            };
+
+            if entry_next.valid() {
+                Some(Self::new(VirtAddr::from(entry_next.addr()), self.lvl + 1))
+            } else {
+                None
+            }
         }
     }
 }
@@ -145,9 +147,18 @@ impl PageTable {
     pub fn walk(&mut self, va: VirtAddr) {
         let mut base = self.lvl0();
 
-        for _ in 0..2 {
+        println!("TTBR base {:x}", PhysAddr::from(base.addr()));
+
+        for _ in 0..=arch::PAGE_TABLE_LVLS {
             let index = base.index_of(va);
-            println!("entry {:x}", base.get_tte(index).bits());
+
+            println!(
+                "va {:x} entry {:x} idx {} lvl {}",
+                va,
+                base.get_tte(index).bits(),
+                index,
+                base.lvl()
+            );
 
             let next_block = match base.next(index) {
                 Some(e) => e,
@@ -156,9 +167,6 @@ impl PageTable {
 
             base = next_block;
         }
-
-        let index = base.index_of(va);
-        println!("entry {:x}", base.get_tte(index).bits());
     }
 
     pub fn new() -> Option<Self> {
@@ -175,7 +183,7 @@ impl PageTable {
         index: usize,
         pa: PhysAddr,
         tp: MappingType,
-        lvl: usize,
+        lvl: u8,
         _v: VirtAddr,
     ) {
         let flags = mmu::mapping_type_to_flags(tp);
@@ -197,7 +205,7 @@ impl PageTable {
 
     fn allocate_new_block(
         b: &mut PageTableBlock,
-        lvl: usize,
+        lvl: u8,
         index: usize,
     ) -> Result<PageTableBlock, MmError> {
         let new_page = page_allocator().alloc(1).ok_or(MmError::NoMem)?;
@@ -209,7 +217,7 @@ impl PageTable {
 
     fn abort_walk(
         _b: &mut PageTableBlock,
-        _lvl: usize,
+        _lvl: u8,
         _index: usize,
     ) -> Result<PageTableBlock, MmError> {
         Err(MmError::NoTranslation)
@@ -220,7 +228,7 @@ impl PageTable {
         index: usize,
         _pa: PhysAddr,
         _tp: MappingType,
-        _lvl: usize,
+        _lvl: u8,
         v: VirtAddr,
     ) {
         unsafe {
@@ -231,11 +239,11 @@ impl PageTable {
 
     #[allow(clippy::too_many_arguments)]
     fn op_lvl<
-        F: FnMut(&mut PageTableBlock, usize, PhysAddr, MappingType, usize, VirtAddr) + Copy, // Set leaf
-        G: FnMut(&mut PageTableBlock, usize, usize) -> Result<PageTableBlock, MmError> + Copy, // Process walk
+        F: FnMut(&mut PageTableBlock, usize, PhysAddr, MappingType, u8, VirtAddr) + Copy, // Set leaf
+        G: FnMut(&mut PageTableBlock, u8, usize) -> Result<PageTableBlock, MmError> + Copy, // Process walk
     >(
         mut base: PageTableBlock,
-        lvl: usize,
+        lvl: u8,
         v: &mut MemRange<VirtAddr>,
         p: &mut MemRange<PhysAddr>,
         map: MappingType,
@@ -258,7 +266,7 @@ impl PageTable {
         while {
             let index = base.index_of(v.start());
 
-            if lvl < 3
+            if lvl < arch::PAGE_TABLE_LVLS
                 && !(use_huge_pages && v.start().is_aligned(order) && v.size().is_aligned(order))
             {
                 let next_block = match base.next(index) {
@@ -268,8 +276,8 @@ impl PageTable {
 
                 Self::op_lvl(next_block, lvl + 1, v, p, map, cb, cb_b, use_huge_pages)?;
             } else {
-                assert!(p.start().is_aligned(order));
-                assert!(v.start().is_aligned(order));
+                debug_assert!(p.start().is_aligned(order));
+                debug_assert!(v.start().is_aligned(order));
 
                 cb(&mut base, index, p.start(), map, lvl, v.start());
 
@@ -277,7 +285,7 @@ impl PageTable {
                 v.truncate(size);
             }
 
-            v.size() != 0 && index != 511
+            v.size() != 0 && index != (arch::PTE_PER_PAGE - 1)
         } {}
 
         Ok(res)
