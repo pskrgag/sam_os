@@ -293,7 +293,7 @@ impl PublicToWire<{wire_name}> for {name} {{
                     )
                 }
                 Type::Builtin(BuiltinTypes::Handle) => format!(
-                    "{name}: _message.add_handle(unsafe {{ self.{name}.as_raw() }})",
+                    "{name}: _message.add_handle(unsafe {{ let res = self.{name}.as_raw(); core::mem::forget(self.{name}); res }})",
                     name = x.0
                 ),
                 _ => format!("{name}: self.{name}", name = x.0),

@@ -28,6 +28,7 @@ impl HandleTable {
         res
     }
 
+    #[must_use]
     pub fn add(&mut self, obj: Arc<dyn KernelObject>) -> HandleBase {
         let res = self.allocate_id();
 

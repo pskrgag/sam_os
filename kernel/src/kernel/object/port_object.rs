@@ -48,18 +48,22 @@ impl Port {
         })
     }
 
-    fn transfer_handles_from_current(to: &Task, h: &[HandleBase]) -> Option<()> {
+    fn transfer_handles_from_current(
+        to: &Task,
+        msg: &mut IpcMessage<'static>,
+    ) -> Result<(), ErrorType> {
         let cur_task = current().unwrap().task();
         let cur_table = cur_task.handle_table();
+        let mut to_table = to.handle_table();
 
-        for i in h {
-            // TODO remove handles in case of an error
-            let h = cur_table.find_poly(*i)?;
+        // TODO remove handles in case of an error
+        for i in msg.handles_mut() {
+            let h = cur_table.find_poly(*i).ok_or(ErrorType::InvalidHandle)?;
 
-            to.handle_table().add(h);
+            *i = to_table.add(h);
         }
 
-        Some(())
+        Ok(())
     }
 
     pub fn call(&self, mut client_msg_uptr: UserPtr<IpcMessage<'static>>) -> Result<(), ErrorType> {
@@ -79,13 +83,12 @@ impl Port {
                 .find::<Self>(client_msg.reply_port())
                 .ok_or(ErrorType::InvalidHandle)?;
 
-            reply_port.sleepers.lock().push_back(current().unwrap());
+            reply_port.sleepers.lock().push_back(cur.clone());
 
-            Self::transfer_handles_from_current(&task, client_msg.handles())
-                .ok_or(ErrorType::InvalidHandle)?;
+            Self::transfer_handles_from_current(&task, &mut client_msg)?;
 
-            client_msg.set_reply_port(client_msg.reply_port());
-            task.handle_table().add(reply_port.clone());
+            let my_port = task.handle_table().add(reply_port.clone());
+            client_msg.set_reply_port(my_port);
 
             self.queue.lock().push_back(client_msg);
             t.wake();
@@ -132,10 +135,9 @@ impl Port {
         self_table.remove(reply_port_handle);
         drop(self_table);
 
-        let user_msg = copy_ipc_message_from_user(msg).ok_or(ErrorType::Fault)?;
+        let mut user_msg = copy_ipc_message_from_user(msg).ok_or(ErrorType::Fault)?;
 
-        Self::transfer_handles_from_current(&task, user_msg.handles())
-            .ok_or(ErrorType::InvalidHandle)?;
+        Self::transfer_handles_from_current(&task, &mut user_msg)?;
 
         reply_port.queue.lock().push_back(user_msg);
         let sleep = reply_port.sleepers.lock().pop_front().unwrap();

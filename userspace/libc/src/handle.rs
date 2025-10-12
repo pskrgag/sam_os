@@ -24,6 +24,7 @@ impl Handle {
 
 impl Drop for Handle {
     fn drop(&mut self) {
-        Syscall::close_handle(self.0).expect("Failed to close handle");
+        // TODO: panic here
+        let _ = Syscall::close_handle(self.0);
     }
 }

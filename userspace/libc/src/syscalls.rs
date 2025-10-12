@@ -108,7 +108,21 @@ impl<'a> Syscall<'a> {
         reply_port: Handle,
         msg: *mut IpcMessage<'a>,
     ) -> Result<usize, ErrorType> {
-        unsafe { syscall(Self::PortSendWait(h.as_raw(), reply_port.as_raw(), msg).as_args()) }
+        unsafe {
+            syscall(
+                Self::PortSendWait(
+                    h.as_raw(),
+                    {
+                        let raw = reply_port.as_raw();
+
+                        core::mem::forget(reply_port);
+                        raw
+                    },
+                    msg,
+                )
+                .as_args(),
+            )
+        }
     }
 
     pub fn as_args(self) -> [usize; 8] {
@@ -234,7 +248,7 @@ impl<'a> Syscall<'a> {
             ],
             Syscall::VmsHandle(h) => [SyscallList::TaskGetVms.into(), h, 0, 0, 0, 0, 0, 0],
             Syscall::Yield => [SyscallList::Yield.into(), 0, 0, 0, 0, 0, 0, 0],
-            Syscall::CloneHandle(h) => [SyscallList::CloseHandle.into(), h, 0, 0, 0, 0, 0, 0],
+            Syscall::CloneHandle(h) => [SyscallList::CloneHandle.into(), h, 0, 0, 0, 0, 0, 0],
         }
     }
 }

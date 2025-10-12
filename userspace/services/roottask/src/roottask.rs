@@ -26,12 +26,11 @@ pub fn start(p: Port) {
             let roottask = roottask.lock();
 
             println!("Getting {:?}", &t.name);
+
             if let Some(h) = roottask.table.get(&t.name) {
                 let h = h.clone_handle().unwrap();
 
-                Ok(bindings::GetRx {
-                    handle: h.clone_handle().unwrap(),
-                })
+                Ok(bindings::GetRx { handle: h })
             } else {
                 Err(ErrorType::NotFound)
             }

@@ -16,6 +16,7 @@ pub enum SyscallList {
     PortCall = 13,
     PortSendWait = 14,
     PortReceive = 15,
+    CloneHandle = 16,
     Maximum = 17,
 }
 
