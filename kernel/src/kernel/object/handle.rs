@@ -1,23 +1,32 @@
+use super::capabilities::CapabilityMask;
 use crate::kernel::object::KernelObject;
 use alloc::sync::Arc;
 use core::any::TypeId;
 use rtl::handle::HandleBase;
 
-// ToDo: rigths
 pub struct Handle {
     obj: Option<Arc<dyn KernelObject>>,
     base: HandleBase,
+    rights: CapabilityMask,
 }
 
 static_assertions::const_assert!(core::mem::size_of::<Arc<i32>>() == 8);
 
 impl Handle {
     pub const fn invalid() -> Self {
-        Self { obj: None, base: 0 }
+        Self {
+            obj: None,
+            base: 0,
+            rights: CapabilityMask::invalid(),
+        }
     }
 
-    pub fn new(o: Arc<dyn KernelObject>, base: HandleBase) -> Self {
-        Self { obj: Some(o), base }
+    pub fn new(o: Arc<dyn KernelObject>, base: HandleBase, rights: CapabilityMask) -> Self {
+        Self {
+            obj: Some(o),
+            base,
+            rights,
+        }
     }
 
     pub const fn is_valid(&self) -> bool {

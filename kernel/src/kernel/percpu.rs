@@ -5,6 +5,7 @@ use crate::{
         paging::kernel_page_table::kernel_page_table,
     },
 };
+use core::sync::atomic::{AtomicBool, Ordering};
 
 use rtl::arch::PAGE_SIZE;
 use rtl::linker_var;
@@ -135,6 +136,12 @@ impl<T> PerCpu<T> {
     }
 }
 
+static READY: AtomicBool = AtomicBool::new(false);
+
+pub fn percpu_ready() -> bool {
+    READY.load(Ordering::Relaxed)
+}
+
 pub fn init_percpu() -> Option<()> {
     let per_cpu_size = linker_var!(edatapercpu) - linker_var!(sdatapercpu);
 
@@ -174,7 +181,6 @@ pub fn init_percpu() -> Option<()> {
         }
     }
 
-    // TODO: unmap?
-
+    READY.store(true, Ordering::Relaxed);
     Some(())
 }

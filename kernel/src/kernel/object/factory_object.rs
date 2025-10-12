@@ -5,14 +5,17 @@ use alloc::string::ToString;
 use alloc::sync::Arc;
 use object_lib::object;
 use rtl::error::ErrorType;
+use spin::Lazy;
 
 #[derive(object)]
 pub struct Factory {
     // ??
 }
 
+pub static FACTORY: Lazy<Arc<Factory>> = Lazy::new(|| Factory::new());
+
 impl Factory {
-    pub fn new() -> Arc<Factory> {
+    fn new() -> Arc<Factory> {
         Arc::new(Self {})
     }
 
@@ -24,5 +27,11 @@ impl Factory {
         let task = current().unwrap().task();
 
         Ok(Port::new(task.clone()))
+    }
+}
+
+impl Drop for Factory {
+    fn drop(&mut self) {
+        panic!("Factory dropped");
     }
 }

@@ -182,7 +182,6 @@ impl Port {
         }
 
         // Prepare message
-        server_msg.set_mid(client_msg.mid());
         server_msg.set_reply_port(client_msg.reply_port());
         server_msg.add_handles(client_msg.handles());
 

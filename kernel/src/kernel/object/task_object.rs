@@ -1,5 +1,5 @@
 use crate::kernel::locking::spinlock::*;
-use crate::kernel::object::factory_object::Factory;
+use crate::kernel::object::factory_object::FACTORY;
 use crate::kernel::object::handle_table::HandleTable;
 use crate::kernel::object::thread_object::Thread;
 use crate::kernel::object::vms_object::Vms;
@@ -22,7 +22,6 @@ pub struct Task {
     id: u32,
     vms: Arc<Vms>,
     handles: Spinlock<HandleTable>,
-    factory: Arc<Factory>,
 }
 
 impl Task {
@@ -33,7 +32,6 @@ impl Task {
             id: 0,
             vms: Vms::new_kernel(),
             handles: Spinlock::new(HandleTable::new()),
-            factory: Factory::new(),
         })
     }
 
@@ -44,7 +42,6 @@ impl Task {
             id: 0,
             vms: Vms::new_user(),
             handles: Spinlock::new(HandleTable::new()),
-            factory: Factory::new(),
         })
     }
 
@@ -73,7 +70,7 @@ impl Task {
 
         t.setup_args(&[
             table.add(self.vms().clone()),
-            table.add(self.factory.clone()),
+            table.add(FACTORY.clone()),
             boot_handle,
         ]);
         self.inner.lock().add_thread(t);

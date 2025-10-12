@@ -7,21 +7,15 @@ use alloc::sync::Arc;
 use run_queue::RunQueue;
 
 pub mod run_queue;
+pub mod current;
 
 unsafe extern "C" {
     fn switch_to(from: *mut Context, to: *const Context);
 }
 
-// Simple, Simple, Simple
-//
-// On cpu reset on non-boot cpus we need any sp, so we
-// steal sp from per-cpu idle thread
-#[unsafe(no_mangle)]
-pub static mut IDLE_THREAD_STACK: [usize; 2] = [0, 0];
-
 #[inline]
 pub fn current() -> Option<Arc<Thread>> {
-    crate::arch::current::get_current()
+    crate::kernel::sched::current::get_current()
 }
 
 pub struct Scheduler {
@@ -59,7 +53,7 @@ impl Scheduler {
                     let next_clone = next.clone();
                     let ctx_next = next.ctx_mut();
 
-                    crate::arch::current::set_current(next_clone);
+                    crate::sched::current::set_current(next_clone);
 
                     switch_to(ctx as _, ctx_next as _);
                 }
@@ -82,7 +76,7 @@ impl Scheduler {
             next.set_state(ThreadState::Running);
             let next_ctx = unsafe { next.ctx_mut() };
 
-            crate::arch::current::set_current(next_clone);
+            crate::sched::current::set_current(next_clone);
 
             // We come here only for 1st process, so we need to turn on irqs
             unsafe {

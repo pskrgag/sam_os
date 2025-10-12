@@ -1,7 +1,6 @@
 pub mod backtrace;
 pub mod context;
 pub mod cpuid;
-pub mod current;
 pub mod irq;
 pub mod mm;
 pub mod regs;

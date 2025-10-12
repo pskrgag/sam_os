@@ -54,7 +54,7 @@ impl<T> Spinlock<T> {
     }
 
     pub fn lock<'a>(&'a self) -> SpinlockGuard<'a, T> {
-        use crate::arch::current::get_current_raw;
+        use crate::kernel::sched::current::get_current_raw;
 
         if let Some(cur) = get_current_raw()
             && cur == self.inner.t.load(Ordering::Relaxed)
@@ -69,7 +69,7 @@ impl<T> Spinlock<T> {
         }
 
         if let Some(cur) = get_current_raw() {
-            self.inner.t.store(cur, Ordering::Relaxed);
+            self.inner.t.store(cur as *mut _, Ordering::Relaxed);
         }
 
         SpinlockGuard {

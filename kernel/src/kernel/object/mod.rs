@@ -2,6 +2,7 @@ use core::any::Any;
 
 pub mod handle;
 pub mod handle_table;
+pub mod capabilities;
 
 pub mod factory_object;
 pub mod port_object;

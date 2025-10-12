@@ -1,13 +1,12 @@
-use crate::kernel::object::KernelObject;
+use crate::kernel::object::capabilities::CapabilityMask;
 use crate::kernel::object::handle::Handle;
+use crate::kernel::object::KernelObject;
 use alloc::collections::btree_map::BTreeMap;
 use alloc::sync::Arc;
 use rtl::handle::HandleBase;
 
 const MAX_HANDLES: usize = 25;
 
-// This is SHIT! Must be replaced with radix trie-like stuff,
-// but for my own sake, I will leave it as simple array
 pub struct HandleTable {
     table: BTreeMap<HandleBase, Handle>,
     id: usize,
@@ -21,10 +20,13 @@ impl HandleTable {
         }
     }
 
+    // TODO: This is something that tastes like shit, but whatever
     fn allocate_id(&mut self) -> HandleBase {
         let res = self.id;
+        let (new, overflow) = self.id.overflowing_add(1);
 
-        self.id += 1;
+        assert!(!overflow);
+        self.id = new;
         res
     }
 
@@ -32,7 +34,8 @@ impl HandleTable {
     pub fn add(&mut self, obj: Arc<dyn KernelObject>) -> HandleBase {
         let res = self.allocate_id();
 
-        self.table.insert(res, Handle::new(obj, res));
+        self.table
+            .insert(res, Handle::new(obj, res, CapabilityMask::invalid()));
         res
     }
 
