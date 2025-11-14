@@ -52,7 +52,7 @@ pub fn prepare(fdt: PhysAddr, mut arg: LoaderArg, tt: &mut PageTable) -> VirtAdd
     );
 
     // After this point is't better to not allocate any memory
-    prepare_pmm(&mut arg);
+    prepare_pmm(&mut arg, tt);
 
     arg.init_virt_task_base = (image_addr, INIT_TASK.len());
     arg.init_phys_task_base = (INIT_TASK.as_ptr() as usize, INIT_TASK.len());
@@ -61,7 +61,20 @@ pub fn prepare(fdt: PhysAddr, mut arg: LoaderArg, tt: &mut PageTable) -> VirtAdd
     arg_addr.into()
 }
 
-fn prepare_pmm(arg: &mut LoaderArg) {
+fn prepare_pmm(arg: &mut LoaderArg, tt: &mut PageTable) {
+    let start = arg.get_vmm_base(VmmLayoutKind::PageAllocator).unwrap().0;
+    let num_pages: usize = regions().iter().map(|x| x.count).sum();
+    // 1 bit per page
+    let num_pages_for_alloc = num_pages / 8;
+    let pa = alloc_pages(num_pages_for_alloc).unwrap();
+
+    tt.map_pages(
+        MemRange::new(start, num_pages_for_alloc * PAGE_SIZE),
+        MemRange::new(pa, num_pages_for_alloc * PAGE_SIZE),
+        PagePerms::ReadWrite,
+        PageKind::Normal,
+    );
+
     for reg in regions() {
         arg.pmm_layout
             .push(MemRange::new(reg.start, reg.count * PAGE_SIZE))

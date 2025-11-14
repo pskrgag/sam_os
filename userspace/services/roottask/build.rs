@@ -1,3 +1,3 @@
 fn main() {
-    ridl::generate_server("../../idls/test.ridl", "hello.rs").unwrap();
+    ridl::generate_server("../../idls/nameserver.ridl", "hello.rs").unwrap();
 }

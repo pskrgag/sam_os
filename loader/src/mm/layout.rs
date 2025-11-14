@@ -33,6 +33,11 @@ static KERNEL_LAYOUT: [VmmLayoutEntry; VmmLayoutKind::Count as usize] = [
         kind: VmmLayoutKind::PerCpu,
     },
     VmmLayoutEntry {
+        base: 0xFFFFE00000000000,
+        size: 0x100000000000,
+        kind: VmmLayoutKind::PageAllocator,
+    },
+    VmmLayoutEntry {
         base: 0x10000,
         size: 1 << 39,
         kind: VmmLayoutKind::User,

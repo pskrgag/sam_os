@@ -21,7 +21,6 @@ pub unsafe fn memset_pages(pa: PhysAddr, num: usize) {
 
 pub fn init(prot: &LoaderArg) {
     layout::init(prot);
-    allocators::boot_alloc::init();
     allocators::page_alloc::init(prot);
     paging::kernel_page_table::init(prot);
     allocators::slab::init_kernel_slabs();

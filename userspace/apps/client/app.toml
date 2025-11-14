@@ -5,4 +5,4 @@ board = "qemu"
 name = "client"
 
 [[component]]
-name = "mmc"
+name = "pci"

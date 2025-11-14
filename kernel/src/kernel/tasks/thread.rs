@@ -11,6 +11,7 @@ pub enum ThreadState {
     Initialized,
     Running,
     WaitingMessage,
+    WaitingMutex,
     NeedResched,
 }
 

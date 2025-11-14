@@ -6,8 +6,8 @@ use crate::{kernel::elf::parse_initial_task, kernel::tasks::task::init_task};
 use alloc::sync::Arc;
 use run_queue::RunQueue;
 
-pub mod run_queue;
 pub mod current;
+pub mod run_queue;
 
 unsafe extern "C" {
     fn switch_to(from: *mut Context, to: *const Context);
@@ -41,8 +41,10 @@ impl Scheduler {
             match cur.state() {
                 ThreadState::Running => return, // Just timer tick
                 ThreadState::NeedResched => self.rq.add_running(cur.clone()),
-                ThreadState::WaitingMessage => self.rq.add_sleeping(cur.clone()),
-                _ => panic!("Running scheduler in unexected state"),
+                ThreadState::WaitingMessage | ThreadState::WaitingMutex => {
+                    self.rq.add_sleeping(cur.clone())
+                }
+                ThreadState::Initialized => panic!("Running scheduler in unexected state"),
             }
 
             if let Some(mut next) = self.rq.pop_running() {
@@ -57,8 +59,6 @@ impl Scheduler {
 
                     switch_to(ctx as _, ctx_next as _);
                 }
-            } else if cur.state() == ThreadState::WaitingMessage {
-                panic!("WTF");
             }
         } else {
             // If there is nothing to switch to, then do nothing

@@ -48,16 +48,9 @@ impl PageAlloc {
 }
 
 impl Region {
-    pub const fn default() -> Self {
-        Self {
-            start: Pfn::new(0x0),
-            pool: Vec::new(),
-        }
-    }
-
-    pub fn new(start: PhysAddr, mut size: usize) -> Option<Self> {
-        let pool_size = *size.round_up_page() / PAGE_SIZE / 64;
-        let mut pool = Vec::with_capacity(pool_size);
+    fn new(start: PhysAddr, count: usize, virt_start: VirtAddr) -> Option<Self> {
+        let pool_size = count.next_multiple_of(64) / 64;
+        let mut pool = unsafe { Vec::from_raw_parts(virt_start.to_raw_mut(), 0, pool_size) };
 
         for _ in 0..pool_size {
             pool.push(Bitmap::<64>::new());
@@ -146,12 +139,17 @@ impl Region {
 
 pub fn init(arg: &LoaderArg) {
     let mut allocator = PAGE_ALLOC.lock();
+    let (mut start, _) = arg
+        .get_vmm_base(loader_protocol::VmmLayoutKind::PageAllocator)
+        .unwrap();
 
     for reg in &arg.pmm_layout {
         println!("Page allocator region {:x} size {:x}", reg.start, reg.size);
         allocator
             .regions
-            .push(Region::new(reg.start, reg.size).unwrap())
+            .push(Region::new(reg.start, reg.size / PAGE_SIZE, start).unwrap())
             .expect("Too many physical regions");
+
+        start = VirtAddr::new(start.bits() + reg.size / PAGE_SIZE / 8);
     }
 }

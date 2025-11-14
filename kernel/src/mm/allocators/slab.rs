@@ -75,8 +75,5 @@ pub fn init_kernel_slabs() -> Option<()> {
         size = (size + 1).next_power_of_two();
     }
 
-    crate::mm::allocators::allocator::BOOT_ALLOC_IS_DEAD
-        .store(true, core::sync::atomic::Ordering::Relaxed);
-
     Some(())
 }

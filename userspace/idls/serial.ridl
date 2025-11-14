@@ -1,0 +1,4 @@
+interface Serial {
+	Get(out U8 byte);
+	Put(in U8 byte);
+}

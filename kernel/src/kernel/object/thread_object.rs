@@ -126,4 +126,16 @@ impl Thread {
 
         crate::sched::run();
     }
+
+    pub fn wait_mutex(self: &Arc<Thread>) {
+        let mut inner = self.inner.lock();
+
+        assert!(inner.state == ThreadState::Running);
+        inner.state = ThreadState::WaitingMutex;
+
+        // drop the lock
+        drop(inner);
+
+        crate::sched::run();
+    }
 }

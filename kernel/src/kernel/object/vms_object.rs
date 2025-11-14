@@ -4,13 +4,13 @@ use crate::mm::user_buffer::UserPtr;
 use crate::mm::vms::VmsInner;
 use alloc::sync::Arc;
 use object_lib::object;
-use qrwlock::RwLock;
+use crate::kernel::locking::mutex::Mutex;
 use rtl::error::ErrorType;
 use rtl::vmm::{MappingType, types::*};
 
 #[derive(object)]
 pub struct Vms {
-    inner: RwLock<VmsInner>,
+    inner: Mutex<VmsInner>,
 }
 
 pub enum VmoCreateArgs {
@@ -21,13 +21,13 @@ pub enum VmoCreateArgs {
 impl Vms {
     pub fn new_user() -> Arc<Self> {
         Arc::new(Self {
-            inner: RwLock::new(VmsInner::new_user()),
+            inner: Mutex::new(VmsInner::new_user()),
         })
     }
 
     pub fn new_kernel() -> Arc<Self> {
         Arc::new(Self {
-            inner: RwLock::new(VmsInner::new_kernel()),
+            inner: Mutex::new(VmsInner::new_kernel()),
         })
     }
 
@@ -37,7 +37,7 @@ impl Vms {
         p: MemRange<PhysAddr>,
         tp: MappingType,
     ) -> Result<VirtAddr, MmError> {
-        let mut inner = self.inner.write();
+        let mut inner = self.inner.lock();
 
         debug_assert!(v.start().is_page_aligned());
         debug_assert!(p.start().is_page_aligned());
@@ -48,7 +48,7 @@ impl Vms {
     }
 
     pub fn vm_allocate(&self, size: usize, tp: MappingType) -> Result<VirtAddr, ()> {
-        let mut inner = self.inner.write();
+        let mut inner = self.inner.lock();
         let res = inner.vm_allocate(size, tp)?;
 
         debug_assert!(res.is_page_aligned());
@@ -56,7 +56,7 @@ impl Vms {
     }
 
     pub fn vm_free(&self, base: VirtAddr, size: usize) -> Result<(), ErrorType> {
-        let mut inner = self.inner.write();
+        let mut inner = self.inner.lock();
 
         inner
             .vm_free(MemRange::new(base, size))
@@ -64,7 +64,7 @@ impl Vms {
     }
 
     pub fn base(&self) -> PhysAddr {
-        let inner = self.inner.read();
+        let inner = self.inner.lock();
 
         inner.ttbr0().unwrap()
     }
@@ -78,7 +78,7 @@ impl Vms {
     }
 
     pub fn map_phys(&self, pa: PhysAddr, size: usize) -> Result<*mut u8, ErrorType> {
-        let mut inner = self.inner.write();
+        let mut inner = self.inner.lock();
 
         let va = inner
             .vm_map(

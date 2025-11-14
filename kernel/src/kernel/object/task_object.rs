@@ -1,4 +1,5 @@
 use crate::kernel::locking::spinlock::*;
+use crate::kernel::locking::mutex::*;
 use crate::kernel::object::factory_object::FACTORY;
 use crate::kernel::object::handle_table::HandleTable;
 use crate::kernel::object::thread_object::Thread;
@@ -21,7 +22,7 @@ pub struct Task {
     name: String,
     id: u32,
     vms: Arc<Vms>,
-    handles: Spinlock<HandleTable>,
+    handles: Mutex<HandleTable>,
 }
 
 impl Task {
@@ -31,7 +32,7 @@ impl Task {
             name: "kernel task".into(),
             id: 0,
             vms: Vms::new_kernel(),
-            handles: Spinlock::new(HandleTable::new()),
+            handles: Mutex::new(HandleTable::new()),
         })
     }
 
@@ -41,7 +42,7 @@ impl Task {
             name,
             id: 0,
             vms: Vms::new_user(),
-            handles: Spinlock::new(HandleTable::new()),
+            handles: Mutex::new(HandleTable::new()),
         })
     }
 
@@ -49,7 +50,7 @@ impl Task {
         self.id
     }
 
-    pub fn handle_table<'a>(&'a self) -> SpinlockGuard<'a, HandleTable> {
+    pub fn handle_table<'a>(&'a self) -> MutexGuard<'a, HandleTable> {
         self.handles.lock()
     }
 
