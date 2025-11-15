@@ -4,12 +4,7 @@ use crate::kernel::sched::current;
 
 pub trait SystemTimer {
     fn enable(&self);
-    fn disable(&self);
     fn reprogram(&self);
-}
-
-pub fn disable() {
-    SYSTEM_TIMER.disable();
 }
 
 pub fn init() {

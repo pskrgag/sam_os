@@ -13,12 +13,6 @@ impl SystemTimer for ArmSystemTimer {
         }
     }
 
-    fn disable(&self) {
-        unsafe {
-            asm!("mov x0, #0", "msr CNTP_CTL_EL0, x0");
-        }
-    }
-
     // NOTE: rust generates weird code with -O1+ for some reason.
     // Leave it as noinline for now to w/a it
     #[inline(never)]

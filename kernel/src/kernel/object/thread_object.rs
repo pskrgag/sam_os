@@ -29,8 +29,7 @@ pub enum ThreadState {
 pub enum ThreadSleepReason {
     None = 0,
     Mutex = 1,
-    Ipc = 2,
-    WaitQueue = 3,
+    WaitQueue = 2,
 }
 
 #[repr(transparent)]

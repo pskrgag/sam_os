@@ -9,10 +9,6 @@ pub mod user_buffer;
 pub mod vma_list;
 pub mod vms;
 
-pub unsafe fn memset_page(pa: PhysAddr) {
-    unsafe { memset_pages(pa, 1) };
-}
-
 pub unsafe fn memset_pages(pa: PhysAddr, num: usize) {
     let mut va = VirtAddr::from(pa);
 

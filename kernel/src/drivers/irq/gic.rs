@@ -38,22 +38,14 @@ const ITARGETSR_VALUE_MASK: u32 = 0b111111111; // core number 1 byte mask
 const IPRIORITYR_INTERRUPT_MASK: u32 = 0b11; // interrupt reminder mask
 const IPRIORITYR_INTERRUPT_SHIFT: u32 = 2; // interrupt divider shift (division by 4)
 const IPRIORITYR_VALUE_SHIFT: u32 = 3; // priority number shift (multiplication by 8)
-const IPRIORITYR_VALUE_MASK: u32 = 0b111111111; // priority number 1 byte mask
 
 const ICFGR_INTERRUPT_MASK: u32 = 0b1111; // interrupt reminder mask
 const ICFGR_INTERRUPT_SHIFT: u32 = 4; // interrupt divider shift (division by 4)
 const ICFGR_VALUE_SHIFT: u32 = 1; // config value shift (multiplication by 8)
 const ICFGR_VALUE_MASK: u32 = 0b11; // config value 2 bits mask
 
-const IPRIORITY_SIZE: u32 = 4;
-const IPRIORITY_BITS: u32 = 8;
-const ICFGR_SIZE: u32 = 16;
-const ICFGR_BITS: u32 = 2;
-
 // Cpu Registers
 const PMR: usize = 0x4;
-
-const PMR_PRIO: u32 = 0xF0;
 
 const IRQ_LINES: u32 = 256;
 
@@ -84,12 +76,6 @@ fn read_from_reg<T>(base: VirtAddr, offset: usize) -> T {
 }
 
 impl Gicc {
-    pub const fn default() -> Self {
-        Self {
-            base: VirtAddr::new(0),
-        }
-    }
-
     pub fn new(base: VirtAddr) -> Self {
         Self { base }
     }
@@ -102,12 +88,6 @@ impl Gicc {
 }
 
 impl Gicd {
-    pub const fn default() -> Self {
-        Self {
-            base: VirtAddr::new(0),
-        }
-    }
-
     pub fn disable(&mut self) {
         write_to_reg::<u32>(self.base, 0, 0);
     }

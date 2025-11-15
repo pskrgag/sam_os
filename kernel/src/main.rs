@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 #![feature(const_trait_impl)]
-#![allow(dead_code)]
 #![allow(non_upper_case_globals)]
 #![allow(unused_macros)]
 #![allow(special_module_name)]
@@ -48,12 +47,6 @@ unsafe extern "C" {
     static __start: usize;
 }
 
-/* At this point we have:
- *
- *      1) MMU is turned on
- *      2) MMMIO is mapped as 1 to 1
- *      3) 0xffffffffc0000000 and load_addr are mapped to load_addr via 1GB block
- */
 #[unsafe(no_mangle)]
 extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
     drivers::init_logging(prot);

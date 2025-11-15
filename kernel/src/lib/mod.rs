@@ -1,4 +1,3 @@
-pub mod ida;
 pub mod printf;
 
 #[macro_use]

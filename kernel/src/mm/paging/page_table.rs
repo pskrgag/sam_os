@@ -40,10 +40,12 @@ impl PageTableBlock {
         Self { addr, lvl }
     }
 
+    #[cfg(test)]
     pub fn addr(&self) -> VirtAddr {
         self.addr
     }
 
+    #[cfg(test)]
     pub fn lvl(&self) -> u8 {
         self.lvl
     }
@@ -144,6 +146,7 @@ impl PageTable {
         }
     }
 
+    #[cfg(test)]
     pub fn walk(&mut self, va: VirtAddr) {
         let mut base = self.lvl0();
 
@@ -381,11 +384,6 @@ impl PageTableEntry {
 
     pub fn from_bits(data: usize) -> Self {
         Self(data)
-    }
-
-    pub fn and(&mut self, data: usize) -> &mut Self {
-        self.0 |= data;
-        self
     }
 
     pub fn addr(&self) -> PhysAddr {

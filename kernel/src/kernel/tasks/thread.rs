@@ -2,7 +2,7 @@ use crate::arch::regs::Context;
 use rtl::vmm::types::*;
 
 unsafe extern "C" {
-    fn kernel_thread_entry_point();
+    // fn kernel_thread_entry_point();
     fn user_thread_entry_point();
 }
 

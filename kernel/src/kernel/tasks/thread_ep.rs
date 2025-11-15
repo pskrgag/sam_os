@@ -22,21 +22,3 @@ global_asm!(
     "eor    x30, x30, x30",
     "eret",
 );
-
-pub fn idle_thread(_: ()) -> Option<()> {
-    loop {
-        println!("Idle loop :)");
-        for _ in 0..10_000_000 {
-            unsafe { core::arch::asm!("nop") };
-        }
-    }
-}
-
-pub fn idle_thread1(_: ()) -> Option<()> {
-    loop {
-        println!("Idle loop 1");
-        for _ in 0..10_000_000 {
-            unsafe { core::arch::asm!("nop") };
-        }
-    }
-}
