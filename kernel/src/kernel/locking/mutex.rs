@@ -1,5 +1,5 @@
 use super::spinlock::Spinlock;
-use crate::kernel::object::thread_object::Thread;
+use crate::kernel::object::thread_object::{Thread, ThreadSleepReason};
 use crate::kernel::sched::current;
 use alloc::collections::LinkedList;
 use alloc::sync::Arc;
@@ -44,7 +44,7 @@ impl<T> Mutex<T> {
         }
 
         list.push_back(cur.clone());
-        cur.wait_mutex();
+        cur.sleep(ThreadSleepReason::Mutex);
 
         debug_assert!(self.state.load(Ordering::Relaxed) != FREE);
         MutexGuard { mtx: self }

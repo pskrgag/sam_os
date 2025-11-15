@@ -7,15 +7,6 @@ unsafe extern "C" {
 }
 
 #[derive(PartialEq, Copy, Clone, Debug)]
-pub enum ThreadState {
-    Initialized,
-    Running,
-    WaitingMessage,
-    WaitingMutex,
-    NeedResched,
-}
-
-#[derive(PartialEq, Copy, Clone, Debug)]
 pub enum ThreadType {
     Undef,
     Kernel,
@@ -24,14 +15,12 @@ pub enum ThreadType {
 
 pub struct ThreadInner {
     pub(crate) arch_ctx: Context,
-    pub(crate) state: ThreadState,
     stack: VirtAddr,
 }
 
 impl ThreadInner {
     pub fn default() -> Self {
         Self {
-            state: ThreadState::Initialized,
             arch_ctx: Context::default(),
             stack: VirtAddr::new(0),
         }
@@ -73,7 +62,5 @@ impl ThreadInner {
         self.arch_ctx.ttbr0 = ttbr0;
 
         self.stack = stack;
-
-        self.state = ThreadState::Initialized;
     }
 }

@@ -421,18 +421,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
-name = "mmc"
-version = "0.1.0"
-dependencies = [
- "cpio_reader",
- "libc 0.1.0",
- "postcard",
- "ridl",
- "rtl",
- "serde",
-]
-
-[[package]]
 name = "num-conv"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -460,6 +448,18 @@ name = "once_cell_polyfill"
 version = "1.70.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4895175b425cb1f87721b59f0f286c2092bd4af812243672510e1ac53e2e0ad"
+
+[[package]]
+name = "pci"
+version = "0.1.0"
+dependencies = [
+ "cpio_reader",
+ "libc 0.1.0",
+ "postcard",
+ "ridl",
+ "rtl",
+ "serde",
+]
 
 [[package]]
 name = "postcard"

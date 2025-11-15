@@ -1,7 +1,7 @@
 use crate::kernel::object::task_object::Task;
 use crate::kernel::sched::add_thread;
 use crate::kernel::tasks::task::kernel_task;
-use crate::kernel::tasks::thread::{ThreadInner, ThreadState};
+use crate::kernel::tasks::thread::ThreadInner;
 use crate::{arch::regs::Context, kernel::locking::spinlock::Spinlock};
 use alloc::sync::Arc;
 use alloc::sync::Weak;
@@ -15,12 +15,56 @@ const USER_THREAD_STACK_PAGES: usize = 50;
 const KERNEL_STACK_PAGES: usize = 100;
 const RR_TICKS: usize = 10;
 
+#[derive(PartialEq, Copy, Clone, Debug)]
+#[repr(usize)]
+pub enum ThreadState {
+    Initialized = 0,
+    Running = 1,
+    Sleeping = 2,
+    NeedResched = 3,
+}
+
+#[derive(PartialEq, Copy, Clone, Debug)]
+#[repr(usize)]
+pub enum ThreadSleepReason {
+    None = 0,
+    Mutex = 1,
+    Ipc = 2,
+    WaitQueue = 3,
+}
+
+#[repr(transparent)]
+#[derive(Clone)]
+pub struct ThreadRawState(usize);
+
+impl Into<usize> for ThreadRawState {
+    fn into(self) -> usize {
+        self.0
+    }
+}
+
 #[derive(object)]
 pub struct Thread {
     id: u16,
     task: Weak<Task>,
     ticks: AtomicUsize,
+    preemtion: AtomicUsize,
     inner: Spinlock<ThreadInner>,
+    state: AtomicUsize,
+}
+
+impl ThreadRawState {
+    fn get_state(&self) -> ThreadState {
+        unsafe { core::mem::transmute((self.0 >> 16) & 0xFFFF) }
+    }
+
+    fn get_sleep_reason(&self) -> ThreadSleepReason {
+        unsafe { core::mem::transmute(self.0 & 0xFFFF) }
+    }
+
+    fn from_raw_parts(state: ThreadState, sleep: ThreadSleepReason) -> Self {
+        Self((state as usize) << 16 | sleep as usize)
+    }
 }
 
 impl Thread {
@@ -29,7 +73,12 @@ impl Thread {
             id,
             inner: Spinlock::new(ThreadInner::default()),
             ticks: RR_TICKS.into(),
+            preemtion: AtomicUsize::new(0),
             task: Arc::downgrade(&task),
+            state: AtomicUsize::new(
+                ThreadRawState::from_raw_parts(ThreadState::Initialized, ThreadSleepReason::None)
+                    .into(),
+            ),
         })
     }
 
@@ -79,9 +128,19 @@ impl Thread {
         inner.setup_args(args);
     }
 
-    pub fn start(self: &Arc<Self>) {
-        self.inner.lock().state = ThreadState::Running;
+    fn set_state(self: &Arc<Self>, state: ThreadState, sleep: ThreadSleepReason) {
+        self.state.store(
+            ThreadRawState::from_raw_parts(state, sleep).into(),
+            Ordering::Relaxed,
+        );
+    }
 
+    pub fn set_running(self: &Arc<Self>) {
+        self.set_state(ThreadState::Running, ThreadSleepReason::None);
+    }
+
+    pub fn start(self: &Arc<Self>) {
+        self.set_running();
         add_thread(self.clone());
     }
 
@@ -89,53 +148,28 @@ impl Thread {
         let old = self.ticks.fetch_sub(1, Ordering::Relaxed);
 
         if old == 0 {
-            self.inner.lock().state = ThreadState::NeedResched;
+            self.set_state(ThreadState::NeedResched, ThreadSleepReason::None);
             self.ticks.store(RR_TICKS, Ordering::Relaxed);
         }
     }
 
     pub fn self_yield(self: Arc<Thread>) {
         self.ticks.store(RR_TICKS, Ordering::Relaxed);
-        self.set_state(ThreadState::NeedResched);
-        crate::sched::run();
-    }
+        self.set_state(ThreadState::NeedResched, ThreadSleepReason::None);
 
-    pub fn set_state(self: &Arc<Thread>, state: ThreadState) {
-        self.inner.lock().state = state;
+        crate::sched::run();
     }
 
     pub fn wake(self: &Arc<Thread>) {
-        let mut inner = self.inner.lock();
-
-        assert!(inner.state == ThreadState::WaitingMessage);
-        inner.state = ThreadState::Running;
+        self.set_state(ThreadState::Running, ThreadSleepReason::None);
     }
 
     pub fn state(self: &Arc<Thread>) -> ThreadState {
-        self.inner.lock().state
+        ThreadRawState(self.state.load(Ordering::Relaxed)).get_state()
     }
 
-    pub fn wait_send(self: &Arc<Thread>) {
-        let mut inner = self.inner.lock();
-
-        assert!(inner.state == ThreadState::Running);
-        inner.state = ThreadState::WaitingMessage;
-
-        // drop the lock
-        drop(inner);
-
-        crate::sched::run();
-    }
-
-    pub fn wait_mutex(self: &Arc<Thread>) {
-        let mut inner = self.inner.lock();
-
-        assert!(inner.state == ThreadState::Running);
-        inner.state = ThreadState::WaitingMutex;
-
-        // drop the lock
-        drop(inner);
-
+    pub fn sleep(self: &Arc<Thread>, why: ThreadSleepReason) {
+        self.set_state(ThreadState::Sleeping, why);
         crate::sched::run();
     }
 }

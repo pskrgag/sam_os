@@ -6,7 +6,7 @@ members = [
 	"userspace/services/roottask",
 	"userspace/apps/client",
 	"xtask",
-	"userspace/services/mmc", 
+	"userspace/services/uart",
 	"loader", "loader_protocol",
 ]
 

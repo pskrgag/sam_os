@@ -1,6 +1,6 @@
-use crate::kernel::object::thread_object::Thread;
+use crate::kernel::object::thread_object::{Thread, ThreadState};
 use crate::percpu_global;
-use crate::{arch::irq::interrupts, arch::regs::Context, kernel::tasks::thread::ThreadState};
+use crate::{arch::irq::interrupts, arch::regs::Context};
 #[cfg(not(test))]
 use crate::{kernel::elf::parse_initial_task, kernel::tasks::task::init_task};
 use alloc::sync::Arc;
@@ -41,14 +41,12 @@ impl Scheduler {
             match cur.state() {
                 ThreadState::Running => return, // Just timer tick
                 ThreadState::NeedResched => self.rq.add_running(cur.clone()),
-                ThreadState::WaitingMessage | ThreadState::WaitingMutex => {
-                    self.rq.add_sleeping(cur.clone())
-                }
+                ThreadState::Sleeping => self.rq.add_sleeping(cur.clone()),
                 ThreadState::Initialized => panic!("Running scheduler in unexected state"),
             }
 
             if let Some(mut next) = self.rq.pop_running() {
-                next.set_state(ThreadState::Running);
+                next.set_running();
 
                 unsafe {
                     let ctx = cur.ctx_mut();
@@ -73,7 +71,7 @@ impl Scheduler {
                 .expect("Rq must not be empty at that moment");
             let next_clone = next.clone();
 
-            next.set_state(ThreadState::Running);
+            next.set_running();
             let next_ctx = unsafe { next.ctx_mut() };
 
             crate::sched::current::set_current(next_clone);
@@ -90,7 +88,7 @@ impl Scheduler {
     pub fn add_thread(&mut self, t: Arc<Thread>) {
         match t.state() {
             ThreadState::Running => self.rq.add_running(t),
-            ThreadState::WaitingMessage => self.rq.add_sleeping(t),
+            ThreadState::Sleeping => self.rq.add_sleeping(t),
             _ => panic!("Called on wrong thread state"),
         }
     }
