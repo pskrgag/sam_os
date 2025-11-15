@@ -230,52 +230,6 @@ impl Vma {
         }
     }
 
-    pub fn default_user() -> Self {
-        Self::new(MemRangeVma::max_user(), MappingType::NONE)
-    }
-
-    pub fn invalid() -> Self {
-        Self {
-            range: MemRangeVma::new_fixed(0.into(), 0),
-            tp: MappingType::USER_DEVICE,
-            state: VmaFlags::Invalid,
-        }
-    }
-
-    pub fn merge(&mut self, other: Vma) -> Option<()> {
-        let self_before = other.start() == (self.start() + self.size()).into();
-        let self_after = self.start() == (other.start() + other.size()).into();
-        let flags_eq = self.state == other.state && self.tp == other.tp;
-
-        assert!(self_before != self_after);
-
-        if !(self_before || self_after) || !flags_eq {
-            None
-        } else if self_before {
-            self.range = MemRangeVma::new_fixed(self.start(), self.size() + other.size());
-            Some(())
-        } else {
-            self.range = MemRangeVma::new_fixed(other.start(), self.size() + other.size());
-            Some(())
-        }
-    }
-
-    pub fn mark_allocated(&mut self) {
-        self.state = VmaFlags::Allocated;
-    }
-
-    pub fn is_valid(&self) -> bool {
-        self.state != VmaFlags::Invalid
-    }
-
-    pub fn contains_addr(&self, addr: VirtAddr) -> bool {
-        self.range.0.contains_addr(addr)
-    }
-
-    pub fn contains_range(&self, addr: MemRange<VirtAddr>) -> bool {
-        self.range.0.contains_range(addr)
-    }
-
     pub fn start(&self) -> VirtAddr {
         self.range.0.start()
     }

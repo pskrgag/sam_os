@@ -1,5 +1,6 @@
 use super::task_object::Task;
 use crate::kernel::locking::wait_queue::WaitQueue;
+use crate::kernel::object::capabilities::{Capability, CapabilityMask};
 use crate::mm::user_buffer::UserPtr;
 use crate::sched::current;
 use alloc::boxed::Box;
@@ -9,7 +10,7 @@ use rtl::error::ErrorType;
 use rtl::handle::*;
 use rtl::ipc::*;
 
-/// Port holds weak reference to thread, since thread may die while
+/// Port holds weak reference to owner task, since thread may die while
 /// other task has cap to it
 #[derive(object)]
 pub struct Port {
@@ -42,6 +43,10 @@ impl Port {
         })
     }
 
+    pub fn full_caps() -> CapabilityMask {
+        CapabilityMask::from(Capability::Call | Capability::Send | Capability::Receive)
+    }
+
     fn transfer_handles_from_current(
         to: &Task,
         msg: &mut IpcMessage<'static>,
@@ -52,7 +57,9 @@ impl Port {
 
         // TODO remove handles in case of an error
         for i in msg.handles_mut() {
-            let h = cur_table.find_poly(*i).ok_or(ErrorType::InvalidHandle)?;
+            let h = cur_table
+                .find_raw_handle(*i)
+                .ok_or(ErrorType::InvalidHandle)?;
 
             *i = to_table.add(h);
         }
@@ -67,7 +74,7 @@ impl Port {
             .unwrap()
             .task()
             .handle_table()
-            .find::<Self>(client_msg.reply_port())
+            .find_handle::<Self>(client_msg.reply_port(), CapabilityMask::any())
             .ok_or(ErrorType::InvalidHandle)?;
 
         Self::transfer_handles_from_current(&task, &mut client_msg)?;
@@ -76,7 +83,7 @@ impl Port {
         client_msg.set_reply_port(my_port);
         self.queue.produce(client_msg);
 
-        let mut server_msg = reply_port.queue.consume();
+        let mut server_msg = reply_port.obj::<Self>().unwrap().queue.consume();
 
         if let Some(d) = client_msg.in_arena() {
             let mut ud = UserPtr::new_array(d.as_ptr(), d.len());
@@ -102,7 +109,7 @@ impl Port {
         let mut self_table = self_task.handle_table();
 
         let reply_port = self_table
-            .find::<Self>(reply_port_handle)
+            .find::<Self>(reply_port_handle, CapabilityMask::any())
             .ok_or(ErrorType::InvalidHandle)?;
 
         let task = reply_port.task.upgrade().ok_or(ErrorType::TaskDead)?;

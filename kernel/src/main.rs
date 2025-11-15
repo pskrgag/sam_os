@@ -9,6 +9,7 @@
 #![feature(allocator_api)]
 #![feature(get_mut_unchecked)]
 #![feature(custom_test_frameworks)]
+#![allow(unexpected_cfgs)]
 #![test_runner(crate::tests::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 

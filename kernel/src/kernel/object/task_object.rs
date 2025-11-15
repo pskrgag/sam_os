@@ -1,10 +1,11 @@
-use crate::kernel::locking::spinlock::*;
 use crate::kernel::locking::mutex::*;
+use crate::kernel::locking::spinlock::*;
+use crate::kernel::object::capabilities::CapabilityMask;
 use crate::kernel::object::factory_object::FACTORY;
+use crate::kernel::object::handle::Handle;
 use crate::kernel::object::handle_table::HandleTable;
 use crate::kernel::object::thread_object::Thread;
 use crate::kernel::object::vms_object::Vms;
-use crate::kernel::object::KernelObject;
 use crate::kernel::tasks::task::TaskInner;
 use rtl::error::ErrorType;
 use rtl::handle::HandleBase;
@@ -70,8 +71,8 @@ impl Task {
         let mut table = self.handle_table();
 
         t.setup_args(&[
-            table.add(self.vms().clone()),
-            table.add(FACTORY.clone()),
+            table.add(Handle::new(self.vms().clone(), Vms::full_caps())),
+            table.add(Handle::new(FACTORY.clone(), CapabilityMask::any())),
             boot_handle,
         ]);
         self.inner.lock().add_thread(t);
@@ -81,11 +82,7 @@ impl Task {
         self.inner.lock().start();
     }
 
-    pub fn start(
-        self: Arc<Self>,
-        ep: VirtAddr,
-        obj: Option<Arc<dyn KernelObject>>,
-    ) -> Result<(), ErrorType> {
+    pub fn start(self: Arc<Self>, ep: VirtAddr, obj: Option<Handle>) -> Result<(), ErrorType> {
         use core::sync::atomic::{AtomicU16, Ordering};
 
         static ID_THREAD: AtomicU16 = AtomicU16::new(1);
@@ -106,6 +103,7 @@ impl Task {
     }
 
     pub fn vms_handle(&self) -> HandleBase {
-        self.handle_table().add(self.vms().clone())
+        self.handle_table()
+            .add(Handle::new(self.vms().clone(), Vms::full_caps()))
     }
 }

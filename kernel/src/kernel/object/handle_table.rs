@@ -31,11 +31,10 @@ impl HandleTable {
     }
 
     #[must_use]
-    pub fn add(&mut self, obj: Arc<dyn KernelObject>) -> HandleBase {
+    pub fn add(&mut self, handle: Handle) -> HandleBase {
         let res = self.allocate_id();
 
-        self.table
-            .insert(res, Handle::new(obj, res, CapabilityMask::invalid()));
+        self.table.insert(res, handle);
         res
     }
 
@@ -43,12 +42,41 @@ impl HandleTable {
         self.table.remove(&hdl).is_some()
     }
 
-    pub fn find<T: KernelObject + Sized + 'static>(&self, hdl: HandleBase) -> Option<Arc<T>> {
-        self.table.get(&hdl).and_then(|x| x.obj::<T>())
+    pub fn find<T: KernelObject + Sized + 'static>(
+        &self,
+        hdl: HandleBase,
+        rights: CapabilityMask,
+    ) -> Option<Arc<T>> {
+        self.table
+            .get(&hdl)
+            .filter(|x| x.has_capabitity(rights))
+            .and_then(|x| x.obj::<T>())
     }
 
-    pub fn find_poly(&self, hdl: HandleBase) -> Option<Arc<dyn KernelObject>> {
-        self.table.get(&hdl).and_then(|x| x.obj_poly())
+    pub fn find_handle<T: KernelObject + Sized + 'static>(
+        &self,
+        hdl: HandleBase,
+        rights: CapabilityMask,
+    ) -> Option<Handle> {
+        self.table
+            .get(&hdl)
+            .filter(|x| x.has_capabitity(rights))
+            .cloned()
+    }
+
+    pub fn find_poly(
+        &self,
+        hdl: HandleBase,
+        rights: CapabilityMask,
+    ) -> Option<Arc<dyn KernelObject>> {
+        self.table
+            .get(&hdl)
+            .filter(|x| x.has_capabitity(rights))
+            .and_then(|x| x.obj_poly())
+    }
+
+    pub fn find_raw_handle(&self, hdl: HandleBase) -> Option<Handle> {
+        self.table.get(&hdl).cloned()
     }
 }
 

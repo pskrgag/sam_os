@@ -4,27 +4,23 @@ use alloc::sync::Arc;
 use core::any::TypeId;
 use rtl::handle::HandleBase;
 
+#[derive(Clone)]
 pub struct Handle {
     obj: Option<Arc<dyn KernelObject>>,
-    base: HandleBase,
     rights: CapabilityMask,
 }
 
-static_assertions::const_assert!(core::mem::size_of::<Arc<i32>>() == 8);
-
 impl Handle {
-    pub const fn invalid() -> Self {
+    pub fn invalid() -> Self {
         Self {
             obj: None,
-            base: 0,
-            rights: CapabilityMask::invalid(),
+            rights: CapabilityMask::any(),
         }
     }
 
-    pub fn new(o: Arc<dyn KernelObject>, base: HandleBase, rights: CapabilityMask) -> Self {
+    pub fn new(o: Arc<dyn KernelObject>, rights: CapabilityMask) -> Self {
         Self {
             obj: Some(o),
-            base,
             rights,
         }
     }
@@ -38,6 +34,10 @@ impl Handle {
 
         ((Arc::as_ptr(self.obj.as_ref().unwrap()) as *const u8 as usize) & ((1 << 63) - 1))
             as HandleBase
+    }
+
+    pub fn has_capabitity(&self, caps: CapabilityMask) -> bool {
+        self.rights.is_set(caps)
     }
 
     pub fn obj<T: KernelObject + Sized + 'static>(&self) -> Option<Arc<T>> {

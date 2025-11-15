@@ -239,7 +239,7 @@ impl Gic {
 
 pub fn init(arg: &LoaderArg) {
     GIC.call_once(|| {
-        arm_gic::irq_enable();
+        unsafe { crate::arch::irq::enable_all() };
         Spinlock::new(Gic::new(arg).unwrap())
     });
 

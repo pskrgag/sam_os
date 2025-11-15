@@ -1,12 +1,14 @@
 use super::vm_object::VmObject;
+use crate::kernel::locking::mutex::Mutex;
+use crate::kernel::object::capabilities::{CapabilityMask, Capability};
+use crate::kernel::object::handle::Handle;
 use crate::mm::paging::page_table::MmError;
 use crate::mm::user_buffer::UserPtr;
 use crate::mm::vms::VmsInner;
 use alloc::sync::Arc;
 use object_lib::object;
-use crate::kernel::locking::mutex::Mutex;
 use rtl::error::ErrorType;
-use rtl::vmm::{MappingType, types::*};
+use rtl::vmm::{types::*, MappingType};
 
 #[derive(object)]
 pub struct Vms {
@@ -29,6 +31,10 @@ impl Vms {
         Arc::new(Self {
             inner: Mutex::new(VmsInner::new_kernel()),
         })
+    }
+
+    pub fn full_caps() -> CapabilityMask {
+        CapabilityMask::from(Capability::MapPhys)
     }
 
     pub fn vm_map(
@@ -69,12 +75,14 @@ impl Vms {
         inner.ttbr0().unwrap()
     }
 
-    pub fn create_vmo(&self, args: VmoCreateArgs) -> Result<Arc<VmObject>, ErrorType> {
-        match args {
+    pub fn create_vmo(&self, args: VmoCreateArgs) -> Result<Handle, ErrorType> {
+        let vmo = match args {
             VmoCreateArgs::Backed(back, mt, ptr) => VmObject::from_buffer(back, mt, ptr),
             VmoCreateArgs::Zeroed(size, mt, ptr) => VmObject::zeroed(size, mt, ptr),
         }
-        .ok_or(ErrorType::NoMemory)
+        .ok_or(ErrorType::NoMemory)?;
+
+        Ok(Handle::new(vmo, CapabilityMask::any()))
     }
 
     pub fn map_phys(&self, pa: PhysAddr, size: usize) -> Result<*mut u8, ErrorType> {

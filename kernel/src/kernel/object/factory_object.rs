@@ -1,5 +1,7 @@
 use super::port_object::Port;
 use super::task_object::Task;
+use crate::kernel::object::capabilities::CapabilityMask;
+use crate::kernel::object::handle::Handle;
 use crate::kernel::sched::current;
 use alloc::string::ToString;
 use alloc::sync::Arc;
@@ -19,14 +21,18 @@ impl Factory {
         Arc::new(Self {})
     }
 
-    pub fn create_task(&self, name: &str) -> Result<Arc<Task>, ErrorType> {
-        Ok(Task::new(name.to_string()))
+    pub fn create_task(&self, name: &str) -> Result<Handle, ErrorType> {
+        let task = Task::new(name.to_string());
+        let handle = Handle::new(task, CapabilityMask::any());
+
+        Ok(handle)
     }
 
-    pub fn create_port(&self) -> Result<Arc<Port>, ErrorType> {
+    pub fn create_port(&self) -> Result<Handle, ErrorType> {
         let task = current().unwrap().task();
+        let port = Port::new(task.clone());
 
-        Ok(Port::new(task.clone()))
+        Ok(Handle::new(port, Port::full_caps()))
     }
 }
 

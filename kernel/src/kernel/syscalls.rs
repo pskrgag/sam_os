@@ -1,7 +1,9 @@
 use crate::{
     kernel::{
         object::{
+            capabilities::{Capability, CapabilityMask},
             factory_object::Factory,
+            handle::Handle,
             port_object::Port,
             task_object::Task,
             vm_object::VmObject,
@@ -69,14 +71,14 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             let name = read_user_string(args.arg(1), args.arg(2))?;
 
             let factory = table
-                .find::<Factory>(args.arg(0))
+                .find::<Factory>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
 
             Ok(table.add(factory.create_task(name.as_str())?))
         }
         SyscallList::CreatePort => {
             let factory = table
-                .find::<Factory>(args.arg(0))
+                .find::<Factory>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
 
             let handle = factory.create_port()?;
@@ -84,7 +86,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
         }
         SyscallList::VmAllocate => {
             let vms = table
-                .find::<Vms>(args.arg(0))
+                .find::<Vms>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
 
             vms.vm_allocate(args.arg(1), args.arg(2))
@@ -93,7 +95,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
         }
         SyscallList::VmFree => {
             let vms = table
-                .find::<Vms>(args.arg(0))
+                .find::<Vms>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
 
             vms.vm_free(args.arg(1), args.arg(2)).map(|_| 0)
@@ -102,7 +104,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             use rtl::objects::vmo::VmoFlags;
 
             let vms = table
-                .find::<Vms>(args.arg(0))
+                .find::<Vms>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
 
             let flags = VmoFlags::from_bits(args.arg(5)).ok_or(ErrorType::InvalidArgument)?;
@@ -120,10 +122,10 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
         }
         SyscallList::MapVmo => {
             let vms = table
-                .find::<Vms>(args.arg(0))
+                .find::<Vms>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
             let vmo = table
-                .find::<VmObject>(args.arg(1))
+                .find::<VmObject>(args.arg(1), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
 
             let ranges = vmo.as_ranges();
@@ -134,26 +136,24 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
         }
         SyscallList::MapPhys => {
             let vms = table
-                .find::<Vms>(args.arg(0))
+                .find::<Vms>(args.arg(0), CapabilityMask::from(Capability::MapPhys))
                 .ok_or(ErrorType::InvalidHandle)?;
 
             vms.map_phys(args.arg(1), args.arg(2)).map(|x| x as usize)
         }
         SyscallList::Yield => {
-            let thread = current().unwrap();
-            thread.self_yield();
-
+            current().unwrap().self_yield();
             Ok(0)
         }
         SyscallList::TaskStart => {
             let task = table
-                .find::<Task>(args.arg(0))
+                .find::<Task>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
 
             let obj = if args.arg::<HandleBase>(1) != HANDLE_INVALID {
                 Some(
                     table
-                        .find_poly(args.arg(2))
+                        .find_raw_handle(args.arg(2))
                         .ok_or(ErrorType::InvalidHandle)?,
                 )
             } else {
@@ -164,15 +164,15 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
         }
         SyscallList::TaskGetVms => {
             let task = table
-                .find::<Task>(args.arg(0))
+                .find::<Task>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
             let vms = task.vms();
 
-            Ok(table.add(vms.clone()))
+            Ok(table.add(Handle::new(vms.clone(), CapabilityMask::any())))
         }
         SyscallList::PortCall => {
             let port = table
-                .find::<Port>(args.arg(0))
+                .find::<Port>(args.arg(0), CapabilityMask::from(Capability::Call))
                 .ok_or(ErrorType::InvalidHandle)?;
 
             drop(table);
@@ -181,7 +181,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
         }
         SyscallList::PortSendWait => {
             let port = table
-                .find::<Port>(args.arg(0))
+                .find::<Port>(args.arg(0), CapabilityMask::from(Capability::Send))
                 .ok_or(ErrorType::InvalidHandle)?;
             let msg = UserPtr::new(args.arg::<usize>(2) as *mut IpcMessage);
 
@@ -190,7 +190,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
         }
         SyscallList::PortReceive => {
             let port = table
-                .find::<Port>(args.arg(0))
+                .find::<Port>(args.arg(0), CapabilityMask::from(Capability::Receive))
                 .ok_or(ErrorType::InvalidHandle)?;
             let in_msg = UserPtr::new(args.arg::<usize>(1) as *mut IpcMessage);
 
@@ -206,7 +206,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
         }
         SyscallList::CloneHandle => {
             let obj = table
-                .find_poly(args.arg(0))
+                .find_raw_handle(args.arg(0))
                 .ok_or(ErrorType::InvalidHandle)?;
 
             Ok(table.add(obj))
