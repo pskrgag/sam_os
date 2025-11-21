@@ -14,15 +14,15 @@ pub struct Factory {
     // ??
 }
 
-pub static FACTORY: Lazy<Arc<Factory>> = Lazy::new(|| Factory::new());
+pub static FACTORY: Lazy<Arc<Factory>> = Lazy::new(|| Factory::new().unwrap());
 
 impl Factory {
-    fn new() -> Arc<Factory> {
-        Arc::new(Self {})
+    fn new() -> Option<Arc<Factory>> {
+        Some(Arc::try_new(Self {}).ok()?)
     }
 
     pub fn create_task(&self, name: &str) -> Result<Handle, ErrorType> {
-        let task = Task::new(name.to_string());
+        let task = Task::new(name.to_string()).ok_or(ErrorType::NoMemory)?;
         let handle = Handle::new(task, CapabilityMask::any());
 
         Ok(handle)
@@ -30,7 +30,7 @@ impl Factory {
 
     pub fn create_port(&self) -> Result<Handle, ErrorType> {
         let task = current().unwrap().task();
-        let port = Port::new(task.clone());
+        let port = Port::new(task.clone()).ok_or(ErrorType::NoMemory)?;
 
         Ok(Handle::new(port, Port::full_caps()))
     }

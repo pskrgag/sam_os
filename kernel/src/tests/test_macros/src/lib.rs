@@ -11,6 +11,7 @@ fn impl_test_macro(f: ItemFn) -> TokenStream {
 
     let gen = quote! {
         #[link_section = ".kernel_tests"]
+        #[used]
         static #obj_name: crate::tests::test_descr::TestDescr = crate::tests::test_descr::TestDescr {
             name: #name_str,
             test_fn: #name,

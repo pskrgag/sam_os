@@ -257,11 +257,15 @@ impl MemRangeVma {
     }
 
     pub fn max_user() -> Self {
-        Self(super::layout::vmm_range(loader_protocol::VmmLayoutKind::User))
+        Self(super::layout::vmm_range(
+            loader_protocol::VmmLayoutKind::User,
+        ))
     }
 
     pub fn max_kernel() -> Self {
-        Self(super::layout::vmm_range(loader_protocol::VmmLayoutKind::VmAlloc))
+        Self(super::layout::vmm_range(
+            loader_protocol::VmmLayoutKind::VmAlloc,
+        ))
     }
 }
 
@@ -321,16 +325,14 @@ mod test {
 
     #[kernel_test]
     fn vma_list_empty() {
-        let mut list = VmaList::new();
+        let mut list = VmaList::new_user();
 
-        test_assert!(list
-            .find_free_range(MemRange::<VirtAddr>::max_user().size())
-            .is_some());
+        test_assert!(list.find_free_range(PAGE_SIZE, None).is_some());
     }
 
     #[kernel_test]
     fn vma_list_add() {
-        let mut list = VmaList::new();
+        let mut list = VmaList::new_user();
         let fixed_va = VirtAddr::new(0x2000);
 
         let va = list.add_to_tree(Vma::new(
@@ -345,7 +347,7 @@ mod test {
 
     #[kernel_test]
     fn vma_list_add_nofixed() {
-        let mut list = VmaList::new();
+        let mut list = VmaList::new_user();
 
         test_assert!(list
             .add_to_tree(Vma::new(
@@ -358,7 +360,7 @@ mod test {
 
     #[kernel_test]
     fn vma_list_free() {
-        let mut list = VmaList::new();
+        let mut list = VmaList::new_user();
         let vma = Vma::new(
             MemRangeVma::new_fixed(0x2000.into(), 0x1000),
             MappingType::USER_DATA,
@@ -369,7 +371,7 @@ mod test {
         test_assert!(va.is_ok());
         test_assert!(list.add_to_tree(vma.clone()).is_err());
 
-        list.free(vma.clone());
+        list.free(vma.range.0.clone());
         test_assert_eq!(list.vma_list_sorted().len(), 1);
 
         test_assert!(list.add_to_tree(vma).is_ok());

@@ -1,6 +1,6 @@
 use super::vm_object::VmObject;
 use crate::kernel::locking::mutex::Mutex;
-use crate::kernel::object::capabilities::{CapabilityMask, Capability};
+use crate::kernel::object::capabilities::{Capability, CapabilityMask};
 use crate::kernel::object::handle::Handle;
 use crate::mm::paging::page_table::MmError;
 use crate::mm::user_buffer::UserPtr;
@@ -21,16 +21,22 @@ pub enum VmoCreateArgs {
 }
 
 impl Vms {
-    pub fn new_user() -> Arc<Self> {
-        Arc::new(Self {
-            inner: Mutex::new(VmsInner::new_user()),
-        })
+    pub fn new_user() -> Option<Arc<Self>> {
+        Some(
+            Arc::try_new(Self {
+                inner: Mutex::new(VmsInner::new_user()),
+            })
+            .ok()?,
+        )
     }
 
-    pub fn new_kernel() -> Arc<Self> {
-        Arc::new(Self {
-            inner: Mutex::new(VmsInner::new_kernel()),
-        })
+    pub fn new_kernel() -> Option<Arc<Self>> {
+        Some(
+            Arc::try_new(Self {
+                inner: Mutex::new(VmsInner::new_kernel()),
+            })
+            .ok()?,
+        )
     }
 
     pub fn full_caps() -> CapabilityMask {

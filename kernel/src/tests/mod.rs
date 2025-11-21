@@ -1,10 +1,11 @@
-use rtl::locking::fake_lock::FakeLock;
+use core::sync::atomic::AtomicBool;
+use rtl::linker_var;
 
 pub mod test_descr;
 
-pub static TEST_FAIL: FakeLock<bool> = FakeLock::new(false);
+pub static TEST_FAIL: AtomicBool = AtomicBool::new(false);
 
-extern "C" {
+unsafe extern "C" {
     static skerneltests: usize;
     static ekerneltests: usize;
 }
@@ -19,7 +20,7 @@ macro_rules! test_assert {
                 file!(),
                 line!()
             );
-            *crate::tests::TEST_FAIL.get() = true;
+            crate::tests::TEST_FAIL.store(true, core::sync::atomic::Ordering::Relaxed);
             return;
         }
     };
@@ -31,7 +32,7 @@ macro_rules! test_assert_ne {
         if $e1 == $e2 {
             print!("\nTest assert failure at {}:{:?} ", file!(), line!());
             print!("Condition failed: `{:?} != {:?}`", $e1, $e2);
-            *crate::tests::TEST_FAIL.get() = true;
+            crate::tests::TEST_FAIL.store(true, core::sync::atomic::Ordering::Relaxed)
             return;
         }
     };
@@ -43,7 +44,7 @@ macro_rules! test_assert_eq {
         if $e1 != $e2 {
             print!("\nTest assert failure at {}:{:?} ", file!(), line!());
             print!("Condition failed: `{:?} == {:?}`\n", $e1, $e2);
-            *crate::tests::TEST_FAIL.get() = true;
+            crate::tests::TEST_FAIL.store(true, core::sync::atomic::Ordering::Relaxed);
             return;
         }
     };
@@ -69,12 +70,12 @@ pub fn test_runner(_tests: &[&dyn Fn()]) {
         (test.test_fn)();
 
         print!("\nResult {}::{} ", test.module, test.name);
-        if *TEST_FAIL.get() == true {
+        if TEST_FAIL.load(core::sync::atomic::Ordering::Relaxed) {
             print!("[FAIL]\n");
         } else {
             print!("[SUCCESS]\n");
         }
 
-        *TEST_FAIL.get() = false;
+        crate::tests::TEST_FAIL.store(false, core::sync::atomic::Ordering::Relaxed)
     }
 }

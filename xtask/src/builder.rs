@@ -1,4 +1,6 @@
 use crate::{config::*, utils::run_prog};
+use regex::Regex;
+use std::str::from_utf8;
 use std::{fs::OpenOptions, io::Write};
 
 static TARGET: &str = "aarch64-unknown-none-softfloat";
@@ -39,6 +41,7 @@ fn build_component(c: &Component, b: &BuildScript, command: &str) -> Result<(), 
         ],
         None,
         None,
+        None,
         Some(&[("BOARD_TYPE", b.board.as_str())]),
     )
 }
@@ -61,11 +64,48 @@ fn build_kernel(_b: &BuildScript) -> Result<(), String> {
         ],
         None,
         None,
+        None,
         Some(&[("RUSTFLAGS", "-C force-frame-pointers")]),
     )
 }
 
-fn build_loader(_b: &BuildScript) -> Result<(), String> {
+// Returns path to kernel
+fn build_test_kernel() -> Result<String, String> {
+    let mut stdout = vec![];
+    let regex = Regex::new(r".*Executable.*unittests.*\((.*)\)").unwrap();
+
+    info!("[INFO]     Builing test kernel...");
+
+    run_prog(
+        "cargo",
+        &[
+            "test",
+            "--no-run",
+            "-p",
+            "sam_kernel",
+            "--target",
+            TARGET,
+            "--color=always",
+        ],
+        None,
+        None,
+        Some(&mut stdout),
+        Some(&[("RUSTFLAGS", "-C force-frame-pointers")]),
+    )?;
+
+    let string = from_utf8(stdout.as_slice()).unwrap().to_owned();
+    let kernel_name = regex
+        .captures(&string)
+        .unwrap()
+        .get(1)
+        .unwrap()
+        .as_str()
+        .to_owned();
+
+    Ok(format!("{}{kernel_name}", env!("CARGO_WORKSPACE_DIR"),))
+}
+
+fn build_loader(kernel: String) -> Result<(), String> {
     info!("[INFO]     Builing loader...");
 
     run_prog(
@@ -83,9 +123,10 @@ fn build_loader(_b: &BuildScript) -> Result<(), String> {
         ],
         None,
         None,
+        None,
         Some(&[
             ("RUSTFLAGS", "-C relocation-model=pie"),
-            ("KERNEL_PATH", &binary("sam_kernel")),
+            ("KERNEL_PATH", &kernel),
             ("INIT_TASK_PATH", &binary("roottask")),
         ]),
     )?;
@@ -98,6 +139,7 @@ fn build_loader(_b: &BuildScript) -> Result<(), String> {
             &binary("loader"),
             &format!("{}.bin", binary("loader")),
         ],
+        None,
         None,
         None,
         None,
@@ -127,6 +169,7 @@ pub fn prepare_cpio(b: &Vec<Component>, to: &str) -> Result<(), String> {
         ),
         Some(&mut out),
         None,
+        None,
     )?;
 
     let mut file = OpenOptions::new()
@@ -146,6 +189,13 @@ pub fn build(c: &BuildScript) -> Result<(), String> {
     build_impl(c, "build")
 }
 
+pub fn test() -> Result<(), String> {
+    let kernel_name = build_test_kernel()?;
+    build_loader(kernel_name)?;
+
+    run_impl(false)
+}
+
 fn build_impl(c: &BuildScript, command: &str) -> Result<(), String> {
     for comp in &c.component {
         build_component(comp, c, command)?;
@@ -161,12 +211,10 @@ fn build_impl(c: &BuildScript, command: &str) -> Result<(), String> {
     )?;
 
     build_kernel(c)?;
-    build_loader(c)
+    build_loader(binary("sam_kernel"))
 }
 
-pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
-    build(&c)?;
-
+fn run_impl(gdb: bool) -> Result<(), String> {
     info!("[INFO]     Running example...");
     let bin = loader_binary();
     let mut args = vec![
@@ -186,7 +234,19 @@ pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
     }
 
     info!("qemu-system-aarch64 {}", args.join(" "));
-    run_prog("qemu-system-aarch64", args.as_slice(), None, None, None)
+    run_prog(
+        "qemu-system-aarch64",
+        args.as_slice(),
+        None,
+        None,
+        None,
+        None,
+    )
+}
+
+pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
+    build(&c)?;
+    run_impl(gdb)
 }
 
 pub fn clippy(c: BuildScript) -> Result<(), String> {

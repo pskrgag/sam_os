@@ -30,11 +30,11 @@ impl TaskInner {
 }
 
 pub fn init_task() -> Arc<Task> {
-    INIT_TASK.call_once(|| Task::new("init".into()));
+    INIT_TASK.call_once(|| Task::new("init".into()).expect("No memory for initial task"));
     INIT_TASK.get().unwrap().clone()
 }
 
 pub fn kernel_task() -> Arc<Task> {
-    KERNEL_TASK.call_once(|| Task::new_kernel());
+    KERNEL_TASK.call_once(|| Task::new_kernel().expect("No memory for kernel task"));
     KERNEL_TASK.get().unwrap().clone()
 }

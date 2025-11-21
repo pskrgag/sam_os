@@ -11,29 +11,11 @@ pub struct Handle {
 }
 
 impl Handle {
-    pub fn invalid() -> Self {
-        Self {
-            obj: None,
-            rights: CapabilityMask::any(),
-        }
-    }
-
     pub fn new(o: Arc<dyn KernelObject>, rights: CapabilityMask) -> Self {
         Self {
             obj: Some(o),
             rights,
         }
-    }
-
-    pub const fn is_valid(&self) -> bool {
-        self.obj.is_some()
-    }
-
-    pub fn as_raw(&self) -> HandleBase {
-        assert!(self.is_valid());
-
-        ((Arc::as_ptr(self.obj.as_ref().unwrap()) as *const u8 as usize) & ((1 << 63) - 1))
-            as HandleBase
     }
 
     pub fn has_capabitity(&self, caps: CapabilityMask) -> bool {

@@ -8,6 +8,7 @@ pub fn run_prog(
     args: &[&str],
     stdin: Option<&[u8]>,
     stdout: Option<&mut Vec<u8>>,
+    stderr: Option<&mut Vec<u8>>,
     env: Option<&[(&str, &str)]>,
 ) -> Result<(), String> {
     let mut child = Command::new(name);
@@ -62,6 +63,10 @@ pub fn run_prog(
         .map_err(|_| "Failed to read stderr of a process")?;
 
     std::io::stderr().write_all(err.as_slice()).unwrap();
+
+    if let Some(stderr) = stderr {
+        *stderr = err;
+    }
 
     // Cargo prints a lot of stuff to stderr for some reason, but I like to perverse warnings
     // during build

@@ -1,27 +1,7 @@
-#[cfg(not(test))]
 use crate::arch::backtrace::backtrace;
-
 use core::panic::PanicInfo;
 use heapless::String;
-
-#[cfg(not(test))]
 use rtl::vmm::types::*;
-
-#[cfg(test)]
-#[panic_handler]
-fn on_panic(info: &PanicInfo) -> ! {
-    println!("{}", info.message());
-
-    if let Some(location) = info.location() {
-        println!(
-            "Happened in file '{}' at line {}",
-            location.file(),
-            location.line(),
-        );
-    }
-
-    loop {}
-}
 
 #[panic_handler]
 fn on_panic(info: &PanicInfo) -> ! {

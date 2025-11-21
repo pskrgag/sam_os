@@ -67,18 +67,24 @@ impl ThreadRawState {
 }
 
 impl Thread {
-    pub fn new(task: Arc<Task>, id: u16) -> Arc<Thread> {
-        Arc::new(Self {
-            id,
-            inner: Spinlock::new(ThreadInner::default()),
-            ticks: RR_TICKS.into(),
-            preemtion: AtomicUsize::new(0),
-            task: Arc::downgrade(&task),
-            state: AtomicUsize::new(
-                ThreadRawState::from_raw_parts(ThreadState::Initialized, ThreadSleepReason::None)
+    pub fn new(task: Arc<Task>, id: u16) -> Option<Arc<Thread>> {
+        Some(
+            Arc::try_new(Self {
+                id,
+                inner: Spinlock::new(ThreadInner::default()),
+                ticks: RR_TICKS.into(),
+                preemtion: AtomicUsize::new(0),
+                task: Arc::downgrade(&task),
+                state: AtomicUsize::new(
+                    ThreadRawState::from_raw_parts(
+                        ThreadState::Initialized,
+                        ThreadSleepReason::None,
+                    )
                     .into(),
-            ),
-        })
+                ),
+            })
+            .ok()?,
+        )
     }
 
     pub fn id(&self) -> u16 {

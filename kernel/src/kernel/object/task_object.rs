@@ -27,24 +27,30 @@ pub struct Task {
 }
 
 impl Task {
-    pub fn new_kernel() -> Arc<Task> {
-        Arc::new(Self {
-            inner: Spinlock::new(TaskInner::new_user()),
-            name: "kernel task".into(),
-            id: 0,
-            vms: Vms::new_kernel(),
-            handles: Mutex::new(HandleTable::new()),
-        })
+    pub fn new_kernel() -> Option<Arc<Task>> {
+        Some(
+            Arc::try_new(Self {
+                inner: Spinlock::new(TaskInner::new_user()),
+                name: "kernel task".into(),
+                id: 0,
+                vms: Vms::new_kernel()?,
+                handles: Mutex::new(HandleTable::new()),
+            })
+            .ok()?,
+        )
     }
 
-    pub fn new(name: String) -> Arc<Task> {
-        Arc::new(Self {
-            inner: Spinlock::new(TaskInner::new_user()),
-            name,
-            id: 0,
-            vms: Vms::new_user(),
-            handles: Mutex::new(HandleTable::new()),
-        })
+    pub fn new(name: String) -> Option<Arc<Task>> {
+        Some(
+            Arc::try_new(Self {
+                inner: Spinlock::new(TaskInner::new_user()),
+                name,
+                id: 0,
+                vms: Vms::new_user()?,
+                handles: Mutex::new(HandleTable::new()),
+            })
+            .ok()?,
+        )
     }
 
     pub fn id(&self) -> u32 {
@@ -87,7 +93,8 @@ impl Task {
 
         static ID_THREAD: AtomicU16 = AtomicU16::new(1);
 
-        let init_thread = Thread::new(self.clone(), ID_THREAD.fetch_add(1, Ordering::Relaxed));
+        let init_thread = Thread::new(self.clone(), ID_THREAD.fetch_add(1, Ordering::Relaxed))
+            .ok_or(ErrorType::NoMemory)?;
         let mut boot_handle: HandleBase = HANDLE_INVALID;
 
         if let Some(obj) = obj {

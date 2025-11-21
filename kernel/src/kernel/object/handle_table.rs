@@ -93,20 +93,20 @@ mod test {
     fn find_smth() {
         let table = HandleTable::new();
 
-        // this Q/A engineer is very smart!
-        test_assert!(table.find_poly(12123812398).is_none());
+        test_assert!(table
+            .find_poly(12123812398, CapabilityMask::any())
+            .is_none());
     }
 
     #[kernel_test]
     fn add_handle_find_poly() {
         let mut table = HandleTable::new();
 
-        let t = Task::new("test".into());
-        let h = Handle::new(t.clone());
-        let raw = h.as_raw();
+        let t = Task::new("test".into()).unwrap();
+        let h = Handle::new(t.clone(), CapabilityMask::any());
 
-        table.add(h);
-        let found = table.find_poly(raw);
+        let hdl = table.add(h);
+        let found = table.find_poly(hdl, CapabilityMask::any());
 
         test_assert!(found.is_some());
 
@@ -120,13 +120,11 @@ mod test {
     fn add_handle_find() {
         let mut table = HandleTable::new();
 
-        let t = Task::new("test".into());
-        let h = Handle::new(t.clone());
-        let raw = h.as_raw();
+        let t = Task::new("test".into()).unwrap();
+        let h = Handle::new(t.clone(), CapabilityMask::any());
 
-        table.add(h);
-        let found = table.find::<Task>(raw);
-
+        let hdl = table.add(h);
+        let found = table.find::<Task>(hdl, CapabilityMask::any());
         test_assert!(found.is_some());
 
         test_assert_eq!(

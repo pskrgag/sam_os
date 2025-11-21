@@ -1,5 +1,5 @@
 use crate::arch::timer::{SYSTEM_TIMER, TIMER_IRQ_NUM};
-use crate::drivers::irq::{irq, gic::ClaimedIrq};
+use crate::drivers::irq::{gic::ClaimedIrq, irq};
 use crate::kernel::sched::current;
 
 pub trait SystemTimer {

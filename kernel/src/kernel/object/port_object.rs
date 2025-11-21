@@ -36,11 +36,14 @@ fn copy_ipc_message_from_user(
 }
 
 impl Port {
-    pub fn new(thread: Arc<Task>) -> Arc<Self> {
-        Arc::new(Self {
-            task: Arc::downgrade(&thread),
-            queue: WaitQueue::new(),
-        })
+    pub fn new(thread: Arc<Task>) -> Option<Arc<Self>> {
+        Some(
+            Arc::try_new(Self {
+                task: Arc::downgrade(&thread),
+                queue: WaitQueue::new(),
+            })
+            .ok()?,
+        )
     }
 
     pub fn full_caps() -> CapabilityMask {

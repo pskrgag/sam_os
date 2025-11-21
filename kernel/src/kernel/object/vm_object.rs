@@ -4,8 +4,8 @@ use crate::mm::user_buffer::UserPtr;
 use alloc::sync::Arc;
 use object_lib::object;
 use rtl::arch::{PAGE_SHIFT, PAGE_SIZE};
-use rtl::vmm::MappingType;
 use rtl::vmm::types::*;
+use rtl::vmm::MappingType;
 
 #[derive(Debug)]
 struct VmObjectInner {
@@ -57,15 +57,21 @@ impl VmObjectInner {
 
 impl VmObject {
     pub fn from_buffer(b: UserPtr<u8>, tp: MappingType, load_addr: VirtAddr) -> Option<Arc<Self>> {
-        Some(Arc::new(Self {
-            inner: Spinlock::new(VmObjectInner::from_buffer(b, tp, load_addr)?),
-        }))
+        Some(
+            Arc::try_new(Self {
+                inner: Spinlock::new(VmObjectInner::from_buffer(b, tp, load_addr)?),
+            })
+            .ok()?,
+        )
     }
 
     pub fn zeroed(size: usize, tp: MappingType, load_addr: VirtAddr) -> Option<Arc<Self>> {
-        Some(Arc::new(Self {
-            inner: Spinlock::new(VmObjectInner::zeroed(size, tp, load_addr)?),
-        }))
+        Some(
+            Arc::try_new(Self {
+                inner: Spinlock::new(VmObjectInner::zeroed(size, tp, load_addr)?),
+            })
+            .ok()?,
+        )
     }
 
     pub fn as_ranges(&self) -> (MemRange<VirtAddr>, MemRange<PhysAddr>) {
