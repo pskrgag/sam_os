@@ -171,7 +171,7 @@ pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
     let bin = loader_binary();
     let mut args = vec![
         "-machine",
-        "virt,gic-version=2",
+        "virt,gic-version=3",
         "-m",
         "1G",
         "-cpu",
@@ -185,7 +185,7 @@ pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
         args.extend_from_slice(&["-s", "-S"]);
     }
 
-    // qemu-system-aarch64 -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel
+    info!("qemu-system-aarch64 {}", args.join(" "));
     run_prog("qemu-system-aarch64", args.as_slice(), None, None, None)
 }
 

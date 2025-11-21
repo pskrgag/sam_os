@@ -1,32 +1,29 @@
-use super::gic::GIC;
+use super::gic::{ClaimedIrq, GIC};
 use crate::kernel::locking::spinlock::Spinlock;
 use alloc::collections::LinkedList;
+use arm_gic::IntId;
 
 pub struct IrqHandler {
-    num: u32,
-    dispatcher: fn(u32),
+    num: IntId,
+    dispatcher: fn(&ClaimedIrq),
 }
 
 pub static IRQS: Spinlock<LinkedList<IrqHandler>> = Spinlock::new(LinkedList::new());
 
 impl IrqHandler {
-    pub fn new(num: u32, func: fn(u32)) -> Self {
+    pub fn new(num: IntId, func: fn(&ClaimedIrq)) -> Self {
         Self {
             num,
             dispatcher: func,
         }
     }
 
-    pub fn num(&self) -> u32 {
+    pub fn num(&self) -> IntId {
         self.num
-    }
-
-    pub fn dispatch(&self) {
-        (self.dispatcher)(self.num);
     }
 }
 
-pub fn register_handler(irq: u32, func: fn(u32)) {
+pub fn register_handler(irq: IntId, func: fn(&ClaimedIrq)) {
     let handler = IrqHandler::new(irq, func);
 
     GIC.get().unwrap().lock().enable_irq(irq);
@@ -34,20 +31,19 @@ pub fn register_handler(irq: u32, func: fn(u32)) {
 }
 
 // pub fn init_secondary(_irq: u32) {
-    // use crate::arch::cpuid::current_cpu;
-    //
-    // GIC.per_cpu_var_get_mut()
-    //     .init_secondary(irq, current_cpu() as u32);
+// use crate::arch::cpuid::current_cpu;
+//
+// GIC.per_cpu_var_get_mut()
+//     .init_secondary(irq, current_cpu() as u32);
 // }
 
 pub fn irq_dispatch() {
-    let mut gic = GIC.get().unwrap().lock();
-    let irqs = IRQS.lock();
-    
-    for i in irqs.iter() {
-        if gic.is_pending(i.num()) {
-            i.dispatch();
-            gic.clear_interrupt(i.num());
+    let gic = GIC.get().unwrap().lock();
+
+    gic.pending().map(|pending| {
+        if let Some(x) = IRQS.lock().iter().find(|x| x.num() == pending.0) {
+            (x.dispatcher)(&pending);
+            drop(pending);
         }
-    }
+    });
 }

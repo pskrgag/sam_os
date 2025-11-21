@@ -83,11 +83,7 @@ extern "C" fn cpu_reset() -> ! {
     println!("Cpu {} started!", arch::cpuid::current_cpu());
 
     arch::irq::handlers::set_up_vbar();
-
-    unsafe {
-        arch::irq::enable_all();
-    }
-
+    arm_gic::irq_enable();
     drivers::timer::init_secondary();
 
     /*

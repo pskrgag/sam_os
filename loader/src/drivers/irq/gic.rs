@@ -1,8 +1,7 @@
-use super::{IRQS, IrqProbe};
+use super::{IrqProbe, IRQS};
 use fdt::node::FdtNode;
 use linkme::distributed_slice;
 use loader_protocol::{DeviceKind, DeviceMapping, LoaderArg};
-use rtl::arch::PAGE_SIZE;
 
 fn map(node: &FdtNode, arg: &mut LoaderArg) {
     let mut iter = node.reg().unwrap();
@@ -11,18 +10,18 @@ fn map(node: &FdtNode, arg: &mut LoaderArg) {
     arg.devices
         .push(DeviceMapping {
             base: reg.starting_address as usize,
-            size: PAGE_SIZE,
+            size: reg.size.unwrap(),
             kind: DeviceKind::GicDist,
         })
         .expect("Too many devices");
 
-    let reg = iter.next().expect("Expect CPU and DIST in GIC FDT Node");
+    let reg = iter.next().expect("Expect REDIST and DIST in GIC FDT Node");
 
     arg.devices
         .push(DeviceMapping {
             base: reg.starting_address as usize,
-            size: PAGE_SIZE,
-            kind: DeviceKind::GicCpu,
+            size: reg.size.unwrap(),
+            kind: DeviceKind::GicRedist,
         })
         .expect("Too many devices");
 
@@ -31,6 +30,6 @@ fn map(node: &FdtNode, arg: &mut LoaderArg) {
 
 #[distributed_slice(IRQS)]
 static PL031: IrqProbe = IrqProbe {
-    compatible: "arm,cortex-a15-gic",
+    compatible: "arm,gic-v3",
     map,
 };

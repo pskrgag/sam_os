@@ -1,4 +1,4 @@
-use super::{UARTS, UartProbe};
+use super::{UartProbe, UARTS};
 use core::fmt::{Result, Write};
 use core::ops::DerefMut;
 use fdt::node::FdtNode;
@@ -6,18 +6,17 @@ use linkme::distributed_slice;
 use loader_protocol::{DeviceKind, DeviceMapping, LoaderArg};
 use rtl::arch::PAGE_SIZE;
 use rtl::locking::fakelock::FakeLock;
-use rtl::uart::{UartTrait, arm_uart::Uart};
-use rtl::vmm::types::VirtAddr;
+use rtl::uart::{arm_uart::Uart, UartTrait};
 
 struct Pl031(Uart);
 
-static BACKEND: FakeLock<Pl031> = FakeLock::new(Pl031(Uart::default(VirtAddr::new(0))));
+static BACKEND: FakeLock<Pl031> = FakeLock::new(Pl031(Uart::invalid()));
 
 fn probe(node: &FdtNode) -> Option<*mut dyn Write> {
     let mut reg = node.reg()?;
     let reg = reg.next().unwrap();
 
-    *BACKEND.get() = Pl031(Uart::default(reg.starting_address.into()));
+    *BACKEND.get() = Pl031(Uart::new(reg.starting_address.into()));
     Some(BACKEND.get().deref_mut())
 }
 

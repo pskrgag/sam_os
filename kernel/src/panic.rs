@@ -1,5 +1,5 @@
 #[cfg(not(test))]
-use crate::arch::{backtrace::backtrace, irq::interrupts::disable_all};
+use crate::arch::backtrace::backtrace;
 
 use core::panic::PanicInfo;
 use heapless::String;
@@ -31,7 +31,7 @@ fn on_panic(info: &PanicInfo) -> ! {
     unsafe {
         let fp: usize;
 
-        disable_all();
+        arm_gic::irq_disable();
         let id: Result<String<100>, _> = if let Some(c) = crate::sched::current() {
             c.task().name().try_into()
         } else {

@@ -1,9 +1,10 @@
 use crate::drivers::timer::SystemTimer;
+use arm_gic::IntId;
 use core::arch::asm;
 
 pub struct ArmSystemTimer;
 
-pub const TIMER_IRQ_NUM: u32 = 30;
+pub const TIMER_IRQ_NUM: IntId = IntId::ppi(14);
 pub static SYSTEM_TIMER: ArmSystemTimer = ArmSystemTimer;
 
 impl SystemTimer for ArmSystemTimer {

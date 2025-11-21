@@ -80,7 +80,7 @@ impl<T> Spinlock<T> {
     }
 
     pub fn lock_irqsave<'a>(&'a self) -> SpinlockGuard<'a, T> {
-        use crate::arch::irq::interrupts::{disable_all, get_flags};
+        use crate::arch::irq::interrupts::get_flags;
 
         let my = self.inner.next.fetch_add(1, Ordering::Acquire);
 
@@ -89,10 +89,7 @@ impl<T> Spinlock<T> {
         }
 
         let flags = Some(get_flags());
-
-        unsafe {
-            disable_all();
-        }
+        arm_gic::irq_disable();
 
         SpinlockGuard {
             lock: &self.inner,

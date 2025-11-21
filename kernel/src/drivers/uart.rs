@@ -6,7 +6,7 @@ use rtl::vmm::types::*;
 
 pub struct Uart;
 
-pub static UART: Spinlock<BackendUart> = Spinlock::new(BackendUart::default(VirtAddr::new(0)));
+pub static UART: Spinlock<BackendUart> = Spinlock::new(BackendUart::invalid());
 
 impl fmt::Write for Uart {
     fn write_str(&mut self, s: &str) -> fmt::Result {
@@ -17,7 +17,7 @@ impl fmt::Write for Uart {
 
 pub fn remap(base: VirtAddr) {
     let mut p = UART.lock();
-    *p = BackendUart::default(base);
+    *p = BackendUart::new(base);
 }
 
 pub fn uart() -> Uart {

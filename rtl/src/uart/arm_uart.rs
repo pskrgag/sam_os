@@ -28,16 +28,18 @@ pub struct Uart {
 }
 
 impl Uart {
-    pub const fn default(base: VirtAddr) -> Self {
-        Self { base }
+    pub const fn invalid() -> Self {
+        Self {
+            base: VirtAddr::new(0),
+        }
     }
 
     pub fn enable(&mut self) {
         self.write_reg(Pl011::Rc as u8, UART_CR_UARTEN | UART_CR_TXE | UART_CR_RXE);
     }
 
-    pub fn init(base: VirtAddr) -> Self {
-        let mut s = Self::default(base);
+    pub fn new(base: VirtAddr) -> Self {
+        let mut s = Self { base };
         s.enable();
         s
     }

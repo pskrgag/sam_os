@@ -62,6 +62,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "arm-gic"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc8a5b06c02f993e98b0b3eb95c3acefb6889cc33a630621fb3e6c564502c2b0"
+dependencies = [
+ "bitflags 2.9.4",
+ "safe-mmio",
+ "thiserror",
+ "zerocopy",
+]
+
+[[package]]
 name = "atomic-polyfill"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -548,6 +560,7 @@ dependencies = [
 name = "sam_kernel"
 version = "0.1.0"
 dependencies = [
+ "arm-gic",
  "bitmaps",
  "bitmask",
  "elf 0.8.0",

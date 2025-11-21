@@ -11,7 +11,7 @@ pub const MAX_PMM_REGIONS: usize = 10;
 pub enum DeviceKind {
     Uart,
     GicDist,
-    GicCpu,
+    GicRedist,
 }
 
 #[derive(Debug, PartialEq, Clone)]

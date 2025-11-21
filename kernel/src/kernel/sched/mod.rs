@@ -1,6 +1,6 @@
 use crate::kernel::object::thread_object::{Thread, ThreadState};
 use crate::percpu_global;
-use crate::{arch::irq::interrupts, arch::regs::Context};
+use crate::arch::regs::Context;
 #[cfg(not(test))]
 use crate::{kernel::elf::parse_initial_task, kernel::tasks::task::init_task};
 use alloc::sync::Arc;
@@ -78,7 +78,7 @@ impl Scheduler {
 
             // We come here only for 1st process, so we need to turn on irqs
             unsafe {
-                interrupts::enable_all();
+                arm_gic::irq_enable();
                 switch_to(&mut ctx as *mut _, next_ctx as *const _);
             }
             panic!("Should not reach here");
