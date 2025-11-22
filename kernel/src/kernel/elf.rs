@@ -22,6 +22,7 @@ pub struct ElfData {
     pub ep: VirtAddr,
 }
 
+#[cfg(not(test))]
 pub fn parse_initial_task(prot: &loader_protocol::LoaderArg) -> Option<ElfData> {
     let elf_data = unsafe {
         core::slice::from_raw_parts(

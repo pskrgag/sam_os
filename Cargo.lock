@@ -616,6 +616,7 @@ dependencies = [
  "spin",
  "static_assertions",
  "test_macros",
+ "wavltree",
 ]
 
 [[package]]
@@ -876,6 +877,12 @@ name = "utf8parse"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
+
+[[package]]
+name = "wavltree"
+version = "0.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ace10234ac0a20f8ba22b3605fbc73fb184eef5faaf5bb690313b28a6df13e6"
 
 [[package]]
 name = "winapi-util"

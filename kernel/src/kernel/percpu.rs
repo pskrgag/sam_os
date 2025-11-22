@@ -125,12 +125,14 @@ impl<T> PerCpu<T> {
 
     // SAFETY: caller should know what he is doing, percpu vars are expected to be touched
     // only by owner cpu. IOW caller takes care of synchronization and possible side-effects
+    #[allow(dead_code)]
     pub unsafe fn for_each_cpu<F: Fn(&T)>(&self, visiter: F) {
         for i in 0..NUM_CPUS {
             visiter(percpu_n!(self.data, i));
         }
     }
 
+    #[allow(dead_code)]
     pub unsafe fn cpu(&self, cpu: usize) -> &'static T {
         percpu_n!(self.data, cpu)
     }

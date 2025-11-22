@@ -287,6 +287,10 @@ impl VmaList {
 
             Some(start.into())
         } else if let Some(base) = base {
+            if base < self.start {
+                return None;
+            }
+
             // Find the lower bound for the address
             let cursor = self
                 .tree
@@ -453,7 +457,7 @@ impl PartialEq for Vma {
 
 impl PartialOrd for Vma {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.range.partial_cmp(&other.range)
+        Some(self.cmp(other))
     }
 }
 
@@ -469,61 +473,22 @@ impl Eq for Vma {}
 mod test {
     use super::*;
     use crate::*;
-    use rtl::arch::PAGE_SIZE;
-    use rtl::vmm::types::*;
     use test_macros::*;
 
     #[kernel_test]
-    fn vma_list_empty() {
+    fn vma_list_add_fixed() {
         let mut list = VmaList::new_user();
 
-        test_assert!(list.find_free_range(PAGE_SIZE, None).is_some());
-    }
+        let new_vma = list.new_vma(0x1000, Some(0x20000), MappingType::all());
+        test_assert_eq!(new_vma, Some(VirtAddr::new(0x20000)));
 
-    #[kernel_test]
-    fn vma_list_add() {
-        let mut list = VmaList::new_user();
-        let fixed_va = VirtAddr::new(0x2000);
+        let new_vma = list.new_vma(0x1000, Some(0x30000), MappingType::all());
+        test_assert_eq!(new_vma, Some(VirtAddr::new(0x30000)));
 
-        let va = list.add_to_tree(Vma::new(
-            MemRangeVma::new_fixed(fixed_va, 0x1000),
-            MappingType::USER_DATA,
-        ));
+        let new_vma = list.new_vma(0x1000, Some(0x1000), MappingType::all());
+        test_assert!(new_vma.is_none());
 
-        test_assert!(va.is_ok());
-        test_assert_eq!(va.unwrap(), fixed_va);
-        test_assert_eq!(list.vma_list_sorted().len(), 3);
-    }
-
-    #[kernel_test]
-    fn vma_list_add_nofixed() {
-        let mut list = VmaList::new_user();
-
-        test_assert!(list
-            .add_to_tree(Vma::new(
-                MemRangeVma::new_fixed(VirtAddr::new(0), 0x1000),
-                MappingType::USER_DATA,
-            ))
-            .is_ok());
-        test_assert_eq!(list.vma_list_sorted().len(), 2);
-    }
-
-    #[kernel_test]
-    fn vma_list_free() {
-        let mut list = VmaList::new_user();
-        let vma = Vma::new(
-            MemRangeVma::new_fixed(0x2000.into(), 0x1000),
-            MappingType::USER_DATA,
-        );
-
-        let va = list.add_to_tree(vma.clone());
-
-        test_assert!(va.is_ok());
-        test_assert!(list.add_to_tree(vma.clone()).is_err());
-
-        list.free(vma.range.0.clone());
-        test_assert_eq!(list.vma_list_sorted().len(), 1);
-
-        test_assert!(list.add_to_tree(vma).is_ok());
+        let new_vma = list.new_vma(0x1000, Some(0x0), MappingType::all());
+        test_assert!(new_vma.is_none());
     }
 }

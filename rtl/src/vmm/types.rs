@@ -9,7 +9,7 @@ use core::{
 #[repr(transparent)]
 pub struct PhysAddr(usize);
 
-#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug, Default)]
 #[repr(transparent)]
 pub struct VirtAddr(usize);
 
