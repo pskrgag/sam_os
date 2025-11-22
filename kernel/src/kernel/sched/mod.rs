@@ -114,7 +114,7 @@ pub fn init_userspace(_prot: &loader_protocol::LoaderArg) {
         let data = parse_initial_task(prot).unwrap();
         let init_task = init_task();
 
-        let init_thread = Thread::new(init_task.clone(), 0);
+        let init_thread = Thread::new(init_task.clone(), 0).unwrap();
 
         let init_vms = init_task.vms();
 
@@ -125,7 +125,6 @@ pub fn init_userspace(_prot: &loader_protocol::LoaderArg) {
         }
 
         init_thread.init_user(data.ep);
-
         init_task.add_initial_thread(init_thread, rtl::handle::HANDLE_INVALID);
         init_task.start_inner();
     }

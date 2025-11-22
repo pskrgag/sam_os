@@ -2,7 +2,7 @@ use super::paging::kernel_page_table::kernel_page_table;
 use crate::mm::{
     allocators::page_alloc::page_allocator,
     paging::page_table::{MmError, PageTable},
-    vma_list::{MemRangeVma, Vma, VmaList},
+    vma_list::VmaList,
 };
 use rtl::arch::*;
 use rtl::error::ErrorType;
@@ -28,10 +28,6 @@ impl VmsInner {
         }
     }
 
-    fn add_to_tree(&mut self, vma: Vma) -> Result<VirtAddr, MmError> {
-        self.vmas.add_to_tree(vma).map_err(|_| MmError::Generic)
-    }
-
     pub fn vm_map(
         &mut self,
         v: MemRange<VirtAddr>,
@@ -41,7 +37,10 @@ impl VmsInner {
         assert!(v.start().is_page_aligned());
         assert!(p.start().is_page_aligned());
 
-        let va = self.add_to_tree(Vma::new(v.into(), tp))?;
+        let va = self
+            .vmas
+            .new_vma(v.size, (!v.start.is_null()).then_some(v.start.into()), tp)
+            .ok_or(MmError::NoMem)?;
 
         self.ttbr0
             .as_mut()
@@ -55,7 +54,7 @@ impl VmsInner {
     pub fn vm_allocate(&mut self, mut size: usize, tp: MappingType) -> Result<VirtAddr, ()> {
         debug_assert!(size.is_page_aligned());
 
-        let mut new_va = self.add_to_tree(Vma::new(MemRangeVma::new_non_fixed(size), tp))?;
+        let mut new_va = self.vmas.new_vma(size, None, tp).ok_or(MmError::NoMem)?;
         let ret = new_va;
 
         while size != 0 {
@@ -86,7 +85,7 @@ impl VmsInner {
         assert!(range.start().is_page_aligned());
         assert!(range.size().is_page_aligned());
 
-        self.vmas.free(range)?;
+        self.vmas.free(range);
 
         self.ttbr0
             .as_mut()

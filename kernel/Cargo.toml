@@ -17,6 +17,7 @@ safe-mmio = "0.2.5"
 elf = { version = "0.8.0", default-features = false }
 bitmask = { version = "0.5.0", default-features = false }
 arm-gic = "0.7.1"
+wavltree = { version = "0.0.8", features = ["dot"] }
 
 [dev-dependencies]
 test_macros = {path = "./src/tests/test_macros/"}
