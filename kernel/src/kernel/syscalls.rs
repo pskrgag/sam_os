@@ -114,14 +114,15 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 .find::<Vms>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
 
-            let flags = VmoFlags::from_bits(args.arg(5)).ok_or(ErrorType::InvalidArgument)?;
+            let flags: VmoFlags = args.try_arg(5).map_err(|_| ErrorType::InvalidArgument)?;
+
             let vmo_args = match flags {
-                VmoFlags::BACKED => VmoCreateArgs::Backed(
+                VmoFlags::Backed => VmoCreateArgs::Backed(
                     UserPtr::new_array(args.arg::<usize>(1) as *const u8, args.arg(2)),
                     args.try_arg(3).map_err(|_| ErrorType::InvalidArgument)?,
                     args.arg(4),
                 ),
-                VmoFlags::ZEROED => VmoCreateArgs::Zeroed(
+                VmoFlags::Zeroed => VmoCreateArgs::Zeroed(
                     args.arg(2),
                     args.try_arg(3).map_err(|_| ErrorType::InvalidArgument)?,
                     args.arg(4),

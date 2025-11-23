@@ -336,6 +336,7 @@ impl PageTable {
         )
     }
 
+    #[allow(dead_code)]
     pub fn map_hugepages(
         &mut self,
         p: Option<MemRange<PhysAddr>>,

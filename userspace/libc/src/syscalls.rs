@@ -178,7 +178,7 @@ impl<'a> Syscall<'a> {
                     size,
                     mt as usize,
                     load_addr.into(),
-                    VmoFlags::BACKED.bits(),
+                    VmoFlags::Backed as usize,
                     0,
                 ],
                 VmoCreateArgs::Zeroed(size, mt, load_addr) => [
@@ -188,7 +188,7 @@ impl<'a> Syscall<'a> {
                     size,
                     mt as usize,
                     load_addr.into(),
-                    VmoFlags::ZEROED.bits(),
+                    VmoFlags::Zeroed as usize,
                     0,
                 ],
             },
