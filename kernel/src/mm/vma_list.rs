@@ -412,11 +412,11 @@ impl VmaList {
         mt: MappingType,
     ) -> Option<VirtAddr> {
         let start = self.find_free_space(size, base)?;
-        let vma = Box::pin(Vma::new(start, size, mt));
+        let vma = Box::try_new(Vma::new(start, size, mt)).ok()?;
 
         debug_assert!(start.is_page_aligned());
 
-        self.tree.insert(vma);
+        self.tree.insert(vma.into());
         Some(start)
     }
 

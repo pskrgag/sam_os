@@ -33,6 +33,7 @@ pub struct PageTableEntry(usize);
 
 pub struct PageTable {
     base: VirtAddr,
+    is_user: bool,
 }
 
 impl PageTableBlock {
@@ -134,15 +135,17 @@ impl PageFlags {
 }
 
 impl PageTable {
-    pub const fn default() -> Self {
+    pub const fn invalid() -> Self {
         Self {
             base: VirtAddr::new(0_usize),
+            is_user: false,
         }
     }
 
     pub unsafe fn from(base: PhysAddr) -> Self {
         Self {
             base: VirtAddr::from(base),
+            is_user: false,
         }
     }
 
@@ -176,6 +179,7 @@ impl PageTable {
         let base: PhysAddr = page_allocator().alloc(1)?;
         let new_table = Self {
             base: VirtAddr::from(base),
+            is_user: true,
         };
 
         Some(new_table)
@@ -188,8 +192,9 @@ impl PageTable {
         tp: MappingType,
         lvl: u8,
         _v: VirtAddr,
+        is_user: bool,
     ) {
-        let flags = mmu::mapping_type_to_flags(tp);
+        let flags = mmu::mapping_type_to_flags(tp, is_user);
         let control = if lvl != 3 {
             PageFlags::block().bits()
         } else {
@@ -242,7 +247,7 @@ impl PageTable {
 
     #[allow(clippy::too_many_arguments)]
     fn op_lvl<
-        F: FnMut(&mut PageTableBlock, usize, PhysAddr, MappingType, u8, VirtAddr) + Copy, // Set leaf
+        F: FnMut(&mut PageTableBlock, usize, PhysAddr, MappingType, u8, VirtAddr, bool) + Copy, // Set leaf
         G: FnMut(&mut PageTableBlock, u8, usize) -> Result<PageTableBlock, MmError> + Copy, // Process walk
     >(
         mut base: PageTableBlock,
@@ -253,6 +258,7 @@ impl PageTable {
         mut cb: F,
         mut cb_b: G,
         use_huge_pages: bool,
+        is_user: bool,
     ) -> Result<VirtAddr, MmError> {
         let order = match lvl {
             0 => 39,
@@ -277,12 +283,22 @@ impl PageTable {
                     None => cb_b(&mut base, lvl, index)?,
                 };
 
-                Self::op_lvl(next_block, lvl + 1, v, p, map, cb, cb_b, use_huge_pages)?;
+                Self::op_lvl(
+                    next_block,
+                    lvl + 1,
+                    v,
+                    p,
+                    map,
+                    cb,
+                    cb_b,
+                    use_huge_pages,
+                    is_user,
+                )?;
             } else {
                 debug_assert!(p.start().is_aligned(order));
                 debug_assert!(v.start().is_aligned(order));
 
-                cb(&mut base, index, p.start(), map, lvl, v.start());
+                cb(&mut base, index, p.start(), map, lvl, v.start(), is_user);
 
                 p.truncate(size);
                 v.truncate(size);
@@ -316,6 +332,7 @@ impl PageTable {
             Self::set_leaf_tte,
             Self::allocate_new_block,
             hp,
+            self.is_user
         )
     }
 
@@ -349,19 +366,20 @@ impl PageTable {
             0,
             &mut v,
             &mut p,
-            MappingType::NONE,
-            |base, index, pa, tp, lvl, v| {
+            MappingType::None,
+            |base, index, pa, tp, lvl, v, _| {
                 let tte = base.get_tte(index);
 
                 cb(
                     tte.addr(),
-                    tte.flags().bits() == mmu::mapping_type_to_flags(MappingType::USER_DEVICE),
+                    tte.flags().bits() == mmu::mapping_type_to_flags(MappingType::Device, false),
                 );
 
                 Self::clean_tte(base, index, pa, tp, lvl, v);
             },
             Self::abort_walk,
             true,
+            self.is_user
         )
         .map(|_| ())
     }

@@ -69,11 +69,11 @@ pub fn parse_initial_task(prot: &loader_protocol::LoaderArg) -> Option<ElfData> 
         };
 
         let perms = if seg.p_flags == PF_W | PF_R {
-            MappingType::USER_DATA
+            MappingType::Data
         } else if seg.p_flags == PF_X | PF_R {
-            MappingType::USER_TEXT
+            MappingType::Text
         } else if seg.p_flags == PF_R {
-            MappingType::USER_DATA_RO
+            MappingType::RoData
         } else {
             panic!("Unknown elf permissions");
         };

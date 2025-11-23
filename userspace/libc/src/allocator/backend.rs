@@ -13,7 +13,7 @@ unsafe impl Sync for SyscallBackend {}
 impl BackendAllocator for SyscallBackend {
     fn allocate(&self, num_pages: usize) -> Option<*mut u8> {
         vms()
-            .vm_allocate(num_pages * PAGE_SIZE, MappingType::USER_DATA)
+            .vm_allocate(num_pages * PAGE_SIZE, MappingType::Data)
             .ok()
     }
 

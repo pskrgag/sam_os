@@ -50,11 +50,11 @@ impl<'a> Elf<'a> {
 
     pub fn program_header_to_mapping_type(h: ProgramHeader) -> MappingType {
         if h.p_flags & PF_W != 0 {
-            MappingType::USER_DATA
+            MappingType::Data
         } else if h.p_flags & PF_X != 0 {
-            MappingType::USER_TEXT
+            MappingType::Text
         } else {
-            MappingType::USER_DATA_RO
+            MappingType::RoData
         }
     }
 }

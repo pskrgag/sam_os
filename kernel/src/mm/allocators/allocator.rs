@@ -10,7 +10,7 @@ unsafe impl Sync for Allocator {}
 
 unsafe impl GlobalAlloc for Allocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        slab::alloc(layout.size()).unwrap()
+        slab::alloc(layout.size()).unwrap_or(core::ptr::null_mut())
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {

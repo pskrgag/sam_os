@@ -27,6 +27,7 @@ pub const BLOCK_KERNEL_RWX: usize = access_perms(AP_UN_KRW);
 pub const BLOCK_KERNEL_RW: usize = access_perms(AP_UN_KRW) | BLOCK_PXN;
 pub const BLOCK_KERNEL_RO: usize = access_perms(AP_UN_KRO) | BLOCK_PXN | (1 << 54) | (1 << 51);
 
+pub const BLOCK_USER_RWX: usize = access_perms(AP_URW_KRW);
 pub const BLOCK_USER_RW: usize = access_perms(AP_URW_KRW) | BLOCK_UXN;
 pub const BLOCK_USER_RO: usize = access_perms(AP_URO_KRO) | BLOCK_UXN;
 

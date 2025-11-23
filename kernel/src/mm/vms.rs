@@ -14,11 +14,11 @@ pub struct VmsInner {
 }
 
 impl VmsInner {
-    pub fn new_user() -> Self {
-        Self {
-            ttbr0: Some(PageTable::new().unwrap()), // ToDo remove unwrap()
+    pub fn new_user() -> Option<Self> {
+        Some(Self {
+            ttbr0: Some(PageTable::new()?),
             vmas: VmaList::new_user(),
-        }
+        })
     }
 
     pub fn new_kernel() -> Self {

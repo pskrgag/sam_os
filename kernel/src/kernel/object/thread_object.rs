@@ -108,13 +108,13 @@ impl Thread {
     pub fn init_user(self: &Arc<Thread>, ep: VirtAddr) {
         let kernel_stack = kernel_task()
             .vms()
-            .vm_allocate(KERNEL_STACK_PAGES * PAGE_SIZE, MappingType::KERNEL_DATA)
+            .vm_allocate(KERNEL_STACK_PAGES * PAGE_SIZE, MappingType::Data)
             .expect("Failed to allocate kernel stack");
 
         let task = self.task.upgrade().unwrap();
         let vms = task.vms();
         let user_stack = vms
-            .vm_allocate(USER_THREAD_STACK_PAGES * PAGE_SIZE, MappingType::USER_DATA)
+            .vm_allocate(USER_THREAD_STACK_PAGES * PAGE_SIZE, MappingType::Data)
             .expect("Failed to allocate user stack");
 
         let mut inner = self.inner.lock();

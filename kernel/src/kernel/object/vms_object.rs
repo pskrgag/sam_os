@@ -24,7 +24,7 @@ impl Vms {
     pub fn new_user() -> Option<Arc<Self>> {
         Some(
             Arc::try_new(Self {
-                inner: Mutex::new(VmsInner::new_user()),
+                inner: Mutex::new(VmsInner::new_user()?),
             })
             .ok()?,
         )
@@ -98,7 +98,7 @@ impl Vms {
             .vm_map(
                 MemRange::new(VirtAddr::new(0), size),
                 MemRange::new(pa, size),
-                MappingType::USER_DEVICE,
+                MappingType::Device,
             )
             .unwrap();
 

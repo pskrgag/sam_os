@@ -167,7 +167,7 @@ pub fn init_percpu() -> Option<()> {
         .map(
             None,
             range,
-            MappingType::KERNEL_DATA,
+            MappingType::Data,
         )
         .ok()?;
 

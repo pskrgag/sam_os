@@ -1,33 +1,32 @@
-use bitflags::bitflags;
-
 pub mod alloc;
 pub mod slab;
 pub mod types;
 
-bitflags! {
-pub struct MappingType: usize {
-    const KERNEL_DATA = 1 << 0;
-    const KERNEL_TEXT = 1 << 1;
-    const KERNEL_DATA_RO = 1 << 2;
-    const KERNEL_RWX = 1 << 3;
-    const KERNEL_DEVICE = 1 << 4;
+#[repr(usize)]
+#[derive(Debug, Copy, Clone)]
+pub enum MappingType {
+    None = 0,
+    Data = 1 << 0,
+    Text = 1 << 1,
+    RoData = 1 << 2,
+    Rwx = 1 << 3,
 
-    const USER_DATA = 1 << 5;
-    const USER_TEXT = 1 << 6;
-    const USER_DATA_RO = 1 << 7;
-    const USER_DEVICE = 1 << 8;
-    const NONE = 1 << 9;
-}
+    // TODO: add more granular params
+    Device = 1 << 4,
 }
 
-impl From<usize> for MappingType {
-    fn from(value: usize) -> Self {
-        Self::from_bits(value).unwrap()
-    }
-}
+impl TryFrom<usize> for MappingType {
+    type Error = ();
 
-impl From<MappingType> for usize {
-    fn from(value: MappingType) -> Self {
-        value.bits()
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        match value {
+            _ if value == Self::None as usize => Ok(Self::None),
+            _ if value == Self::Data as usize => Ok(Self::Data),
+            _ if value == Self::Text as usize => Ok(Self::Text),
+            _ if value == Self::RoData as usize => Ok(Self::RoData),
+            _ if value == Self::Rwx as usize => Ok(Self::Rwx),
+            _ if value == Self::Device as usize => Ok(Self::Device),
+            _ => Err(()),
+        }
     }
 }

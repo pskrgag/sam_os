@@ -40,6 +40,10 @@ impl SyscallArgs {
         self.args[n].into()
     }
 
+    pub fn try_arg<T: TryFrom<usize>>(&self, n: usize) -> Result<T, <T as TryFrom<usize>>::Error> {
+        self.args[n].try_into()
+    }
+
     pub fn args(&self) -> [usize; 7] {
         self.args
     }
@@ -89,9 +93,12 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 .find::<Vms>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
 
-            vms.vm_allocate(args.arg(1), args.arg(2))
-                .map(|x| x.bits())
-                .map_err(|_| ErrorType::NoMemory)
+            vms.vm_allocate(
+                args.arg(1),
+                args.try_arg(2).map_err(|_| ErrorType::InvalidArgument)?,
+            )
+            .map(|x| x.bits())
+            .map_err(|_| ErrorType::NoMemory)
         }
         SyscallList::VmFree => {
             let vms = table
@@ -111,10 +118,14 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             let vmo_args = match flags {
                 VmoFlags::BACKED => VmoCreateArgs::Backed(
                     UserPtr::new_array(args.arg::<usize>(1) as *const u8, args.arg(2)),
-                    args.arg(3),
+                    args.try_arg(3).map_err(|_| ErrorType::InvalidArgument)?,
                     args.arg(4),
                 ),
-                VmoFlags::ZEROED => VmoCreateArgs::Zeroed(args.arg(2), args.arg(3), args.arg(4)),
+                VmoFlags::ZEROED => VmoCreateArgs::Zeroed(
+                    args.arg(2),
+                    args.try_arg(3).map_err(|_| ErrorType::InvalidArgument)?,
+                    args.arg(4),
+                ),
                 _ => Err(ErrorType::InvalidArgument)?,
             };
 
