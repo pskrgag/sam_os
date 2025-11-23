@@ -10,12 +10,6 @@ use core::{
 pub struct PhysAddr(usize);
 
 impl PhysAddr {
-    // We need get() to be const in some cases.
-    // so we can't remove it
-    pub const fn get(&self) -> usize {
-        self.0
-    }
-
     pub const fn to_pfn(&self) -> usize {
         self.0 >> arch::PAGE_SHIFT
     }
@@ -368,7 +362,7 @@ impl Address for PhysAddr {
 #[cfg(feature = "kernel")]
 impl From<PhysAddr> for LinearAddr {
     fn from(addr: PhysAddr) -> Self {
-        Self(addr.get() + arch::PHYS_OFFSET)
+        Self(addr.0 + arch::PHYS_OFFSET)
     }
 }
 

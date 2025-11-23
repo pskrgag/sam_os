@@ -1,5 +1,5 @@
 #![no_std]
-///! Common HAL-related things that are shared between kernel user-space and bootloader
+//! Common HAL-related things that are shared between kernel user-space and bootloader
 
 // Page structure definition
 pub mod page;
@@ -9,3 +9,6 @@ pub mod arch;
 
 // Addresses
 pub mod address;
+
+// Uart
+pub mod uart;

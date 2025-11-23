@@ -209,7 +209,7 @@ impl PageTable {
         index: usize,
     ) -> Result<PageTableBlock, MmError> {
         let new_page = page_allocator().alloc(1).ok_or(MmError::NoMem)?;
-        let new_entry = PageTableEntry::from_bits(PageFlags::table().bits() | new_page.get());
+        let new_entry = PageTableEntry::from_bits(PageFlags::table().bits() | new_page.bits());
 
         unsafe { b.set_tte(index, new_entry) };
         Ok(PageTableBlock::new(

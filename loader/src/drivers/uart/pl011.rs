@@ -6,7 +6,7 @@ use linkme::distributed_slice;
 use loader_protocol::{DeviceKind, DeviceMapping, LoaderArg};
 use hal::arch::PAGE_SIZE;
 use rtl::locking::fakelock::FakeLock;
-use rtl::uart::{arm_uart::Uart, UartTrait};
+use hal::uart::{pl011::Uart, UartTrait};
 
 struct Pl031(Uart);
 

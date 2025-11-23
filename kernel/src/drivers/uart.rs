@@ -1,7 +1,6 @@
 use crate::kernel::locking::spinlock::Spinlock;
 use core::fmt;
-use rtl::uart::Uart as BackendUart;
-use rtl::uart::UartTrait;
+use hal::uart::{Uart as BackendUart, UartTrait};
 use hal::address::*;
 
 pub struct Uart;

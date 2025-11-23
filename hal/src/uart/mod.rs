@@ -1,9 +1,9 @@
-use hal::address::VirtAddr;
+use crate::address::VirtAddr;
 
 #[cfg(target_arch = "aarch64")]
-pub mod arm_uart;
+pub mod pl011;
 #[cfg(target_arch = "aarch64")]
-pub use arm_uart::*;
+pub use pl011::*;
 
 pub trait UartTrait {
     fn write_bytes(&mut self, bytes: &[u8]);

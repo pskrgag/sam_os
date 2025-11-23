@@ -10,9 +10,5 @@ pub mod ipc;
 pub mod locking;
 pub mod syscalls;
 pub mod vmm;
-
-pub mod uart;
-
 pub mod misc;
-
 pub mod objects;
