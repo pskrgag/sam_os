@@ -1,9 +1,9 @@
 use crate::{kernel::locking::spinlock::Spinlock, mm::allocators::page_alloc::page_allocator};
 
 use core::alloc::Layout;
+use hal::address::*;
 use rtl::vmm::alloc::BackendAllocator;
 use rtl::vmm::slab::SlabAllocator;
-use hal::address::*;
 
 const MIN_SLAB_SIZE: usize = 8;
 
@@ -28,13 +28,15 @@ unsafe impl Sync for PMMBackend {}
 impl BackendAllocator for PMMBackend {
     fn allocate(&self, num_pages: usize) -> Option<*mut u8> {
         let pa = page_allocator().alloc(num_pages)?;
-        let va = VirtAddr::from(pa);
+        let linear = LinearAddr::from(pa);
+        let va: VirtAddr = linear.into();
 
         Some(va.to_raw_mut::<u8>())
     }
 
     fn free(&self, p: *const u8, num_pages: usize) {
-        let pa: PhysAddr = PhysAddr::from(VirtAddr::from_raw(p));
+        let pa: PhysAddr = PhysAddr::from(LinearAddr::from(p as usize));
+
         page_allocator().free(pa, num_pages);
     }
 }

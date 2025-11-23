@@ -1,13 +1,13 @@
 use crate::mm::allocators::page_alloc::page_allocator;
 use alloc::vec::Vec;
 use elf::{
-    ElfBytes,
     abi::{PF_R, PF_W, PF_X, PT_LOAD},
     endian::LittleEndian,
+    ElfBytes,
 };
+use hal::address::*;
 use hal::arch::PAGE_SIZE;
 use rtl::vmm::MappingType;
-use hal::address::*;
 
 #[derive(Debug)]
 pub struct Segment {
@@ -55,8 +55,10 @@ pub fn parse_initial_task(prot: &loader_protocol::LoaderArg) -> Option<ElfData> 
             );
 
             if seg.p_memsz != 0 {
-                let mut start = VirtAddr::from(new_pages.start());
-                let start = unsafe { start.as_slice_mut::<u8>(virt_range.size()) };
+                let start = LinearAddr::from(new_pages.start());
+                let mut va: VirtAddr = start.into();
+
+                let start = unsafe { va.as_slice_mut::<u8>(virt_range.size()) };
                 let elf_range =
                     seg.p_offset as usize..seg.p_offset as usize + seg.p_filesz as usize;
                 let slice_range = (seg.p_vaddr as usize).page_offset()

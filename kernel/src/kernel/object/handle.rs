@@ -2,7 +2,6 @@ use super::capabilities::CapabilityMask;
 use crate::kernel::object::KernelObject;
 use alloc::sync::Arc;
 use core::any::TypeId;
-use rtl::handle::HandleBase;
 
 #[derive(Clone)]
 pub struct Handle {
@@ -39,6 +38,7 @@ impl Handle {
         }
     }
 
+    #[allow(dead_code)]
     pub fn obj_poly(&self) -> Option<Arc<dyn KernelObject>> {
         if let Some(o) = &self.obj {
             Some(o.clone())

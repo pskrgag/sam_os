@@ -24,7 +24,7 @@ pub struct PageFlags {
 }
 
 pub struct PageTableBlock {
-    addr: VirtAddr,
+    addr: LinearAddr,
     lvl: u8,
 }
 
@@ -32,17 +32,17 @@ pub struct PageTableBlock {
 pub struct PageTableEntry(usize);
 
 pub struct PageTable {
-    base: VirtAddr,
+    base: LinearAddr,
     is_user: bool,
 }
 
 impl PageTableBlock {
-    pub fn new(addr: VirtAddr, lvl: u8) -> Self {
+    pub fn new(addr: LinearAddr, lvl: u8) -> Self {
         Self { addr, lvl }
     }
 
     #[cfg(test)]
-    pub fn addr(&self) -> VirtAddr {
+    pub fn addr(&self) -> LinearAddr {
         self.addr
     }
 
@@ -58,18 +58,17 @@ impl PageTableBlock {
     pub fn is_valid_tte(&self, index: usize) -> bool {
         assert!(index < 512);
 
-        PageTableEntry::from_bits(unsafe {
-            self.addr.to_raw_mut::<usize>().add(index).read_volatile()
-        })
-        .valid()
+        let va: VirtAddr = self.addr.into();
+        PageTableEntry::from_bits(unsafe { va.to_raw_mut::<usize>().add(index).read_volatile() })
+            .valid()
     }
 
     pub unsafe fn set_tte(&mut self, index: usize, entry: PageTableEntry) {
         assert!(index < 512);
 
+        let va: VirtAddr = self.addr.into();
         unsafe {
-            self.addr
-                .to_raw_mut::<usize>()
+            va.to_raw_mut::<usize>()
                 .add(index)
                 .write_volatile(entry.bits());
 
@@ -80,9 +79,8 @@ impl PageTableBlock {
     pub fn get_tte(&mut self, index: usize) -> PageTableEntry {
         assert!(index < 512);
 
-        unsafe {
-            PageTableEntry::from_bits(self.addr.to_raw_mut::<usize>().add(index).read_volatile())
-        }
+        let va: VirtAddr = self.addr.into();
+        unsafe { PageTableEntry::from_bits(va.to_raw_mut::<usize>().add(index).read_volatile()) }
     }
 
     pub fn index_of(&self, addr: VirtAddr) -> usize {
@@ -99,12 +97,13 @@ impl PageTableBlock {
         if self.is_last() {
             None
         } else {
+            let va: VirtAddr = self.addr.into();
             let entry_next = unsafe {
-                PageTableEntry::from_bits(self.addr.to_raw::<usize>().add(index).read_volatile())
+                PageTableEntry::from_bits(va.to_raw::<usize>().add(index).read_volatile())
             };
 
             if entry_next.valid() {
-                Some(Self::new(VirtAddr::from(entry_next.addr()), self.lvl + 1))
+                Some(Self::new(LinearAddr::from(entry_next.addr()), self.lvl + 1))
             } else {
                 None
             }
@@ -135,16 +134,9 @@ impl PageFlags {
 }
 
 impl PageTable {
-    pub const fn invalid() -> Self {
-        Self {
-            base: VirtAddr::new(0_usize),
-            is_user: false,
-        }
-    }
-
     pub unsafe fn from(base: PhysAddr) -> Self {
         Self {
-            base: VirtAddr::from(base),
+            base: LinearAddr::from(base),
             is_user: false,
         }
     }
@@ -178,7 +170,7 @@ impl PageTable {
     pub fn new() -> Option<Self> {
         let base: PhysAddr = page_allocator().alloc(1)?;
         let new_table = Self {
-            base: VirtAddr::from(base),
+            base: LinearAddr::from(base),
             is_user: true,
         };
 
@@ -220,7 +212,10 @@ impl PageTable {
         let new_entry = PageTableEntry::from_bits(PageFlags::table().bits() | new_page.get());
 
         unsafe { b.set_tte(index, new_entry) };
-        Ok(PageTableBlock::new(VirtAddr::from(new_page), lvl as u8 + 1))
+        Ok(PageTableBlock::new(
+            LinearAddr::from(new_page),
+            lvl as u8 + 1,
+        ))
     }
 
     fn abort_walk(
@@ -312,47 +307,42 @@ impl PageTable {
 
     fn map_internal(
         &mut self,
-        p: Option<MemRange<PhysAddr>>,
+        mut p: MemRange<PhysAddr>,
         mut v: MemRange<VirtAddr>,
         m_type: MappingType,
         hp: bool,
     ) -> Result<VirtAddr, MmError> {
-        let mut p_range = if let Some(pr) = p {
-            pr
-        } else {
-            MemRange::new(PhysAddr::from(v.start()), v.size())
-        };
-
         Self::op_lvl(
             self.lvl0(),
             0,
             &mut v,
-            &mut p_range,
+            &mut p,
             m_type,
             Self::set_leaf_tte,
             Self::allocate_new_block,
             hp,
-            self.is_user
+            self.is_user,
         )
-    }
-
-    #[allow(dead_code)]
-    pub fn map_hugepages(
-        &mut self,
-        p: Option<MemRange<PhysAddr>>,
-        v: MemRange<VirtAddr>,
-        m_type: MappingType,
-    ) -> Result<VirtAddr, MmError> {
-        self.map_internal(p, v, m_type, true)
     }
 
     pub fn map(
         &mut self,
-        p: Option<MemRange<PhysAddr>>,
+        p: MemRange<PhysAddr>,
         v: MemRange<VirtAddr>,
         m_type: MappingType,
     ) -> Result<VirtAddr, MmError> {
         self.map_internal(p, v, m_type, false)
+    }
+
+    pub fn map_linear(
+        &mut self,
+        p: MemRange<PhysAddr>,
+        m_type: MappingType,
+    ) -> Result<VirtAddr, MmError> {
+        let v_range: MemRange<LinearAddr> = MemRange::new(p.start().into(), p.size());
+        let va_range: MemRange<VirtAddr> = MemRange::new(v_range.start().into(), v_range.size());
+
+        self.map_internal(p, va_range, m_type, false)
     }
 
     pub fn free<F: Fn(PhysAddr, bool)>(
@@ -380,7 +370,7 @@ impl PageTable {
             },
             Self::abort_walk,
             true,
-            self.is_user
+            self.is_user,
         )
         .map(|_| ())
     }

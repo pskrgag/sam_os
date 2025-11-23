@@ -9,13 +9,119 @@ use core::{
 #[repr(transparent)]
 pub struct PhysAddr(usize);
 
+impl PhysAddr {
+    // We need get() to be const in some cases.
+    // so we can't remove it
+    pub const fn get(&self) -> usize {
+        self.0
+    }
+
+    pub const fn to_pfn(&self) -> usize {
+        self.0 >> arch::PAGE_SHIFT
+    }
+
+    pub const fn new(addr: usize) -> Self {
+        Self(addr)
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug, Default)]
 #[repr(transparent)]
 pub struct VirtAddr(usize);
 
+impl VirtAddr {
+    pub const fn new(ptr: usize) -> Self {
+        Self(ptr)
+    }
+
+    pub fn from_raw<T>(ptr: *const T) -> Self {
+        Self(ptr as usize)
+    }
+
+    pub fn to_raw<T>(&self) -> *const T {
+        self.0 as *const T
+    }
+
+    pub fn to_raw_mut<T>(&self) -> *mut T {
+        self.0 as *mut T
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.0 == 0
+    }
+
+    /// # Safety
+    ///
+    /// Caller should be sure that pointer points to [`[count; T]`]
+    pub unsafe fn as_slice_mut<T>(&mut self, count: usize) -> &mut [T] {
+        unsafe { core::slice::from_raw_parts_mut(self.0 as *mut T, count) }
+    }
+
+    /// # Safety
+    ///
+    /// Caller should be sure that pointer points to [`[count; T]`]
+    pub unsafe fn as_slice_at_offset_mut<T>(&mut self, count: usize, offset: usize) -> &mut [T] {
+        unsafe { core::slice::from_raw_parts_mut((self.0 + offset) as *mut T, count) }
+    }
+}
+
+impl<T> From<*const T> for VirtAddr {
+    fn from(addr: *const T) -> Self {
+        Self(addr as usize)
+    }
+}
+
+impl<T> From<*mut T> for VirtAddr {
+    fn from(addr: *mut T) -> Self {
+        Self(addr as usize)
+    }
+}
+
+#[cfg(feature = "kernel")]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug, Default)]
+#[repr(transparent)]
+pub struct LinearAddr(usize);
+
+#[cfg(feature = "kernel")]
+impl Into<VirtAddr> for LinearAddr {
+    fn into(self: LinearAddr) -> VirtAddr {
+        VirtAddr(self.0)
+    }
+}
+
+#[cfg(feature = "kernel")]
+impl From<usize> for LinearAddr {
+    fn from(val: usize) -> Self {
+        LinearAddr(val)
+    }
+}
+
+#[cfg(feature = "kernel")]
+impl Address for LinearAddr {
+    #[inline]
+    fn bits(&self) -> usize {
+        self.0
+    }
+
+    #[inline]
+    fn set_bits(&mut self, bits: usize) {
+        self.0 = bits;
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug)]
 #[repr(transparent)]
 pub struct Pfn(usize);
+
+impl Pfn {
+    pub const fn get(&self) -> usize {
+        self.0
+    }
+
+    pub const fn new(pfn: usize) -> Self {
+        Self(pfn)
+    }
+}
 
 #[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
 pub struct MemRange<T: Address + core::fmt::Debug> {
@@ -224,68 +330,6 @@ impl Add<usize> for VirtAddr {
     }
 }
 
-impl PhysAddr {
-    // We need get() to be const in some cases.
-    // so we can't remove it
-    pub const fn get(&self) -> usize {
-        self.0
-    }
-
-    pub const fn to_pfn(&self) -> usize {
-        self.0 >> arch::PAGE_SHIFT
-    }
-
-    pub const fn new(addr: usize) -> Self {
-        Self(addr)
-    }
-}
-
-impl Pfn {
-    pub const fn get(&self) -> usize {
-        self.0
-    }
-
-    pub const fn new(pfn: usize) -> Self {
-        Self(pfn)
-    }
-}
-
-impl VirtAddr {
-    pub const fn new(ptr: usize) -> Self {
-        Self(ptr)
-    }
-
-    pub fn from_raw<T>(ptr: *const T) -> Self {
-        Self(ptr as usize)
-    }
-
-    pub fn to_raw<T>(&self) -> *const T {
-        self.0 as *const T
-    }
-
-    pub fn to_raw_mut<T>(&self) -> *mut T {
-        self.0 as *mut T
-    }
-
-    pub fn is_null(&self) -> bool {
-        self.0 == 0
-    }
-
-    /// # Safety
-    ///
-    /// Caller should be sure that pointer points to [`[count; T]`]
-    pub unsafe fn as_slice_mut<T>(&mut self, count: usize) -> &mut [T] {
-        unsafe { core::slice::from_raw_parts_mut(self.0 as *mut T, count) }
-    }
-
-    /// # Safety
-    ///
-    /// Caller should be sure that pointer points to [`[count; T]`]
-    pub unsafe fn as_slice_at_offset_mut<T>(&mut self, count: usize, offset: usize) -> &mut [T] {
-        unsafe { core::slice::from_raw_parts_mut((self.0 + offset) as *mut T, count) }
-    }
-}
-
 impl Address for VirtAddr {
     #[inline]
     fn bits(&self) -> usize {
@@ -321,28 +365,16 @@ impl Address for PhysAddr {
     }
 }
 
-impl<T> From<*const T> for VirtAddr {
-    fn from(addr: *const T) -> Self {
-        Self(addr as usize)
-    }
-}
-
-impl<T> From<*mut T> for VirtAddr {
-    fn from(addr: *mut T) -> Self {
-        Self(addr as usize)
-    }
-}
-
 #[cfg(feature = "kernel")]
-impl From<PhysAddr> for VirtAddr {
+impl From<PhysAddr> for LinearAddr {
     fn from(addr: PhysAddr) -> Self {
         Self(addr.get() + arch::PHYS_OFFSET)
     }
 }
 
 #[cfg(feature = "kernel")]
-impl From<VirtAddr> for PhysAddr {
-    fn from(addr: VirtAddr) -> Self {
+impl From<LinearAddr> for PhysAddr {
+    fn from(addr: LinearAddr) -> Self {
         Self(addr.bits() - arch::PHYS_OFFSET)
     }
 }
@@ -353,17 +385,17 @@ impl fmt::Display for VirtAddr {
     }
 }
 
-impl fmt::Display for PhysAddr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
 impl fmt::LowerHex for VirtAddr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let val = self.0;
 
         fmt::LowerHex::fmt(&val, f)
+    }
+}
+
+impl fmt::Display for PhysAddr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 

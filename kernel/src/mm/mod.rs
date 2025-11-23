@@ -1,6 +1,6 @@
-use loader_protocol::LoaderArg;
+use hal::address::{LinearAddr, PhysAddr, VirtAddr};
 use hal::arch::PAGE_SIZE;
-use hal::address::{PhysAddr, VirtAddr};
+use loader_protocol::LoaderArg;
 
 pub mod allocators;
 pub mod layout;
@@ -10,7 +10,8 @@ pub mod vma_list;
 pub mod vms;
 
 pub unsafe fn memset_pages(pa: PhysAddr, num: usize) {
-    let mut va = VirtAddr::from(pa);
+    let linear = LinearAddr::from(pa);
+    let mut va: VirtAddr = linear.into();
 
     unsafe { va.as_slice_mut::<u8>(num * PAGE_SIZE).fill(0x00) };
 }

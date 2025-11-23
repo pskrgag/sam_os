@@ -2,15 +2,13 @@ use crate::{
     arch::cpuid::current_cpu,
     mm::{
         allocators::page_alloc::page_allocator, layout::vmm_range,
-        paging::kernel_page_table::kernel_page_table,
     },
 };
 use core::sync::atomic::{AtomicBool, Ordering};
 
+use hal::address::*;
 use hal::arch::PAGE_SIZE;
 use rtl::linker_var;
-use hal::address::*;
-use rtl::vmm::MappingType;
 use spin::Once;
 
 // TODO: W/A. it should be read from dtb
@@ -21,7 +19,7 @@ unsafe extern "C" {
     static edatapercpu: usize;
 }
 
-static PER_CPU_BASE: Once<VirtAddr> = Once::new();
+static PER_CPU_BASE: Once<LinearAddr> = Once::new();
 static PER_CPU_SIZE: Once<usize> = Once::new();
 
 // Fake struct to disallow direct usage
@@ -154,32 +152,24 @@ pub fn init_percpu() -> Option<()> {
         .alloc(pages)
         .expect("Failed to allocate memory for per-cpu");
 
-    PER_CPU_BASE.call_once(|| VirtAddr::from(pa));
+    PER_CPU_BASE.call_once(|| LinearAddr::from(pa));
     PER_CPU_SIZE.call_once(|| per_cpu_size);
 
     println!("Per cpu size {}", per_cpu_size);
-    let mut range = vmm_range(loader_protocol::VmmLayoutKind::PerCpu);
-
+    let range = vmm_range(loader_protocol::VmmLayoutKind::PerCpu);
     debug_assert!(range.size() >= per_cpu_size);
-    range.size = per_cpu_size;
 
-    kernel_page_table()
-        .map(
-            None,
-            range,
-            MappingType::Data,
-        )
-        .ok()?;
 
     for i in 0..NUM_CPUS {
         let p = pa + (per_cpu_size * i).into();
 
         unsafe {
-            core::slice::from_raw_parts_mut(VirtAddr::from(p).to_raw_mut::<u8>(), per_cpu_size)
-                .copy_from_slice(core::slice::from_raw_parts(
-                    linker_var!(sdatapercpu) as *const u8,
-                    per_cpu_size,
-                ));
+            let linear = LinearAddr::from(p);
+            let va: VirtAddr = linear.into();
+
+            core::slice::from_raw_parts_mut(va.to_raw_mut::<u8>(), per_cpu_size).copy_from_slice(
+                core::slice::from_raw_parts(linker_var!(sdatapercpu) as *const u8, per_cpu_size),
+            );
         }
     }
 

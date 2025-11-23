@@ -4,9 +4,9 @@ use crate::mm::{
     paging::page_table::{MmError, PageTable},
     vma_list::VmaList,
 };
+use hal::address::*;
 use hal::arch::*;
 use rtl::error::ErrorType;
-use hal::address::*;
 use rtl::vmm::MappingType;
 
 pub struct VmsInner {
@@ -46,7 +46,7 @@ impl VmsInner {
         self.ttbr0
             .as_mut()
             .unwrap()
-            .map(Some(p), MemRange::new(va, v.size()), tp)?;
+            .map(p, MemRange::new(va, v.size()), tp)?;
 
         Ok(va)
     }
@@ -70,7 +70,7 @@ impl VmsInner {
                 .as_mut()
                 .unwrap_or(&mut kernel_page_table())
                 .map(
-                    Some(MemRange::new(p, PAGE_SIZE)),
+                    MemRange::new(p, PAGE_SIZE),
                     MemRange::new(new_va, PAGE_SIZE),
                     tp,
                 )?;

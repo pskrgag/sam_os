@@ -26,7 +26,8 @@ impl VmObjectInner {
             ((load_addr.bits() + b.len()) >> PAGE_SHIFT) - (load_addr.bits() >> PAGE_SHIFT) + 1;
 
         let p: PhysAddr = page_allocator().alloc(pages)?;
-        let mut va = VirtAddr::from(p);
+        let linear = LinearAddr::from(p);
+        let mut va: VirtAddr = linear.into();
 
         let range = unsafe { va.as_slice_at_offset_mut::<u8>(b.len(), load_addr.page_offset()) };
 
