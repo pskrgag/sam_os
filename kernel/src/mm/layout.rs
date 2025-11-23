@@ -1,5 +1,5 @@
 use heapless::Vec;
-use rtl::vmm::types::{MemRange, VirtAddr};
+use hal::address::*;
 use spin::Once;
 
 use loader_protocol::{LoaderArg, MAX_VMM_REGIONS, VmmLayoutEntry, VmmLayoutKind};

@@ -4,7 +4,7 @@ use crate::kernel::sched;
 use crate::kernel::syscalls::do_syscall;
 use core::arch::{asm, global_asm};
 use rtl::linker_var;
-use rtl::vmm::types::*;
+use hal::address::*;
 
 global_asm!(include_str!("interrupts.S"));
 

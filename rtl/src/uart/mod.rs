@@ -1,4 +1,4 @@
-use crate::vmm::types::VirtAddr;
+use hal::address::VirtAddr;
 
 #[cfg(target_arch = "aarch64")]
 pub mod arm_uart;

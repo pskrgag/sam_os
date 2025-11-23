@@ -3,8 +3,8 @@ use crate::mm::allocators::page_alloc::page_allocator;
 use crate::mm::user_buffer::UserPtr;
 use alloc::sync::Arc;
 use object_lib::object;
-use rtl::arch::{PAGE_SHIFT, PAGE_SIZE};
-use rtl::vmm::types::*;
+use hal::arch::{PAGE_SHIFT, PAGE_SIZE};
+use hal::address::*;
 use rtl::vmm::MappingType;
 
 #[derive(Debug)]

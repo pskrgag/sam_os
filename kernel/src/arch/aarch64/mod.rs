@@ -9,7 +9,7 @@ pub mod timer;
 
 use core::arch::global_asm;
 use core::mem;
-use rtl::arch::PAGE_SIZE;
+use hal::arch::PAGE_SIZE;
 
 pub const PTE_PER_PAGE: usize = PAGE_SIZE / mem::size_of::<usize>();
 

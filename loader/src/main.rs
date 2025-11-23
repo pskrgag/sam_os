@@ -5,7 +5,7 @@
 use core::panic::PanicInfo;
 use fdt::Fdt;
 use loader_protocol::LoaderArg;
-use rtl::vmm::types::{Address, PhysAddr};
+use hal::address::{Address, PhysAddr};
 
 mod arch;
 #[macro_use]
@@ -23,10 +23,9 @@ extern "C" fn main(fdt_base: PhysAddr) {
     drivers::uart::probe(&fdt);
 
     let mut tt = mm::init(&fdt);
-
-    mm::layout::init_layout(&mut protocol);
     kernel::map_kernel(&mut tt);
 
+    mm::layout::init_layout(&mut protocol);
     mm::linear_map::map_linear(&mut tt, &protocol);
 
     drivers::map(&fdt, &mut protocol);
@@ -40,5 +39,8 @@ extern "C" fn main(fdt_base: PhysAddr) {
 #[panic_handler]
 fn on_panic(info: &PanicInfo) -> ! {
     println!("panic! {}", info.message());
-    loop {}
+
+    loop {
+        unsafe { core::arch::asm!("wfi"); }
+    }
 }

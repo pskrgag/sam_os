@@ -16,7 +16,7 @@ use crate::{
 use alloc::string::String;
 use alloc::string::ToString;
 use rtl::handle::{HandleBase, HANDLE_INVALID};
-use rtl::vmm::types::Address;
+use hal::address::*;
 use rtl::{error::ErrorType, ipc::IpcMessage, syscalls::SyscallList};
 
 pub struct SyscallArgs {
@@ -127,7 +127,6 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                     args.try_arg(3).map_err(|_| ErrorType::InvalidArgument)?,
                     args.arg(4),
                 ),
-                _ => Err(ErrorType::InvalidArgument)?,
             };
 
             Ok(table.add(vms.create_vmo(vmo_args)?))

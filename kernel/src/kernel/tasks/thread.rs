@@ -1,5 +1,5 @@
 use crate::arch::regs::Context;
-use rtl::vmm::types::*;
+use hal::address::*;
 
 unsafe extern "C" {
     // fn kernel_thread_entry_point();

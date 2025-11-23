@@ -4,9 +4,10 @@ use crate::mm::{
     paging::page_table::{MmError, PageTable},
     vma_list::VmaList,
 };
-use rtl::arch::*;
+use hal::arch::*;
 use rtl::error::ErrorType;
-use rtl::vmm::{types::*, MappingType};
+use hal::address::*;
+use rtl::vmm::MappingType;
 
 pub struct VmsInner {
     ttbr0: Option<PageTable>,

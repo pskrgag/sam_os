@@ -1,14 +1,8 @@
-use crate::arch::*;
 use core::{
     fmt::Debug,
     mem::size_of,
     ops::{Add, BitAnd, Not, Shl, Shr, Sub},
 };
-
-#[inline]
-pub fn num_pages(size: usize) -> usize {
-    size.next_multiple_of(PAGE_SIZE) >> PAGE_SHIFT
-}
 
 #[inline]
 pub fn genmask<T>(h: T, l: T) -> T

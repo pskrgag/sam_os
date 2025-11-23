@@ -8,7 +8,8 @@ use crate::mm::vms::VmsInner;
 use alloc::sync::Arc;
 use object_lib::object;
 use rtl::error::ErrorType;
-use rtl::vmm::{types::*, MappingType};
+use rtl::vmm::MappingType;
+use hal::address::{VirtAddr, Address, MemRange, PhysAddr};
 
 #[derive(object)]
 pub struct Vms {

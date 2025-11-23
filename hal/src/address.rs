@@ -1,4 +1,4 @@
-use crate::arch;
+use super::arch;
 use core::ops::Add;
 use core::{
     fmt::{self, Debug},
@@ -275,14 +275,14 @@ impl VirtAddr {
     ///
     /// Caller should be sure that pointer points to [`[count; T]`]
     pub unsafe fn as_slice_mut<T>(&mut self, count: usize) -> &mut [T] {
-        core::slice::from_raw_parts_mut(self.0 as *mut T, count)
+        unsafe { core::slice::from_raw_parts_mut(self.0 as *mut T, count) }
     }
 
     /// # Safety
     ///
     /// Caller should be sure that pointer points to [`[count; T]`]
     pub unsafe fn as_slice_at_offset_mut<T>(&mut self, count: usize, offset: usize) -> &mut [T] {
-        core::slice::from_raw_parts_mut((self.0 + offset) as *mut T, count)
+        unsafe { core::slice::from_raw_parts_mut((self.0 + offset) as *mut T, count) }
     }
 }
 

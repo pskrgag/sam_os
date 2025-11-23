@@ -7,8 +7,8 @@ use alloc::sync::Arc;
 use alloc::sync::Weak;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use object_lib::object;
-use rtl::arch::PAGE_SIZE;
-use rtl::vmm::types::*;
+use hal::arch::PAGE_SIZE;
+use hal::address::*;
 use rtl::vmm::MappingType;
 
 const USER_THREAD_STACK_PAGES: usize = 50;

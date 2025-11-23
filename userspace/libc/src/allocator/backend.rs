@@ -1,5 +1,5 @@
 use crate::vmm::vms::vms;
-use rtl::arch::PAGE_SIZE;
+use hal::arch::PAGE_SIZE;
 use rtl::vmm::alloc::BackendAllocator;
 use rtl::vmm::MappingType;
 

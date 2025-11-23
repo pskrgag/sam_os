@@ -1,5 +1,5 @@
 use crate::mm::page_table::{PageKind, PagePerms};
-use rtl::vmm::types::{Address, PhysAddr, VirtAddr};
+use hal::address::{Address, PhysAddr, VirtAddr};
 
 pub const PTE_COUNT: usize = 512;
 pub const PAGE_TABLE_LAST_LVL: usize = 3;

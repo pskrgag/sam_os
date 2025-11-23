@@ -1,5 +1,5 @@
 use crate::arch::mm::mmu_flags::*;
-use rtl::vmm::types::*;
+use hal::address::*;
 use rtl::vmm::*;
 
 const KERNEL_DATA: usize = BLOCK_KERNEL_RW | BLOCK_NORMAL_MEM;

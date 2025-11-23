@@ -1,7 +1,7 @@
 /// Virtual layout for the kernel
 use loader_protocol::{LoaderArg, VmmLayoutEntry, VmmLayoutKind};
 
-static KERNEL_LAYOUT: [VmmLayoutEntry; VmmLayoutKind::Count as usize] = [
+pub static KERNEL_LAYOUT: [VmmLayoutEntry; VmmLayoutKind::Count as usize] = [
     VmmLayoutEntry {
         base: 0xFFFF700000000000,
         size: 0x100000000000,
@@ -36,6 +36,11 @@ static KERNEL_LAYOUT: [VmmLayoutEntry; VmmLayoutKind::Count as usize] = [
         base: 0xFFFFE00000000000,
         size: 0x100000000000,
         kind: VmmLayoutKind::PageAllocator,
+    },
+    VmmLayoutEntry {
+        base: 0xFFFFF00000000000,
+        size: 0x100000000000,
+        kind: VmmLayoutKind::PageArray,
     },
     VmmLayoutEntry {
         base: 0x10000,

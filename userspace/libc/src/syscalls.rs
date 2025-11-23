@@ -5,15 +5,13 @@ use crate::syscalls_aarch64::*;
 use crate::syscalls_x86_64::*;
 
 use super::handle::Handle;
+use hal::address::{PhysAddr, VirtAddr};
 use rtl::error::ErrorType;
 use rtl::handle::Handle as RawHandle;
 use rtl::ipc::IpcMessage;
 use rtl::objects::vmo::VmoFlags;
 use rtl::syscalls::SyscallList;
-use rtl::vmm::{
-    types::{PhysAddr, VirtAddr},
-    MappingType,
-};
+use rtl::vmm::MappingType;
 
 pub enum VmoCreateArgs {
     Backed(*const u8, usize, MappingType, VirtAddr),

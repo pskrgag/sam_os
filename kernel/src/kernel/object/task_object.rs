@@ -10,7 +10,7 @@ use crate::kernel::tasks::task::TaskInner;
 use rtl::error::ErrorType;
 use rtl::handle::HandleBase;
 use rtl::handle::HANDLE_INVALID;
-use rtl::vmm::types::VirtAddr;
+use hal::address::VirtAddr;
 
 use alloc::string::String;
 use alloc::sync::Arc;

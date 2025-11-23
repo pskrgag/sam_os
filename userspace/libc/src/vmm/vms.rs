@@ -2,7 +2,7 @@ use crate::handle::Handle;
 use crate::syscalls::{Syscall, VmoCreateArgs};
 use crate::vmm::vm_object::VmObject;
 use rtl::error::ErrorType;
-use rtl::vmm::types::*;
+use hal::address::*;
 use rtl::vmm::MappingType;
 
 pub static mut SELF_VMS: Option<Vms> = None;

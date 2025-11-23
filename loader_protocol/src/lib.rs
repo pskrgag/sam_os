@@ -1,7 +1,7 @@
 #![no_std]
 
 use heapless::Vec;
-use rtl::vmm::types::{MemRange, PhysAddr, VirtAddr};
+use hal::address::{MemRange, PhysAddr, VirtAddr};
 
 pub const MAX_DEVICES: usize = 10;
 pub const MAX_VMM_REGIONS: usize = 10;
@@ -24,6 +24,7 @@ pub enum VmmLayoutKind {
     VmAlloc,
     PerCpu,
     PageAllocator,
+    PageArray,
     User,
     Count,
 }

@@ -1,4 +1,4 @@
-use rtl::vmm::types::*;
+use hal::address::*;
 
 #[repr(C)]
 #[derive(Debug)]

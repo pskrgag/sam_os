@@ -3,7 +3,7 @@ use crate::{kernel::locking::spinlock::Spinlock, mm::allocators::page_alloc::pag
 use core::alloc::Layout;
 use rtl::vmm::alloc::BackendAllocator;
 use rtl::vmm::slab::SlabAllocator;
-use rtl::vmm::types::*;
+use hal::address::*;
 
 const MIN_SLAB_SIZE: usize = 8;
 

@@ -4,7 +4,6 @@
 
 extern crate static_assertions;
 
-pub mod arch;
 pub mod error;
 pub mod handle;
 pub mod ipc;

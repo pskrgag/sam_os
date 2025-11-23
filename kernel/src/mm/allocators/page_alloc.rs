@@ -3,8 +3,8 @@ use crate::mm::memset_pages;
 use alloc::vec::Vec;
 use bitmaps::Bitmap;
 use loader_protocol::{LoaderArg, MAX_PMM_REGIONS};
-use rtl::arch::PAGE_SIZE;
-use rtl::vmm::types::*;
+use hal::arch::PAGE_SIZE;
+use hal::address::*;
 
 #[derive(Debug)]
 pub struct Region {

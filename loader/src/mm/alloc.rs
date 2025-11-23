@@ -1,6 +1,6 @@
 use super::regions::regions;
-use rtl::arch::PAGE_SIZE;
-use rtl::vmm::types::{Address, PhysAddr};
+use hal::arch::PAGE_SIZE;
+use hal::address::{Address, PhysAddr};
 
 pub fn alloc_pages(count: usize) -> Option<PhysAddr> {
     for reg in regions() {

@@ -1,5 +1,5 @@
 use crate::arch::PTE_PER_PAGE;
-use rtl::vmm::types::*;
+use hal::address::*;
 
 #[inline]
 pub fn l0_linear_offset(va: VirtAddr) -> usize {

@@ -10,6 +10,7 @@ bitmaps = {version = "3.2.0", default-features = false}
 spin = {version = "0.9.4", default-features = false, features = ["once", "lazy"] }
 object_lib = { path = "src/kernel/object/object_lib" }
 rtl = { path = "../rtl", features = ["kernel"] }
+hal = { path = "../hal", features = ["kernel"] }
 static_assertions = "1.1.0"
 loader_protocol = { path = "../loader_protocol" }
 heapless = "0.9.1"

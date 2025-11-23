@@ -3,7 +3,7 @@ use crate::{
     arch::{self, mm::mmu_flags},
     mm::allocators::page_alloc::page_allocator,
 };
-use rtl::vmm::types::*;
+use hal::address::*;
 use rtl::vmm::MappingType;
 
 #[derive(Debug)]

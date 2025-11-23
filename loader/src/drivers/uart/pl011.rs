@@ -4,7 +4,7 @@ use core::ops::DerefMut;
 use fdt::node::FdtNode;
 use linkme::distributed_slice;
 use loader_protocol::{DeviceKind, DeviceMapping, LoaderArg};
-use rtl::arch::PAGE_SIZE;
+use hal::arch::PAGE_SIZE;
 use rtl::locking::fakelock::FakeLock;
 use rtl::uart::{arm_uart::Uart, UartTrait};
 

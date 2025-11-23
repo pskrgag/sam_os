@@ -10,6 +10,7 @@ fdt = { version = "0.1.5", features = ["pretty-printing"] }
 heapless = { version = "0.9.1", features = ["serde"] }
 linkme = { version = "0.3.33", features = ["used_linker"] }
 rtl = { path = "../rtl" }
+hal = { path = "../hal" }
 loader_protocol = { path = "../loader_protocol" }
 
 [[bin]]

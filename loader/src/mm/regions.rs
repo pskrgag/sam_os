@@ -1,10 +1,10 @@
 use core::ops::DerefMut;
 use fdt::Fdt;
 use heapless::Vec;
-use rtl::arch::{PAGE_SHIFT, PAGE_SIZE};
+use hal::arch::{PAGE_SHIFT, PAGE_SIZE};
 use rtl::linker_var;
 use rtl::locking::fakelock::FakeLock;
-use rtl::vmm::types::{Address, PhysAddr};
+use hal::address::{Address, PhysAddr};
 
 unsafe extern "C" {
     static __start: usize;

@@ -268,6 +268,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "784a4df722dc6267a04af36895398f59d21d07dce47232adf31ec0ff2fa45e67"
 
 [[package]]
+name = "hal"
+version = "0.1.0"
+
+[[package]]
 name = "hash32"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -361,6 +365,7 @@ name = "libc"
 version = "0.1.0"
 dependencies = [
  "elf 0.7.4",
+ "hal",
  "rtl",
  "rustrt",
  "spin",
@@ -399,6 +404,7 @@ dependencies = [
  "aarch64-cpu",
  "elf 0.8.0",
  "fdt",
+ "hal",
  "heapless 0.9.1",
  "linkme",
  "loader_protocol",
@@ -409,8 +415,8 @@ dependencies = [
 name = "loader_protocol"
 version = "0.1.0"
 dependencies = [
+ "hal",
  "heapless 0.9.1",
- "rtl",
 ]
 
 [[package]]
@@ -558,6 +564,7 @@ name = "rtl"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "hal",
  "static_assertions",
 ]
 
@@ -601,6 +608,7 @@ dependencies = [
  "bitmaps",
  "bitmask",
  "elf 0.8.0",
+ "hal",
  "heapless 0.9.1",
  "loader_protocol",
  "object_lib",
@@ -852,6 +860,7 @@ name = "uart"
 version = "0.1.0"
 dependencies = [
  "cpio_reader",
+ "hal",
  "libc 0.1.0",
  "postcard",
  "ridl",

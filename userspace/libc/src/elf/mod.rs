@@ -2,7 +2,7 @@ use elf::abi::PT_LOAD;
 use elf::endian::LittleEndian;
 use elf::segment::ProgramHeader;
 use elf::ElfBytes;
-use rtl::vmm::types::VirtAddr;
+use hal::address::VirtAddr;
 use rtl::vmm::MappingType;
 
 // const PF_R: u32 = 0x4;

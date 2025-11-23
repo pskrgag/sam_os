@@ -4,8 +4,8 @@ use crate::mm::{
     regions::regions,
 };
 use loader_protocol::{LoaderArg, VmmLayoutKind};
-use rtl::arch::PAGE_SIZE;
-use rtl::vmm::types::{Address, MemRange, PhysAddr, VirtAddr};
+use hal::arch::PAGE_SIZE;
+use hal::address::{Address, MemRange, PhysAddr, VirtAddr};
 
 #[repr(align(0x1000))]
 struct Aligned;

@@ -5,9 +5,9 @@ use elf::{
     abi::{PF_R, PF_W, PF_X, PT_LOAD},
     endian::LittleEndian,
 };
-use rtl::arch::PAGE_SIZE;
+use hal::arch::PAGE_SIZE;
 use rtl::vmm::MappingType;
-use rtl::vmm::types::*;
+use hal::address::*;
 
 #[derive(Debug)]
 pub struct Segment {

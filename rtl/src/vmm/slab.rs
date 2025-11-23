@@ -1,6 +1,6 @@
-use crate::arch::PAGE_SIZE;
+use hal::arch::PAGE_SIZE;
 use crate::vmm::alloc::BackendAllocator;
-use crate::vmm::types::*;
+use hal::address::*;
 
 pub struct SlabAllocator<B: BackendAllocator + 'static> {
     slab_size: usize,

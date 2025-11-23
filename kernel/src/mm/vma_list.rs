@@ -1,9 +1,9 @@
 use alloc::boxed::Box;
-use core::cmp::{Ordering, Reverse};
+use core::cmp::Ordering;
 use core::ops::{Bound, Deref, DerefMut};
 use core::pin::Pin;
 use core::ptr::NonNull;
-use rtl::vmm::types::*;
+use hal::address::*;
 use rtl::vmm::MappingType;
 use wavltree::{Linked, Links, Side, WAVLTree};
 

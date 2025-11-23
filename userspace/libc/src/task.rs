@@ -7,7 +7,7 @@ use crate::vmm::vms::Vms;
 use alloc::string::String;
 use alloc::vec::Vec;
 use rtl::error::ErrorType;
-use rtl::vmm::types::VirtAddr;
+use hal::address::VirtAddr;
 
 pub struct Task {
     name: String,

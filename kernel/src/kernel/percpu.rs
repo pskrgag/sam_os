@@ -7,9 +7,9 @@ use crate::{
 };
 use core::sync::atomic::{AtomicBool, Ordering};
 
-use rtl::arch::PAGE_SIZE;
+use hal::arch::PAGE_SIZE;
 use rtl::linker_var;
-use rtl::vmm::types::*;
+use hal::address::*;
 use rtl::vmm::MappingType;
 use spin::Once;
 

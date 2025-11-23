@@ -1,5 +1,5 @@
 use crate::uart::UartTrait;
-use crate::vmm::types::VirtAddr;
+use hal::address::VirtAddr;
 use core::mem::size_of;
 use core::ptr;
 

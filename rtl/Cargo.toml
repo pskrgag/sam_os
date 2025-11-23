@@ -8,8 +8,9 @@ edition = "2021"
 [dependencies]
 static_assertions = "1.1.0"
 bytemuck = {version = "1.14", features = ["derive"]}
+hal = { path = "../hal", features = [] }
 
 [features]
 default = ["user"]
+kernel = ["hal/kernel"]
 user = []
-kernel = []

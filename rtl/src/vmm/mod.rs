@@ -1,6 +1,5 @@
 pub mod alloc;
 pub mod slab;
-pub mod types;
 
 #[repr(usize)]
 #[derive(Debug, Copy, Clone)]

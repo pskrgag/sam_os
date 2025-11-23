@@ -1,6 +1,6 @@
 use loader_protocol::LoaderArg;
-use rtl::arch::PAGE_SIZE;
-use rtl::vmm::types::{PhysAddr, VirtAddr};
+use hal::arch::PAGE_SIZE;
+use hal::address::{PhysAddr, VirtAddr};
 
 pub mod allocators;
 pub mod layout;

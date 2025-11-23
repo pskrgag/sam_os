@@ -2,7 +2,7 @@ use crate::kernel::locking::spinlock::Spinlock;
 use core::fmt;
 use rtl::uart::Uart as BackendUart;
 use rtl::uart::UartTrait;
-use rtl::vmm::types::*;
+use hal::address::*;
 
 pub struct Uart;
 
