@@ -1,3 +1,4 @@
+use crate::drivers::fdt::fdt;
 use crate::{
     kernel::{
         object::{
@@ -15,8 +16,8 @@ use crate::{
 };
 use alloc::string::String;
 use alloc::string::ToString;
-use rtl::handle::{HandleBase, HANDLE_INVALID};
 use hal::address::*;
+use rtl::handle::{HandleBase, HANDLE_INVALID};
 use rtl::{error::ErrorType, ipc::IpcMessage, syscalls::SyscallList};
 
 pub struct SyscallArgs {
@@ -188,7 +189,6 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
 
             drop(table);
             port.call(UserPtr::new(args.arg::<usize>(1) as *mut IpcMessage))
-                .map(|_| 0)
         }
         SyscallList::PortSendWait => {
             let port = table
@@ -221,6 +221,12 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 .ok_or(ErrorType::InvalidHandle)?;
 
             Ok(table.add(obj))
+        }
+        SyscallList::MapFdt => {
+            let fdt_pa: PhysAddr = fdt().base.into();
+            let fdt_size = fdt().size;
+
+            task.vms().map_phys(fdt_pa, fdt_size).map(|x| x as usize)
         }
         _ => Err(ErrorType::NoOperation),
     }

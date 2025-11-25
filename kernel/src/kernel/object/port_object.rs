@@ -70,7 +70,7 @@ impl Port {
         Ok(())
     }
 
-    pub fn call(&self, mut client_msg_uptr: UserPtr<IpcMessage<'static>>) -> Result<(), ErrorType> {
+    pub fn call(&self, mut client_msg_uptr: UserPtr<IpcMessage<'static>>) -> Result<usize, ErrorType> {
         let mut client_msg = copy_ipc_message_from_user(client_msg_uptr).ok_or(ErrorType::Fault)?;
         let task = self.task.upgrade().ok_or(ErrorType::TaskDead)?;
         let reply_port = current()
@@ -79,6 +79,7 @@ impl Port {
             .handle_table()
             .find_handle::<Self>(client_msg.reply_port(), CapabilityMask::any())
             .ok_or(ErrorType::InvalidHandle)?;
+        let mut arena_len = 0;
 
         Self::transfer_handles_from_current(&task, &mut client_msg)?;
 
@@ -93,13 +94,14 @@ impl Port {
 
             if let Some(d1) = server_msg.out_arena() {
                 ud.write_array(d1)?;
+                arena_len = d1.len();
                 unsafe { drop(Box::from_raw(d1)) };
             }
         }
 
         client_msg.add_handles(server_msg.handles());
         client_msg_uptr.write(&client_msg)?;
-        Ok(())
+        Ok(arena_len)
     }
 
     pub fn send_wait(

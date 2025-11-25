@@ -10,8 +10,8 @@ pub mod page_table;
 pub mod regions;
 pub mod page_array;
 
-pub fn init(fdt: &Fdt) -> PageTable {
-    regions::init(fdt);
+pub fn init(fdt: &Fdt, fdt_base: PhysAddr) -> PageTable {
+    regions::init(fdt, fdt_base);
 
     let mut table = PageTable::new().expect("Failed to create a page table");
     map_self_text(&mut table);

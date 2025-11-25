@@ -9,7 +9,7 @@ rtl = { path = "../../../rtl/" }
 hal = { path = "../../../hal/" }
 postcard = { version = "1", features = ["alloc"] }
 serde = { version = "1", default-features = false  }
-cpio_reader = "0.1.2"
+fdt = { version = "0.1.5", features = ["pretty-printing"] }
 
 [build-dependencies]
 ridl = { path = "../../../tools/ridl" }

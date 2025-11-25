@@ -55,7 +55,7 @@ impl PageTableBlock {
         self.lvl == arch::PAGE_TABLE_LVLS
     }
 
-    pub fn is_valid_tte(&self, index: usize) -> bool {
+    pub fn is_valid_pte(&self, index: usize) -> bool {
         assert!(index < 512);
 
         let va: VirtAddr = self.addr.into();
@@ -63,7 +63,7 @@ impl PageTableBlock {
             .valid()
     }
 
-    pub unsafe fn set_tte(&mut self, index: usize, entry: PageTableEntry) {
+    pub unsafe fn set_pte(&mut self, index: usize, entry: PageTableEntry) {
         assert!(index < 512);
 
         let va: VirtAddr = self.addr.into();
@@ -76,11 +76,16 @@ impl PageTableBlock {
         }
     }
 
-    pub fn get_tte(&mut self, index: usize) -> PageTableEntry {
+    pub fn get_pte(&mut self, index: usize) -> PageTableEntry {
         assert!(index < 512);
 
         let va: VirtAddr = self.addr.into();
         unsafe { PageTableEntry::from_bits(va.to_raw_mut::<usize>().add(index).read_volatile()) }
+    }
+
+    pub fn pte_addr(&self, index: usize) -> *const PageTableEntry {
+        let va: VirtAddr = self.addr.into();
+        unsafe { va.to_raw_mut::<usize>().add(index) as _ }
     }
 
     pub fn index_of(&self, addr: VirtAddr) -> usize {
@@ -153,7 +158,7 @@ impl PageTable {
             println!(
                 "va {:x} entry {:x} idx {} lvl {}",
                 va,
-                base.get_tte(index).bits(),
+                base.get_pte(index).bits(),
                 index,
                 base.lvl()
             );
@@ -193,10 +198,10 @@ impl PageTable {
             PageFlags::page().bits()
         };
 
-        assert!(!b.is_valid_tte(index));
+        assert!(!b.is_valid_pte(index), "PTE addr {:p}, PTE content {:x}", b.pte_addr(index), b.get_pte(index).bits());
 
         unsafe {
-            b.set_tte(
+            b.set_pte(
                 index,
                 PageTableEntry::from_bits(control | flags | pa.bits()),
             );
@@ -211,11 +216,8 @@ impl PageTable {
         let new_page = page_allocator().alloc(1).ok_or(MmError::NoMem)?;
         let new_entry = PageTableEntry::from_bits(PageFlags::table().bits() | new_page.bits());
 
-        unsafe { b.set_tte(index, new_entry) };
-        Ok(PageTableBlock::new(
-            LinearAddr::from(new_page),
-            lvl as u8 + 1,
-        ))
+        unsafe { b.set_pte(index, new_entry) };
+        Ok(PageTableBlock::new(LinearAddr::from(new_page), lvl + 1))
     }
 
     fn abort_walk(
@@ -235,7 +237,7 @@ impl PageTable {
         v: VirtAddr,
     ) {
         unsafe {
-            b.set_tte(index, PageTableEntry::from_bits(0));
+            b.set_pte(index, PageTableEntry::from_bits(0));
             flush_tlb_page_last(v);
         };
     }
@@ -359,7 +361,7 @@ impl PageTable {
             &mut p,
             MappingType::None,
             |base, index, pa, tp, lvl, v, _| {
-                let tte = base.get_tte(index);
+                let tte = base.get_pte(index);
 
                 cb(
                     tte.addr(),

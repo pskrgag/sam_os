@@ -33,7 +33,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
         let mut message = IpcMessage::new();
         let data = Tx::{name}({wire_name_tx} {{ {} }});
         let data_vec = to_allocvec(&data).unwrap();
-        let mut receive_buffer = [0u8; core::mem::size_of::<{wire_name_tx}>()];
+        let mut receive_buffer = [0u8; core::mem::size_of::<RxMessage>()];
 
         message.set_out_arena(data_vec.as_slice());
         message.set_in_arena(receive_buffer.as_mut_slice());
@@ -102,7 +102,7 @@ impl {name} {{
     }
 
     pub fn compile(mut self) {
-        utils::start_mod(self.buf);
+        utils::start_mod(self.buf, self.interface.name());
         utils::includes(self.buf);
         self.make_struct();
 

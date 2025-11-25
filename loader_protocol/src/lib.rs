@@ -47,6 +47,7 @@ pub struct VmmLayoutEntry {
 pub struct LoaderArg {
     pub tt_base: usize,
     pub fdt_base: usize,
+    pub fdt_size: usize,
     pub init_virt_task_base: (usize, usize),
     pub init_phys_task_base: (usize, usize),
     pub devices: Vec<DeviceMapping, MAX_DEVICES>,

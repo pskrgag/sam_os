@@ -25,7 +25,7 @@ impl Port {
         Syscall::port_send_wait(&self.h, reply_port, reply)
     }
 
-    pub fn call(&self, msg: &mut IpcMessage) -> Result<(), ErrorType> {
+    pub fn call(&self, msg: &mut IpcMessage) -> Result<usize, ErrorType> {
         let p = Port::create().ok_or(ErrorType::NoOperation)?;
 
         msg.set_reply_port(unsafe { p.h.as_raw() });

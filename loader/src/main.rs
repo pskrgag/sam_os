@@ -22,14 +22,14 @@ extern "C" fn main(fdt_base: PhysAddr) {
 
     drivers::uart::probe(&fdt);
 
-    let mut tt = mm::init(&fdt);
+    let mut tt = mm::init(&fdt, fdt_base);
     kernel::map_kernel(&mut tt);
 
     mm::layout::init_layout(&mut protocol);
     mm::linear_map::map_linear(&mut tt, &protocol);
 
     drivers::map(&fdt, &mut protocol);
-    let arg0 = protocol::prepare(fdt_base, protocol, &mut tt);
+    let arg0 = protocol::prepare(fdt_base, &fdt, protocol, &mut tt);
 
     arch::boot::boot(kernel::kernel_ep().bits(), arg0.bits(), tt.base().bits());
 

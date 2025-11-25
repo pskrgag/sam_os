@@ -3,19 +3,21 @@ use crate::mm::{
     page_table::{PageKind, PagePerms, PageTable},
     regions::regions,
 };
-use loader_protocol::{LoaderArg, VmmLayoutKind};
-use hal::arch::PAGE_SIZE;
+use fdt::Fdt;
 use hal::address::{Address, MemRange, PhysAddr, VirtAddr};
+use hal::arch::PAGE_SIZE;
+use loader_protocol::{LoaderArg, VmmLayoutKind};
 
 #[repr(align(0x1000))]
 struct Aligned;
 static INIT_TASK: &[u8] = rtl::include_bytes_align_as!(Aligned, env!("INIT_TASK_PATH"));
 
-pub fn prepare(fdt: PhysAddr, mut arg: LoaderArg, tt: &mut PageTable) -> VirtAddr {
+pub fn prepare(fdt_pa: PhysAddr, fdt: &Fdt, mut arg: LoaderArg, tt: &mut PageTable) -> VirtAddr {
     let mut mmio_start = arg.get_vmm_base(VmmLayoutKind::Mmio).unwrap().0;
 
     arg.tt_base = tt.base().into();
-    arg.fdt_base = fdt.bits();
+    arg.fdt_base = fdt_pa.bits();
+    arg.fdt_size = fdt.total_size();
 
     for dev in &mut arg.devices {
         tt.map_pages(

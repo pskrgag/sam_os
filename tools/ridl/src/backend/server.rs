@@ -137,7 +137,7 @@ impl<S: 'static> {name}<S> {{
     }
 
     pub fn compile(mut self) {
-        utils::start_mod(self.buf);
+        utils::start_mod(self.buf, self.interface.name());
         utils::includes(self.buf);
         self.make_struct();
 

@@ -3,11 +3,40 @@
 
 // use hal::address::{MemRange, PhysAddr, VirtAddr};
 // use libc::vmm::vms::vms;
-use libc::{handle::Handle, main};
+use fdt::Fdt;
+use libc::syscalls::Syscall;
+use libc::{handle::Handle, main, port::Port};
+use rtl::locking::spinlock::Spinlock;
+
+mod pl011;
 
 #[main]
-fn main(_: Handle) {
-    println!("I AM HERE");
+fn main(nameserver: Handle) {
+    let fdt = Syscall::get_fdt().unwrap();
+    let fdt = unsafe { Fdt::from_ptr(fdt.to_raw::<u8>()).unwrap() };
+
+    let pl011 = pl011::probe(&fdt).unwrap();
+    let p = Port::create().unwrap();
+
+    let nameserver = bindings_NameServer::NameServer::new(Port::new(nameserver));
+    nameserver
+        .Register("serial", p.handle())
+        .expect("Failed to register handle in nameserver");
+
+    let mut server = bindings_Serial::Serial::new(p, Spinlock::new(pl011))
+        .register_handler(|_: bindings_Serial::GetTx, uart| {
+            Ok(bindings_Serial::GetRx {
+                byte: uart.lock().read_byte(),
+            })
+        })
+        .register_handler(|msg: bindings_Serial::PutTx, uart| {
+            uart.lock().write_byte(msg.byte);
+            Ok(bindings_Serial::PutRx {})
+        });
+
+    println!("Starting 'uart' server...");
+    server.run().unwrap();
 }
 
-// include!(concat!(env!("OUT_DIR"), "/hello.rs"));
+include!(concat!(env!("OUT_DIR"), "/serial.rs"));
+include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));

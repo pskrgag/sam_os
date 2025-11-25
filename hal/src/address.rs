@@ -51,6 +51,10 @@ impl VirtAddr {
         unsafe { core::slice::from_raw_parts_mut(self.0 as *mut T, count) }
     }
 
+    pub unsafe fn as_slice<T>(&self, count: usize) -> &[T] {
+        unsafe { core::slice::from_raw_parts(self.0 as *mut T, count) }
+    }
+
     /// # Safety
     ///
     /// Caller should be sure that pointer points to [`[count; T]`]

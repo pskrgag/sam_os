@@ -4,7 +4,7 @@ members = [
 	"rtl",
 	"kernel",
 	"userspace/services/roottask",
-	"userspace/apps/client",
+	"userspace/apps/console",
 	"xtask",
 	"userspace/services/uart",
 	"loader", "loader_protocol", "hal",

@@ -2,7 +2,7 @@ name = "Test app"
 board = "qemu"
 
 [[component]]
-name = "client"
+name = "console"
 
 [[component]]
 name = "uart"

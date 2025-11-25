@@ -33,7 +33,7 @@ pub struct Message {
     pub name: String,
 }
 
-pub fn start_mod<W: Write>(buf: &mut W) {
+pub fn start_mod<W: Write>(buf: &mut W, suffix: &str) {
     writeln!(buf, "#[allow(dead_code)]").unwrap();
     writeln!(buf, "#[allow(non_snake_case)]").unwrap();
     writeln!(buf, "#[allow(unused_imports)]").unwrap();
@@ -41,7 +41,7 @@ pub fn start_mod<W: Write>(buf: &mut W) {
     writeln!(buf, "#[allow(private_bounds)]").unwrap();
     writeln!(buf, "#[allow(clippy::type_complexity)]").unwrap();
     writeln!(buf, "#[allow(clippy::missing_transmute_annotations)]").unwrap();
-    writeln!(buf, "mod bindings {{").unwrap();
+    writeln!(buf, "mod bindings_{suffix} {{").unwrap();
 }
 
 pub fn end_mod<W: Write>(buf: &mut W) {

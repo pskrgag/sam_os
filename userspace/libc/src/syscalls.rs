@@ -35,6 +35,7 @@ pub enum Syscall<'a> {
     PortSendWait(RawHandle, RawHandle, *mut IpcMessage<'a>),
     PortReceive(RawHandle, *mut IpcMessage<'a>),
     CloneHandle(RawHandle),
+    GetFdt,
 }
 
 impl<'a> Syscall<'a> {
@@ -89,8 +90,8 @@ impl<'a> Syscall<'a> {
         unsafe { syscall(Self::CloseHandle(h).as_args()).map(|_| ()) }
     }
 
-    pub fn port_call(h: &Handle, msg: *mut IpcMessage<'a>) -> Result<(), ErrorType> {
-        unsafe { syscall(Self::PortCall(h.as_raw(), msg).as_args()).map(|_| ()) }
+    pub fn port_call(h: &Handle, msg: *mut IpcMessage<'a>) -> Result<usize, ErrorType> {
+        unsafe { syscall(Self::PortCall(h.as_raw(), msg).as_args()) }
     }
 
     pub fn port_receive(h: &Handle, msg: *mut IpcMessage<'a>) -> Result<usize, ErrorType> {
@@ -99,6 +100,10 @@ impl<'a> Syscall<'a> {
 
     pub fn clone_handle(h: &Handle) -> Result<Handle, ErrorType> {
         unsafe { syscall(Self::CloneHandle(h.as_raw()).as_args()).map(Handle::new) }
+    }
+
+    pub fn get_fdt() -> Result<VirtAddr, ErrorType> {
+        unsafe { syscall(Self::GetFdt.as_args()).map(VirtAddr::new) }
     }
 
     pub fn port_send_wait(
@@ -247,6 +252,7 @@ impl<'a> Syscall<'a> {
             Syscall::VmsHandle(h) => [SyscallList::TaskGetVms.into(), h, 0, 0, 0, 0, 0, 0],
             Syscall::Yield => [SyscallList::Yield.into(), 0, 0, 0, 0, 0, 0, 0],
             Syscall::CloneHandle(h) => [SyscallList::CloneHandle.into(), h, 0, 0, 0, 0, 0, 0],
+            Syscall::GetFdt => [SyscallList::MapFdt.into(), 0, 0, 0, 0, 0, 0, 0],
         }
     }
 }

@@ -1,10 +1,10 @@
 use core::ops::DerefMut;
 use fdt::Fdt;
-use heapless::Vec;
+use hal::address::{Address, PhysAddr};
 use hal::arch::{PAGE_SHIFT, PAGE_SIZE};
+use heapless::Vec;
 use rtl::linker_var;
 use rtl::locking::fakelock::FakeLock;
-use hal::address::{Address, PhysAddr};
 
 unsafe extern "C" {
     static __start: usize;
@@ -62,7 +62,7 @@ fn add_region(reg: MemoryRegion) {
     ALLOC_MEM_REGIONS.get().push(reg).unwrap();
 }
 
-pub fn init(fdt: &Fdt) {
+pub fn init(fdt: &Fdt, fdt_base: PhysAddr) {
     let mem = fdt.memory();
     let image_start = PhysAddr::new(linker_var!(__start));
     let image_size = linker_var!(__end) - image_start.bits();
@@ -84,6 +84,11 @@ pub fn init(fdt: &Fdt) {
 
         if reg.contains(image_start) {
             reg.exclude(image_start, image_size).map(|x| add_region(x));
+        }
+
+        if reg.contains(fdt_base) {
+            reg.exclude(fdt_base, fdt.total_size())
+                .map(|x| add_region(x));
         }
 
         add_region(reg);

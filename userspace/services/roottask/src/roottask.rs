@@ -1,4 +1,4 @@
-use super::bindings;
+use super::bindings_NameServer as bindings;
 use alloc::{collections::btree_map::BTreeMap, string::String};
 use libc::{handle::Handle, port::Port};
 use rtl::{error::ErrorType, locking::spinlock::Spinlock};

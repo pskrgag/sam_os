@@ -29,6 +29,7 @@ impl<T> UserPtr<T> {
     pub fn read_on_heap(&self) -> Option<Box<[u8]>> {
         use core::mem::size_of;
 
+        // TODO: add error handling of OMM. This is no good
         let heap = vec![0; self.count * size_of::<T>()];
 
         unsafe {

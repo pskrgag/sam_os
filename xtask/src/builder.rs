@@ -225,6 +225,10 @@ fn run_impl(gdb: bool) -> Result<(), String> {
         "-cpu",
         "cortex-a53",
         "-nographic",
+        "-serial",
+        "mon:stdio",
+        "-serial",
+        "pty",
         "-kernel",
         &bin,
     ];
