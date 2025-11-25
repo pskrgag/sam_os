@@ -10,7 +10,7 @@ rustrt = {path = "procmacro"}
 elf = { version = "0.7.2", default-features = false}
 rtl = {path = "../../rtl" }
 hal = {path = "../../hal" }
-spin = {version = "0.9.4", default-features = false, features = ["once"] }
+spin = {version = "0.9.8", default-features = false, features = ["once"] }
 
 [lib]
 name = "libc"
