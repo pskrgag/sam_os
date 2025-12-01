@@ -24,13 +24,17 @@ fn main(nameserver: Handle) {
         .expect("Failed to register handle in nameserver");
 
     let mut server = bindings_Serial::Serial::new(p, Spinlock::new(pl011))
-        .register_handler(|_: bindings_Serial::GetTx, uart| {
-            Ok(bindings_Serial::GetRx {
+        .register_handler(|_: bindings_Serial::GetByteTx, uart| {
+            Ok(bindings_Serial::GetByteRx {
                 byte: uart.lock().read_byte(),
             })
         })
         .register_handler(|msg: bindings_Serial::PutTx, uart| {
-            uart.lock().write_byte(msg.byte);
+            let mut uart = uart.lock();
+
+            for i in msg.message.bytes() {
+                uart.write_byte(i);
+            }
             Ok(bindings_Serial::PutRx {})
         });
 

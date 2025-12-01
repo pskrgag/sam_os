@@ -11,22 +11,23 @@ impl Console {
     }
 
     pub fn put_str<S: AsRef<str>>(&self, s: S) {
-        for byte in s.as_ref().bytes() {
-            self.backend.Put(byte).unwrap();
-        }
+        self.backend.Put(s.as_ref()).unwrap();
     }
 
     pub fn read_until_newline(&self) -> String {
         let mut res = String::new();
 
         loop {
-            let new = self.backend.Get().unwrap();
+            let new = self.backend.GetByte().unwrap();
 
             if new.byte == b'\r' {
-                self.backend.Put(b'\n').unwrap();
+                self.put_str("\n");
                 break res;
             } else {
-                self.backend.Put(new.byte).unwrap();
+                let mut s = String::with_capacity(1);
+
+                s.push(new.byte as char);
+                self.put_str(&s);
             }
 
             res.push(new.byte as char);
@@ -60,4 +61,3 @@ impl Console {
         }
     }
 }
-
