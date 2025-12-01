@@ -99,7 +99,6 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 args.try_arg(2).map_err(|_| ErrorType::InvalidArgument)?,
             )
             .map(|x| x.bits())
-            .map_err(|_| ErrorType::NoMemory)
         }
         SyscallList::VmFree => {
             let vms = table

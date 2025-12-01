@@ -52,17 +52,19 @@ impl VmsInner {
     }
 
     // ToDo: on-demang allocation of physical memory
-    pub fn vm_allocate(&mut self, mut size: usize, tp: MappingType) -> Result<VirtAddr, ()> {
-        debug_assert!(size.is_page_aligned());
+    pub fn vm_allocate(&mut self, mut size: usize, tp: MappingType) -> Result<VirtAddr, ErrorType> {
+        if !size.is_page_aligned() {
+            return Err(ErrorType::InvalidArgument);
+        }
 
-        let mut new_va = self.vmas.new_vma(size, None, tp).ok_or(MmError::NoMem)?;
+        let mut new_va = self.vmas.new_vma(size, None, tp).ok_or(ErrorType::NoMemory)?;
         let ret = new_va;
 
         while size != 0 {
             let p = if let Some(p) = page_allocator().alloc(1) {
                 p
             } else {
-                return Err(());
+                return Err(ErrorType::NoMemory);
             };
 
             // ToDo: clean up in case of an error
@@ -73,7 +75,8 @@ impl VmsInner {
                     MemRange::new(p, PAGE_SIZE),
                     MemRange::new(new_va, PAGE_SIZE),
                     tp,
-                )?;
+                )
+                .map_err(|_| ErrorType::NoMemory)?;
 
             size -= PAGE_SIZE;
             new_va.add(PAGE_SIZE);

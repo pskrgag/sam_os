@@ -14,21 +14,10 @@ pub fn init() {
     SYSTEM_TIMER.enable();
 }
 
-pub fn init_secondary() {
-    // SYSTEM_TIMER.reprogram();
-    // SYSTEM_TIMER.enable();
-    //
-    // // irq::init_secondary(30);
-}
-
-pub fn reprogram() {
-    SYSTEM_TIMER.reprogram();
-}
-
 pub fn timer_dispatch(_: &ClaimedIrq) {
     if let Some(cur) = current() {
         cur.tick();
     }
 
-    reprogram();
+    SYSTEM_TIMER.reprogram();
 }

@@ -142,6 +142,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
+name = "cfg-if"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
+
+[[package]]
 name = "clap"
 version = "4.5.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -230,6 +236,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b42b6fa04a440b495c8b04d0e71b707c585f83cb9cb28cf8cd0d976c315e31b4"
 dependencies = [
  "powerfmt",
+]
+
+[[package]]
+name = "dlmalloc"
+version = "0.2.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6738d2e996274e499bc7b0d693c858b7720b9cd2543a0643a3087e6cb0a4fa16"
+dependencies = [
+ "cfg-if",
+ "libc 0.2.159",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -365,6 +382,7 @@ checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 name = "libc"
 version = "0.1.0"
 dependencies = [
+ "dlmalloc",
  "elf 0.7.4",
  "hal",
  "rtl",

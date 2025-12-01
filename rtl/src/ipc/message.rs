@@ -2,8 +2,6 @@ use crate::handle::*;
 
 pub const IPC_MAX_HANDLES: usize = 5;
 
-type MessageId = usize;
-
 // Note: I want to keep Copy marker here, so I had to lie about
 // mutablity of arena slices.
 #[derive(Debug, Clone, Copy)]
@@ -14,7 +12,6 @@ pub struct IpcMessage<'a> {
     pub in_data: Option<&'a [u8]>,
     pub out_data: Option<&'a [u8]>,
     reply_port: Handle,
-    mid: MessageId,
 }
 
 impl<'a> IpcMessage<'a> {
@@ -24,19 +21,10 @@ impl<'a> IpcMessage<'a> {
         in_data: None,
         out_data: None,
         reply_port: HANDLE_INVALID,
-        mid: MessageId::MAX,
     };
 
     pub const fn new() -> Self {
         Self::DEFAULT
-    }
-
-    pub fn set_mid(&mut self, mid: MessageId) {
-        self.mid = mid;
-    }
-
-    pub fn mid(&self) -> MessageId {
-        self.mid
     }
 
     pub fn handles(&self) -> &[HandleBase] {

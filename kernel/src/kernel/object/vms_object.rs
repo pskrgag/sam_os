@@ -6,10 +6,10 @@ use crate::mm::paging::page_table::MmError;
 use crate::mm::user_buffer::UserPtr;
 use crate::mm::vms::VmsInner;
 use alloc::sync::Arc;
+use hal::address::{Address, MemRange, PhysAddr, VirtAddr};
 use object_lib::object;
 use rtl::error::ErrorType;
 use rtl::vmm::MappingType;
-use hal::address::{VirtAddr, Address, MemRange, PhysAddr};
 
 #[derive(object)]
 pub struct Vms {
@@ -23,21 +23,17 @@ pub enum VmoCreateArgs {
 
 impl Vms {
     pub fn new_user() -> Option<Arc<Self>> {
-        Some(
-            Arc::try_new(Self {
-                inner: Mutex::new(VmsInner::new_user()?),
-            })
-            .ok()?,
-        )
+        Arc::try_new(Self {
+            inner: Mutex::new(VmsInner::new_user()?),
+        })
+        .ok()
     }
 
     pub fn new_kernel() -> Option<Arc<Self>> {
-        Some(
-            Arc::try_new(Self {
-                inner: Mutex::new(VmsInner::new_kernel()),
-            })
-            .ok()?,
-        )
+        Arc::try_new(Self {
+            inner: Mutex::new(VmsInner::new_kernel()),
+        })
+        .ok()
     }
 
     pub fn full_caps() -> CapabilityMask {
@@ -60,7 +56,7 @@ impl Vms {
         inner.vm_map(v, p, tp)
     }
 
-    pub fn vm_allocate(&self, size: usize, tp: MappingType) -> Result<VirtAddr, ()> {
+    pub fn vm_allocate(&self, size: usize, tp: MappingType) -> Result<VirtAddr, ErrorType> {
         let mut inner = self.inner.lock();
         let res = inner.vm_allocate(size, tp)?;
 

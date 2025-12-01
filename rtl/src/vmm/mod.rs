@@ -1,6 +1,3 @@
-pub mod alloc;
-pub mod slab;
-
 #[repr(usize)]
 #[derive(Debug, Copy, Clone)]
 pub enum MappingType {

@@ -25,11 +25,11 @@ fn map(node: &FdtNode, arg: &mut LoaderArg) {
         })
         .expect("Too many devices");
 
-    println!("Mapped gic");
+    println!("Mapped gic-v3");
 }
 
 #[distributed_slice(IRQS)]
-static PL031: IrqProbe = IrqProbe {
+static GIC: IrqProbe = IrqProbe {
     compatible: "arm,gic-v3",
     map,
 };

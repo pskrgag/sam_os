@@ -32,7 +32,7 @@ fn map(node: &FdtNode, arg: &mut LoaderArg) {
         })
         .expect("Too many devices");
 
-    println!("Mapped pl031");
+    println!("Mapped pl011");
 }
 
 impl Write for Pl031 {
@@ -43,7 +43,7 @@ impl Write for Pl031 {
 }
 
 #[distributed_slice(UARTS)]
-static PL031: UartProbe = UartProbe {
+static PL011: UartProbe = UartProbe {
     compatible: "arm,pl011",
     probe,
     map,

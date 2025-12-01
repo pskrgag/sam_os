@@ -81,12 +81,12 @@ extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
 
 #[unsafe(no_mangle)]
 extern "C" fn cpu_reset() -> ! {
-    println!("Cpu {} started!", arch::cpuid::current_cpu());
-
-    arch::irq::handlers::set_up_vbar();
-    arm_gic::irq_enable();
-    drivers::timer::init_secondary();
-
+    // println!("Cpu {} started!", arch::cpuid::current_cpu());
+    //
+    // arch::irq::handlers::set_up_vbar();
+    // arm_gic::irq_enable();
+    // drivers::timer::init_secondary();
+    //
     /*
      * Runqueue for current cpu should already contain
      * idle thread, so just loop until timer irq

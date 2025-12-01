@@ -1,8 +1,7 @@
 use super::arch;
-use core::ops::Add;
 use core::{
     fmt::{self, Debug},
-    ops::Sub,
+    ops::{Add, Sub},
 };
 
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug)]
@@ -22,6 +21,13 @@ impl PhysAddr {
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug, Default)]
 #[repr(transparent)]
 pub struct VirtAddr(usize);
+
+#[cfg(feature = "kernel")]
+impl From<LinearAddr> for VirtAddr {
+    fn from(val: LinearAddr) -> VirtAddr {
+        VirtAddr(val.0)
+    }
+}
 
 impl VirtAddr {
     pub const fn new(ptr: usize) -> Self {
@@ -79,13 +85,6 @@ impl<T> From<*mut T> for VirtAddr {
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug, Default)]
 #[repr(transparent)]
 pub struct LinearAddr(usize);
-
-#[cfg(feature = "kernel")]
-impl Into<VirtAddr> for LinearAddr {
-    fn into(self: LinearAddr) -> VirtAddr {
-        VirtAddr(self.0)
-    }
-}
 
 #[cfg(feature = "kernel")]
 impl From<usize> for LinearAddr {
