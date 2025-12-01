@@ -30,24 +30,24 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
             writeln!(
                 self.buf,
                 r#") -> Result<{name}Rx, ErrorType> {{
-        let mut message = IpcMessage::new();
+        let mut _message = IpcMessage::new();
         let data = Tx::{name}({wire_name_tx} {{ {} }});
         let data_vec = to_allocvec(&data).unwrap();
         let mut receive_buffer = [0u8; core::mem::size_of::<RxMessage>()];
 
-        message.set_out_arena(data_vec.as_slice());
-        message.set_in_arena(receive_buffer.as_mut_slice());
+        _message.set_out_arena(data_vec.as_slice());
+        _message.set_in_arena(receive_buffer.as_mut_slice());
 
-        self.port.call(&mut message)?;
+        self.port.call(&mut _message)?;
 
-        let res: RxMessage = from_bytes(message.in_data.unwrap()).unwrap();
+        let res: RxMessage = from_bytes(_message.in_data.unwrap()).unwrap();
 
         let wire: {name}RxWire = match res {{
             RxMessage::Ok(e) => Ok::<{name}RxWire, ErrorType>(e.try_into().unwrap()),
             RxMessage::Err(e) => Err(unsafe {{ core::mem::transmute::<_, ErrorType>(e) }}),
         }}?;
 
-        Ok(wire.try_to_public(&message).unwrap())
+        Ok(wire.try_to_public(&_message).unwrap())
 "#,
                 msg.tx
                     .data
@@ -60,7 +60,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                             )
                         }
                         Type::Builtin(BuiltinTypes::Handle) => format!(
-                            "{name}: message.add_handle(unsafe {{ {name}.as_raw() }})",
+                            "{name}: _message.add_handle(unsafe {{ {name}.as_raw() }})",
                             name = x.0
                         ),
                         _ => x.0.clone(),

@@ -50,6 +50,10 @@ impl Type {
         Some(Type::Builtin(*KEYWORDS.get(name.as_str())?))
     }
 
+    pub fn is_sequence(&self) -> bool {
+        matches!(self, Self::Sequence { .. })
+    }
+
     pub fn as_arg(&self) -> String {
         match self {
             Self::Builtin(bt) => {

@@ -59,6 +59,7 @@ pub fn includes<W: Write>(buf: &mut W) {
     writeln!(buf, "use alloc::sync::Arc;").unwrap();
     writeln!(buf, "use alloc::string::String;").unwrap();
     writeln!(buf, "use crate::alloc::borrow::ToOwned;").unwrap();
+    writeln!(buf, "use serde::ser::SerializeTuple;").unwrap();
     writeln!(
         buf,
         r#"
@@ -78,6 +79,78 @@ pub fn includes<W: Write>(buf: &mut W) {
     "#
     )
     .unwrap();
+
+    // Custom (de)serialization functions for slices (usize, [T; N])
+
+    writeln!(
+        buf,
+        r#"
+use core::mem::MaybeUninit;
+use serde::de::{{Error, SeqAccess, Unexpected, Visitor}};
+use serde::ser::SerializeSeq;
+use serde::{{Deserializer, Serializer}};
+
+        fn serialize<const N: usize, S, T>(t: &(usize, [T; N]), serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+            T: Serialize,
+            {{
+                 {{
+                      let mut seq = serializer.serialize_seq(Some(t.0 + 1))?;
+
+                      seq.serialize_element(&t.0)?;
+
+                      for elem in 0..t.0 {{
+                          seq.serialize_element(&t.1[elem])?;
+                      }}
+
+                      seq.end()
+                  }}
+             }}
+
+    fn deserialize<'de, D, const N: usize, T>(data: D) -> Result<(usize, [T; N]), D::Error>
+    where
+        D: Deserializer<'de>,
+        T: Deserialize<'de>,
+        {{
+             {{
+                  struct Vis<'de, T: Deserialize<'de>, const N: usize>(
+                      (
+                          core::marker::PhantomData<[T; N]>,
+                          core::marker::PhantomData<&'de u8>,
+                      ),
+                  );
+
+                  impl<'de, T: Deserialize<'de>, const N: usize> Visitor<'de> for Vis<'de, T, N> {{
+                      type Value = (usize, [T; N]);
+
+                      fn expecting(&self, _formatter: &mut core::fmt::Formatter) -> core::fmt::Result {{
+                          Ok(())
+                      }}
+
+                      fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+                      where
+                          A: SeqAccess<'de>,
+                      {{
+                           let len = seq.next_element::<u64>()?.ok_or(Error::custom("wtf"))? as usize;
+                           let mut res = [const {{ MaybeUninit::uninit() }}; N];
+
+                           assert!(len < N);
+
+                           for i in 0..len {{
+                               res[i].write(seq.next_element::<T>()?.ok_or(Error::custom("wtf1"))?);
+                           }}
+
+                           Ok(unsafe {{ (len, res.map(|x| x.assume_init())) }})
+                       }}
+                  }}
+
+                  data.deserialize_seq(unsafe {{ core::mem::zeroed::<Vis<T, N>>() }})
+              }}
+         }}
+    "#
+    )
+    .unwrap();
     writeln!(buf).unwrap();
 }
 
@@ -94,11 +167,16 @@ fn produce_wire_type<W: Write>(buf: &mut W, s: &Struct, name: &str, tx: bool) {
 
     writeln!(
         buf,
-        "#[derive(Serialize, Deserialize, Debug, Clone, Default)]\npub struct {name} {{",
+        "#[derive(Serialize, Deserialize, Debug, Clone)]\npub struct {name} {{",
     )
     .unwrap();
 
     for data in &s.data {
+        if data.1.is_sequence() {
+            writeln!(buf, "    #[serde(serialize_with = \"serialize\")]").unwrap();
+            writeln!(buf, "    #[serde(deserialize_with = \"deserialize\")]").unwrap();
+        }
+
         writeln!(buf, "    pub {}: {},", data.0, data.1.as_wire()).unwrap();
     }
 

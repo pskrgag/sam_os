@@ -8,6 +8,7 @@ libc = { path = "../../libc/" }
 rtl = { path = "../../../rtl/" }
 postcard = { version = "1", features = ["alloc"] }
 serde = { version = "1", default-features = false  }
+serde_bytes = { version = "0.11", default-features = false }
 
 [build-dependencies]
 ridl = { path = "../../../tools/ridl" }
