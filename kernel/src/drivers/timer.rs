@@ -4,6 +4,7 @@ use crate::kernel::sched::current;
 
 pub trait SystemTimer {
     fn enable(&self);
+    // TODO: pass freq as argument
     fn reprogram(&self);
 }
 

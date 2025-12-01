@@ -623,6 +623,7 @@ dependencies = [
 name = "sam_kernel"
 version = "0.1.0"
 dependencies = [
+ "aarch64-cpu",
  "arm-gic",
  "bitmaps",
  "bitmask",

@@ -4,6 +4,7 @@ use core::{
     ops::{Deref, DerefMut},
     sync::atomic::{AtomicPtr, AtomicU16, Ordering},
 };
+use crate::arch::irq::interrupts::{set_flags, get_flags, IrqFlags};
 
 #[derive(Debug)]
 pub struct SpinLockInner {
@@ -21,7 +22,7 @@ pub struct Spinlock<T> {
 pub struct SpinlockGuard<'a, T: 'a> {
     lock: &'a SpinLockInner,
     data: &'a mut T,
-    flags: Option<usize>,
+    flags: Option<IrqFlags>,
 }
 
 impl<'a, T> SpinlockGuard<'a, T> {
@@ -80,8 +81,6 @@ impl<T> Spinlock<T> {
     }
 
     pub fn lock_irqsave<'a>(&'a self) -> SpinlockGuard<'a, T> {
-        use crate::arch::irq::interrupts::get_flags;
-
         let my = self.inner.next.fetch_add(1, Ordering::Acquire);
 
         while self.inner.current.load(Ordering::Relaxed) != my {
@@ -106,9 +105,7 @@ impl SpinLockInner {
         self.current.fetch_add(1, Ordering::Release);
     }
 
-    pub fn unlock_irqrestore(&self, flags: usize) {
-        use crate::arch::irq::interrupts::set_flags;
-
+    pub fn unlock_irqrestore(&self, flags: IrqFlags) {
         unsafe {
             set_flags(flags);
         }

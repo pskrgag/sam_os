@@ -2,9 +2,10 @@ use crate::arch::backtrace::backtrace;
 use crate::drivers::irq::irq::irq_dispatch;
 use crate::kernel::sched;
 use crate::kernel::syscalls::do_syscall;
-use core::arch::{asm, global_asm};
+use core::arch::global_asm;
 use rtl::linker_var;
 use hal::address::*;
+use aarch64_cpu::registers::{VBAR_EL1, Writeable};
 
 global_asm!(include_str!("interrupts.S"));
 
@@ -68,11 +69,7 @@ impl ExceptionCtx {
 
 #[inline]
 pub fn set_up_vbar() {
-    unsafe {
-        asm!("msr VBAR_EL1, {}",
-             "isb",
-            in(reg) linker_var!(exception_vector));
-    }
+    VBAR_EL1.set(linker_var!(exception_vector) as u64);
 }
 
 fn fixup(v: VirtAddr, ctx: &mut ExceptionCtx) -> bool {

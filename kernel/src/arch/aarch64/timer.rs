@@ -1,6 +1,6 @@
 use crate::drivers::timer::SystemTimer;
 use arm_gic::IntId;
-use core::arch::asm;
+use aarch64_cpu::registers::{CNTFRQ_EL0, Readable, CNTP_TVAL_EL0, Writeable, CNTP_CTL_EL0};
 
 pub struct ArmSystemTimer;
 
@@ -9,21 +9,12 @@ pub static SYSTEM_TIMER: ArmSystemTimer = ArmSystemTimer;
 
 impl SystemTimer for ArmSystemTimer {
     fn enable(&self) {
-        unsafe {
-            asm!("mov x0, #1", "msr CNTP_CTL_EL0, x0");
-        }
+        CNTP_CTL_EL0.set(1);
     }
 
-    // NOTE: rust generates weird code with -O1+ for some reason.
-    // Leave it as noinline for now to w/a it
-    #[inline(never)]
     fn reprogram(&self) {
-        let mut cur_freq: u64;
+        let cur_freq: u64 = CNTFRQ_EL0.get();
 
-        unsafe {
-            asm!("mrs {}, CNTFRQ_EL0", out(reg) cur_freq);
-            cur_freq /= 100;
-            asm!("msr CNTP_TVAL_EL0, {}", in(reg) cur_freq);
-        }
+        CNTP_TVAL_EL0.set(cur_freq / 100);
     }
 }

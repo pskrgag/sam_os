@@ -1,3 +1,5 @@
+use aarch64_cpu::registers::{Readable, CNTFRQ_EL0, CNTPCT_EL0};
+
 pub mod backtrace;
 pub mod context;
 pub mod cpuid;
@@ -18,16 +20,10 @@ pub const NUM_CPUS: usize = 2;
 pub const PAGE_TABLE_LVLS: u8 = 3;
 
 pub fn time_since_start() -> f64 {
-    let cntfrq: usize;
-    let cntpct: usize;
+    let cntfrq = CNTFRQ_EL0.get();
+    let cntpct = CNTPCT_EL0.get();
 
-    unsafe {
-        core::arch::asm!("mrs {0}, CNTPCT_EL0",
-                         "mrs {1}, CNTFRQ_EL0",
-                         out(reg) cntpct,
-                         out(reg) cntfrq);
-    }
-
+    // TODO: move to fixed point here
     cntpct as f64 / cntfrq as f64
 }
 
