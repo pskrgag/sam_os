@@ -15,7 +15,7 @@ pub fn _print(args: fmt::Arguments) {
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => {
-        ($crate::lib::printf::_print(format_args!($($arg)*)))
+        ($crate::helper::printf::_print(format_args!($($arg)*)))
     };
 }
 
@@ -23,26 +23,18 @@ macro_rules! print {
 macro_rules! println {
     () => ($crate::print!("\n"));
     ($format:expr) => ({
-        $crate::lib::printf::_print(format_args!(
+        $crate::helper::printf::_print(format_args!(
                 concat!("[{:.10}] [{}] ", $format, "\n"),
                 $crate::arch::time_since_start(),
                 $crate::arch::cpuid::current_cpu()
             ));
     });
     ($format:expr, $($arg:tt)*) => ({
-        $crate::lib::printf::_print(format_args!(
+        $crate::helper::printf::_print(format_args!(
                 concat!("[{:.10}] [{}] ", $format, "\n"),
                 $crate::arch::time_since_start(),
                 $crate::arch::cpuid::current_cpu(),
                 $($arg)*
             ));
-    })
-}
-
-#[cfg(debug_assertions)]
-macro_rules! dbg {
-    () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ({
-        $crate::lib::printf::_print(format_args_nl!($($arg)*));
     })
 }

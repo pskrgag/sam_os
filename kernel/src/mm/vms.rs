@@ -89,7 +89,7 @@ impl VmsInner {
         assert!(range.start().is_page_aligned());
         assert!(range.size().is_page_aligned());
 
-        self.vmas.free(range);
+        self.vmas.free(range)?;
 
         self.ttbr0
             .as_mut()

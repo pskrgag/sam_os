@@ -1,9 +1,10 @@
 use alloc::boxed::Box;
 use core::cmp::Ordering;
-use core::ops::{Bound, Deref, DerefMut, RangeBounds};
+use core::ops::Bound;
 use core::pin::Pin;
 use core::ptr::NonNull;
 use hal::address::*;
+use rtl::error::ErrorType;
 use rtl::vmm::MappingType;
 use wavltree::{Linked, Links, Side, WAVLTree};
 
@@ -16,7 +17,7 @@ struct NodeState {
 
 struct Vma {
     links: Links<Self>,
-    range: MemRangeVma,
+    range: MemRange<VirtAddr>,
     flags: MappingType,
     stats: NodeState,
 }
@@ -26,14 +27,14 @@ impl core::fmt::Debug for Vma {
         write!(
             f,
             "Range {:?}, MaxGap: {:x} Max Byte: {:x}",
-            self.range.0, self.stats.max_gap, self.stats.max_byte
+            self.range, self.stats.max_gap, self.stats.max_byte
         )
     }
 }
 
 unsafe impl Linked for Vma {
     type Handle = Pin<Box<Self>>;
-    type Key = MemRangeVma;
+    type Key = VirtAddr;
 
     fn into_ptr(handle: Self::Handle) -> NonNull<Self> {
         unsafe { NonNull::from(Box::leak(Pin::into_inner_unchecked(handle))) }
@@ -52,7 +53,7 @@ unsafe impl Linked for Vma {
     }
 
     fn get_key(&self) -> &Self::Key {
-        &self.range
+        &self.range.start
     }
 
     fn after_insert(self: Pin<&mut Self>) {
@@ -92,10 +93,10 @@ impl Vma {
     pub fn new(start: VirtAddr, size: usize, flags: MappingType) -> Self {
         Self {
             links: Links::new(),
-            range: MemRangeVma(MemRange {
+            range: MemRange {
                 start: start.into(),
                 size,
-            }),
+            },
             stats: NodeState::default(),
             flags,
         }
@@ -159,78 +160,10 @@ impl Vma {
     }
 }
 
-#[derive(Debug, Eq, Clone, Copy)]
-struct MemRangeVma(MemRange<VirtAddr>);
-
-impl Deref for MemRangeVma {
-    type Target = MemRange<VirtAddr>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for MemRangeVma {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
 pub struct VmaList {
     tree: WAVLTree<Vma>,
     start: usize,
     size: usize,
-}
-
-impl MemRangeVma {
-    pub fn new(start: usize, size: usize) -> Self {
-        Self(MemRange {
-            start: start.into(),
-            size,
-        })
-    }
-
-    // pub fn invalid() -> Self {
-    //     Self(MemRange::new(VirtAddr::from(usize::MAX), 0))
-    // }
-    //
-    // pub fn is_valid(&self) -> bool {
-    //     self.start() != usize::MAX.into()
-    // }
-    //
-    // pub fn split_at(mut self, addr: VirtAddr, size: usize) -> [MemRangeVma; 3] {
-    //     let range = self.0;
-    //     let start = range.start();
-    //     let isize = range.size();
-    //
-    //     assert!(self.0.contains_addr(addr));
-    //     assert!(self != Self::invalid());
-    //
-    //     // Split at 3
-    //     if addr != range.start() && addr.bits() != range.start() + range.size() - size {
-    //         self = Self(MemRange::new(start, addr - start));
-    //
-    //         let vma_middle = Self::new_fixed(addr, size);
-    //
-    //         let vma_higer = MemRangeVma::new_fixed(
-    //             VirtAddr::new(addr + size),
-    //             isize - self.0.size() - vma_middle.0.size(),
-    //         );
-    //
-    //         [self, vma_middle, vma_higer]
-    //     } else if addr == range.start() {
-    //         let vma_lower = MemRangeVma::new_fixed(addr, size);
-    //
-    //         self = MemRangeVma::new_fixed(VirtAddr::new(addr + size), range.size() - size);
-    //
-    //         [vma_lower, self, Self::invalid()]
-    //     } else {
-    //         self = MemRangeVma::new_fixed(range.start(), range.size() - size);
-    //
-    //         let vma_higer = MemRangeVma::new_fixed(addr, size);
-    //         [self, vma_higer, Self::invalid()]
-    //     }
-    // }
 }
 
 impl VmaList {
@@ -292,9 +225,7 @@ impl VmaList {
             }
 
             // Find the lower bound for the address
-            let cursor = self
-                .tree
-                .upper_bound(Bound::Included(&MemRangeVma::new(base, size)));
+            let cursor = self.tree.upper_bound(Bound::Included(&VirtAddr::new(base)));
 
             // If lower bound exists, check if it contains specified range
             if let Some(vma) = cursor.get() {
@@ -420,36 +351,12 @@ impl VmaList {
         Some(start)
     }
 
-    pub fn free(&mut self, _range: MemRange<VirtAddr>) {
+    pub fn free(&mut self, _range: MemRange<VirtAddr>) -> Result<(), ErrorType> {
         if self.tree.size() == 0 {
-            return;
+            return Ok(());
         }
 
         todo!()
-    }
-}
-
-impl From<MemRange<VirtAddr>> for MemRangeVma {
-    fn from(value: MemRange<VirtAddr>) -> Self {
-        Self(value)
-    }
-}
-
-impl PartialEq for MemRangeVma {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.start == other.0.start
-    }
-}
-
-impl PartialOrd for MemRangeVma {
-    fn partial_cmp(&self, other: &MemRangeVma) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for MemRangeVma {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.0.start.cmp(&other.start)
     }
 }
 
@@ -467,7 +374,7 @@ impl PartialOrd for Vma {
 
 impl Ord for Vma {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.range.cmp(&other.range)
+        self.range.start().cmp(&other.range.start)
     }
 }
 

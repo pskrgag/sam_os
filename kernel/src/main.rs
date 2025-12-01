@@ -1,25 +1,18 @@
 #![no_std]
 #![no_main]
-#![feature(const_trait_impl)]
-#![allow(non_upper_case_globals)]
-#![allow(unused_macros)]
-#![allow(special_module_name)]
-#![feature(int_roundings)]
 #![feature(allocator_api)]
-#![feature(get_mut_unchecked)]
 #![feature(custom_test_frameworks)]
 #![allow(unexpected_cfgs)]
 #![allow(dead_code)]
+#![allow(non_upper_case_globals)]
 #![test_runner(crate::tests::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 extern crate alloc;
 
 #[macro_use]
-mod lib;
-
+mod helper;
 mod arch;
-
 #[macro_use]
 mod kernel;
 mod drivers;
@@ -27,7 +20,6 @@ mod mm;
 mod panic;
 
 use kernel::sched;
-pub use lib::printf;
 
 #[cfg(test)]
 #[macro_use]
