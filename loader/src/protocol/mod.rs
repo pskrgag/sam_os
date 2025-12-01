@@ -57,7 +57,6 @@ pub fn prepare(fdt_pa: PhysAddr, fdt: &Fdt, mut arg: LoaderArg, tt: &mut PageTab
     prepare_pmm(&mut arg, tt);
 
     arg.init_virt_task_base = (image_addr, INIT_TASK.len());
-    arg.init_phys_task_base = (INIT_TASK.as_ptr() as usize, INIT_TASK.len());
     *unsafe { &mut *(page.bits() as *mut LoaderArg) } = arg;
 
     arg_addr.into()

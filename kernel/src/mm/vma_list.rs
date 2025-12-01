@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 use core::cmp::Ordering;
-use core::ops::{Bound, Deref, DerefMut};
+use core::ops::{Bound, Deref, DerefMut, RangeBounds};
 use core::pin::Pin;
 use core::ptr::NonNull;
 use hal::address::*;
@@ -421,6 +421,10 @@ impl VmaList {
     }
 
     pub fn free(&mut self, _range: MemRange<VirtAddr>) {
+        if self.tree.size() == 0 {
+            return;
+        }
+
         todo!()
     }
 }
@@ -479,16 +483,16 @@ mod test {
     fn vma_list_add_fixed() {
         let mut list = VmaList::new_user();
 
-        let new_vma = list.new_vma(0x1000, Some(0x20000), MappingType::all());
+        let new_vma = list.new_vma(0x1000, Some(0x20000), MappingType::None);
         test_assert_eq!(new_vma, Some(VirtAddr::new(0x20000)));
 
-        let new_vma = list.new_vma(0x1000, Some(0x30000), MappingType::all());
+        let new_vma = list.new_vma(0x1000, Some(0x30000), MappingType::None);
         test_assert_eq!(new_vma, Some(VirtAddr::new(0x30000)));
 
-        let new_vma = list.new_vma(0x1000, Some(0x1000), MappingType::all());
+        let new_vma = list.new_vma(0x1000, Some(0x1000), MappingType::None);
         test_assert!(new_vma.is_none());
 
-        let new_vma = list.new_vma(0x1000, Some(0x0), MappingType::all());
+        let new_vma = list.new_vma(0x1000, Some(0x0), MappingType::None);
         test_assert!(new_vma.is_none());
     }
 }
