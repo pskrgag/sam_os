@@ -2,13 +2,43 @@
 #[derive(Debug, Copy, Clone)]
 pub enum MappingType {
     None = 0,
-    Data = 1 << 0,
-    Text = 1 << 1,
-    RoData = 1 << 2,
-    Rwx = 1 << 3,
+    Data = 1,
+    RoData = 2,
+    Text = 3,
+    Rwx = 4,
 
     // TODO: add more granular params
-    Device = 1 << 4,
+    Device = 5,
+}
+
+impl MappingType {
+    pub fn is_greater(&self, other: MappingType) -> bool {
+        #[repr(usize)]
+        enum Flags {
+            Read = 1,
+            Write = 2,
+            Execute = 4,
+        }
+
+        fn into(tp: MappingType) -> usize {
+            match tp {
+                MappingType::None => 0,
+                MappingType::Data | MappingType::Device => {
+                    Flags::Read as usize | Flags::Write as usize
+                }
+                MappingType::RoData => Flags::Read as usize,
+                MappingType::Text => Flags::Read as usize | Flags::Execute as usize,
+                MappingType::Rwx => {
+                    Flags::Read as usize | Flags::Execute as usize | Flags::Write as usize
+                }
+            }
+        }
+
+        let current = into(self.clone());
+        let other = into(other);
+
+        (current ^ other) & current != 0
+    }
 }
 
 impl TryFrom<usize> for MappingType {

@@ -2,8 +2,6 @@ use super::vm_object::VmObject;
 use crate::kernel::locking::mutex::Mutex;
 use crate::kernel::object::capabilities::{Capability, CapabilityMask};
 use crate::kernel::object::handle::Handle;
-use crate::mm::paging::page_table::MmError;
-use crate::mm::user_buffer::UserPtr;
 use crate::mm::vms::VmsInner;
 use alloc::sync::Arc;
 use hal::address::{Address, MemRange, PhysAddr, VirtAddr};
@@ -14,11 +12,6 @@ use rtl::vmm::MappingType;
 #[derive(object)]
 pub struct Vms {
     inner: Mutex<VmsInner>,
-}
-
-pub enum VmoCreateArgs {
-    Backed(UserPtr<u8>, MappingType, VirtAddr),
-    Zeroed(usize, MappingType, VirtAddr),
 }
 
 impl Vms {
@@ -42,16 +35,14 @@ impl Vms {
 
     pub fn vm_map(
         &self,
-        v: MemRange<VirtAddr>,
+        v: Option<MemRange<VirtAddr>>,
         p: MemRange<PhysAddr>,
         tp: MappingType,
-    ) -> Result<VirtAddr, MmError> {
+    ) -> Result<VirtAddr, ErrorType> {
         let mut inner = self.inner.lock();
 
-        debug_assert!(v.start().is_page_aligned());
         debug_assert!(p.start().is_page_aligned());
         debug_assert!(p.size().is_page_aligned());
-        debug_assert!(v.size().is_page_aligned());
 
         inner.vm_map(v, p, tp)
     }
@@ -78,12 +69,8 @@ impl Vms {
         inner.ttbr0().unwrap()
     }
 
-    pub fn create_vmo(&self, args: VmoCreateArgs) -> Result<Handle, ErrorType> {
-        let vmo = match args {
-            VmoCreateArgs::Backed(back, mt, ptr) => VmObject::from_buffer(back, mt, ptr),
-            VmoCreateArgs::Zeroed(size, mt, ptr) => VmObject::zeroed(size, mt, ptr),
-        }
-        .ok_or(ErrorType::NoMemory)?;
+    pub fn create_vmo(&self, size: usize, mt: MappingType) -> Result<Handle, ErrorType> {
+        let vmo = VmObject::zeroed(size, mt).ok_or(ErrorType::NoMemory)?;
 
         Ok(Handle::new(vmo, CapabilityMask::any()))
     }
@@ -91,13 +78,7 @@ impl Vms {
     pub fn map_phys(&self, pa: PhysAddr, size: usize) -> Result<*mut u8, ErrorType> {
         let mut inner = self.inner.lock();
 
-        let va = inner
-            .vm_map(
-                MemRange::new(VirtAddr::new(0), size),
-                MemRange::new(pa, size),
-                MappingType::Device,
-            )
-            .unwrap();
+        let va = inner.vm_map(None, MemRange::new(pa, size), MappingType::Device)?;
 
         Ok(va.to_raw_mut::<u8>())
     }

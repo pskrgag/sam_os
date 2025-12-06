@@ -15,10 +15,20 @@ struct NodeState {
     max_gap: usize,
 }
 
+use bitmask::bitmask;
+
+bitmask! {
+    pub mask VmaFlags: u8 where flags VmaFlag {
+        None = 0,
+        ExternalPages = 1,
+    }
+}
+
 struct Vma {
     links: Links<Self>,
     range: MemRange<VirtAddr>,
-    flags: MappingType,
+    prot: MappingType,
+    flags: VmaFlags,
     stats: NodeState,
 }
 
@@ -90,7 +100,7 @@ unsafe impl Linked for Vma {
 }
 
 impl Vma {
-    pub fn new(start: VirtAddr, size: usize, flags: MappingType) -> Self {
+    pub fn new(start: VirtAddr, size: usize, prot: MappingType, flags: VmaFlags) -> Self {
         Self {
             links: Links::new(),
             range: MemRange {
@@ -98,6 +108,7 @@ impl Vma {
                 size,
             },
             stats: NodeState::default(),
+            prot,
             flags,
         }
     }
@@ -209,19 +220,19 @@ impl VmaList {
         }
     }
 
-    fn find_free_space(&self, size: usize, base: Option<usize>) -> Option<VirtAddr> {
+    fn find_free_space(&self, size: usize, base: Option<usize>) -> Result<VirtAddr, ErrorType> {
         if size > self.size {
-            return None;
+            return Err(ErrorType::InvalidArgument);
         }
 
         if self.tree.size() == 0 {
             // If tree is empty just take the address from the beginning.
             let start = base.unwrap_or(self.start);
 
-            Some(start.into())
+            Ok(start.into())
         } else if let Some(base) = base {
             if base < self.start {
-                return None;
+                return Err(ErrorType::InvalidArgument);
             }
 
             // Find the lower bound for the address
@@ -232,7 +243,7 @@ impl VmaList {
                 let right = vma.links.right();
 
                 if vma.range.contains_addr(base.into()) {
-                    return None;
+                    return Err(ErrorType::AlreadyExists);
                 }
 
                 let enough_space = if let Some(right) = right {
@@ -241,13 +252,17 @@ impl VmaList {
                     self.start + self.size - base >= size
                 };
 
-                enough_space.then_some(base.into())
+                enough_space
+                    .then_some(base.into())
+                    .ok_or(ErrorType::NoMemory)
             } else {
                 // If it does not exists, check the range from the start of the address space to
                 // the base
                 let root = self.tree.root().get().expect("Root must exist here");
 
-                (root.min_byte() - base.into() > size).then_some(base.into())
+                (root.min_byte() - base.into() > size)
+                    .then_some(base.into())
+                    .ok_or(ErrorType::NoMemory)
             }
         } else {
             // User wants to find any free rang with size.
@@ -263,20 +278,24 @@ impl VmaList {
                 if root.max_byte().bits() == self.start + self.size - 1
                     && root.min_byte().bits() == self.start
                 {
-                    return None;
+                    return Err(ErrorType::NoMemory);
                 }
 
                 if root.min_byte().bits() != self.start {
                     let gap = root.min_byte().bits() - self.start;
 
-                    (gap >= size).then_some(self.start.into())
+                    (gap >= size)
+                        .then_some(self.start.into())
+                        .ok_or(ErrorType::NoMemory)
                 } else if root.max_byte().bits() != self.start + self.size - 1 {
                     let space_end = self.start + self.size - 1;
                     let gap = space_end - root.max_byte().bits();
 
-                    (gap >= size).then_some((root.max_byte() + 1).into())
+                    (gap >= size)
+                        .then_some((root.max_byte() + 1).into())
+                        .ok_or(ErrorType::NoMemory)
                 } else {
-                    None
+                    Err(ErrorType::NoMemory)
                 }
             } else {
                 let can_insert_here = |vma: &Vma, size: usize| -> Option<VirtAddr> {
@@ -295,7 +314,7 @@ impl VmaList {
 
                 while let Some(vma) = root {
                     if let Some(start) = can_insert_here(vma, size) {
-                        return Some(start);
+                        return Ok(start);
                     }
 
                     if vma.links.left().is_none() && vma.links.right().is_none() {
@@ -324,14 +343,14 @@ impl VmaList {
                 let root = root.unwrap();
 
                 if root.min_byte().bits() - self.start >= size {
-                    return Some(self.start.into());
+                    return Ok(self.start.into());
                 }
 
-                if self.start + self.size - root.max_byte().bits() - 1 >= size {
-                    return Some((root.max_byte() + 1).into());
+                if self.start + self.size - root.max_byte().bits() >= size + 1 {
+                    return Ok((root.max_byte() + 1).into());
                 }
 
-                None
+                Err(ErrorType::NoMemory)
             }
         }
     }
@@ -341,14 +360,16 @@ impl VmaList {
         size: usize,
         base: Option<usize>,
         mt: MappingType,
-    ) -> Option<VirtAddr> {
+        flags: VmaFlags,
+    ) -> Result<VirtAddr, ErrorType> {
         let start = self.find_free_space(size, base)?;
-        let vma = Box::try_new(Vma::new(start, size, mt)).ok()?;
+        let vma =
+            Box::try_new(Vma::new(start, size, mt, flags)).map_err(|_| ErrorType::NoMemory)?;
 
         debug_assert!(start.is_page_aligned());
 
         self.tree.insert(vma.into());
-        Some(start)
+        Ok(start)
     }
 
     pub fn free(&mut self, _range: MemRange<VirtAddr>) -> Result<(), ErrorType> {
@@ -390,16 +411,31 @@ mod test {
     fn vma_list_add_fixed() {
         let mut list = VmaList::new_user();
 
-        let new_vma = list.new_vma(0x1000, Some(0x20000), MappingType::None);
+        let new_vma = list.new_vma(
+            0x1000,
+            Some(0x20000),
+            MappingType::None,
+            VmaFlag::None.into(),
+        );
         test_assert_eq!(new_vma, Some(VirtAddr::new(0x20000)));
 
-        let new_vma = list.new_vma(0x1000, Some(0x30000), MappingType::None);
+        let new_vma = list.new_vma(
+            0x1000,
+            Some(0x30000),
+            MappingType::None,
+            VmaFlag::None.into(),
+        );
         test_assert_eq!(new_vma, Some(VirtAddr::new(0x30000)));
 
-        let new_vma = list.new_vma(0x1000, Some(0x1000), MappingType::None);
+        let new_vma = list.new_vma(
+            0x1000,
+            Some(0x1000),
+            MappingType::None,
+            VmaFlag::None.into(),
+        );
         test_assert!(new_vma.is_none());
 
-        let new_vma = list.new_vma(0x1000, Some(0x0), MappingType::None);
+        let new_vma = list.new_vma(0x1000, Some(0x0), MappingType::None, VmaFlag::None.into());
         test_assert!(new_vma.is_none());
     }
 }

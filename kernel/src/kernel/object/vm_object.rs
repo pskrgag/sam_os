@@ -1,10 +1,9 @@
 use crate::kernel::locking::spinlock::Spinlock;
 use crate::mm::allocators::page_alloc::page_allocator;
-use crate::mm::user_buffer::UserPtr;
 use alloc::sync::Arc;
-use object_lib::object;
-use hal::arch::{PAGE_SHIFT, PAGE_SIZE};
 use hal::address::*;
+use hal::arch::PAGE_SIZE;
+use object_lib::object;
 use rtl::vmm::MappingType;
 
 #[derive(Debug)]
@@ -12,7 +11,6 @@ struct VmObjectInner {
     start: PhysAddr,
     pages: usize,
     mt: MappingType,
-    load_addr: VirtAddr,
 }
 
 #[derive(object)]
@@ -21,67 +19,30 @@ pub struct VmObject {
 }
 
 impl VmObjectInner {
-    pub fn from_buffer(b: UserPtr<u8>, tp: MappingType, mut load_addr: VirtAddr) -> Option<Self> {
-        let pages =
-            ((load_addr.bits() + b.len()) >> PAGE_SHIFT) - (load_addr.bits() >> PAGE_SHIFT) + 1;
-
-        let p: PhysAddr = page_allocator().alloc(pages)?;
-        let linear = LinearAddr::from(p);
-        let mut va: VirtAddr = linear.into();
-
-        let range = unsafe { va.as_slice_at_offset_mut::<u8>(b.len(), load_addr.page_offset()) };
-
-        let s = b.read_to(range);
-        assert!(s == Some(b.len()));
-
-        Some(Self {
-            start: p,
-            pages,
-            mt: tp,
-            load_addr: *load_addr.round_down_page(),
-        })
-    }
-
-    pub fn zeroed(size: usize, tp: MappingType, mut load_addr: VirtAddr) -> Option<Self> {
-        let pages =
-            ((load_addr.bits() + size) >> PAGE_SHIFT) - (load_addr.bits() >> PAGE_SHIFT) + 1;
+    pub fn zeroed(size: usize, tp: MappingType) -> Option<Self> {
+        let pages = size.next_multiple_of(PAGE_SIZE) / PAGE_SIZE;
         let p = page_allocator().alloc(pages)?;
 
         Some(Self {
             start: p,
             pages,
             mt: tp,
-            load_addr: *load_addr.round_down_page(),
         })
     }
 }
 
 impl VmObject {
-    pub fn from_buffer(b: UserPtr<u8>, tp: MappingType, load_addr: VirtAddr) -> Option<Arc<Self>> {
-        Some(
-            Arc::try_new(Self {
-                inner: Spinlock::new(VmObjectInner::from_buffer(b, tp, load_addr)?),
-            })
-            .ok()?,
-        )
+    pub fn zeroed(size: usize, tp: MappingType) -> Option<Arc<Self>> {
+        Arc::try_new(Self {
+            inner: Spinlock::new(VmObjectInner::zeroed(size, tp)?),
+        })
+        .ok()
     }
 
-    pub fn zeroed(size: usize, tp: MappingType, load_addr: VirtAddr) -> Option<Arc<Self>> {
-        Some(
-            Arc::try_new(Self {
-                inner: Spinlock::new(VmObjectInner::zeroed(size, tp, load_addr)?),
-            })
-            .ok()?,
-        )
-    }
-
-    pub fn as_ranges(&self) -> (MemRange<VirtAddr>, MemRange<PhysAddr>) {
+    pub fn range(&self) -> MemRange<PhysAddr> {
         let inner = self.inner.lock();
 
-        (
-            MemRange::new(inner.load_addr, inner.pages * PAGE_SIZE),
-            MemRange::new(inner.start, inner.pages * PAGE_SIZE),
-        )
+        MemRange::new(inner.start, inner.pages * PAGE_SIZE)
     }
 
     pub fn mapping_type(&self) -> MappingType {

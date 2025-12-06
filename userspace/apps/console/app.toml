@@ -1,8 +1,14 @@
 name = "Test app"
 board = "qemu"
 
+# Serial (2 UARTS: one for the kernel, one for the user-space)
+extra_qemu_args = "-drive file=sd.img,format=raw,if=none,id=mydrive -device sdhci-pci -device sd-card,drive=mydrive -serial mon:stdio -serial pty"
+
 [[component]]
 name = "console"
+
+[[component]]
+name = "pci"
 
 [[component]]
 name = "uart"

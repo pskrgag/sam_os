@@ -5,18 +5,12 @@ use crate::syscalls_aarch64::*;
 use crate::syscalls_x86_64::*;
 
 use super::handle::Handle;
-use hal::address::{PhysAddr, VirtAddr};
+use hal::address::{Address, PhysAddr, VirtAddr};
 use rtl::error::ErrorType;
 use rtl::handle::Handle as RawHandle;
 use rtl::ipc::IpcMessage;
-use rtl::objects::vmo::VmoFlags;
 use rtl::syscalls::SyscallList;
 use rtl::vmm::MappingType;
-
-pub enum VmoCreateArgs {
-    Backed(*const u8, usize, MappingType, VirtAddr),
-    Zeroed(usize, MappingType, VirtAddr),
-}
 
 pub enum Syscall<'a> {
     Write(&'a str),
@@ -25,8 +19,8 @@ pub enum Syscall<'a> {
     CreateTask(RawHandle, &'a str),
     VmAllocate(RawHandle, usize, MappingType),
     VmFree(RawHandle, *mut u8, usize),
-    VmCreateVmo(RawHandle, VmoCreateArgs),
-    VmMapVmo(RawHandle, RawHandle),
+    VmCreateVmo(RawHandle, usize, MappingType),
+    VmMapVmo(RawHandle, RawHandle, VirtAddr, MappingType),
     VmMapPhys(RawHandle, PhysAddr, usize),
     TaskStart(RawHandle, VirtAddr, RawHandle),
     VmsHandle(RawHandle),
@@ -64,12 +58,19 @@ impl<'a> Syscall<'a> {
         unsafe { syscall(Self::VmFree(h.as_raw(), ptr, size).as_args()).map(|_| ()) }
     }
 
-    pub fn vm_create_vmo(h: &Handle, args: VmoCreateArgs) -> Result<Handle, ErrorType> {
-        unsafe { syscall(Self::VmCreateVmo(h.as_raw(), args).as_args()).map(Handle::new) }
+    pub fn vm_create_vmo(h: &Handle, size: usize, tp: MappingType) -> Result<Handle, ErrorType> {
+        unsafe { syscall(Self::VmCreateVmo(h.as_raw(), size, tp).as_args()).map(Handle::new) }
     }
 
-    pub fn vm_map_vmo(vms: &Handle, vmo: &Handle) -> Result<(), ErrorType> {
-        unsafe { syscall(Self::VmMapVmo(vms.as_raw(), vmo.as_raw()).as_args()).map(|_| ()) }
+    pub fn vm_map_vmo(
+        vms: &Handle,
+        vmo: &Handle,
+        to: VirtAddr,
+        tp: MappingType,
+    ) -> Result<VirtAddr, ErrorType> {
+        unsafe {
+            syscall(Self::VmMapVmo(vms.as_raw(), vmo.as_raw(), to, tp).as_args()).map(VirtAddr::new)
+        }
     }
 
     pub fn vm_map_phys(vms: &Handle, pa: PhysAddr, size: usize) -> Result<*mut u8, ErrorType> {
@@ -173,29 +174,26 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
-            Syscall::VmCreateVmo(handle, args) => match args {
-                VmoCreateArgs::Backed(addr, size, mt, load_addr) => [
-                    SyscallList::CreateVmo.into(),
-                    handle,
-                    addr as usize,
-                    size,
-                    mt as usize,
-                    load_addr.into(),
-                    VmoFlags::Backed as usize,
-                    0,
-                ],
-                VmoCreateArgs::Zeroed(size, mt, load_addr) => [
-                    SyscallList::CreateVmo.into(),
-                    handle,
-                    0,
-                    size,
-                    mt as usize,
-                    load_addr.into(),
-                    VmoFlags::Zeroed as usize,
-                    0,
-                ],
-            },
-            Syscall::VmMapVmo(vms, vmo) => [SyscallList::MapVmo.into(), vms, vmo, 0, 0, 0, 0, 0],
+            Syscall::VmCreateVmo(handle, size, tp) => [
+                SyscallList::CreateVmo.into(),
+                handle,
+                size,
+                tp as usize,
+                0,
+                0,
+                0,
+                0,
+            ],
+            Syscall::VmMapVmo(vms, vmo, to, tp) => [
+                SyscallList::MapVmo.into(),
+                vms,
+                vmo,
+                to.bits(),
+                tp as usize,
+                0,
+                0,
+                0,
+            ],
             Syscall::TaskStart(handle, ep, boot_handle) => [
                 SyscallList::TaskStart.into(),
                 handle,

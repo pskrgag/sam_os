@@ -11,6 +11,7 @@ pub enum ErrorType {
     TryAgain = 7,
     AlreadyExists = 8,
     NotFound = 9,
+    Generic = 10,
 }
 
 impl From<ErrorType> for usize {

@@ -5,19 +5,7 @@ use crate::{
 };
 use hal::address::*;
 use rtl::vmm::MappingType;
-
-#[derive(Debug)]
-pub enum MmError {
-    Generic,
-    InvalidAddr,
-    NoMem,
-    NotImpl,
-    NoTranslation,
-}
-
-impl From<MmError> for () {
-    fn from(_value: MmError) -> Self {}
-}
+use rtl::error::ErrorType;
 
 pub struct PageFlags {
     flags: usize,
@@ -212,8 +200,8 @@ impl PageTable {
         b: &mut PageTableBlock,
         lvl: u8,
         index: usize,
-    ) -> Result<PageTableBlock, MmError> {
-        let new_page = page_allocator().alloc(1).ok_or(MmError::NoMem)?;
+    ) -> Result<PageTableBlock, ErrorType> {
+        let new_page = page_allocator().alloc(1).ok_or(ErrorType::NoMemory)?;
         let new_entry = PageTableEntry::from_bits(PageFlags::table().bits() | new_page.bits());
 
         unsafe { b.set_pte(index, new_entry) };
@@ -224,8 +212,8 @@ impl PageTable {
         _b: &mut PageTableBlock,
         _lvl: u8,
         _index: usize,
-    ) -> Result<PageTableBlock, MmError> {
-        Err(MmError::NoTranslation)
+    ) -> Result<PageTableBlock, ErrorType> {
+        Err(ErrorType::Generic)
     }
 
     fn clean_tte(
@@ -245,7 +233,7 @@ impl PageTable {
     #[allow(clippy::too_many_arguments)]
     fn op_lvl<
         F: FnMut(&mut PageTableBlock, usize, PhysAddr, MappingType, u8, VirtAddr, bool) + Copy, // Set leaf
-        G: FnMut(&mut PageTableBlock, u8, usize) -> Result<PageTableBlock, MmError> + Copy, // Process walk
+        G: FnMut(&mut PageTableBlock, u8, usize) -> Result<PageTableBlock, ErrorType> + Copy, // Process walk
     >(
         mut base: PageTableBlock,
         lvl: u8,
@@ -256,7 +244,7 @@ impl PageTable {
         mut cb_b: G,
         use_huge_pages: bool,
         is_user: bool,
-    ) -> Result<VirtAddr, MmError> {
+    ) -> Result<VirtAddr, ErrorType> {
         let order = match lvl {
             0 => 39,
             1 => 30,
@@ -313,7 +301,7 @@ impl PageTable {
         mut v: MemRange<VirtAddr>,
         m_type: MappingType,
         hp: bool,
-    ) -> Result<VirtAddr, MmError> {
+    ) -> Result<VirtAddr, ErrorType> {
         Self::op_lvl(
             self.lvl0(),
             0,
@@ -332,7 +320,7 @@ impl PageTable {
         p: MemRange<PhysAddr>,
         v: MemRange<VirtAddr>,
         m_type: MappingType,
-    ) -> Result<VirtAddr, MmError> {
+    ) -> Result<VirtAddr, ErrorType> {
         self.map_internal(p, v, m_type, false)
     }
 
@@ -340,7 +328,7 @@ impl PageTable {
         &mut self,
         p: MemRange<PhysAddr>,
         m_type: MappingType,
-    ) -> Result<VirtAddr, MmError> {
+    ) -> Result<VirtAddr, ErrorType> {
         let v_range: MemRange<LinearAddr> = MemRange::new(p.start().into(), p.size());
         let va_range: MemRange<VirtAddr> = MemRange::new(v_range.start().into(), v_range.size());
 
@@ -351,7 +339,7 @@ impl PageTable {
         &mut self,
         mut v: MemRange<VirtAddr>,
         cb: F,
-    ) -> Result<(), MmError> {
+    ) -> Result<(), ErrorType> {
         let mut p = MemRange::new(PhysAddr::new(v.start().bits()), v.size());
 
         Self::op_lvl(

@@ -6,8 +6,10 @@ use crate::vmm::vms::vms;
 use crate::vmm::vms::Vms;
 use alloc::string::String;
 use alloc::vec::Vec;
+use hal::address::{Address, VirtAddr};
+use hal::arch::{PAGE_MASK, PAGE_SIZE};
 use rtl::error::ErrorType;
-use hal::address::VirtAddr;
+use rtl::vmm::MappingType;
 
 pub struct Task {
     name: String,
@@ -33,29 +35,39 @@ impl Task {
         let ph = elf.program_headers().ok_or(ErrorType::InvalidArgument)?;
         let mut h = Vec::with_capacity(ph.len());
 
-        for i in ph {
-            let vm = if i.p_filesz != 0 {
-                vms().create_vm_object(
-                    elf.program_header_to_data(i),
-                    Elf::program_header_to_mapping_type(i),
-                    VirtAddr::from(i.p_vaddr as usize),
-                )?
+        for phdr in ph {
+            let load_addr = VirtAddr::from(phdr.p_vaddr as usize);
+            let to_allocate = ((load_addr.bits() + phdr.p_memsz as usize + PAGE_SIZE) & !PAGE_MASK)
+                - (load_addr.bits() & !PAGE_MASK);
+
+            let vm = if phdr.p_filesz != 0 {
+                let res = vms().create_vm_object(to_allocate, MappingType::Rwx)?;
+
+                unsafe {
+                    // TODO: unmap
+                    let mut va = vms().map_vm_object(&res, None, MappingType::Data)?;
+                    let slice = va.as_slice_at_offset_mut::<u8>(phdr.p_filesz as usize, phdr.p_vaddr as usize & PAGE_MASK);
+
+                    slice.copy_from_slice(elf.program_header_to_data(phdr));
+                }
+
+                res
             } else {
-                vms().create_vm_object_zeroed(
-                    Elf::program_header_to_mapping_type(i),
-                    VirtAddr::from(i.p_vaddr as usize),
-                    i.p_memsz as usize,
-                )?
+                vms().create_vm_object(to_allocate, Elf::program_header_to_mapping_type(phdr))?
             };
 
-            h.push(vm);
+            h.push((vm, load_addr, Elf::program_header_to_mapping_type(phdr)));
         }
 
         let mut new_task = factory().create_task(name.as_str())?;
         let vms = new_task.vms().unwrap();
 
-        for i in h {
-            vms.map_vm_object(&i)?;
+        for (vmo, load, tp) in h {
+            let mut load = load.bits();
+
+            load &= !PAGE_MASK;
+            vms.map_vm_object(&vmo, Some(VirtAddr::new(load)), tp)
+                .unwrap();
         }
 
         new_task.set_ep(elf.entry_point());

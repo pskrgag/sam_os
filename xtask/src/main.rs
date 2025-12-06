@@ -44,6 +44,7 @@ fn main() {
     let config = read_to_string(args.config).unwrap();
     let config: BuildScript = toml::from_str(config.as_str()).unwrap();
 
+    info!("{:?}", config);
     info!("Running build script '{}' ...", config.name);
 
     match args.command {

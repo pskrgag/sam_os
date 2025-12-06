@@ -193,7 +193,7 @@ pub fn test() -> Result<(), String> {
     let kernel_name = build_test_kernel()?;
     build_loader(kernel_name)?;
 
-    run_impl(false)
+    run_impl(false, None)
 }
 
 fn build_impl(c: &BuildScript, command: &str) -> Result<(), String> {
@@ -214,7 +214,7 @@ fn build_impl(c: &BuildScript, command: &str) -> Result<(), String> {
     build_loader(binary("sam_kernel"))
 }
 
-fn run_impl(gdb: bool) -> Result<(), String> {
+fn run_impl(gdb: bool, c: Option<&BuildScript>) -> Result<(), String> {
     info!("[INFO]     Running example...");
     let bin = loader_binary();
     let mut args = vec![
@@ -225,13 +225,13 @@ fn run_impl(gdb: bool) -> Result<(), String> {
         "-cpu",
         "cortex-a53",
         "-nographic",
-        "-serial",
-        "mon:stdio",
-        "-serial",
-        "pty",
         "-kernel",
         &bin,
     ];
+
+    if let Some(c) = c && let Some(extra) = &c.extra_qemu_args {
+        args.extend_from_slice(&extra.split_whitespace().collect::<Vec<_>>());
+    }
 
     if gdb {
         args.extend_from_slice(&["-s", "-S"]);
@@ -250,7 +250,7 @@ fn run_impl(gdb: bool) -> Result<(), String> {
 
 pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
     build(&c)?;
-    run_impl(gdb)
+    run_impl(gdb, Some(&c))
 }
 
 pub fn clippy(c: BuildScript) -> Result<(), String> {

@@ -8,7 +8,7 @@ use crate::{
             port_object::Port,
             task_object::Task,
             vm_object::VmObject,
-            vms_object::{VmoCreateArgs, Vms},
+            vms_object::Vms,
         },
         sched::current,
     },
@@ -18,6 +18,7 @@ use alloc::string::String;
 use alloc::string::ToString;
 use hal::address::*;
 use rtl::handle::{HandleBase, HANDLE_INVALID};
+use rtl::vmm::MappingType;
 use rtl::{error::ErrorType, ipc::IpcMessage, syscalls::SyscallList};
 
 pub struct SyscallArgs {
@@ -108,28 +109,14 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             vms.vm_free(args.arg(1), args.arg(2)).map(|_| 0)
         }
         SyscallList::CreateVmo => {
-            use rtl::objects::vmo::VmoFlags;
-
             let vms = table
                 .find::<Vms>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
 
-            let flags: VmoFlags = args.try_arg(5).map_err(|_| ErrorType::InvalidArgument)?;
-
-            let vmo_args = match flags {
-                VmoFlags::Backed => VmoCreateArgs::Backed(
-                    UserPtr::new_array(args.arg::<usize>(1) as *const u8, args.arg(2)),
-                    args.try_arg(3).map_err(|_| ErrorType::InvalidArgument)?,
-                    args.arg(4),
-                ),
-                VmoFlags::Zeroed => VmoCreateArgs::Zeroed(
-                    args.arg(2),
-                    args.try_arg(3).map_err(|_| ErrorType::InvalidArgument)?,
-                    args.arg(4),
-                ),
-            };
-
-            Ok(table.add(vms.create_vmo(vmo_args)?))
+            Ok(table.add(vms.create_vmo(
+                args.arg(1),
+                args.try_arg(2).map_err(|_| ErrorType::InvalidArgument)?,
+            )?))
         }
         SyscallList::MapVmo => {
             let vms = table
@@ -138,12 +125,21 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             let vmo = table
                 .find::<VmObject>(args.arg(1), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
+            let to: VirtAddr = args.arg(2);
+            let tp: MappingType = args.try_arg(3).map_err(|_| ErrorType::InvalidArgument)?;
 
-            let ranges = vmo.as_ranges();
+            if !vmo.mapping_type().is_greater(tp) {
+                return Err(ErrorType::InvalidArgument);
+            }
 
-            vms.vm_map(ranges.0, ranges.1, vmo.mapping_type())
-                .map(|x| x.into())
-                .map_err(|_| ErrorType::InvalidArgument)
+            let range = vmo.range();
+            let va_range = if to == VirtAddr::new(0) {
+                None
+            } else {
+                Some(MemRange::new(to, range.size()))
+            };
+
+            vms.vm_map(va_range, range, tp).map(|x| x.into())
         }
         SyscallList::MapPhys => {
             let vms = table

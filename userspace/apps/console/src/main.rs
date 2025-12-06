@@ -19,5 +19,6 @@ fn main(root: Handle) {
 
     console::Console::new(serial_backend).serve();
 }
-include!(concat!(env!("OUT_DIR"), "/hello.rs"));
+
+include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));
 include!(concat!(env!("OUT_DIR"), "/serial.rs"));

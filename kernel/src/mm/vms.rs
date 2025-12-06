@@ -1,8 +1,8 @@
 use super::paging::kernel_page_table::kernel_page_table;
 use crate::mm::{
     allocators::page_alloc::page_allocator,
-    paging::page_table::{MmError, PageTable},
-    vma_list::VmaList,
+    paging::page_table::PageTable,
+    vma_list::{VmaFlag, VmaList},
 };
 use hal::address::*;
 use hal::arch::*;
@@ -31,22 +31,26 @@ impl VmsInner {
 
     pub fn vm_map(
         &mut self,
-        v: MemRange<VirtAddr>,
+        v: Option<MemRange<VirtAddr>>,
         p: MemRange<PhysAddr>,
         tp: MappingType,
-    ) -> Result<VirtAddr, MmError> {
-        assert!(v.start().is_page_aligned());
-        assert!(p.start().is_page_aligned());
+    ) -> Result<VirtAddr, ErrorType> {
+        debug_assert!(p.start().is_page_aligned());
+        debug_assert!(p.size().is_page_aligned());
 
-        let va = self
-            .vmas
-            .new_vma(v.size, (!v.start.is_null()).then_some(v.start.into()), tp)
-            .ok_or(MmError::NoMem)?;
+        let size = p.size();
+
+        let va = self.vmas.new_vma(
+            size,
+            v.map(|x| x.start()).map(|x| x.bits()),
+            tp,
+            VmaFlag::ExternalPages.into(),
+        )?;
 
         self.ttbr0
             .as_mut()
             .unwrap()
-            .map(p, MemRange::new(va, v.size()), tp)?;
+            .map(p, MemRange::new(va, size), tp)?;
 
         Ok(va)
     }
@@ -57,7 +61,7 @@ impl VmsInner {
             return Err(ErrorType::InvalidArgument);
         }
 
-        let mut new_va = self.vmas.new_vma(size, None, tp).ok_or(ErrorType::NoMemory)?;
+        let mut new_va = self.vmas.new_vma(size, None, tp, VmaFlag::None.into())?;
         let ret = new_va;
 
         while size != 0 {

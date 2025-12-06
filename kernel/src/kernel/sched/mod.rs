@@ -121,7 +121,7 @@ pub fn init_userspace(_prot: &loader_protocol::LoaderArg) {
         for mut i in data.regions {
             i.va.align_page();
             i.pa.align_page();
-            init_vms.vm_map(i.va, i.pa, i.tp).expect("Failed to map");
+            init_vms.vm_map(Some(i.va), i.pa, i.tp).expect("Failed to map");
         }
 
         init_thread.init_user(data.ep);

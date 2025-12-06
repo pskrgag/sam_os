@@ -7,7 +7,7 @@ members = [
 	"userspace/apps/console",
 	"xtask",
 	"userspace/services/uart",
-	"loader", "loader_protocol", "hal",
+	"loader", "loader_protocol", "hal", "userspace/services/pci",
 ]
 
 resolver = "2"
