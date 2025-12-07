@@ -41,6 +41,7 @@ pub fn start_mod<W: Write>(buf: &mut W, suffix: &str) {
     writeln!(buf, "#[allow(private_bounds)]").unwrap();
     writeln!(buf, "#[allow(clippy::type_complexity)]").unwrap();
     writeln!(buf, "#[allow(clippy::missing_transmute_annotations)]").unwrap();
+    writeln!(buf, "#[allow(clippy::large_enum_variant)]").unwrap();
     writeln!(buf, "mod bindings_{suffix} {{").unwrap();
 }
 
@@ -137,8 +138,8 @@ use serde::{{Deserializer, Serializer}};
 
                            assert!(len < N);
 
-                           for i in 0..len {{
-                               res[i].write(seq.next_element::<T>()?.ok_or(Error::custom("wtf1"))?);
+                           for i in res.iter_mut().take(len) {{
+                               i.write(seq.next_element::<T>()?.ok_or(Error::custom("wtf1"))?);
                            }}
 
                            Ok(unsafe {{ (len, res.map(|x| x.assume_init())) }})

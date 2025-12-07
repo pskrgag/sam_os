@@ -12,8 +12,6 @@ mod roottask;
 fn main(_: Handle) {
     let p = Port::create().unwrap();
 
-    println!("HEllo");
-
     for i in cpio_reader::iter_files(CPIO) {
         let elf = i.file();
         let name = if let Some(pos) = i.name().rfind('/') {

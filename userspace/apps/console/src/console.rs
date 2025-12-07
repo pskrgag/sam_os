@@ -39,7 +39,7 @@ impl Console {
             self.put_str("> ");
             let cmd = self.read_until_newline();
 
-            if cmd == "" {
+            if cmd.is_empty() {
                 continue;
             }
 

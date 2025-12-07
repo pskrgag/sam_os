@@ -34,7 +34,7 @@ impl MappingType {
             }
         }
 
-        let current = into(self.clone());
+        let current = into(*self);
         let other = into(other);
 
         (current ^ other) & current != 0

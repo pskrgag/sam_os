@@ -14,9 +14,9 @@ impl Pl011 {
     }
 
     pub fn write_byte(&mut self, byte: u8) {
-        let mut bytes = [byte; 1];
+        let bytes = [byte; 1];
 
-        self.0.write_bytes(&mut bytes);
+        self.0.write_bytes(&bytes);
     }
 }
 
