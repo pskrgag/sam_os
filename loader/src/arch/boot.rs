@@ -1,5 +1,5 @@
 use aarch64_cpu::registers::{
-    MAIR_EL1, ReadWriteable, SCTLR_EL1, TCR_EL1, TTBR0_EL1, TTBR1_EL1, Writeable,
+    ReadWriteable, Writeable, MAIR_EL1, SCTLR_EL1, TCR_EL1, TTBR0_EL1, TTBR1_EL1,
 };
 use core::arch::asm;
 
@@ -12,7 +12,8 @@ pub fn boot(ep: usize, arg0: usize, tt: usize) {
             + TCR_EL1::T1SZ.val(16)
             + TCR_EL1::SH0::Inner
             + TCR_EL1::SH1::Inner
-            + TCR_EL1::TG1::KiB_4,
+            + TCR_EL1::TG1::KiB_4
+            + TCR_EL1::IPS::Bits_40,
     );
 
     MAIR_EL1.modify(

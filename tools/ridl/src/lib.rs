@@ -16,6 +16,7 @@ mod error_reporter;
 use frontend::lexer::*;
 use frontend::parser::*;
 
+/// Generates binding for client side of RIDL
 pub fn generate_client<I: AsRef<Path>, O: AsRef<Path>>(idl: I, out: O) -> Result<()> {
     let source = std::fs::read_to_string(&idl)
         .unwrap_or_else(|_| format!("Failed to read file '{:?}'", idl.as_ref()));
@@ -37,7 +38,12 @@ pub fn generate_client<I: AsRef<Path>, O: AsRef<Path>>(idl: I, out: O) -> Result
     Ok(())
 }
 
-pub fn generate_server<I: AsRef<Path>, O: AsRef<Path>>(idl: I, out: O) -> Result<()> {
+/// Generates binding for server side of RIDL
+pub fn generate_server<I: AsRef<Path>, O: AsRef<Path>>(
+    idl: I,
+    out: O,
+    dispatch_pool: bool,
+) -> Result<()> {
     let source = std::fs::read_to_string(&idl)
         .unwrap_or_else(|_| format!("Failed to read file '{:?}'", idl.as_ref()));
     let reporter = error_reporter::ErrorReporter::new(source.as_bytes());
@@ -54,6 +60,7 @@ pub fn generate_server<I: AsRef<Path>, O: AsRef<Path>>(idl: I, out: O) -> Result
     backend::server::compile_server(
         ast,
         &mut File::create(Path::new(&std::env::var("OUT_DIR").unwrap()).join(out))?,
+        dispatch_pool,
     );
     Ok(())
 }

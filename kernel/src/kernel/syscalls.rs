@@ -194,6 +194,15 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             drop(table);
             port.send_wait(args.arg(1), msg)
         }
+        SyscallList::PortSend => {
+            let port = table
+                .find::<Port>(args.arg(0), CapabilityMask::from(Capability::Send))
+                .ok_or(ErrorType::InvalidHandle)?;
+            let msg = UserPtr::new(args.arg::<usize>(2) as *mut IpcMessage);
+
+            drop(table);
+            port.send(args.arg(1), msg).map(|_| 0)
+        }
         SyscallList::PortReceive => {
             let port = table
                 .find::<Port>(args.arg(0), CapabilityMask::from(Capability::Receive))

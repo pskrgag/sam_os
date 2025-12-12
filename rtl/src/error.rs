@@ -1,7 +1,6 @@
 #[repr(usize)]
 #[derive(Debug)]
 pub enum ErrorType {
-    Ok = 0,
     InvalidArgument = 1,
     NoOperation = 2,
     Fault = 3,

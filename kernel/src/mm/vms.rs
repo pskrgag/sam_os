@@ -98,10 +98,9 @@ impl VmsInner {
         self.ttbr0
             .as_mut()
             .unwrap_or(&mut kernel_page_table())
-            .free(range, |pa, device| {
-                if !device {
-                    page_allocator().free(pa, 1);
-                }
+            .free(range, |pa| {
+                // TODO: check if VMA has ExternalPages flag
+                page_allocator().free(pa, 1);
             })
             .expect("Failed to free memory");
 

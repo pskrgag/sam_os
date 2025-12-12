@@ -30,14 +30,17 @@ impl Vms {
         Ok(VmObject::new(h))
     }
 
-    pub fn map_vm_object(&self, o: &VmObject, to: Option<VirtAddr>, tp: MappingType) -> Result<VirtAddr, ErrorType> {
+    pub fn map_vm_object(
+        &self,
+        o: &VmObject,
+        to: Option<VirtAddr>,
+        tp: MappingType,
+    ) -> Result<VirtAddr, ErrorType> {
         Syscall::vm_map_vmo(&self.h, o.handle(), to.unwrap_or(VirtAddr::new(0)), tp)
     }
 
-    pub fn map_phys(&self, p: MemRange<PhysAddr>) -> Option<VirtAddr> {
-        Syscall::vm_map_phys(&self.h, p.start(), p.size())
-            .ok()
-            .map(VirtAddr::from)
+    pub fn map_phys(&self, p: MemRange<PhysAddr>) -> Result<VirtAddr, ErrorType> {
+        Syscall::vm_map_phys(&self.h, p.start(), p.size()).map(VirtAddr::from)
     }
 }
 

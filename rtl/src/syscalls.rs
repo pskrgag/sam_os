@@ -18,7 +18,8 @@ pub enum SyscallList {
     PortReceive = 15,
     CloneHandle = 16,
     MapFdt = 17,
-    Maximum = 18,
+    PortSend = 18,
+    Maximum = 19,
 }
 
 impl TryFrom<usize> for SyscallList {

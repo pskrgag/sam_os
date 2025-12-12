@@ -8,7 +8,16 @@ version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a21cd0131c25c438e19cd6a774adf7e3f64f7f4d723022882facc2dee0f8bc9"
 dependencies = [
- "tock-registers",
+ "tock-registers 0.9.0",
+]
+
+[[package]]
+name = "aarch64-cpu"
+version = "11.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44171e22925ec72b63d86747bc3655c7849a5b8d865c980222128839f45ac034"
+dependencies = [
+ "tock-registers 0.10.1",
 ]
 
 [[package]]
@@ -96,6 +105,12 @@ name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
+
+[[package]]
+name = "bit_field"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e4b40c7323adcfc0a41c4b88143ed58346ff65a288fc144329c5c45e05d70c6"
 
 [[package]]
 name = "bitflags"
@@ -239,6 +254,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "dispatch_loop"
+version = "0.1.0"
+dependencies = [
+ "libc 0.1.0",
+ "rtl",
+]
+
+[[package]]
 name = "dlmalloc"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -284,6 +307,11 @@ name = "fdt"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "784a4df722dc6267a04af36895398f59d21d07dce47232adf31ec0ff2fa45e67"
+
+[[package]]
+name = "fdt"
+version = "0.2.0-alpha1"
+source = "git+https://github.com/IsaacWoods/fdt.git#6c7031c66ff422d02eb2a22653f892a27f49df00"
 
 [[package]]
 name = "hal"
@@ -420,9 +448,9 @@ dependencies = [
 name = "loader"
 version = "0.1.0"
 dependencies = [
- "aarch64-cpu",
+ "aarch64-cpu 10.0.0",
  "elf 0.8.0",
- "fdt",
+ "fdt 0.1.5",
  "hal",
  "heapless 0.9.1",
  "linkme",
@@ -493,12 +521,26 @@ checksum = "a4895175b425cb1f87721b59f0f286c2092bd4af812243672510e1ac53e2e0ad"
 name = "pci"
 version = "0.1.0"
 dependencies = [
+ "dispatch_loop",
+ "fdt 0.2.0-alpha1",
  "hal",
  "libc 0.1.0",
+ "pci_types",
  "postcard",
  "ridl",
  "rtl",
+ "safe-mmio",
  "serde",
+]
+
+[[package]]
+name = "pci_types"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4325c6aa3cca3373503b1527e75756f9fbfe5fd76be4b4c8a143ee47430b8e0"
+dependencies = [
+ "bit_field",
+ "bitflags",
 ]
 
 [[package]]
@@ -635,7 +677,7 @@ dependencies = [
 name = "sam_kernel"
 version = "0.1.0"
 dependencies = [
- "aarch64-cpu",
+ "aarch64-cpu 11.2.0",
  "arm-gic",
  "bitmaps",
  "bitmask",
@@ -657,6 +699,18 @@ name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+
+[[package]]
+name = "sdhci"
+version = "0.1.0"
+dependencies = [
+ "hal",
+ "libc 0.1.0",
+ "postcard",
+ "ridl",
+ "rtl",
+ "serde",
+]
 
 [[package]]
 name = "semver"
@@ -869,6 +923,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b9e2fdb3a1e862c0661768b7ed25390811df1947a8acbfbefe09b47078d93c4"
 
 [[package]]
+name = "tock-registers"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d2d250f87fb3fb6f225c907cf54381509f47b40b74b1d1f12d2dccbc915bdfe"
+
+[[package]]
 name = "toml"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -911,7 +971,7 @@ checksum = "fcc842091f2def52017664b53082ecbbeb5c7731092bad69d2c63050401dfd64"
 name = "uart"
 version = "0.1.0"
 dependencies = [
- "fdt",
+ "fdt 0.1.5",
  "hal",
  "libc 0.1.0",
  "postcard",

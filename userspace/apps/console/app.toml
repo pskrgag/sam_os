@@ -12,3 +12,6 @@ name = "pci"
 
 [[component]]
 name = "uart"
+
+[[component]]
+name = "sdhci"

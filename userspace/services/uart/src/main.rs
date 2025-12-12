@@ -1,8 +1,6 @@
 #![no_main]
 #![no_std]
 
-// use hal::address::{MemRange, PhysAddr, VirtAddr};
-// use libc::vmm::vms::vms;
 use fdt::Fdt;
 use libc::syscalls::Syscall;
 use libc::{handle::Handle, main, port::Port};

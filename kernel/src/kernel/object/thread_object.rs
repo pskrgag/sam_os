@@ -2,6 +2,7 @@ use crate::kernel::object::task_object::Task;
 use crate::kernel::sched::add_thread;
 use crate::kernel::tasks::task::kernel_task;
 use crate::kernel::tasks::thread::ThreadInner;
+use crate::kernel::object::KernelObjectBase;
 use crate::{arch::regs::Context, kernel::locking::spinlock::Spinlock};
 use alloc::sync::Arc;
 use alloc::sync::Weak;
@@ -30,6 +31,7 @@ pub enum ThreadSleepReason {
     None = 0,
     Mutex = 1,
     WaitQueue = 2,
+    Event = 3,
 }
 
 #[repr(transparent)]
@@ -50,6 +52,7 @@ pub struct Thread {
     preemtion: AtomicUsize,
     inner: Spinlock<ThreadInner>,
     state: AtomicUsize,
+    base: KernelObjectBase,
 }
 
 impl ThreadRawState {
@@ -82,6 +85,7 @@ impl Thread {
                     )
                     .into(),
                 ),
+                base: KernelObjectBase::new(),
             })
             .ok()?,
         )

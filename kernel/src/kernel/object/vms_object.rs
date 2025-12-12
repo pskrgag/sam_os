@@ -2,6 +2,7 @@ use super::vm_object::VmObject;
 use crate::kernel::locking::mutex::Mutex;
 use crate::kernel::object::capabilities::{Capability, CapabilityMask};
 use crate::kernel::object::handle::Handle;
+use crate::kernel::object::KernelObjectBase;
 use crate::mm::vms::VmsInner;
 use alloc::sync::Arc;
 use hal::address::{Address, MemRange, PhysAddr, VirtAddr};
@@ -12,12 +13,14 @@ use rtl::vmm::MappingType;
 #[derive(object)]
 pub struct Vms {
     inner: Mutex<VmsInner>,
+    base: KernelObjectBase,
 }
 
 impl Vms {
     pub fn new_user() -> Option<Arc<Self>> {
         Arc::try_new(Self {
             inner: Mutex::new(VmsInner::new_user()?),
+            base: KernelObjectBase::new(),
         })
         .ok()
     }
@@ -25,6 +28,7 @@ impl Vms {
     pub fn new_kernel() -> Option<Arc<Self>> {
         Arc::try_new(Self {
             inner: Mutex::new(VmsInner::new_kernel()),
+            base: KernelObjectBase::new(),
         })
         .ok()
     }
@@ -79,7 +83,6 @@ impl Vms {
         let mut inner = self.inner.lock();
 
         let va = inner.vm_map(None, MemRange::new(pa, size), MappingType::Device)?;
-
         Ok(va.to_raw_mut::<u8>())
     }
 }

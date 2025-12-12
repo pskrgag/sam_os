@@ -27,6 +27,7 @@ pub enum Syscall<'a> {
     CloseHandle(RawHandle),
     PortCall(RawHandle, *mut IpcMessage<'a>),
     PortSendWait(RawHandle, RawHandle, *mut IpcMessage<'a>),
+    PortSend(RawHandle, RawHandle, *mut IpcMessage<'a>),
     PortReceive(RawHandle, *mut IpcMessage<'a>),
     CloneHandle(RawHandle),
     GetFdt,
@@ -126,6 +127,29 @@ impl<'a> Syscall<'a> {
                 )
                 .as_args(),
             )
+        }
+    }
+
+    pub fn port_send(
+        h: &Handle,
+        reply_port: Handle,
+        msg: *mut IpcMessage<'a>,
+    ) -> Result<(), ErrorType> {
+        unsafe {
+            syscall(
+                Self::PortSend(
+                    h.as_raw(),
+                    {
+                        let raw = reply_port.as_raw();
+
+                        core::mem::forget(reply_port);
+                        raw
+                    },
+                    msg,
+                )
+                .as_args(),
+            )
+            .map(|_| ())
         }
     }
 
@@ -239,6 +263,16 @@ impl<'a> Syscall<'a> {
             ],
             Syscall::PortSendWait(handle, reply_port, msg) => [
                 SyscallList::PortSendWait.into(),
+                handle,
+                reply_port,
+                msg as *const _ as usize,
+                0,
+                0,
+                0,
+                0,
+            ],
+            Syscall::PortSend(handle, reply_port, msg) => [
+                SyscallList::PortSend.into(),
                 handle,
                 reply_port,
                 msg as *const _ as usize,

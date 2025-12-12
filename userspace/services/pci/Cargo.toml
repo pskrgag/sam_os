@@ -4,11 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-libc = { path = "../../libc/" }
+libc = { path = "../../libs/libc" }
+dispatch_loop = { path = "../../libs/dispatch_loop" }
 rtl = { path = "../../../rtl/" }
 hal = { path = "../../../hal/" }
 postcard = { version = "1", features = ["alloc"] }
 serde = { version = "1", default-features = false  }
+safe-mmio = "0.2.5"
+fdt = { git = "https://github.com/IsaacWoods/fdt.git", features = ["pretty-printing"] }
+pci_types = "0.10.0"
 
 [build-dependencies]
 ridl = { path = "../../../tools/ridl" }

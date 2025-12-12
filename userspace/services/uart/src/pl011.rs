@@ -42,7 +42,7 @@ pub fn probe(fdt: &Fdt) -> Option<Pl011> {
     let res = vms().map_phys(MemRange::new(
         PhysAddr::new(reg.starting_address as usize),
         reg.size?,
-    ))?;
+    )).ok()?;
 
     Some(Pl011(Uart::new(res)))
 }

@@ -8,8 +8,8 @@ edition = "2021"
 [dependencies]
 rustrt = {path = "procmacro"}
 elf = { version = "0.7.2", default-features = false}
-rtl = {path = "../../rtl" }
-hal = {path = "../../hal" }
+rtl = {path = "../../../rtl" }
+hal = {path = "../../../hal" }
 spin = {version = "0.9.8", default-features = false, features = ["once"] }
 dlmalloc = "0.2.12"
 

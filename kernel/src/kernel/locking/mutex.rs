@@ -71,6 +71,9 @@ impl<T> Mutex<T> {
     }
 }
 
+unsafe impl<T> Send for Mutex<T> {}
+unsafe impl<T> Sync for Mutex<T> {}
+
 impl<'a, T> Deref for MutexGuard<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {

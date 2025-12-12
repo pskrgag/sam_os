@@ -13,6 +13,14 @@ fn impl_kernel_object_macro(ast: &syn::DeriveInput) -> TokenStream {
             fn as_any(&self) -> &dyn core::any::Any {
                 self
             }
+
+            fn signal(&self, signals: crate::kernel::object::signals::Signals) {
+                self.base.signal(signals)
+            }
+
+            fn wait_event(&self, obs: crate::kernel::object::ObserverHandler) {
+                self.base.add_observer(obs)
+            }
         }
 
         unsafe impl Send for #name { }

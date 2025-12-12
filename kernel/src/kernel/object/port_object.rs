@@ -1,6 +1,7 @@
 use super::task_object::Task;
 use crate::kernel::locking::wait_queue::WaitQueue;
 use crate::kernel::object::capabilities::{Capability, CapabilityMask};
+use crate::kernel::object::KernelObjectBase;
 use crate::mm::user_buffer::UserPtr;
 use crate::sched::current;
 use alloc::boxed::Box;
@@ -14,6 +15,7 @@ use rtl::ipc::*;
 /// other task has cap to it
 #[derive(object)]
 pub struct Port {
+    base: KernelObjectBase,
     task: Weak<Task>,
     queue: WaitQueue<IpcMessage<'static>>, // Kernel holds a copy, so just lie about lifetime for now
 }
@@ -41,6 +43,7 @@ impl Port {
             Arc::try_new(Self {
                 task: Arc::downgrade(&thread),
                 queue: WaitQueue::new(),
+                base: KernelObjectBase::new(),
             })
             .ok()?,
         )
@@ -70,7 +73,10 @@ impl Port {
         Ok(())
     }
 
-    pub fn call(&self, mut client_msg_uptr: UserPtr<IpcMessage<'static>>) -> Result<usize, ErrorType> {
+    pub fn call(
+        &self,
+        mut client_msg_uptr: UserPtr<IpcMessage<'static>>,
+    ) -> Result<usize, ErrorType> {
         let mut client_msg = copy_ipc_message_from_user(client_msg_uptr).ok_or(ErrorType::Fault)?;
         let task = self.task.upgrade().ok_or(ErrorType::TaskDead)?;
         let reply_port = current()
@@ -104,11 +110,11 @@ impl Port {
         Ok(arena_len)
     }
 
-    pub fn send_wait(
+    pub fn send(
         &self,
         reply_port_handle: HandleBase,
         msg: UserPtr<IpcMessage<'static>>,
-    ) -> Result<usize, ErrorType> {
+    ) -> Result<(), ErrorType> {
         let cur = current().unwrap();
         let self_task = cur.task();
         let mut self_table = self_task.handle_table();
@@ -127,6 +133,15 @@ impl Port {
         Self::transfer_handles_from_current(&task, &mut user_msg)?;
 
         reply_port.queue.produce(user_msg);
+        Ok(())
+    }
+
+    pub fn send_wait(
+        &self,
+        reply_port_handle: HandleBase,
+        msg: UserPtr<IpcMessage<'static>>,
+    ) -> Result<usize, ErrorType> {
+        self.send(reply_port_handle, msg)?;
         self.receive(msg)
     }
 

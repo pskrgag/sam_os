@@ -1,4 +1,5 @@
-use crate::kernel::locking::spinlock::Spinlock;
+use crate::kernel::locking::mutex::Mutex;
+use crate::kernel::object::KernelObjectBase;
 use crate::mm::allocators::page_alloc::page_allocator;
 use alloc::sync::Arc;
 use hal::address::*;
@@ -15,7 +16,8 @@ struct VmObjectInner {
 
 #[derive(object)]
 pub struct VmObject {
-    inner: Spinlock<VmObjectInner>,
+    inner: Mutex<VmObjectInner>,
+    base: KernelObjectBase,
 }
 
 impl VmObjectInner {
@@ -34,7 +36,8 @@ impl VmObjectInner {
 impl VmObject {
     pub fn zeroed(size: usize, tp: MappingType) -> Option<Arc<Self>> {
         Arc::try_new(Self {
-            inner: Spinlock::new(VmObjectInner::zeroed(size, tp)?),
+            inner: Mutex::new(VmObjectInner::zeroed(size, tp)?),
+            base: KernelObjectBase::new(),
         })
         .ok()
     }

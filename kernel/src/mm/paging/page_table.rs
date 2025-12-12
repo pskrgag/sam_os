@@ -4,8 +4,8 @@ use crate::{
     mm::allocators::page_alloc::page_allocator,
 };
 use hal::address::*;
-use rtl::vmm::MappingType;
 use rtl::error::ErrorType;
+use rtl::vmm::MappingType;
 
 pub struct PageFlags {
     flags: usize,
@@ -186,7 +186,12 @@ impl PageTable {
             PageFlags::page().bits()
         };
 
-        assert!(!b.is_valid_pte(index), "PTE addr {:p}, PTE content {:x}", b.pte_addr(index), b.get_pte(index).bits());
+        assert!(
+            !b.is_valid_pte(index),
+            "PTE addr {:p}, PTE content {:x}",
+            b.pte_addr(index),
+            b.get_pte(index).bits()
+        );
 
         unsafe {
             b.set_pte(
@@ -335,7 +340,7 @@ impl PageTable {
         self.map_internal(p, va_range, m_type, false)
     }
 
-    pub fn free<F: Fn(PhysAddr, bool)>(
+    pub fn free<F: Fn(PhysAddr)>(
         &mut self,
         mut v: MemRange<VirtAddr>,
         cb: F,
@@ -351,11 +356,7 @@ impl PageTable {
             |base, index, pa, tp, lvl, v, _| {
                 let tte = base.get_pte(index);
 
-                cb(
-                    tte.addr(),
-                    tte.flags().bits() == mmu::mapping_type_to_flags(MappingType::Device, false),
-                );
-
+                cb(tte.addr());
                 Self::clean_tte(base, index, pa, tp, lvl, v);
             },
             Self::abort_walk,

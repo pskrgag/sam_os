@@ -6,6 +6,7 @@ use crate::kernel::object::handle::Handle;
 use crate::kernel::object::handle_table::HandleTable;
 use crate::kernel::object::thread_object::Thread;
 use crate::kernel::object::vms_object::Vms;
+use crate::kernel::object::KernelObjectBase;
 use crate::kernel::tasks::task::TaskInner;
 use rtl::error::ErrorType;
 use rtl::handle::HandleBase;
@@ -24,6 +25,7 @@ pub struct Task {
     id: u32,
     vms: Arc<Vms>,
     handles: Mutex<HandleTable>,
+    base: KernelObjectBase,
 }
 
 impl Task {
@@ -35,6 +37,7 @@ impl Task {
                 id: 0,
                 vms: Vms::new_kernel()?,
                 handles: Mutex::new(HandleTable::new()),
+                base: KernelObjectBase::new(),
             })
             .ok()?,
         )
@@ -48,6 +51,7 @@ impl Task {
                 id: 0,
                 vms: Vms::new_user()?,
                 handles: Mutex::new(HandleTable::new()),
+                base: KernelObjectBase::new(),
             })
             .ok()?,
         )

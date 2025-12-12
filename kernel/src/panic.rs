@@ -18,7 +18,7 @@ fn on_panic(info: &PanicInfo) -> ! {
             "kernel".try_into()
         };
         println!("--- cut here ---");
-        println!("Kernel Panic! In context of '{:?}'", id);
+        println!("Kernel Panic! In context of '{}'", id.unwrap());
 
         println!("{}", info.message());
 
