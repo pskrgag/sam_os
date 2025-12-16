@@ -1,13 +1,17 @@
-use crate::kernel::object::thread_object::{Thread, ThreadState};
+use crate::arch::regs::{Context, TrapReason};
+use crate::drivers::irq::irq::irq_dispatch;
+use crate::kernel::object::thread_object::Thread;
+use crate::kernel::syscalls::do_syscall;
 use crate::percpu_global;
-use crate::arch::regs::Context;
-#[cfg(not(test))]
-use crate::{kernel::elf::parse_initial_task, kernel::tasks::task::init_task};
+use aarch64_cpu::registers::{Readable, ELR_EL1, ESR_EL1, FAR_EL1};
 use alloc::sync::Arc;
-use run_queue::RunQueue;
+use core::cell::LazyCell;
+use runtime::executor::Executor;
 
 pub mod current;
-pub mod run_queue;
+pub mod runtime;
+pub mod ticks;
+pub mod timer;
 
 unsafe extern "C" {
     fn switch_to(from: *mut Context, to: *const Context);
@@ -19,113 +23,63 @@ pub fn current() -> Option<Arc<Thread>> {
 }
 
 pub struct Scheduler {
-    rq: RunQueue,
+    rq: Executor,
 }
 
 percpu_global!(
-    pub static SCHEDULER: Scheduler = Scheduler::new();
+    pub static SCHEDULER: LazyCell<Scheduler> = LazyCell::new(Scheduler::new);
 );
 
 impl Scheduler {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
-            rq: RunQueue::new(),
+            rq: Executor::new(),
         }
     }
+}
 
-    pub fn schedule(&mut self) {
-        // Fix up queue based on recent events
-        self.rq.move_by_pred(|x| x.state() == ThreadState::Running);
-
-        if let Some(mut cur) = current() {
-            match cur.state() {
-                ThreadState::Running => return, // Just timer tick
-                ThreadState::NeedResched => self.rq.add_running(cur.clone()),
-                ThreadState::Sleeping => self.rq.add_sleeping(cur.clone()),
-                ThreadState::Initialized => panic!("Running scheduler in unexected state"),
-            }
-
-            if let Some(mut next) = self.rq.pop_running() {
-                next.set_running();
-
-                unsafe {
-                    let ctx = cur.ctx_mut();
-                    let next_clone = next.clone();
-                    let ctx_next = next.ctx_mut();
-
-                    crate::sched::current::set_current(next_clone);
-
-                    switch_to(ctx as _, ctx_next as _);
-                }
-            }
-        } else {
-            // If there is nothing to switch to, then do nothing
-            if self.rq.empty() {
-                return;
-            }
-
-            let mut ctx = Context::default(); // tmp storage
-            let mut next = self
-                .rq
-                .pop_running()
-                .expect("Rq must not be empty at that moment");
-            let next_clone = next.clone();
-
-            next.set_running();
-            let next_ctx = unsafe { next.ctx_mut() };
-
-            crate::sched::current::set_current(next_clone);
-
-            // We come here only for 1st process, so we need to turn on irqs
-            unsafe {
-                arm_gic::irq_enable();
-                switch_to(&mut ctx as *mut _, next_ctx as *const _);
-            }
-            panic!("Should not reach here");
-        }
-    }
-
-    pub fn add_thread(&mut self, t: Arc<Thread>) {
-        match t.state() {
-            ThreadState::Running => self.rq.add_running(t),
-            ThreadState::Sleeping => self.rq.add_sleeping(t),
-            _ => panic!("Called on wrong thread state"),
-        }
-    }
+pub fn spawn<F: Future<Output = ()> + Send + 'static>(future: F) {
+    SCHEDULER.per_cpu_var_get_mut().rq.add(future);
 }
 
 pub fn run() {
-    let scheduler = SCHEDULER.per_cpu_var_get_mut();
-
-    scheduler.schedule();
+    SCHEDULER.per_cpu_var_get_mut().rq.run();
 }
 
-pub fn add_thread(t: Arc<Thread>) {
-    let scheduler = SCHEDULER.per_cpu_var_get_mut();
+pub async fn userspace_loop(thread: Arc<Thread>) {
+    loop {
+        let mut ctx = thread.context().unwrap();
 
-    scheduler.add_thread(t);
-}
+        current::set_current(thread.clone());
+        thread.task().vms().switch_to();
 
-pub fn init_userspace(_prot: &loader_protocol::LoaderArg) {
-    #[cfg(not(test))]
-    {
-        let prot = _prot;
-
-        let data = parse_initial_task(prot).unwrap();
-        let init_task = init_task();
-
-        let init_thread = Thread::new(init_task.clone(), 0).unwrap();
-
-        let init_vms = init_task.vms();
-
-        for mut i in data.regions {
-            i.va.align_page();
-            i.pa.align_page();
-            init_vms.vm_map(Some(i.va), i.pa, i.tp).expect("Failed to map");
+        unsafe {
+            ctx.switch();
         }
 
-        init_thread.init_user(data.ep);
-        init_task.add_initial_thread(init_thread, rtl::handle::HANDLE_INVALID);
-        init_task.start_inner();
+        match ctx.trap_reason() {
+            TrapReason::Syscall => {
+                let res = match ctx.try_into() {
+                    Ok(args) => do_syscall(args),
+                    Err(err) => Err(err),
+                };
+                let res = match res {
+                    Ok(res) => res,
+                    Err(err) => -(err as isize) as usize,
+                };
+
+                ctx.finish_syscall(res);
+            }
+            TrapReason::Irq => irq_dispatch(),
+            _ => todo!(
+                "{:?} 0x{:x} 0x{:x} 0x{:x}",
+                ctx,
+                ELR_EL1.get(),
+                ESR_EL1.get(),
+                FAR_EL1.get()
+            ),
+        }
+
+        thread.update_context(ctx);
     }
 }

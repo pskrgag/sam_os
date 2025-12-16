@@ -416,16 +416,16 @@ mod test {
             Some(0x20000),
             MappingType::None,
             VmaFlag::None.into(),
-        );
-        test_assert_eq!(new_vma, Some(VirtAddr::new(0x20000)));
+        ).unwrap();
+        test_assert_eq!(new_vma, VirtAddr::new(0x20000));
 
         let new_vma = list.new_vma(
             0x1000,
             Some(0x30000),
             MappingType::None,
             VmaFlag::None.into(),
-        );
-        test_assert_eq!(new_vma, Some(VirtAddr::new(0x30000)));
+        ).unwrap();
+        test_assert_eq!(new_vma, VirtAddr::new(0x30000));
 
         let new_vma = list.new_vma(
             0x1000,
@@ -433,9 +433,9 @@ mod test {
             MappingType::None,
             VmaFlag::None.into(),
         );
-        test_assert!(new_vma.is_none());
+        test_assert!(new_vma.is_err());
 
         let new_vma = list.new_vma(0x1000, Some(0x0), MappingType::None, VmaFlag::None.into());
-        test_assert!(new_vma.is_none());
+        test_assert!(new_vma.is_err());
     }
 }

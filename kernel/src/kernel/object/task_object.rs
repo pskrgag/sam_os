@@ -8,10 +8,10 @@ use crate::kernel::object::thread_object::Thread;
 use crate::kernel::object::vms_object::Vms;
 use crate::kernel::object::KernelObjectBase;
 use crate::kernel::tasks::task::TaskInner;
+use hal::address::VirtAddr;
 use rtl::error::ErrorType;
 use rtl::handle::HandleBase;
 use rtl::handle::HANDLE_INVALID;
-use hal::address::VirtAddr;
 
 use alloc::string::String;
 use alloc::sync::Arc;
@@ -30,31 +30,27 @@ pub struct Task {
 
 impl Task {
     pub fn new_kernel() -> Option<Arc<Task>> {
-        Some(
-            Arc::try_new(Self {
-                inner: Spinlock::new(TaskInner::new_user()),
-                name: "kernel task".into(),
-                id: 0,
-                vms: Vms::new_kernel()?,
-                handles: Mutex::new(HandleTable::new()),
-                base: KernelObjectBase::new(),
-            })
-            .ok()?,
-        )
+        Arc::try_new(Self {
+            inner: Spinlock::new(TaskInner::new_user()),
+            name: "kernel task".into(),
+            id: 0,
+            vms: Vms::new_kernel()?,
+            handles: Mutex::new(HandleTable::new()),
+            base: KernelObjectBase::new(),
+        })
+        .ok()
     }
 
     pub fn new(name: String) -> Option<Arc<Task>> {
-        Some(
-            Arc::try_new(Self {
-                inner: Spinlock::new(TaskInner::new_user()),
-                name,
-                id: 0,
-                vms: Vms::new_user()?,
-                handles: Mutex::new(HandleTable::new()),
-                base: KernelObjectBase::new(),
-            })
-            .ok()?,
-        )
+        Arc::try_new(Self {
+            inner: Spinlock::new(TaskInner::new_user()),
+            name,
+            id: 0,
+            vms: Vms::new_user()?,
+            handles: Mutex::new(HandleTable::new()),
+            base: KernelObjectBase::new(),
+        })
+        .ok()
     }
 
     pub fn id(&self) -> u32 {
@@ -77,17 +73,6 @@ impl Task {
         self.inner.lock().add_thread(t);
     }
 
-    pub fn add_initial_thread(self: &Arc<Self>, t: Arc<Thread>, boot_handle: HandleBase) {
-        let mut table = self.handle_table();
-
-        t.setup_args(&[
-            table.add(Handle::new(self.vms().clone(), Vms::full_caps())),
-            table.add(Handle::new(FACTORY.clone(), CapabilityMask::any())),
-            boot_handle,
-        ]);
-        self.inner.lock().add_thread(t);
-    }
-
     pub fn start_inner(&self) {
         self.inner.lock().start();
     }
@@ -97,7 +82,7 @@ impl Task {
 
         static ID_THREAD: AtomicU16 = AtomicU16::new(1);
 
-        let init_thread = Thread::new(self.clone(), ID_THREAD.fetch_add(1, Ordering::Relaxed))
+        let init_thread = Thread::new_user(self.clone(), ID_THREAD.fetch_add(1, Ordering::Relaxed))
             .ok_or(ErrorType::NoMemory)?;
         let mut boot_handle: HandleBase = HANDLE_INVALID;
 
@@ -106,8 +91,16 @@ impl Task {
             boot_handle = new_table.add(obj);
         }
 
-        init_thread.init_user(ep);
-        self.add_initial_thread(init_thread, boot_handle);
+        let mut table = self.handle_table();
+        init_thread.init_user(
+            ep,
+            Some([
+                table.add(Handle::new(self.vms().clone(), Vms::full_caps())),
+                table.add(Handle::new(FACTORY.clone(), CapabilityMask::any())),
+                boot_handle,
+            ]),
+        );
+        self.inner.lock().add_thread(init_thread);
 
         self.start_inner();
         Ok(())

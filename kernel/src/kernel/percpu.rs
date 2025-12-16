@@ -27,6 +27,9 @@ pub struct PerCpu<T> {
     data: T,
 }
 
+unsafe impl<T> Send for PerCpu<T> {}
+unsafe impl<T> Sync for PerCpu<T> {}
+
 #[macro_export]
 macro_rules! percpu_global {
     ($(#[$attr:meta])* static $N:ident : $T:ty = $e:expr;) => {

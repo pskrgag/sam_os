@@ -49,7 +49,7 @@ pub fn parse_initial_task(prot: &loader_protocol::LoaderArg) -> Option<ElfData> 
         let phys_range = {
             let new_pages = MemRange::new(
                 page_allocator()
-                    .alloc(virt_range.size() as usize / PAGE_SIZE)
+                    .alloc(virt_range.size() / PAGE_SIZE)
                     .unwrap(),
                 virt_range.size(),
             );

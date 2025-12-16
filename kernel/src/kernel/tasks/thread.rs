@@ -1,11 +1,6 @@
 use crate::arch::regs::Context;
 use hal::address::*;
 
-unsafe extern "C" {
-    // fn kernel_thread_entry_point();
-    fn user_thread_entry_point();
-}
-
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum ThreadType {
     Undef,
@@ -14,53 +9,27 @@ pub enum ThreadType {
 }
 
 pub struct ThreadInner {
-    pub(crate) arch_ctx: Context,
+    arch_ctx: Option<Context>,
     stack: VirtAddr,
 }
 
 impl ThreadInner {
-    pub fn default() -> Self {
+    pub fn new(stack: VirtAddr) -> Self {
         Self {
-            arch_ctx: Context::default(),
-            stack: VirtAddr::new(0),
+            arch_ctx: None,
+            stack,
         }
     }
 
-    pub fn setup_args(&mut self, args: &[usize]) {
-        if !args.is_empty() {
-            self.arch_ctx.x23 = args[0];
-        }
-
-        if args.len() > 1 {
-            self.arch_ctx.x24 = args[1];
-        }
-
-        if args.len() > 2 {
-            self.arch_ctx.x25 = args[2];
-        }
-
-        if args.len() > 3 {
-            self.arch_ctx.x26 = args[3];
-        }
-
-        if args.len() > 4 {
-            self.arch_ctx.x27 = args[4];
-        }
+    pub fn init_context(&mut self, ep: VirtAddr, user_stack: VirtAddr, args: [usize; 3]) {
+        self.arch_ctx = Some(Context::new(ep, user_stack, args));
     }
 
-    pub fn init_user(
-        &mut self,
-        stack: VirtAddr,
-        func: VirtAddr,
-        user_stack: VirtAddr,
-        ttbr0: usize,
-    ) {
-        self.arch_ctx.x21 = user_stack.into();
-        self.arch_ctx.lr = (user_thread_entry_point as *const fn()) as usize;
-        self.arch_ctx.x20 = func.bits();
-        self.arch_ctx.x19 = stack.into();
-        self.arch_ctx.ttbr0 = ttbr0;
+    pub fn take_context(&mut self) -> Option<Context> {
+        self.arch_ctx.take()
+    }
 
-        self.stack = stack;
+    pub fn set_context(&mut self, ctx: Context) {
+        self.arch_ctx = Some(ctx)
     }
 }

@@ -1,5 +1,5 @@
 use super::mutex::Mutex;
-use crate::kernel::object::thread_object::{Thread, ThreadSleepReason};
+use crate::kernel::object::thread_object::Thread;
 use crate::kernel::sched::current;
 use alloc::collections::VecDeque;
 use alloc::sync::{Arc, Weak};
@@ -40,7 +40,7 @@ impl<T> WaitQueue<T> {
                 self.waiters.lock().push(Arc::downgrade(&cur));
 
                 drop(data);
-                cur.sleep(ThreadSleepReason::WaitQueue);
+                // cur.sleep(ThreadSleepReason::WaitQueue);
             }
         }
     }

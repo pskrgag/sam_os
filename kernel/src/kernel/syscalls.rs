@@ -21,6 +21,7 @@ use rtl::handle::{HandleBase, HANDLE_INVALID};
 use rtl::vmm::MappingType;
 use rtl::{error::ErrorType, ipc::IpcMessage, syscalls::SyscallList};
 
+#[derive(Debug)]
 pub struct SyscallArgs {
     number: SyscallList,
     args: [usize; 7],

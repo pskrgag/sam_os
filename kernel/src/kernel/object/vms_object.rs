@@ -4,6 +4,7 @@ use crate::kernel::object::capabilities::{Capability, CapabilityMask};
 use crate::kernel::object::handle::Handle;
 use crate::kernel::object::KernelObjectBase;
 use crate::mm::vms::VmsInner;
+use aarch64_cpu::registers::{Writeable, TTBR0_EL1};
 use alloc::sync::Arc;
 use hal::address::{Address, MemRange, PhysAddr, VirtAddr};
 use object_lib::object;
@@ -84,5 +85,9 @@ impl Vms {
 
         let va = inner.vm_map(None, MemRange::new(pa, size), MappingType::Device)?;
         Ok(va.to_raw_mut::<u8>())
+    }
+
+    pub fn switch_to(&self) {
+        TTBR0_EL1.set(self.base().bits() as u64)
     }
 }

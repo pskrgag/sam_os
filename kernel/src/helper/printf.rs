@@ -23,16 +23,20 @@ macro_rules! print {
 macro_rules! println {
     () => ($crate::print!("\n"));
     ($format:expr) => ({
+        let current_time = crate::sched::timer::time_since_start();
+
         $crate::helper::printf::_print(format_args!(
-                concat!("[{:.10}] [{}] ", $format, "\n"),
-                $crate::arch::time_since_start(),
+                concat!("[{}.{:06}] [{}] ", $format, "\n"),
+                current_time.as_secs(), current_time.subsec_micros(),
                 $crate::arch::cpuid::current_cpu()
             ));
     });
     ($format:expr, $($arg:tt)*) => ({
+        let current_time = crate::sched::timer::time_since_start();
+
         $crate::helper::printf::_print(format_args!(
-                concat!("[{:.10}] [{}] ", $format, "\n"),
-                $crate::arch::time_since_start(),
+                concat!("[{}.{:06}] [{}] ", $format, "\n"),
+                current_time.as_secs(), current_time.subsec_micros(),
                 $crate::arch::cpuid::current_cpu(),
                 $($arg)*
             ));

@@ -2,11 +2,16 @@
 #![no_main]
 #![feature(allocator_api)]
 #![feature(custom_test_frameworks)]
+#![feature(coroutines, coroutine_trait, iter_from_coroutine)]
+#![feature(linked_list_cursors)]
 #![allow(unexpected_cfgs)]
 #![allow(dead_code)]
 #![allow(non_upper_case_globals)]
 #![test_runner(crate::tests::test_runner)]
 #![reexport_test_harness_main = "test_main"]
+
+#[cfg(not(test))]
+use crate::{kernel::elf::parse_initial_task, kernel::tasks::task::init_task};
 
 extern crate alloc;
 
@@ -40,6 +45,24 @@ unsafe extern "C" {
     static __start: usize;
 }
 
+#[cfg(not(test))]
+pub fn init_userspace(prot: &loader_protocol::LoaderArg) {
+    let data = parse_initial_task(prot).unwrap();
+    let init_task = init_task();
+
+    let init_vms = init_task.vms();
+
+    for mut i in data.regions {
+        i.va.align_page();
+        i.pa.align_page();
+        init_vms
+            .vm_map(Some(i.va), i.pa, i.tp)
+            .expect("Failed to map");
+    }
+
+    init_task.start(data.ep, None).expect("Failed to start first task");
+}
+
 #[unsafe(no_mangle)]
 extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
     drivers::init_logging(prot);
@@ -53,6 +76,16 @@ extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
 
     print!("{SAMOS_BANNER}");
 
+    #[cfg(not(test))]
+    init_userspace(prot);
+
+    kernel::sched::spawn((async || {
+        println!("hello");
+        kernel::object::thread_object::Thread::sleep_for(core::time::Duration::from_secs(1)).await;
+        println!("hello1");
+    })());
+    kernel::sched::run();
+
     #[cfg(test)]
     #[allow(clippy::empty_loop)]
     {
@@ -64,7 +97,7 @@ extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
     #[cfg(not(test))]
     #[allow(clippy::empty_loop)]
     {
-        sched::init_userspace(prot);
+        init_userspace(prot);
 
         #[allow(clippy::empty_loop)]
         loop {}

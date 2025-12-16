@@ -41,7 +41,7 @@ impl KernelObjectBase {
             let cur = current().unwrap();
 
             inner.observers.push((obs, Arc::downgrade(&cur)));
-            cur.sleep(thread_object::ThreadSleepReason::Event);
+            // cur.sleep(thread_object::ThreadSleepReason::Event);
         }
     }
 
