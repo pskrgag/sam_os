@@ -45,7 +45,8 @@ impl<T> UserPtr<T> {
         let mut heap = Vec::new();
         let len = self.count * size_of::<T>();
 
-        heap.try_reserve_exact(len).map_err(|_| ErrorType::NoMemory)?;
+        heap.try_reserve_exact(len)
+            .map_err(|_| ErrorType::NoMemory)?;
         heap.resize(len, 0);
 
         unsafe {
@@ -119,10 +120,16 @@ impl<T> UserPtr<T> {
     pub fn write_array(&mut self, t: &[T]) -> Result<(), ErrorType> {
         use core::mem::size_of;
 
-        let s = usize::min(self.count, t.len());
+        if self.count < t.len() {
+            return Err(ErrorType::InvalidArgument);
+        }
 
         unsafe {
-            let res = arch_copy_to_user(t.as_ptr() as usize, size_of::<T>() * s, self.p as usize);
+            let res = arch_copy_to_user(
+                t.as_ptr() as usize,
+                size_of::<T>() * t.len(),
+                self.p as usize,
+            );
             if res == 0 {
                 Ok(())
             } else {

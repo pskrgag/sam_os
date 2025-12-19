@@ -393,6 +393,15 @@ impl fmt::LowerHex for VirtAddr {
     }
 }
 
+#[cfg(feature = "kernel")]
+impl fmt::LowerHex for LinearAddr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let val = self.0;
+
+        fmt::LowerHex::fmt(&val, f)
+    }
+}
+
 impl fmt::Display for PhysAddr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)

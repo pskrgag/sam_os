@@ -134,7 +134,10 @@ impl Thread {
         use crate::kernel::sched::userspace_loop;
 
         self.set_running();
-        spawn(alloc::boxed::Box::pin(userspace_loop(self.clone())));
+        spawn(
+            alloc::boxed::Box::pin(userspace_loop(self.clone())),
+            self.clone(),
+        );
     }
 
     pub async fn context(self: &Arc<Self>) -> Context {

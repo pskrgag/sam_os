@@ -66,7 +66,7 @@ fn prepare_pmm(arg: &mut LoaderArg, tt: &mut PageTable) {
     let start = arg.get_vmm_base(VmmLayoutKind::PageAllocator).unwrap().0;
     let num_pages: usize = regions().iter().map(|x| x.count).sum();
     // 1 bit per page
-    let num_pages_for_alloc = num_pages / 8;
+    let num_pages_for_alloc = num_pages.next_multiple_of(8) / 8;
     let pa = alloc_pages(num_pages_for_alloc).unwrap();
 
     tt.map_pages(

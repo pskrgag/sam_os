@@ -6,7 +6,6 @@ use crate::percpu_global;
 use aarch64_cpu::registers::{Readable, ELR_EL1, ESR_EL1, FAR_EL1};
 use alloc::sync::Arc;
 use core::cell::LazyCell;
-use hal::address::*;
 use runtime::executor::Executor;
 
 pub mod current;
@@ -39,8 +38,8 @@ impl Scheduler {
     }
 }
 
-pub fn spawn<F: Future<Output = ()> + Send + 'static>(future: F) {
-    SCHEDULER.per_cpu_var_get_mut().rq.add(future);
+pub fn spawn<F: Future<Output = ()> + Send + 'static>(future: F, thread: Arc<Thread>) {
+    SCHEDULER.per_cpu_var_get_mut().rq.add(future, thread);
 }
 
 pub fn run() {
@@ -50,9 +49,6 @@ pub fn run() {
 pub async fn userspace_loop(thread: Arc<Thread>) {
     loop {
         let mut ctx = thread.context().await;
-
-        current::set_current(thread.clone());
-        thread.task().vms().switch_to();
 
         unsafe {
             ctx.switch();
@@ -66,10 +62,7 @@ pub async fn userspace_loop(thread: Arc<Thread>) {
                 };
                 let res = match res {
                     Ok(res) => res,
-                    Err(err) => {
-                        println!("err {:?} {:?}", err, ctx.x0);
-                        -(err as isize) as usize
-                    }
+                    Err(err) => -(err as isize) as usize,
                 };
 
                 ctx.finish_syscall(res);

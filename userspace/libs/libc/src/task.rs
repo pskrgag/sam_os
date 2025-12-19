@@ -46,7 +46,10 @@ impl Task {
                 unsafe {
                     // TODO: unmap
                     let mut va = vms().map_vm_object(&res, None, MappingType::Data)?;
-                    let slice = va.as_slice_at_offset_mut::<u8>(phdr.p_filesz as usize, phdr.p_vaddr as usize & PAGE_MASK);
+                    let slice = va.as_slice_at_offset_mut::<u8>(
+                        phdr.p_filesz as usize,
+                        phdr.p_vaddr as usize & PAGE_MASK,
+                    );
 
                     slice.copy_from_slice(elf.program_header_to_data(phdr));
                 }

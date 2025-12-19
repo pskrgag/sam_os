@@ -44,13 +44,6 @@ impl Waker<'_> {
     }
 }
 
-impl Drop for Waker<'_> {
-    fn drop(&mut self) {
-        // TODO: remove after investigation
-        panic!("");
-    }
-}
-
 pub struct WakerPage {
     notified: AtomicU64,
 }
@@ -102,13 +95,7 @@ impl WakerPage {
             index,
         });
 
-        let p = Arc::into_raw(arc) as *const _;
-        unsafe { Arc::increment_strong_count(p) };
-
-
-
-        let raw = RawWaker::new(p, &VTABLE);
-
+        let raw = RawWaker::new(Arc::into_raw(arc) as *const _, &VTABLE);
         unsafe { CoreWaker::from_raw(raw) }
     }
 }

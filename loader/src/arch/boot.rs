@@ -17,7 +17,7 @@ pub fn boot(ep: usize, arg0: usize, tt: usize) {
     );
 
     MAIR_EL1.modify(
-        MAIR_EL1::Attr0_Normal_Inner::WriteBack_Transient_WriteAlloc
+        MAIR_EL1::Attr0_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
             + MAIR_EL1::Attr1_Device::nonGathering_nonReordering_noEarlyWriteAck,
     );
 

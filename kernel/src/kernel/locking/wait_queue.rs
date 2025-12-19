@@ -22,7 +22,7 @@ impl<T> WaitQueue<T> {
         self.data.lock().push_back(data);
 
         if let Some(waiter) = self.waiters.lock().pop() {
-            waiter.wake_by_ref();
+            waiter.wake();
         }
     }
 
