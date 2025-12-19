@@ -1,10 +1,10 @@
+use crate::arch::irq::interrupts::{IrqFlags, get_flags, set_flags};
 use crate::kernel::object::thread_object::Thread;
 use core::{
     cell::UnsafeCell,
     ops::{Deref, DerefMut},
     sync::atomic::{AtomicPtr, AtomicU16, Ordering},
 };
-use crate::arch::irq::interrupts::{set_flags, get_flags, IrqFlags};
 
 #[derive(Debug)]
 pub struct SpinLockInner {

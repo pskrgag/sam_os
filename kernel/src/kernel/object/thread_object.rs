@@ -1,7 +1,7 @@
 use crate::arch::regs::Context;
 use crate::kernel::locking::spinlock::Spinlock;
-use crate::kernel::object::task_object::Task;
 use crate::kernel::object::KernelObjectBase;
+use crate::kernel::object::task_object::Task;
 use crate::kernel::sched::spawn;
 use crate::kernel::tasks::task::kernel_task;
 use crate::kernel::tasks::thread::ThreadInner;
@@ -217,7 +217,7 @@ impl Thread {
     }
 
     pub async fn sleep_for(dl: Duration) {
-        use crate::kernel::sched::timer::{time_since_start, TIMER_QUEUE};
+        use crate::kernel::sched::timer::{TIMER_QUEUE, time_since_start};
 
         struct Sleep {
             dl: Duration,

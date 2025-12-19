@@ -1,5 +1,5 @@
 use aarch64_cpu::registers::{
-    ReadWriteable, Writeable, MAIR_EL1, SCTLR_EL1, TCR_EL1, TTBR0_EL1, TTBR1_EL1,
+    MAIR_EL1, ReadWriteable, SCTLR_EL1, TCR_EL1, TTBR0_EL1, TTBR1_EL1, Writeable,
 };
 use core::arch::asm;
 

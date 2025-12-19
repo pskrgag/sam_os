@@ -1,5 +1,5 @@
-use heapless::Vec;
 use hal::address::*;
+use heapless::Vec;
 use spin::Once;
 
 use loader_protocol::{LoaderArg, MAX_VMM_REGIONS, VmmLayoutEntry, VmmLayoutKind};

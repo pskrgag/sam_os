@@ -1,4 +1,4 @@
-use aarch64_cpu::registers::{Readable, Writeable, DAIF};
+use aarch64_cpu::registers::{DAIF, Readable, Writeable};
 
 #[derive(Copy, Clone)]
 pub struct IrqFlags(usize);

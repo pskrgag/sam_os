@@ -1,5 +1,5 @@
 use crate::arch::PTE_PER_PAGE;
-use aarch64_cpu::registers::{Writeable, TTBR0_EL1};
+use aarch64_cpu::registers::{TTBR0_EL1, Writeable};
 use core::arch::asm;
 use hal::address::*;
 

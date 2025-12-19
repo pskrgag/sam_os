@@ -229,7 +229,9 @@ fn run_impl(gdb: bool, c: Option<&BuildScript>) -> Result<(), String> {
         &bin,
     ];
 
-    if let Some(c) = c && let Some(extra) = &c.extra_qemu_args {
+    if let Some(c) = c
+        && let Some(extra) = &c.extra_qemu_args
+    {
         args.extend_from_slice(&extra.split_whitespace().collect::<Vec<_>>());
     }
 

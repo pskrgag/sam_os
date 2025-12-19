@@ -1,5 +1,5 @@
 use super::ticks::SYSTEM_TICK;
-use super::ticks::{sched_ticks, SchedTicks};
+use super::ticks::{SchedTicks, sched_ticks};
 use crate::kernel::locking::spinlock::Spinlock;
 use alloc::boxed::Box;
 use alloc::collections::LinkedList;
@@ -38,7 +38,9 @@ impl TimerQueue {
     fn insert(&mut self, mut t: Timer) {
         let mut cursor = self.queue.cursor_front_mut();
 
-        while let Some(cur) = cursor.current() && cur < &mut t {
+        while let Some(cur) = cursor.current()
+            && cur < &mut t
+        {
             cursor.move_next();
         }
 
@@ -60,7 +62,9 @@ impl TimerQueue {
         let current_tick = sched_ticks();
         let mut cursor = self.queue.cursor_front_mut();
 
-        while let Some(cur) = cursor.current() && cur.dl == current_tick {
+        while let Some(cur) = cursor.current()
+            && cur.dl == current_tick
+        {
             // SAFETY: cursor points to element because of while check
             let cur = unsafe { cursor.remove_current().unwrap_unchecked() };
 

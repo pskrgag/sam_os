@@ -1,7 +1,7 @@
 use crate::arch::backtrace::backtrace;
 use core::panic::PanicInfo;
-use heapless::String;
 use hal::address::*;
+use heapless::String;
 
 #[panic_handler]
 fn on_panic(info: &PanicInfo) -> ! {

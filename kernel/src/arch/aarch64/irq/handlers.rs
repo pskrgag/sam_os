@@ -1,10 +1,10 @@
 use crate::arch::backtrace::backtrace;
-use crate::drivers::irq::irq::irq_dispatch;
 use crate::arch::regs::{Context, TrapReason};
+use crate::drivers::irq::irq::irq_dispatch;
+use aarch64_cpu::registers::{ELR_EL1, ESR_EL1, FAR_EL1, Readable, VBAR_EL1, Writeable};
 use core::arch::global_asm;
-use rtl::linker_var;
 use hal::address::*;
-use aarch64_cpu::registers::{VBAR_EL1, Writeable, ESR_EL1, Readable, FAR_EL1, ELR_EL1};
+use rtl::linker_var;
 
 global_asm!(include_str!("interrupts.s"));
 

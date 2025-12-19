@@ -10,7 +10,7 @@ pub static KERNEL_PAGE_TABLE: Once<Spinlock<PageTable>> = Once::new();
 pub static mut PAGE_TABLE_BASE: usize = 0;
 
 pub fn init(arg: &loader_protocol::LoaderArg) {
-    KERNEL_PAGE_TABLE.call_once(|| unsafe { Spinlock::new(PageTable::from(arg.tt_base.into()))  });
+    KERNEL_PAGE_TABLE.call_once(|| unsafe { Spinlock::new(PageTable::from(arg.tt_base.into())) });
 }
 
 pub fn kernel_page_table() -> SpinlockGuard<'static, PageTable> {

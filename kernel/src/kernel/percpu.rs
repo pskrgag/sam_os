@@ -1,8 +1,6 @@
 use crate::{
     arch::cpuid::current_cpu,
-    mm::{
-        allocators::page_alloc::page_allocator, layout::vmm_range,
-    },
+    mm::{allocators::page_alloc::page_allocator, layout::vmm_range},
 };
 use core::sync::atomic::{AtomicBool, Ordering};
 
@@ -161,7 +159,6 @@ pub fn init_percpu() -> Option<()> {
     println!("Per cpu size {}", per_cpu_size);
     let range = vmm_range(loader_protocol::VmmLayoutKind::PerCpu);
     debug_assert!(range.size() >= per_cpu_size);
-
 
     for i in 0..NUM_CPUS {
         let p = pa + (per_cpu_size * i).into();

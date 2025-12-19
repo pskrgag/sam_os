@@ -1,4 +1,4 @@
-use aarch64_cpu::registers::{Readable, MPIDR_EL1};
+use aarch64_cpu::registers::{MPIDR_EL1, Readable};
 
 const MPIDR_HWID_MASK: usize = 0xff00ffffff;
 

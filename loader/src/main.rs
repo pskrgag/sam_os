@@ -4,8 +4,8 @@
 
 use core::panic::PanicInfo;
 use fdt::Fdt;
-use loader_protocol::LoaderArg;
 use hal::address::{Address, PhysAddr};
+use loader_protocol::LoaderArg;
 
 mod arch;
 #[macro_use]
@@ -41,6 +41,8 @@ fn on_panic(info: &PanicInfo) -> ! {
     println!("panic! {}", info.message());
 
     loop {
-        unsafe { core::arch::asm!("wfi"); }
+        unsafe {
+            core::arch::asm!("wfi");
+        }
     }
 }

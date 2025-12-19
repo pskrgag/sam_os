@@ -1,7 +1,7 @@
 use super::task_object::Task;
 use crate::kernel::locking::wait_queue::WaitQueue;
-use crate::kernel::object::capabilities::{Capability, CapabilityMask};
 use crate::kernel::object::KernelObjectBase;
+use crate::kernel::object::capabilities::{Capability, CapabilityMask};
 use crate::mm::user_buffer::UserPtr;
 use crate::sched::current;
 use alloc::boxed::Box;

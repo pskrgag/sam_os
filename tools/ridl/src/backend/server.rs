@@ -1,7 +1,7 @@
 use super::utils;
 use crate::ast::{interface::Interface, module::Module};
 use std::io::Write;
-use utils::{function_to_struct, Message};
+use utils::{Message, function_to_struct};
 
 struct InterfaceCompiler<'a, W: Write> {
     interface: &'a Interface,
@@ -233,7 +233,7 @@ pub fn compile_server<W: Write>(ir: Module, buf: &mut W, dispatch_loop: bool) {
             interface,
             buf,
             messages: vec![],
-            dispatch_loop
+            dispatch_loop,
         }
         .compile()
     }

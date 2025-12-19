@@ -2,9 +2,9 @@ use crate::kernel::locking::spinlock::*;
 use crate::mm::memset_pages;
 use alloc::vec::Vec;
 use bitmaps::Bitmap;
-use loader_protocol::{LoaderArg, MAX_PMM_REGIONS};
-use hal::arch::PAGE_SIZE;
 use hal::address::*;
+use hal::arch::PAGE_SIZE;
+use loader_protocol::{LoaderArg, MAX_PMM_REGIONS};
 
 #[derive(Debug)]
 pub struct Region {
@@ -151,6 +151,8 @@ pub fn init(arg: &LoaderArg) {
             .push(Region::new(reg.start, reg.size / PAGE_SIZE, start).unwrap())
             .expect("Too many physical regions");
 
-        start = VirtAddr::new(start.bits() + ((reg.size / PAGE_SIZE).next_multiple_of(8) / 8).next_multiple_of(8));
+        start = VirtAddr::new(
+            start.bits() + ((reg.size / PAGE_SIZE).next_multiple_of(8) / 8).next_multiple_of(8),
+        );
     }
 }

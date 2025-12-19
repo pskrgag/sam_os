@@ -1,12 +1,12 @@
+use super::MemRange;
 use super::layout::KERNEL_LAYOUT;
 use super::page_table::{PageKind, PagePerms, PageTable};
 use super::regions::whole_ram;
-use hal::address::VirtAddr;
-use super::MemRange;
 use core::mem::size_of;
+use hal::address::VirtAddr;
+use hal::arch::PAGE_SIZE;
 use hal::page::Page;
 use loader_protocol::VmmLayoutKind;
-use hal::arch::PAGE_SIZE;
 
 pub fn init(tt: &mut PageTable) {
     let ram = whole_ram();

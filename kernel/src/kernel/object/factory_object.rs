@@ -1,8 +1,8 @@
 use super::port_object::Port;
 use super::task_object::Task;
+use crate::kernel::object::KernelObjectBase;
 use crate::kernel::object::capabilities::CapabilityMask;
 use crate::kernel::object::handle::Handle;
-use crate::kernel::object::KernelObjectBase;
 use crate::kernel::sched::current;
 use alloc::string::ToString;
 use alloc::sync::Arc;

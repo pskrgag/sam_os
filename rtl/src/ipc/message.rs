@@ -30,7 +30,7 @@ impl<'a> IpcMessage<'a> {
     pub fn handles(&self) -> &[HandleBase] {
         &self.handles[..self.num_handles]
     }
-    
+
     pub fn handles_mut(&mut self) -> &mut [HandleBase] {
         &mut self.handles[..self.num_handles]
     }

@@ -1,14 +1,14 @@
 use fdt::Fdt;
+use hal::address::{MemRange, PhysAddr, VirtAddr};
 use page_table::{PageKind, PagePerms, PageTable};
 use rtl::linker_var;
-use hal::address::{MemRange, PhysAddr, VirtAddr};
 
 pub mod alloc;
 pub mod layout;
 pub mod linear_map;
+pub mod page_array;
 pub mod page_table;
 pub mod regions;
-pub mod page_array;
 
 pub fn init(fdt: &Fdt, fdt_base: PhysAddr) -> PageTable {
     regions::init(fdt, fdt_base);

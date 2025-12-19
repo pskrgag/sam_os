@@ -1,8 +1,8 @@
 use super::page_table::{PageKind, PagePerms, PageTable};
 use crate::mm::regions::whole_ram;
-use loader_protocol::{LoaderArg, VmmLayoutKind};
-use hal::arch::PAGE_SIZE;
 use hal::address::{Address, MemRange, VirtAddr};
+use hal::arch::PAGE_SIZE;
+use loader_protocol::{LoaderArg, VmmLayoutKind};
 
 pub fn map_linear(table: &mut PageTable, prot: &LoaderArg) {
     let res = whole_ram();

@@ -18,7 +18,7 @@ use crate::{
 use alloc::string::String;
 use alloc::string::ToString;
 use hal::address::*;
-use rtl::handle::{HandleBase, HANDLE_INVALID};
+use rtl::handle::{HANDLE_INVALID, HandleBase};
 use rtl::vmm::MappingType;
 use rtl::{error::ErrorType, ipc::IpcMessage, syscalls::SyscallList};
 

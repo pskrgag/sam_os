@@ -1,7 +1,7 @@
 #![no_std]
 
-use heapless::Vec;
 use hal::address::{MemRange, PhysAddr, VirtAddr};
+use heapless::Vec;
 
 pub const MAX_DEVICES: usize = 10;
 pub const MAX_VMM_REGIONS: usize = 10;

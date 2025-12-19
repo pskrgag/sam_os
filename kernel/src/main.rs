@@ -60,7 +60,9 @@ pub fn init_userspace(prot: &loader_protocol::LoaderArg) {
             .expect("Failed to map");
     }
 
-    init_task.start(data.ep, None).expect("Failed to start first task");
+    init_task
+        .start(data.ep, None)
+        .expect("Failed to start first task");
 }
 
 #[unsafe(no_mangle)]

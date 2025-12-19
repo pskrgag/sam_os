@@ -7,8 +7,8 @@ use elf::{
     abi::{PF_R, PF_W, PF_X, PT_LOAD},
     endian::LittleEndian,
 };
-use hal::arch::PAGE_SIZE;
 use hal::address::{MemRange, PhysAddr, VirtAddr};
+use hal::arch::PAGE_SIZE;
 
 #[repr(align(0x1000))]
 struct Aligned;

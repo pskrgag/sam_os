@@ -1,9 +1,9 @@
 use super::vm_object::VmObject;
 use crate::arch::mm::page_table::switch_context;
 use crate::kernel::locking::mutex::Mutex;
+use crate::kernel::object::KernelObjectBase;
 use crate::kernel::object::capabilities::{Capability, CapabilityMask};
 use crate::kernel::object::handle::Handle;
-use crate::kernel::object::KernelObjectBase;
 use crate::mm::vms::VmsInner;
 use alloc::sync::Arc;
 use hal::address::{Address, MemRange, PhysAddr, VirtAddr};

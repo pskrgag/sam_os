@@ -1,12 +1,12 @@
-use super::{UartProbe, UARTS};
+use super::{UARTS, UartProbe};
 use core::fmt::{Result, Write};
 use core::ops::DerefMut;
 use fdt::node::FdtNode;
+use hal::arch::PAGE_SIZE;
+use hal::uart::{UartTrait, pl011::Uart};
 use linkme::distributed_slice;
 use loader_protocol::{DeviceKind, DeviceMapping, LoaderArg};
-use hal::arch::PAGE_SIZE;
 use rtl::locking::fakelock::FakeLock;
-use hal::uart::{pl011::Uart, UartTrait};
 
 struct Pl031(Uart);
 

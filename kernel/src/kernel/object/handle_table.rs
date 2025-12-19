@@ -1,6 +1,6 @@
+use crate::kernel::object::KernelObject;
 use crate::kernel::object::capabilities::CapabilityMask;
 use crate::kernel::object::handle::Handle;
-use crate::kernel::object::KernelObject;
 use alloc::collections::btree_map::BTreeMap;
 use alloc::sync::Arc;
 use rtl::handle::HandleBase;
@@ -93,9 +93,11 @@ mod test {
     fn find_smth() {
         let table = HandleTable::new();
 
-        test_assert!(table
-            .find_poly(12123812398, CapabilityMask::any())
-            .is_none());
+        test_assert!(
+            table
+                .find_poly(12123812398, CapabilityMask::any())
+                .is_none()
+        );
     }
 
     #[kernel_test]

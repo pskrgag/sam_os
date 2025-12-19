@@ -1,7 +1,7 @@
 use crate::kernel::locking::spinlock::Spinlock;
 use arm_gic::{
-    gicv3::{GicCpuInterface, GicV3, Group, InterruptGroup},
     IntId, UniqueMmioPointer,
+    gicv3::{GicCpuInterface, GicV3, Group, InterruptGroup},
 };
 use core::ptr::NonNull;
 use loader_protocol::{DeviceKind, LoaderArg};

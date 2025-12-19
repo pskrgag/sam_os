@@ -1,4 +1,4 @@
-use super::{IrqProbe, IRQS};
+use super::{IRQS, IrqProbe};
 use fdt::node::FdtNode;
 use linkme::distributed_slice;
 use loader_protocol::{DeviceKind, DeviceMapping, LoaderArg};

@@ -1,6 +1,6 @@
 use crate::drivers::timer::SystemTimer;
 use aarch64_cpu::registers::{
-    Readable, Writeable, CNTFRQ_EL0, CNTPCT_EL0, CNTP_CTL_EL0, CNTP_TVAL_EL0,
+    CNTFRQ_EL0, CNTP_CTL_EL0, CNTP_TVAL_EL0, CNTPCT_EL0, Readable, Writeable,
 };
 use arm_gic::IntId;
 use core::time::Duration;

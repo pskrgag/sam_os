@@ -322,14 +322,18 @@ impl VmaList {
                     }
 
                     unsafe {
-                        if let Some(left) = vma.links.left() && left.as_ref().max_gap() >= size {
+                        if let Some(left) = vma.links.left()
+                            && left.as_ref().max_gap() >= size
+                        {
                             root = Some(left.as_ref());
                             continue;
                         }
                     }
 
                     unsafe {
-                        if let Some(right) = vma.links.right() && right.as_ref().max_gap() >= size {
+                        if let Some(right) = vma.links.right()
+                            && right.as_ref().max_gap() >= size
+                        {
                             root = Some(right.as_ref());
                             continue;
                         }
@@ -411,20 +415,24 @@ mod test {
     fn vma_list_add_fixed() {
         let mut list = VmaList::new_user();
 
-        let new_vma = list.new_vma(
-            0x1000,
-            Some(0x20000),
-            MappingType::None,
-            VmaFlag::None.into(),
-        ).unwrap();
+        let new_vma = list
+            .new_vma(
+                0x1000,
+                Some(0x20000),
+                MappingType::None,
+                VmaFlag::None.into(),
+            )
+            .unwrap();
         test_assert_eq!(new_vma, VirtAddr::new(0x20000));
 
-        let new_vma = list.new_vma(
-            0x1000,
-            Some(0x30000),
-            MappingType::None,
-            VmaFlag::None.into(),
-        ).unwrap();
+        let new_vma = list
+            .new_vma(
+                0x1000,
+                Some(0x30000),
+                MappingType::None,
+                VmaFlag::None.into(),
+            )
+            .unwrap();
         test_assert_eq!(new_vma, VirtAddr::new(0x30000));
 
         let new_vma = list.new_vma(
