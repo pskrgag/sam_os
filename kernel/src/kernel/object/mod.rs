@@ -67,7 +67,7 @@ impl KernelObjectBase {
 }
 
 // All exposed kernel objects must be derived from this trait
-pub trait KernelObject {
+pub trait KernelObject: Send {
     /// Expose yourself as Any to allow storing in capability table
     fn as_any(&self) -> &dyn Any;
 

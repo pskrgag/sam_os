@@ -6,6 +6,7 @@ use crate::percpu_global;
 use aarch64_cpu::registers::{Readable, ELR_EL1, ESR_EL1, FAR_EL1};
 use alloc::sync::Arc;
 use core::cell::LazyCell;
+use hal::address::*;
 use runtime::executor::Executor;
 
 pub mod current;
@@ -48,7 +49,7 @@ pub fn run() {
 
 pub async fn userspace_loop(thread: Arc<Thread>) {
     loop {
-        let mut ctx = thread.context().unwrap();
+        let mut ctx = thread.context().await;
 
         current::set_current(thread.clone());
         thread.task().vms().switch_to();
@@ -60,12 +61,15 @@ pub async fn userspace_loop(thread: Arc<Thread>) {
         match ctx.trap_reason() {
             TrapReason::Syscall => {
                 let res = match ctx.try_into() {
-                    Ok(args) => do_syscall(args),
+                    Ok(args) => do_syscall(args).await,
                     Err(err) => Err(err),
                 };
                 let res = match res {
                     Ok(res) => res,
-                    Err(err) => -(err as isize) as usize,
+                    Err(err) => {
+                        println!("err {:?} {:?}", err, ctx.x0);
+                        -(err as isize) as usize
+                    }
                 };
 
                 ctx.finish_syscall(res);

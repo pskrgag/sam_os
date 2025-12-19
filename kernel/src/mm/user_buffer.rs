@@ -1,5 +1,6 @@
 use alloc::boxed::Box;
-use alloc::vec;
+use alloc::vec::Vec;
+use core::marker::PhantomData;
 use rtl::error::ErrorType;
 
 unsafe extern "C" {
@@ -9,28 +10,43 @@ unsafe extern "C" {
 
 #[derive(Clone, Copy, Debug)]
 pub struct UserPtr<T> {
-    p: *const T,
+    p: usize,
     count: usize,
+    _p: PhantomData<T>,
 }
 
+// TODO: this API is fucking garbage and needs redo
 impl<T> UserPtr<T> {
     pub fn new(p: *const T) -> Self {
-        Self { p, count: 1 }
+        Self {
+            p: p as usize,
+            count: 1,
+            _p: PhantomData,
+        }
     }
 
     pub fn new_array(p: *const T, count: usize) -> Self {
-        Self { p, count }
+        Self {
+            p: p as usize,
+            count,
+            _p: PhantomData,
+        }
     }
 
     pub fn len(&self) -> usize {
         self.count
     }
 
-    pub fn read_on_heap(&self) -> Option<Box<[u8]>> {
+    pub fn read_on_heap(&self) -> Result<Box<[u8]>, ErrorType> {
         use core::mem::size_of;
 
         // TODO: add error handling of OMM. This is no good
-        let heap = vec![0; self.count * size_of::<T>()];
+        // let heap = vec![0; self.count * size_of::<T>()];
+        let mut heap = Vec::new();
+        let len = self.count * size_of::<T>();
+
+        heap.try_reserve_exact(len).map_err(|_| ErrorType::NoMemory)?;
+        heap.resize(len, 0);
 
         unsafe {
             let res = arch_copy_from_user(
@@ -39,9 +55,9 @@ impl<T> UserPtr<T> {
                 heap.as_ptr() as _,
             );
             if res == 0 {
-                Some(heap.into_boxed_slice())
+                Ok(heap.into_boxed_slice())
             } else {
-                None
+                Err(ErrorType::Fault)
             }
         }
     }
@@ -56,12 +72,16 @@ impl<T> UserPtr<T> {
                 to.as_ptr() as _,
             );
 
-            if res == 0 { Some(s) } else { None }
+            if res == 0 {
+                Some(s)
+            } else {
+                None
+            }
         }
     }
 
     pub fn read(&self) -> Option<T> {
-        use core::mem::{MaybeUninit, size_of};
+        use core::mem::{size_of, MaybeUninit};
 
         let t = MaybeUninit::uninit();
 

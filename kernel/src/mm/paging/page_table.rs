@@ -29,12 +29,10 @@ impl PageTableBlock {
         Self { addr, lvl }
     }
 
-    #[cfg(test)]
     pub fn addr(&self) -> LinearAddr {
         self.addr
     }
 
-    #[cfg(test)]
     pub fn lvl(&self) -> u8 {
         self.lvl
     }
@@ -134,30 +132,25 @@ impl PageTable {
         }
     }
 
-    #[cfg(test)]
-    pub fn walk(&mut self, va: VirtAddr) {
+    pub fn translate(&self, va: VirtAddr) -> Option<PhysAddr> {
         let mut base = self.lvl0();
 
-        println!("TTBR base {:x}", PhysAddr::from(base.addr()));
-
-        for _ in 0..=arch::PAGE_TABLE_LVLS {
+        for lvl in 0..=arch::PAGE_TABLE_LVLS {
             let index = base.index_of(va);
 
-            println!(
-                "va {:x} entry {:x} idx {} lvl {}",
-                va,
-                base.get_pte(index).bits(),
-                index,
-                base.lvl()
-            );
+            if lvl != arch::PAGE_TABLE_LVLS {
+                let next_block = match base.next(index) {
+                    Some(e) => e,
+                    None => return None,
+                };
 
-            let next_block = match base.next(index) {
-                Some(e) => e,
-                None => return,
-            };
-
-            base = next_block;
+                base = next_block;
+            } else {
+                return Some(base.get_pte(index).addr());
+            }
         }
+
+        panic!("")
     }
 
     pub fn new() -> Option<Self> {

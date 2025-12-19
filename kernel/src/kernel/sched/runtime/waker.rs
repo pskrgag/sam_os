@@ -7,9 +7,7 @@ static VTABLE: RawWakerVTable = RawWakerVTable::new(clone, wake, wake_by_ref, dr
 
 unsafe fn clone(data: *const ()) -> RawWaker {
     unsafe {
-        let arc = Arc::from_raw(data as *const Waker).clone();
-
-        core::mem::forget(arc);
+        Arc::increment_strong_count(data);
         RawWaker::new(data, &VTABLE)
     }
 }
@@ -17,16 +15,22 @@ unsafe fn clone(data: *const ()) -> RawWaker {
 unsafe fn wake(data: *const ()) {
     unsafe {
         let arc = Arc::from_raw(data as *const Waker);
-        arc.wake()
+        arc.wake();
     }
 }
 
 unsafe fn wake_by_ref(data: *const ()) {
-    unsafe { wake(data) }
+    unsafe {
+        let arc = Arc::from_raw(data as *const Waker);
+        arc.wake();
+        core::mem::forget(arc);
+    }
 }
 
 unsafe fn drop_waker(data: *const ()) {
-    unsafe { drop(Arc::from_raw(data as *const Waker)) }
+    unsafe {
+        drop(Arc::from_raw(data as *const Waker));
+    }
 }
 
 pub struct Waker<'a> {
@@ -37,6 +41,13 @@ pub struct Waker<'a> {
 impl Waker<'_> {
     fn wake(&self) {
         self.bit.fetch_or(1u64 << self.index, Ordering::Relaxed);
+    }
+}
+
+impl Drop for Waker<'_> {
+    fn drop(&mut self) {
+        // TODO: remove after investigation
+        panic!("");
     }
 }
 
@@ -90,7 +101,13 @@ impl WakerPage {
             bit: &self.notified,
             index,
         });
-        let raw = RawWaker::new(Arc::into_raw(arc) as *const _, &VTABLE);
+
+        let p = Arc::into_raw(arc) as *const _;
+        unsafe { Arc::increment_strong_count(p) };
+
+
+
+        let raw = RawWaker::new(p, &VTABLE);
 
         unsafe { CoreWaker::from_raw(raw) }
     }

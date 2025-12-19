@@ -7,6 +7,7 @@ use crate::{
             handle::Handle,
             port_object::Port,
             task_object::Task,
+            thread_object::Thread,
             vm_object::VmObject,
             vms_object::Vms,
         },
@@ -54,7 +55,7 @@ impl SyscallArgs {
 
 fn read_user_string(source: usize, size: usize) -> Result<String, ErrorType> {
     let name = UserPtr::new_array(source as *const u8, size);
-    let name = name.read_on_heap().ok_or(ErrorType::Fault)?;
+    let name = name.read_on_heap()?;
     let name = core::str::from_utf8(&name)
         .map_err(|_| ErrorType::InvalidArgument)?
         .to_string();
@@ -62,18 +63,18 @@ fn read_user_string(source: usize, size: usize) -> Result<String, ErrorType> {
     Ok(name)
 }
 
-pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
+pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
     let thread = current().unwrap();
     let task = thread.task();
     let mut table = task.handle_table();
 
     match args.number() {
-        SyscallList::Write => unsafe {
-            do_write(core::slice::from_raw_parts(
-                args.arg::<usize>(0) as *const u8,
-                args.arg(1),
-            ))
-        },
+        SyscallList::Write => {
+            let str = UserPtr::new_array(args.arg::<usize>(0) as *const u8, args.arg(1));
+
+            do_write(&str.read_on_heap()?);
+            Ok(0)
+        }
         SyscallList::CreateTask => {
             let name = read_user_string(args.arg(1), args.arg(2))?;
 
@@ -150,7 +151,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             vms.map_phys(args.arg(1), args.arg(2)).map(|x| x as usize)
         }
         SyscallList::Yield => {
-            current().unwrap().self_yield();
+            Thread::self_yield().await;
             Ok(0)
         }
         SyscallList::TaskStart => {
@@ -185,6 +186,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
 
             drop(table);
             port.call(UserPtr::new(args.arg::<usize>(1) as *mut IpcMessage))
+                .await
         }
         SyscallList::PortSendWait => {
             let port = table
@@ -193,7 +195,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             let msg = UserPtr::new(args.arg::<usize>(2) as *mut IpcMessage);
 
             drop(table);
-            port.send_wait(args.arg(1), msg)
+            port.send_wait(args.arg(1), msg).await
         }
         SyscallList::PortSend => {
             let port = table
@@ -211,7 +213,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             let in_msg = UserPtr::new(args.arg::<usize>(1) as *mut IpcMessage);
 
             drop(table);
-            port.receive(in_msg)
+            port.receive(in_msg).await
         }
         SyscallList::CloseHandle => {
             if table.remove(args.arg(0)) {
@@ -237,12 +239,7 @@ pub fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
     }
 }
 
-fn do_write(string: &[u8]) -> Result<usize, ErrorType> {
-    match core::str::from_utf8(string) {
-        Ok(s) => {
-            print!("{}", s);
-            Ok(0)
-        }
-        _ => Err(ErrorType::Fault),
-    }
+fn do_write(string: &[u8]) {
+    let str = unsafe { core::str::from_utf8_unchecked(string) };
+    print!("{}", str);
 }

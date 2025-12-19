@@ -1,4 +1,5 @@
 use crate::arch::regs::Context;
+use core::task::Waker;
 use hal::address::*;
 
 #[derive(PartialEq, Copy, Clone, Debug)]
@@ -11,6 +12,7 @@ pub enum ThreadType {
 pub struct ThreadInner {
     arch_ctx: Option<Context>,
     stack: VirtAddr,
+    waker: Option<Waker>,
 }
 
 impl ThreadInner {
@@ -18,7 +20,16 @@ impl ThreadInner {
         Self {
             arch_ctx: None,
             stack,
+            waker: None,
         }
+    }
+
+    pub fn set_waker(&mut self, waker: Waker) {
+        self.waker = Some(waker);
+    }
+
+    pub fn wake(&mut self) {
+        self.waker.take().map(|x| x.wake());
     }
 
     pub fn init_context(&mut self, ep: VirtAddr, user_stack: VirtAddr, args: [usize; 3]) {

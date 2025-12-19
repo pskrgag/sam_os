@@ -90,4 +90,8 @@ impl Vms {
     pub fn switch_to(&self) {
         TTBR0_EL1.set(self.base().bits() as u64)
     }
+
+    pub fn translate(&self, va: VirtAddr) -> Option<PhysAddr> {
+        self.inner.lock().translate(va)
+    }
 }

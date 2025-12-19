@@ -79,11 +79,6 @@ extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
     #[cfg(not(test))]
     init_userspace(prot);
 
-    kernel::sched::spawn((async || {
-        println!("hello");
-        kernel::object::thread_object::Thread::sleep_for(core::time::Duration::from_secs(1)).await;
-        println!("hello1");
-    })());
     kernel::sched::run();
 
     #[cfg(test)]

@@ -1,19 +1,22 @@
+use crate::arch::regs::Context;
+use crate::kernel::locking::spinlock::Spinlock;
 use crate::kernel::object::task_object::Task;
 use crate::kernel::object::KernelObjectBase;
 use crate::kernel::sched::spawn;
 use crate::kernel::tasks::task::kernel_task;
 use crate::kernel::tasks::thread::ThreadInner;
-use crate::{arch::regs::Context, kernel::locking::spinlock::Spinlock};
 use alloc::sync::Arc;
 use alloc::sync::Weak;
+use core::pin::Pin;
 use core::sync::atomic::{AtomicUsize, Ordering};
+use core::task::{Context as PollContext, Poll};
 use core::time::Duration;
 use hal::address::*;
 use hal::arch::PAGE_SIZE;
 use object_lib::object;
 use rtl::vmm::MappingType;
 
-const USER_THREAD_STACK_PAGES: usize = 50;
+const USER_THREAD_STACK_PAGES: usize = 100;
 const KERNEL_STACK_PAGES: usize = 100;
 const RR_TICKS: usize = 10;
 
@@ -131,13 +134,42 @@ impl Thread {
         use crate::kernel::sched::userspace_loop;
 
         self.set_running();
-        spawn(userspace_loop(self.clone()));
+        spawn(alloc::boxed::Box::pin(userspace_loop(self.clone())));
     }
 
-    pub fn context(self: &Arc<Self>) -> Option<Context> {
-        let mut inner = self.inner.lock();
+    pub async fn context(self: &Arc<Self>) -> Context {
+        struct RunnableChecker {
+            thread: Arc<Thread>,
+        }
 
-        inner.take_context()
+        impl Future for RunnableChecker {
+            type Output = Context;
+
+            fn poll(self: Pin<&mut Self>, cx: &mut PollContext) -> Poll<Self::Output> {
+                match self.thread.state() {
+                    ThreadState::Running => {
+                        Poll::Ready(self.thread.inner.lock().take_context().unwrap())
+                    }
+                    ThreadState::NeedResched => {
+                        self.thread.set_running();
+                        cx.waker().wake_by_ref();
+                        Poll::Pending
+                    }
+                    _ => todo!(),
+                }
+            }
+        }
+
+        match self.state() {
+            ThreadState::Running => self.inner.lock().take_context().unwrap(),
+            ThreadState::NeedResched => {
+                RunnableChecker {
+                    thread: self.clone(),
+                }
+                .await
+            }
+            _ => todo!(),
+        }
     }
 
     pub fn update_context(self: &Arc<Self>, ctx: Context) {
@@ -151,13 +183,26 @@ impl Thread {
 
         if old == 0 {
             self.set_state(ThreadState::NeedResched, ThreadSleepReason::None);
+
+            // TODO: better move to scheduler
             self.ticks.store(RR_TICKS, Ordering::Relaxed);
         }
     }
 
-    pub fn self_yield(self: Arc<Thread>) {
-        self.ticks.store(RR_TICKS, Ordering::Relaxed);
-        self.set_state(ThreadState::NeedResched, ThreadSleepReason::None);
+    pub async fn self_yield() {
+        struct Yield;
+
+        impl Future for Yield {
+            type Output = ();
+
+            fn poll(self: Pin<&mut Self>, _cx: &mut PollContext) -> Poll<Self::Output> {
+                // Drop to the scheduler
+                // TODO: (reset ticks)
+                Poll::Ready(())
+            }
+        }
+
+        Yield.await
     }
 
     pub fn wake(self: &Arc<Thread>) {
@@ -170,8 +215,6 @@ impl Thread {
 
     pub async fn sleep_for(dl: Duration) {
         use crate::kernel::sched::timer::{time_since_start, TIMER_QUEUE};
-        use core::pin::Pin;
-        use core::task::{Context, Poll};
 
         struct Sleep {
             dl: Duration,
@@ -181,7 +224,7 @@ impl Thread {
         impl Future for Sleep {
             type Output = ();
 
-            fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+            fn poll(self: Pin<&mut Self>, cx: &mut PollContext) -> Poll<Self::Output> {
                 let waker = cx.waker().clone();
 
                 if time_since_start() >= self.dl {

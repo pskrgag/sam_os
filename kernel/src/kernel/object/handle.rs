@@ -9,6 +9,10 @@ pub struct Handle {
     rights: CapabilityMask,
 }
 
+// dyn KernelObject is not Send by default, but all kernel objects are wrapped into Arc, so should
+// be fine??? (TODO: recheck if I lied to the compiler here)
+unsafe impl Send for Handle {}
+
 impl Handle {
     pub fn new(o: Arc<dyn KernelObject>, rights: CapabilityMask) -> Self {
         Self {

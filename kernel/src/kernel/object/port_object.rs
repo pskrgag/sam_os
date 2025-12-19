@@ -22,8 +22,8 @@ pub struct Port {
 
 fn copy_ipc_message_from_user(
     user_msg: UserPtr<IpcMessage<'static>>,
-) -> Option<IpcMessage<'static>> {
-    let mut user_msg = user_msg.read()?;
+) -> Result<IpcMessage<'static>, ErrorType> {
+    let mut user_msg = user_msg.read().ok_or(ErrorType::Fault)?;
 
     let data = user_msg.out_arena();
 
@@ -34,7 +34,7 @@ fn copy_ipc_message_from_user(
         user_msg.set_out_arena(Box::leak(user_buffer));
     }
 
-    Some(user_msg)
+    Ok(user_msg)
 }
 
 impl Port {
@@ -73,11 +73,11 @@ impl Port {
         Ok(())
     }
 
-    pub fn call(
+    pub async fn call(
         &self,
         mut client_msg_uptr: UserPtr<IpcMessage<'static>>,
     ) -> Result<usize, ErrorType> {
-        let mut client_msg = copy_ipc_message_from_user(client_msg_uptr).ok_or(ErrorType::Fault)?;
+        let mut client_msg = copy_ipc_message_from_user(client_msg_uptr)?;
         let task = self.task.upgrade().ok_or(ErrorType::TaskDead)?;
         let reply_port = current()
             .unwrap()
@@ -93,7 +93,7 @@ impl Port {
         client_msg.set_reply_port(my_port);
         self.queue.produce(client_msg);
 
-        let mut server_msg = reply_port.obj::<Self>().unwrap().queue.consume();
+        let mut server_msg = reply_port.obj::<Self>().unwrap().queue.consume().await;
 
         if let Some(d) = client_msg.in_arena() {
             let mut ud = UserPtr::new_array(d.as_ptr(), d.len());
@@ -128,7 +128,7 @@ impl Port {
         self_table.remove(reply_port_handle);
         drop(self_table);
 
-        let mut user_msg = copy_ipc_message_from_user(msg).ok_or(ErrorType::Fault)?;
+        let mut user_msg = copy_ipc_message_from_user(msg)?;
 
         Self::transfer_handles_from_current(&task, &mut user_msg)?;
 
@@ -136,23 +136,23 @@ impl Port {
         Ok(())
     }
 
-    pub fn send_wait(
+    pub async fn send_wait(
         &self,
         reply_port_handle: HandleBase,
         msg: UserPtr<IpcMessage<'static>>,
     ) -> Result<usize, ErrorType> {
         self.send(reply_port_handle, msg)?;
-        self.receive(msg)
+        self.receive(msg).await
     }
 
-    pub fn receive(
+    pub async fn receive(
         &self,
         mut server_msg_uptr: UserPtr<IpcMessage<'static>>,
     ) -> Result<usize, ErrorType> {
-        let mut server_msg = copy_ipc_message_from_user(server_msg_uptr).ok_or(ErrorType::Fault)?;
+        let mut server_msg = copy_ipc_message_from_user(server_msg_uptr)?;
         let mut arena_len = 0;
 
-        let mut client_msg = self.queue.consume();
+        let mut client_msg = self.queue.consume().await;
 
         // Copy arena data
         if let Some(d) = server_msg.in_arena() {

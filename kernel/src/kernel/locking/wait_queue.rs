@@ -1,13 +1,13 @@
 use super::mutex::Mutex;
-use crate::kernel::object::thread_object::Thread;
-use crate::kernel::sched::current;
 use alloc::collections::VecDeque;
-use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
+use core::future::Future;
+use core::pin::Pin;
+use core::task::{Context, Poll, Waker};
 
 pub struct WaitQueue<T> {
     data: Mutex<VecDeque<T>>,
-    waiters: Mutex<Vec<Weak<Thread>>>,
+    waiters: Mutex<Vec<Waker>>,
 }
 
 impl<T> WaitQueue<T> {
@@ -21,27 +21,31 @@ impl<T> WaitQueue<T> {
     pub fn produce(&self, data: T) {
         self.data.lock().push_back(data);
 
-        for waiter in &*self.waiters.lock() {
-            if let Some(waiter) = waiter.upgrade() {
-                waiter.wake();
-            }
+        if let Some(waiter) = self.waiters.lock().pop() {
+            waiter.wake_by_ref();
         }
     }
 
-    pub fn consume(&self) -> T {
-        let cur = current().unwrap();
+    pub async fn consume(&self) -> T {
+        struct ConsumeFuture<'a, T> {
+            wq: &'a WaitQueue<T>,
+        }
 
-        loop {
-            let mut data = self.data.lock();
+        impl<'a, T> Future for ConsumeFuture<'a, T> {
+            type Output = T;
 
-            if let Some(res) = data.pop_front() {
-                break res;
-            } else {
-                self.waiters.lock().push(Arc::downgrade(&cur));
+            fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+                let mut data = self.wq.data.lock();
 
-                drop(data);
-                // cur.sleep(ThreadSleepReason::WaitQueue);
+                if let Some(elem) = data.pop_front() {
+                    Poll::Ready(elem)
+                } else {
+                    self.wq.waiters.lock().push(cx.waker().clone());
+                    Poll::Pending
+                }
             }
         }
+
+        ConsumeFuture { wq: self }.await
     }
 }

@@ -106,6 +106,8 @@ impl SlabAllocator {
             debug_assert!(!addr.is_null());
             debug_assert!((addr as *mut FreeList).is_aligned());
 
+            let slice = core::slice::from_raw_parts_mut(addr, self.slab_size);
+            slice.fill(0xa5);
             self.freelist
                 .add_to_freelist(NonNull::new_unchecked(addr as *mut FreeList));
         }
@@ -113,7 +115,7 @@ impl SlabAllocator {
 }
 
 impl FreeList {
-    /* Allocate one page for the beggining */
+    /* Allocate one page for the beginning */
     pub fn new(size: usize) -> Option<Self> {
         assert!(size.is_power_of_two());
 
@@ -150,6 +152,7 @@ impl FreeList {
         unsafe {
             let mut next = self.next.take()?;
 
+            // println!("{:p} {:p}", next, &self.next);
             self.next = next.as_mut().next.take();
             Some(next.as_ptr())
         }

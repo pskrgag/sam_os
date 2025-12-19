@@ -110,4 +110,8 @@ impl VmsInner {
     pub fn ttbr0(&self) -> Option<PhysAddr> {
         self.ttbr0.as_ref().map(|ttbr0| ttbr0.base())
     }
+
+    pub fn translate(&self, va: VirtAddr) -> Option<PhysAddr> {
+        self.ttbr0.as_ref()?.translate(va)
+    }
 }

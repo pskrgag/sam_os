@@ -18,6 +18,7 @@ switch_to_user:
 
 	// Save pointer to the context, so during trap we will be able to locate it
 	str	x0, [sp, #0x70]
+	msr	SPSel, #1
 
 	// Load user-space context
 	ldp	x1, x2, [x0, #240]
@@ -44,6 +45,9 @@ switch_to_user:
 
 	// Must be last, since x0 is the base register
 	ldp	x0, x1, [x0, #0]
+
+	// TODO: remove this flush
+	tlbi	vmalle1is
 
 	// Jump to user-space
 	eret
