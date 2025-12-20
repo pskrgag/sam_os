@@ -1,5 +1,5 @@
 use fdt::Fdt;
-use hal::address::{MemRange, PhysAddr};
+use hal::address::{MemRange, PhysAddr, Address};
 use hal::uart::{UartTrait, pl011::Uart};
 use libc::vmm::vms::vms;
 
@@ -41,7 +41,7 @@ pub fn probe(fdt: &Fdt) -> Option<Pl011> {
     // Map it
     let res = vms()
         .map_phys(MemRange::new(
-            PhysAddr::new(reg.starting_address as usize),
+            PhysAddr::from_bits(reg.starting_address as usize),
             reg.size?,
         ))
         .ok()?;

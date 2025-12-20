@@ -1,9 +1,9 @@
 use crate::mm::allocators::page_alloc::page_allocator;
 use alloc::vec::Vec;
 use elf::{
-    ElfBytes,
     abi::{PF_R, PF_W, PF_X, PT_LOAD},
     endian::LittleEndian,
+    ElfBytes,
 };
 use hal::address::*;
 use hal::arch::PAGE_SIZE;
@@ -42,7 +42,7 @@ pub fn parse_initial_task(prot: &loader_protocol::LoaderArg) -> Option<ElfData> 
     {
         let base = seg.p_vaddr;
         let size = seg.p_memsz;
-        let mut virt_range = MemRange::new(VirtAddr::new(base as usize), size as usize);
+        let mut virt_range = MemRange::new(VirtAddr::from_bits(base as usize), size as usize);
 
         virt_range.align_page();
 
@@ -55,14 +55,14 @@ pub fn parse_initial_task(prot: &loader_protocol::LoaderArg) -> Option<ElfData> 
             );
 
             if seg.p_memsz != 0 {
-                let start = LinearAddr::from(new_pages.start());
-                let mut va: VirtAddr = start.into();
+                let mut va = LinearAddr::from(new_pages.start());
 
                 let start = unsafe { va.as_slice_mut::<u8>(virt_range.size()) };
                 let elf_range =
                     seg.p_offset as usize..seg.p_offset as usize + seg.p_filesz as usize;
-                let slice_range = (seg.p_vaddr as usize).page_offset()
-                    ..(seg.p_vaddr as usize).page_offset() + seg.p_filesz as usize;
+                let slice_range = VirtAddr::from_bits(seg.p_vaddr as usize).page_offset()
+                    ..VirtAddr::from_bits(seg.p_vaddr as usize).page_offset()
+                        + seg.p_filesz as usize;
 
                 start[slice_range].copy_from_slice(&elf_data[elf_range])
             }

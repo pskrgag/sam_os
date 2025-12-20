@@ -1,4 +1,4 @@
-use hal::address::{LinearAddr, PhysAddr, VirtAddr};
+use hal::address::{LinearAddr, PhysAddr, VirtualAddress};
 use hal::arch::PAGE_SIZE;
 use loader_protocol::LoaderArg;
 
@@ -8,8 +8,7 @@ pub mod user_buffer;
 pub mod vmm;
 
 pub unsafe fn memset_pages(pa: PhysAddr, num: usize) {
-    let linear = LinearAddr::from(pa);
-    let mut va: VirtAddr = linear.into();
+    let mut va = LinearAddr::from(pa);
 
     unsafe { va.as_slice_mut::<u8>(num * PAGE_SIZE).fill(0x00) };
 }

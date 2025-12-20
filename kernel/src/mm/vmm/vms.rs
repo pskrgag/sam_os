@@ -8,7 +8,7 @@ use crate::object::handle::Handle;
 use crate::object::KernelObjectBase;
 use crate::sync::Mutex;
 use alloc::sync::Arc;
-use hal::address::{Address, MemRange, PhysAddr, VirtAddr};
+use hal::address::{Address, MemRange, PhysAddr, VirtAddr, VirtualAddress};
 use hal::arch::*;
 use object_lib::object;
 use rtl::error::ErrorType;
@@ -41,7 +41,7 @@ impl VmsInner {
         tp: MappingType,
     ) -> Result<VirtAddr, ErrorType> {
         debug_assert!(p.start().is_page_aligned());
-        debug_assert!(p.size().is_page_aligned());
+        debug_assert_eq!(p.size().next_multiple_of(PAGE_SIZE), p.size());
 
         let size = p.size();
 
@@ -62,7 +62,7 @@ impl VmsInner {
 
     // ToDo: on-demang allocation of physical memory
     pub fn vm_allocate(&mut self, mut size: usize, tp: MappingType) -> Result<VirtAddr, ErrorType> {
-        if !size.is_page_aligned() {
+        if !size.next_multiple_of(PAGE_SIZE) == size {
             return Err(ErrorType::InvalidArgument);
         }
 
@@ -95,8 +95,8 @@ impl VmsInner {
     }
 
     pub fn vm_free(&mut self, range: MemRange<VirtAddr>) -> Result<(), ErrorType> {
-        assert!(range.start().is_page_aligned());
-        assert!(range.size().is_page_aligned());
+        debug_assert!(range.start().is_page_aligned());
+        debug_assert_eq!(range.size().next_multiple_of(PAGE_SIZE), range.size());
 
         self.vmas.free(range)?;
 
@@ -157,7 +157,7 @@ impl Vms {
         let mut inner = self.inner.lock();
 
         debug_assert!(p.start().is_page_aligned());
-        debug_assert!(p.size().is_page_aligned());
+        debug_assert_eq!(p.size().next_multiple_of(PAGE_SIZE), p.size());
 
         inner.vm_map(v, p, tp)
     }

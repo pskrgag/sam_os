@@ -6,7 +6,7 @@ use crate::vmm::vms::vms;
 use crate::vmm::vms::Vms;
 use alloc::string::String;
 use alloc::vec::Vec;
-use hal::address::{Address, VirtAddr};
+use hal::address::{Address, VirtAddr, VirtualAddress};
 use hal::arch::{PAGE_MASK, PAGE_SIZE};
 use rtl::error::ErrorType;
 use rtl::vmm::MappingType;
@@ -69,7 +69,7 @@ impl Task {
             let mut load = load.bits();
 
             load &= !PAGE_MASK;
-            vms.map_vm_object(&vmo, Some(VirtAddr::new(load)), tp)
+            vms.map_vm_object(&vmo, Some(VirtAddr::from_bits(load)), tp)
                 .unwrap();
         }
 

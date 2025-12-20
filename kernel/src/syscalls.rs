@@ -134,7 +134,7 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             }
 
             let range = vmo.range();
-            let va_range = if to == VirtAddr::new(0) {
+            let va_range = if to == VirtAddr::from_bits(0) {
                 None
             } else {
                 Some(MemRange::new(to, range.size()))

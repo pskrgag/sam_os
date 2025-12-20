@@ -36,7 +36,12 @@ impl Vms {
         to: Option<VirtAddr>,
         tp: MappingType,
     ) -> Result<VirtAddr, ErrorType> {
-        Syscall::vm_map_vmo(&self.h, o.handle(), to.unwrap_or(VirtAddr::new(0)), tp)
+        Syscall::vm_map_vmo(
+            &self.h,
+            o.handle(),
+            to.unwrap_or(VirtAddr::from_bits(0)),
+            tp,
+        )
     }
 
     pub fn map_phys(&self, p: MemRange<PhysAddr>) -> Result<VirtAddr, ErrorType> {

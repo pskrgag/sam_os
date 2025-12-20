@@ -43,7 +43,7 @@ pub fn va_to_index(va: VirtAddr, lvl: usize) -> usize {
 
 impl Pte {
     pub fn pa(&self) -> PhysAddr {
-        PhysAddr::new(self.0 & !PAGE_ENTRY_FLAGS_MASK)
+        PhysAddr::from_bits(self.0 & !PAGE_ENTRY_FLAGS_MASK)
     }
 
     pub fn is_valid(&self) -> bool {

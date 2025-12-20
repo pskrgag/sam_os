@@ -5,6 +5,7 @@ use fdt::Fdt;
 use libc::syscalls::Syscall;
 use libc::{handle::Handle, main, port::Port};
 use rtl::locking::spinlock::Spinlock;
+use hal::address::VirtualAddress;
 
 mod pl011;
 

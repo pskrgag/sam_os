@@ -70,7 +70,8 @@ impl<'a> Syscall<'a> {
         tp: MappingType,
     ) -> Result<VirtAddr, ErrorType> {
         unsafe {
-            syscall(Self::VmMapVmo(vms.as_raw(), vmo.as_raw(), to, tp).as_args()).map(VirtAddr::new)
+            syscall(Self::VmMapVmo(vms.as_raw(), vmo.as_raw(), to, tp).as_args())
+                .map(<VirtAddr as Address>::from_bits)
         }
     }
 
@@ -105,7 +106,7 @@ impl<'a> Syscall<'a> {
     }
 
     pub fn get_fdt() -> Result<VirtAddr, ErrorType> {
-        unsafe { syscall(Self::GetFdt.as_args()).map(VirtAddr::new) }
+        unsafe { syscall(Self::GetFdt.as_args()).map(<VirtAddr as Address>::from_bits) }
     }
 
     pub fn port_send_wait(

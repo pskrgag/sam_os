@@ -7,7 +7,7 @@ use elf::{
     abi::{PF_R, PF_W, PF_X, PT_LOAD},
     endian::LittleEndian,
 };
-use hal::address::{MemRange, PhysAddr, VirtAddr};
+use hal::address::{MemRange, PhysAddr, VirtAddr, Address};
 use hal::arch::PAGE_SIZE;
 
 #[repr(align(0x1000))]
@@ -34,13 +34,13 @@ pub fn map_kernel(tt: &mut PageTable) {
     {
         let base = seg.p_vaddr;
         let size = seg.p_memsz;
-        let mut virt_range = MemRange::new(VirtAddr::new(base as usize), size as usize);
+        let mut virt_range = MemRange::new(VirtAddr::from_bits(base as usize), size as usize);
 
         virt_range.align_page();
 
         let mut phys_range = if seg.p_filesz != 0 {
             MemRange::new(
-                PhysAddr::new(unsafe { phys_base.add(seg.p_offset as usize) } as usize),
+                PhysAddr::from_bits(unsafe { phys_base.add(seg.p_offset as usize) } as usize),
                 seg.p_filesz as usize,
             )
         } else {
@@ -69,5 +69,5 @@ pub fn map_kernel(tt: &mut PageTable) {
 }
 
 pub fn kernel_ep() -> VirtAddr {
-    unsafe { VirtAddr::new(KERNEL_EP.unwrap()) }
+    unsafe { VirtAddr::from_bits(KERNEL_EP.unwrap()) }
 }

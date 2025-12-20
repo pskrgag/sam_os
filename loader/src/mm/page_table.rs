@@ -1,6 +1,7 @@
 use super::alloc::alloc_pages;
-use crate::arch::mmu::{PAGE_TABLE_LAST_LVL, PTE_COUNT, Pte, lvl_to_order, va_to_index};
+use crate::arch::mmu::{lvl_to_order, va_to_index, Pte, PAGE_TABLE_LAST_LVL, PTE_COUNT};
 use hal::address::{Address, MemRange, PhysAddr, VirtAddr};
+use hal::arch::PAGE_SIZE;
 
 pub struct PageTable {
     base: *mut Pte,
@@ -78,16 +79,16 @@ impl PageTable {
         perms: PagePerms,
         kind: PageKind,
     ) {
-        assert!(va.size() == pa.size());
-        assert!(va.start().is_page_aligned());
-        assert!(va.size().is_page_aligned());
-        assert!(pa.size().is_page_aligned());
-        assert!(pa.start().is_page_aligned());
+        debug_assert_eq!(va.size(), pa.size());
+        debug_assert_eq!(va.size().next_multiple_of(PAGE_SIZE), va.size());
+        debug_assert_eq!(pa.size().next_multiple_of(PAGE_SIZE), pa.size());
+        debug_assert!(va.start().is_page_aligned());
+        debug_assert!(pa.start().is_page_aligned());
 
         Self::map_lvl(self.base, &mut va, &mut pa, perms, kind, 0)
     }
 
     pub fn base(&self) -> PhysAddr {
-        PhysAddr::new(self.base as usize)
+        PhysAddr::from_bits(self.base as usize)
     }
 }

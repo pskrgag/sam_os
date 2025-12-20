@@ -12,10 +12,6 @@ impl PhysAddr {
     pub const fn to_pfn(&self) -> usize {
         self.0 >> arch::PAGE_SHIFT
     }
-
-    pub const fn new(addr: usize) -> Self {
-        Self(addr)
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug, Default)]
@@ -29,48 +25,7 @@ impl From<LinearAddr> for VirtAddr {
     }
 }
 
-impl VirtAddr {
-    pub const fn new(ptr: usize) -> Self {
-        Self(ptr)
-    }
-
-    pub fn from_raw<T>(ptr: *const T) -> Self {
-        Self(ptr as usize)
-    }
-
-    pub fn to_raw<T>(&self) -> *const T {
-        self.0 as *const T
-    }
-
-    pub fn to_raw_mut<T>(&self) -> *mut T {
-        self.0 as *mut T
-    }
-
-    pub fn is_null(&self) -> bool {
-        self.0 == 0
-    }
-
-    /// # Safety
-    ///
-    /// Caller should be sure that pointer points to [`[count; T]`]
-    pub unsafe fn as_slice_mut<T>(&mut self, count: usize) -> &mut [T] {
-        unsafe { core::slice::from_raw_parts_mut(self.0 as *mut T, count) }
-    }
-
-    /// # Safety
-    ///
-    /// Caller should be sure that pointer points to [`[count; T]`]
-    pub unsafe fn as_slice<T>(&self, count: usize) -> &[T] {
-        unsafe { core::slice::from_raw_parts(self.0 as *mut T, count) }
-    }
-
-    /// # Safety
-    ///
-    /// Caller should be sure that pointer points to [`[count; T]`]
-    pub unsafe fn as_slice_at_offset_mut<T>(&mut self, count: usize, offset: usize) -> &mut [T] {
-        unsafe { core::slice::from_raw_parts_mut((self.0 + offset) as *mut T, count) }
-    }
-}
+impl VirtAddr {}
 
 impl<T> From<*const T> for VirtAddr {
     fn from(addr: *const T) -> Self {
@@ -107,21 +62,15 @@ impl Address for LinearAddr {
     fn set_bits(&mut self, bits: usize) {
         self.0 = bits;
     }
+
+    fn from_bits(bits: usize) -> Self {
+        Self(bits)
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug)]
 #[repr(transparent)]
 pub struct Pfn(usize);
-
-impl Pfn {
-    pub const fn get(&self) -> usize {
-        self.0
-    }
-
-    pub const fn new(pfn: usize) -> Self {
-        Self(pfn)
-    }
-}
 
 #[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
 pub struct MemRange<T: Address + core::fmt::Debug> {
@@ -139,13 +88,10 @@ impl<T: Address + Debug> core::fmt::Debug for MemRange<T> {
     }
 }
 
-pub trait Address {
+pub trait Address: Sized {
     fn bits(&self) -> usize;
     fn set_bits(&mut self, bits: usize);
-
-    fn is_null(&self) -> bool {
-        self.bits() == 0
-    }
+    fn from_bits(bits: usize) -> Self;
 
     fn round_up(&mut self, to: usize) -> &mut Self {
         assert!(to.is_power_of_two());
@@ -188,6 +134,49 @@ pub trait Address {
     }
 }
 
+pub trait VirtualAddress: Address {
+    fn from_raw<T>(ptr: *const T) -> Self {
+        Self::from_bits(ptr as usize)
+    }
+
+    fn to_raw<T>(&self) -> *const T {
+        self.bits() as *const T
+    }
+
+    fn to_raw_mut<T>(&self) -> *mut T {
+        self.bits() as *mut T
+    }
+
+    fn is_null(&self) -> bool {
+        self.bits() == 0
+    }
+
+    /// # Safety
+    ///
+    /// Caller should be sure that pointer points to [`[count; T]`]
+    unsafe fn as_slice_mut<T>(&mut self, count: usize) -> &mut [T] {
+        unsafe { core::slice::from_raw_parts_mut(self.to_raw_mut(), count) }
+    }
+
+    /// # Safety
+    ///
+    /// Caller should be sure that pointer points to [`[count; T]`]
+    unsafe fn as_slice<T>(&self, count: usize) -> &[T] {
+        unsafe { core::slice::from_raw_parts(self.to_raw(), count) }
+    }
+
+    /// # Safety
+    ///
+    /// Caller should be sure that pointer points to [`[count; T]`]
+    unsafe fn as_slice_at_offset_mut<T>(&mut self, count: usize, offset: usize) -> &mut [T] {
+        unsafe { core::slice::from_raw_parts_mut((self.bits() + offset) as *mut T, count) }
+    }
+}
+
+impl VirtualAddress for VirtAddr {}
+#[cfg(feature = "kernel")]
+impl VirtualAddress for LinearAddr {}
+
 impl<T: Copy + Address + From<usize> + Ord + core::fmt::Debug> MemRange<T> {
     pub const fn new(start: T, size: usize) -> Self {
         Self { start, size }
@@ -206,7 +195,7 @@ impl<T: Copy + Address + From<usize> + Ord + core::fmt::Debug> MemRange<T> {
         self.start
             .set_bits(self.start().bits() & !(arch::PAGE_SIZE - 1));
 
-        self.size.round_up(arch::PAGE_SIZE);
+        self.size = self.size.next_multiple_of(arch::PAGE_SIZE);
     }
 
     pub fn truncate(&mut self, size: usize) -> bool {
@@ -340,19 +329,12 @@ impl Address for VirtAddr {
     fn set_bits(&mut self, bits: usize) {
         self.0 = bits;
     }
-}
 
-impl Address for usize {
-    #[inline]
-    fn bits(&self) -> usize {
-        *self
-    }
-
-    #[inline]
-    fn set_bits(&mut self, bits: usize) {
-        *self = bits;
+    fn from_bits(bits: usize) -> Self {
+        Self(bits)
     }
 }
+
 impl Address for PhysAddr {
     #[inline]
     fn bits(&self) -> usize {
@@ -362,6 +344,10 @@ impl Address for PhysAddr {
     #[inline]
     fn set_bits(&mut self, bits: usize) {
         self.0 = bits;
+    }
+
+    fn from_bits(bits: usize) -> Self {
+        Self(bits)
     }
 }
 

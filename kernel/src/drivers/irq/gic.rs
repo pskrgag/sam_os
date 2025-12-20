@@ -6,6 +6,7 @@ use arm_gic::{
 use core::ptr::NonNull;
 use loader_protocol::{DeviceKind, LoaderArg};
 use spin::Once;
+use hal::address::VirtualAddress;
 
 pub struct Gic(GicV3<'static>);
 

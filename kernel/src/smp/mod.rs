@@ -160,8 +160,7 @@ pub fn init_percpu() -> Option<()> {
         let p = pa + (per_cpu_size * i).into();
 
         unsafe {
-            let linear = LinearAddr::from(p);
-            let va: VirtAddr = linear.into();
+            let va = LinearAddr::from(p);
 
             core::slice::from_raw_parts_mut(va.to_raw_mut::<u8>(), per_cpu_size).copy_from_slice(
                 core::slice::from_raw_parts(linker_var!(sdatapercpu) as *const u8, per_cpu_size),

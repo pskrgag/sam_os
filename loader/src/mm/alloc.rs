@@ -7,7 +7,7 @@ pub fn alloc_pages(count: usize) -> Option<PhysAddr> {
         if reg.count > count {
             let addr = reg.start;
 
-            reg.start = reg.start + PhysAddr::new(count * PAGE_SIZE);
+            reg.start = reg.start + PhysAddr::from_bits(count * PAGE_SIZE);
             reg.count -= count;
 
             unsafe { core::slice::from_raw_parts_mut(addr.bits() as *mut u8, PAGE_SIZE).fill(0x0) };

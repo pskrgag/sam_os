@@ -8,6 +8,7 @@ use dispatch_loop::EndpointsDispatcher;
 use fdt::Fdt;
 use libc::{factory::factory, handle::Handle, main, port::Port, syscalls::Syscall};
 use rtl::locking::spinlock::Spinlock;
+use hal::address::VirtualAddress;
 
 mod dispatcher;
 mod ecam;

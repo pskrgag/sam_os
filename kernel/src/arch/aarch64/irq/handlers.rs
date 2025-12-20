@@ -55,7 +55,7 @@ fn kern_sync(ctx: &mut Context) {
             "ESR_EL1 0x{esr_el1:x} FAR_EL1 0x{far_el1:x}, ELR_EL1 0x{elr_el1:x}",
         );
 
-        let mut bt = [VirtAddr::new(0); 50];
+        let mut bt = [VirtAddr::from_bits(0); 50];
 
         unsafe { backtrace(&mut bt, ctx.x29.into()) };
 

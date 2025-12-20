@@ -22,13 +22,13 @@ pub fn prepare(fdt_pa: PhysAddr, fdt: &Fdt, mut arg: LoaderArg, tt: &mut PageTab
     for dev in &mut arg.devices {
         tt.map_pages(
             MemRange::new(mmio_start, dev.size),
-            MemRange::new(PhysAddr::new(dev.base), dev.size),
+            MemRange::new(PhysAddr::from_bits(dev.base), dev.size),
             PagePerms::ReadWrite,
             PageKind::Device,
         );
 
         dev.base = mmio_start.bits();
-        mmio_start = VirtAddr::new(mmio_start.bits() + dev.size);
+        mmio_start = VirtAddr::from_bits(mmio_start.bits() + dev.size);
     }
 
     // Map arg page to the kernel
@@ -44,10 +44,13 @@ pub fn prepare(fdt_pa: PhysAddr, fdt: &Fdt, mut arg: LoaderArg, tt: &mut PageTab
     );
 
     tt.map_pages(
-        MemRange::new(image_addr.into(), *INIT_TASK.len().round_up_page()),
         MemRange::new(
-            PhysAddr::new(INIT_TASK.as_ptr() as usize),
-            *INIT_TASK.len().round_up_page(),
+            image_addr.into(),
+            INIT_TASK.len().next_multiple_of(PAGE_SIZE),
+        ),
+        MemRange::new(
+            PhysAddr::from_bits(INIT_TASK.as_ptr() as usize),
+            INIT_TASK.len().next_multiple_of(PAGE_SIZE),
         ),
         PagePerms::Read,
         PageKind::Normal,

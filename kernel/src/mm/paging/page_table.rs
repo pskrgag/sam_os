@@ -259,7 +259,9 @@ impl PageTable {
             let index = base.index_of(v.start());
 
             if lvl < arch::PAGE_TABLE_LVLS
-                && !(use_huge_pages && v.start().is_aligned(order) && v.size().is_aligned(order))
+                && !(use_huge_pages
+                    && v.start().is_aligned(order)
+                    && v.size().next_multiple_of(1 << order) == v.size())
             {
                 let next_block = match base.next(index) {
                     Some(e) => e,
@@ -338,7 +340,7 @@ impl PageTable {
         mut v: MemRange<VirtAddr>,
         cb: F,
     ) -> Result<(), ErrorType> {
-        let mut p = MemRange::new(PhysAddr::new(v.start().bits()), v.size());
+        let mut p = MemRange::new(PhysAddr::from_bits(v.start().bits()), v.size());
 
         Self::op_lvl(
             self.lvl0(),
@@ -380,7 +382,7 @@ impl PageTableEntry {
     }
 
     pub fn addr(&self) -> PhysAddr {
-        PhysAddr::new(self.0 & !mmu_flags::PAGE_ENTRY_FLAGS_MASK)
+        PhysAddr::from_bits(self.0 & !mmu_flags::PAGE_ENTRY_FLAGS_MASK)
     }
 
     pub fn flags(&self) -> PageFlags {

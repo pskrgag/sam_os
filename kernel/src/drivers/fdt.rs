@@ -1,4 +1,4 @@
-use hal::address::{LinearAddr, PhysAddr};
+use hal::address::{LinearAddr, PhysAddr, Address};
 use loader_protocol::LoaderArg;
 use spin::Once;
 
@@ -11,7 +11,7 @@ pub static FDT: Once<Fdt> = Once::new();
 
 pub fn init(arg: &LoaderArg) {
     FDT.call_once(|| Fdt {
-        base: LinearAddr::from(PhysAddr::new(arg.fdt_base)),
+        base: LinearAddr::from(PhysAddr::from_bits(arg.fdt_base)),
         size: arg.fdt_size,
     });
 }

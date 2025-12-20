@@ -12,7 +12,7 @@ pub fn map_linear(table: &mut PageTable, prot: &LoaderArg) {
 
     table.map_pages(
         MemRange::new(
-            VirtAddr::new(base.bits() + res.start.bits()),
+            VirtAddr::from_bits(base.bits() + res.start.bits()),
             res.count * PAGE_SIZE,
         ),
         MemRange::new(res.start, res.count * PAGE_SIZE),

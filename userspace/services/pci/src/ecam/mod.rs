@@ -1,6 +1,6 @@
 use core::ptr;
 use fdt::Fdt;
-use hal::address::{MemRange, VirtAddr};
+use hal::address::{MemRange, VirtAddr, VirtualAddress};
 use libc::vmm::vms::vms;
 use pci_types::{Bar, ConfigRegionAccess, EndpointHeader, PciAddress, PciHeader};
 use rtl::error::ErrorType;

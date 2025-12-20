@@ -1,5 +1,5 @@
 use fdt::Fdt;
-use hal::address::{MemRange, PhysAddr, VirtAddr};
+use hal::address::{MemRange, PhysAddr, VirtAddr, Address};
 use page_table::{PageKind, PagePerms, PageTable};
 use rtl::linker_var;
 
@@ -36,8 +36,8 @@ fn map_self_stack(table: &mut PageTable) {
     let stack_begin = stack_end - stack_size;
 
     table.map_pages(
-        MemRange::new(VirtAddr::new(stack_begin), stack_size),
-        MemRange::new(PhysAddr::new(stack_begin), stack_size),
+        MemRange::new(VirtAddr::from_bits(stack_begin), stack_size),
+        MemRange::new(PhysAddr::from_bits(stack_begin), stack_size),
         PagePerms::Execute,
         PageKind::Normal,
     );
@@ -49,8 +49,8 @@ fn map_self_text(table: &mut PageTable) {
     let text_size = text_end - text_begin;
 
     table.map_pages(
-        MemRange::new(VirtAddr::new(text_begin), text_size),
-        MemRange::new(PhysAddr::new(text_begin), text_size),
+        MemRange::new(VirtAddr::from_bits(text_begin), text_size),
+        MemRange::new(PhysAddr::from_bits(text_begin), text_size),
         PagePerms::Execute,
         PageKind::Normal,
     );

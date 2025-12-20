@@ -236,7 +236,7 @@ impl VmaList {
             }
 
             // Find the lower bound for the address
-            let cursor = self.tree.upper_bound(Bound::Included(&VirtAddr::new(base)));
+            let cursor = self.tree.upper_bound(Bound::Included(&VirtAddr::from_bits(base)));
 
             // If lower bound exists, check if it contains specified range
             if let Some(vma) = cursor.get() {

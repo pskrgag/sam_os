@@ -3,7 +3,7 @@ use super::layout::KERNEL_LAYOUT;
 use super::page_table::{PageKind, PagePerms, PageTable};
 use super::regions::whole_ram;
 use core::mem::size_of;
-use hal::address::VirtAddr;
+use hal::address::{VirtAddr, Address};
 use hal::arch::PAGE_SIZE;
 use hal::page::Page;
 use loader_protocol::VmmLayoutKind;
@@ -18,7 +18,7 @@ pub fn init(tt: &mut PageTable) {
 
     assert!(regions.size >= pages_to_alloc * PAGE_SIZE);
 
-    let va_range = MemRange::new(VirtAddr::new(regions.base), pages_to_alloc * PAGE_SIZE);
+    let va_range = MemRange::new(VirtAddr::from_bits(regions.base), pages_to_alloc * PAGE_SIZE);
     let pa_range = MemRange::new(pages, pages_to_alloc * PAGE_SIZE);
 
     tt.map_pages(va_range, pa_range, PagePerms::ReadWrite, PageKind::Normal);

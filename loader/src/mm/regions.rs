@@ -1,6 +1,6 @@
 use core::ops::DerefMut;
 use fdt::Fdt;
-use hal::address::{Address, PhysAddr};
+use hal::address::{Address, PhysAddr, VirtAddr};
 use hal::arch::{PAGE_SHIFT, PAGE_SIZE};
 use heapless::Vec;
 use rtl::linker_var;
@@ -34,11 +34,11 @@ impl MemoryRegion {
         let size = self.count * PAGE_SIZE;
         let end = start + size;
 
-        assert!(size.is_page_aligned());
-        assert!(reg_start.is_page_aligned());
+        assert_eq!(size.next_multiple_of(PAGE_SIZE), size);
+        assert!(VirtAddr::from_bits(reg_start).is_page_aligned());
 
         if reg_start == start {
-            self.start = PhysAddr::new(start + size);
+            self.start = PhysAddr::from_bits(start + size);
             self.count -= reg_size / PAGE_SIZE;
             None
         } else if reg_start + reg_size == end {
@@ -48,7 +48,7 @@ impl MemoryRegion {
             self.count = (reg_start - start) / PAGE_SIZE;
 
             Some(MemoryRegion {
-                start: PhysAddr::new(reg_start + reg_size),
+                start: PhysAddr::from_bits(reg_start + reg_size),
                 count: (end - (reg_start + reg_size)) / PAGE_SIZE,
             })
         }
@@ -64,7 +64,7 @@ fn add_region(reg: MemoryRegion) {
 
 pub fn init(fdt: &Fdt, fdt_base: PhysAddr) {
     let mem = fdt.memory();
-    let image_start = PhysAddr::new(linker_var!(__start));
+    let image_start = PhysAddr::from_bits(linker_var!(__start));
     let image_size = linker_var!(__end) - image_start.bits();
 
     for reg in mem.regions() {

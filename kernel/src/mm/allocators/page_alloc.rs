@@ -144,14 +144,17 @@ pub fn init(arg: &LoaderArg) {
         .unwrap();
 
     for reg in &arg.pmm_layout {
-        info!("Page allocator region {:x} size {:x}\n", reg.start, reg.size);
+        info!(
+            "Page allocator region {:x} size {:x}\n",
+            reg.start, reg.size
+        );
 
         allocator
             .regions
             .push(Region::new(reg.start, reg.size / PAGE_SIZE, start).unwrap())
             .expect("Too many physical regions");
 
-        start = VirtAddr::new(
+        start = VirtAddr::from_bits(
             start.bits() + ((reg.size / PAGE_SIZE).next_multiple_of(8) / 8).next_multiple_of(8),
         );
     }
