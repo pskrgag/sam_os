@@ -1,6 +1,7 @@
 #![no_std]
 #![feature(allocator_api)]
 #![feature(slice_ptr_get)]
+#![feature(variant_count)]
 
 extern crate static_assertions;
 
@@ -11,3 +12,4 @@ pub mod locking;
 pub mod misc;
 pub mod syscalls;
 pub mod vmm;
+pub mod signal;

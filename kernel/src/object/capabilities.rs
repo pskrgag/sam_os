@@ -11,6 +11,9 @@ bitmask! {
 
         // VmSpace
         MapPhys = (1 << 3),
+
+        // Wait
+        Wait = (1 << 4),
     }
 }
 

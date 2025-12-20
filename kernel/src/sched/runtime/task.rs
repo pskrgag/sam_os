@@ -7,12 +7,12 @@ use core::pin::Pin;
 use core::task::{Context, Poll};
 
 pub struct Task {
-    future: Spinlock<Pin<Box<dyn Future<Output = ()> + Send>>>,
+    future: Spinlock<Pin<Box<dyn Future<Output = ()>>>>,
     thread: Arc<Thread>,
 }
 
 impl Task {
-    pub fn new(future: impl Future<Output = ()> + Send + 'static, thread: Arc<Thread>) -> Self {
+    pub fn new(future: impl Future<Output = ()> + 'static, thread: Arc<Thread>) -> Self {
         Self {
             future: Spinlock::new(Box::pin(future)),
             thread,

@@ -1,6 +1,6 @@
-use crate::object::KernelObject;
 use crate::object::capabilities::CapabilityMask;
 use crate::object::handle::Handle;
+use crate::object::KernelObject;
 use alloc::collections::btree_map::BTreeMap;
 use alloc::sync::Arc;
 use rtl::handle::HandleBase;
@@ -68,7 +68,7 @@ impl HandleTable {
         &self,
         hdl: HandleBase,
         rights: CapabilityMask,
-    ) -> Option<Arc<dyn KernelObject>> {
+    ) -> Option<Arc<dyn KernelObject + Send + Sync>> {
         self.table
             .get(&hdl)
             .filter(|x| x.has_capabitity(rights))
@@ -83,8 +83,8 @@ impl HandleTable {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::kernel::object::handle::Handle;
-    use crate::kernel::object::task_object::Task;
+    use crate::object::handle::Handle;
+    use crate::tasks::task::Task;
     use crate::*;
     use alloc::sync::Arc;
     use test_macros::*;
@@ -93,11 +93,9 @@ mod test {
     fn find_smth() {
         let table = HandleTable::new();
 
-        test_assert!(
-            table
-                .find_poly(12123812398, CapabilityMask::any())
-                .is_none()
-        );
+        test_assert!(table
+            .find_poly(12123812398, CapabilityMask::any())
+            .is_none());
     }
 
     #[kernel_test]

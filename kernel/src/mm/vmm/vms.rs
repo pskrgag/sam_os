@@ -10,8 +10,8 @@ use crate::sync::Mutex;
 use alloc::sync::Arc;
 use hal::address::{Address, MemRange, PhysAddr, VirtAddr, VirtualAddress};
 use hal::arch::*;
-use object_lib::object;
 use rtl::error::ErrorType;
+use rtl::signal::Signal;
 use rtl::vmm::MappingType;
 
 pub struct VmsInner {
@@ -121,11 +121,12 @@ impl VmsInner {
     }
 }
 
-#[derive(object)]
 pub struct Vms {
     inner: Mutex<VmsInner>,
     base: KernelObjectBase,
 }
+
+crate::kernel_object!(Vms, Signal::None.into());
 
 impl Vms {
     pub fn new_user() -> Option<Arc<Self>> {

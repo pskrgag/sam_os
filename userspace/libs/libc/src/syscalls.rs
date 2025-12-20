@@ -9,6 +9,7 @@ use hal::address::{Address, PhysAddr, VirtAddr};
 use rtl::error::ErrorType;
 use rtl::handle::Handle as RawHandle;
 use rtl::ipc::IpcMessage;
+use rtl::signal::Signals;
 use rtl::syscalls::SyscallList;
 use rtl::vmm::MappingType;
 
@@ -31,6 +32,7 @@ pub enum Syscall<'a> {
     PortReceive(RawHandle, *mut IpcMessage<'a>),
     CloneHandle(RawHandle),
     GetFdt,
+    ObjectWait(RawHandle, Signals),
 }
 
 impl<'a> Syscall<'a> {
@@ -107,6 +109,10 @@ impl<'a> Syscall<'a> {
 
     pub fn get_fdt() -> Result<VirtAddr, ErrorType> {
         unsafe { syscall(Self::GetFdt.as_args()).map(<VirtAddr as Address>::from_bits) }
+    }
+
+    pub fn object_wait(h: &Handle, sig: Signals) -> Result<(), ErrorType> {
+        unsafe { syscall(Self::ObjectWait(h.as_raw(), sig).as_args()).map(|_| ()) }
     }
 
     pub fn port_send_wait(
@@ -286,6 +292,16 @@ impl<'a> Syscall<'a> {
             Syscall::Yield => [SyscallList::Yield.into(), 0, 0, 0, 0, 0, 0, 0],
             Syscall::CloneHandle(h) => [SyscallList::CloneHandle.into(), h, 0, 0, 0, 0, 0, 0],
             Syscall::GetFdt => [SyscallList::MapFdt.into(), 0, 0, 0, 0, 0, 0, 0],
+            Syscall::ObjectWait(h, sig) => [
+                SyscallList::WaitObject.into(),
+                h,
+                (*sig).into(),
+                0,
+                0,
+                0,
+                0,
+                0,
+            ],
         }
     }
 }

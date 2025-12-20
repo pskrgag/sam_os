@@ -28,7 +28,7 @@ impl Executor {
         }
     }
 
-    pub fn add<F: Future<Output = ()> + Send + 'static>(&mut self, future: F, thread: Arc<Thread>) {
+    pub fn add<F: Future<Output = ()> + 'static>(&mut self, future: F, thread: Arc<Thread>) {
         self.rq.add(Task::new(future, thread));
     }
 

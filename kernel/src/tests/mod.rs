@@ -14,13 +14,13 @@ unsafe extern "C" {
 macro_rules! test_assert {
     ($cond:expr) => {
         if !$cond {
-            print!(
+            error!(
                 "\nCondition failed: `{}` at {}:{}",
                 stringify!($cond),
                 file!(),
                 line!()
             );
-            crate::tests::TEST_FAIL.store(true, core::sync::atomic::Ordering::Relaxed);
+            $crate::tests::TEST_FAIL.store(true, core::sync::atomic::Ordering::Relaxed);
             return;
         }
     };
@@ -30,9 +30,9 @@ macro_rules! test_assert {
 macro_rules! test_assert_ne {
     ($e1:expr, $e2:expr) => {
         if $e1 == $e2 {
-            print!("\nTest assert failure at {}:{:?} ", file!(), line!());
-            print!("Condition failed: `{:?} != {:?}`", $e1, $e2);
-            crate::tests::TEST_FAIL.store(true, core::sync::atomic::Ordering::Relaxed)
+            error!("\nTest assert failure at {}:{:?} ", file!(), line!());
+            error!("Condition failed: `{:?} != {:?}`", $e1, $e2);
+            $crate::tests::TEST_FAIL.store(true, core::sync::atomic::Ordering::Relaxed)
             return;
         }
     };
@@ -42,9 +42,9 @@ macro_rules! test_assert_ne {
 macro_rules! test_assert_eq {
     ($e1:expr, $e2:expr) => {
         if $e1 != $e2 {
-            print!("\nTest assert failure at {}:{:?} ", file!(), line!());
-            print!("Condition failed: `{:?} == {:?}`\n", $e1, $e2);
-            crate::tests::TEST_FAIL.store(true, core::sync::atomic::Ordering::Relaxed);
+            error!("\nTest assert failure at {}:{:?} ", file!(), line!());
+            error!("Condition failed: `{:?} == {:?}`\n", $e1, $e2);
+            $crate::tests::TEST_FAIL.store(true, core::sync::atomic::Ordering::Relaxed);
             return;
         }
     };
@@ -62,18 +62,18 @@ pub fn test_runner(_tests: &[&dyn Fn()]) {
         )
     };
 
-    println!("Running {} tests...", kernel_tests.len());
+    info!("Running {} tests...\n", kernel_tests.len());
 
     for test in kernel_tests {
-        print!("Running {}::{} ", test.module, test.name);
+        info!("Running {}::{}\n", test.module, test.name);
 
         (test.test_fn)();
 
-        print!("\nResult {}::{} ", test.module, test.name);
+        info!("\nResult {}::{} ", test.module, test.name);
         if TEST_FAIL.load(core::sync::atomic::Ordering::Relaxed) {
-            print!("[FAIL]\n");
+            error!("[FAIL]\n");
         } else {
-            print!("[SUCCESS]\n");
+            info!("[SUCCESS]\n");
         }
 
         crate::tests::TEST_FAIL.store(false, core::sync::atomic::Ordering::Relaxed)

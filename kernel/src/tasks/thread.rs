@@ -1,20 +1,19 @@
 use super::task::Task;
 use crate::arch::regs::Context;
-use crate::tasks::task::kernel_task;
 use crate::object::KernelObjectBase;
 use crate::sched::spawn;
 use crate::sync::Spinlock;
+use crate::tasks::task::kernel_task;
 use alloc::sync::Arc;
 use alloc::sync::Weak;
 use core::pin::Pin;
 use core::sync::atomic::{AtomicUsize, Ordering};
-use core::task::Waker;
-use core::task::{Context as PollContext, Poll};
+use core::task::{Context as PollContext, Poll, Waker};
 use core::time::Duration;
 use hal::address::*;
 use hal::arch::PAGE_SIZE;
-use object_lib::object;
 use rtl::linker_var;
+use rtl::signal::Signal;
 use rtl::vmm::MappingType;
 
 const USER_THREAD_STACK_PAGES: usize = 100;
@@ -92,7 +91,6 @@ impl Into<usize> for ThreadRawState {
     }
 }
 
-#[derive(object)]
 pub struct Thread {
     id: u16,
     task: Weak<Task>,
@@ -102,6 +100,8 @@ pub struct Thread {
     state: AtomicUsize,
     base: KernelObjectBase,
 }
+
+crate::kernel_object!(Thread, Signal::None.into());
 
 impl ThreadRawState {
     fn get_state(&self) -> ThreadState {

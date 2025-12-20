@@ -1,19 +1,20 @@
 use super::port_object::Port;
-use crate::object::KernelObjectBase;
 use crate::object::capabilities::CapabilityMask;
 use crate::object::handle::Handle;
+use crate::object::KernelObjectBase;
 use crate::sched::current;
 use crate::tasks::task::Task;
 use alloc::string::ToString;
 use alloc::sync::Arc;
-use object_lib::object;
 use rtl::error::ErrorType;
+use rtl::signal::Signal;
 use spin::Lazy;
 
-#[derive(object)]
 pub struct Factory {
     base: KernelObjectBase,
 }
+
+crate::kernel_object!(Factory, Signal::None.into());
 
 pub static FACTORY: Lazy<Arc<Factory>> = Lazy::new(|| Factory::new().unwrap());
 

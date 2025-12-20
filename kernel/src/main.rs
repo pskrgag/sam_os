@@ -4,6 +4,7 @@
 #![feature(custom_test_frameworks)]
 #![feature(coroutines, coroutine_trait, iter_from_coroutine)]
 #![feature(linked_list_cursors)]
+#![feature(iterator_try_collect)]
 #![allow(unexpected_cfgs)]
 #![allow(dead_code)]
 #![allow(non_upper_case_globals)]

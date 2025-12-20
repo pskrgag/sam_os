@@ -37,7 +37,7 @@ impl<T> UserPtr<T> {
         self.count
     }
 
-    pub fn read_on_heap(&self) -> Result<Box<[u8]>, ErrorType> {
+    pub fn read_on_heap(&self) -> Result<Box<[T]>, ErrorType> {
         use core::mem::size_of;
 
         // TODO: add error handling of OMM. This is no good
@@ -47,15 +47,16 @@ impl<T> UserPtr<T> {
 
         heap.try_reserve_exact(len)
             .map_err(|_| ErrorType::NoMemory)?;
-        heap.resize(len, 0);
+        let slice = heap.spare_capacity_mut();
 
         unsafe {
             let res = arch_copy_from_user(
                 self.p as usize,
                 size_of::<T>() * self.count,
-                heap.as_ptr() as _,
+                slice.as_ptr() as _,
             );
             if res == 0 {
+                heap.set_len(self.count);
                 Ok(heap.into_boxed_slice())
             } else {
                 Err(ErrorType::Fault)
@@ -73,12 +74,16 @@ impl<T> UserPtr<T> {
                 to.as_ptr() as _,
             );
 
-            if res == 0 { Some(s) } else { None }
+            if res == 0 {
+                Some(s)
+            } else {
+                None
+            }
         }
     }
 
     pub fn read(&self) -> Option<T> {
-        use core::mem::{MaybeUninit, size_of};
+        use core::mem::{size_of, MaybeUninit};
 
         let t = MaybeUninit::uninit();
 

@@ -37,7 +37,7 @@ impl Scheduler {
     }
 }
 
-pub fn spawn<F: Future<Output = ()> + Send + 'static>(future: F, thread: Arc<Thread>) {
+pub fn spawn<F: Future<Output = ()> + 'static>(future: F, thread: Arc<Thread>) {
     SCHEDULER.per_cpu_var_get_mut().rq.add(future, thread);
 }
 

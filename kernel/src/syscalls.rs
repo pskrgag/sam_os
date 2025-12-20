@@ -1,9 +1,11 @@
 use crate::drivers::fdt::fdt;
+use crate::logger::print_str;
 use crate::object::{
     capabilities::{Capability, CapabilityMask},
     factory_object::Factory,
     handle::Handle,
     port_object::Port,
+    {wait_many, WaitManyArg},
 };
 use crate::{
     mm::{
@@ -13,11 +15,11 @@ use crate::{
     sched::current,
     tasks::{task::Task, thread::Thread},
 };
-use crate::logger::print_str;
 use alloc::string::String;
 use alloc::string::ToString;
 use hal::address::*;
 use rtl::handle::{HandleBase, HANDLE_INVALID};
+use rtl::signal::{Signal, Signals, WaitEntry};
 use rtl::vmm::MappingType;
 use rtl::{error::ErrorType, ipc::IpcMessage, syscalls::SyscallList};
 
@@ -234,7 +236,41 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
 
             task.vms().map_phys(fdt_pa, fdt_size).map(|x| x as usize)
         }
-        _ => Err(ErrorType::NoOperation),
+        SyscallList::WaitObject => {
+            let obj = table
+                .find_poly(args.arg(0), CapabilityMask::from(Capability::Wait))
+                .ok_or(ErrorType::InvalidHandle)?;
+            let sig: Signals = args.try_arg(1)?;
+
+            obj.wait_signal(sig).await;
+            Ok(0)
+        }
+        SyscallList::WaitObjectMany => {
+            let mut user_ptr = UserPtr::new_array(args.arg::<usize>(0) as *mut WaitEntry, args.arg(1));
+            let mut user_wait_entries = user_ptr.read_on_heap()?;
+            let mut wait_entries = user_wait_entries
+                .iter()
+                .map(|x| {
+                    Ok(WaitManyArg {
+                        obj: table
+                            .find_poly(x.handle, CapabilityMask::from(Capability::Wait))
+                            .ok_or(ErrorType::InvalidHandle)?,
+                        waitfor: x.waitfor,
+                        pending: Signal::None.into(),
+                    })
+                })
+                .try_collect::<alloc::vec::Vec<_>>()?;
+
+            wait_many(&mut wait_entries).await;
+
+            for (user, kernel) in core::iter::zip(user_wait_entries.iter_mut(), wait_entries.iter())
+            {
+                user.pendind = kernel.pending;
+            }
+
+            user_ptr.write_array(&user_wait_entries)?;
+            Ok(0)
+        }
     }
 }
 

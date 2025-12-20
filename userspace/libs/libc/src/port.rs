@@ -1,8 +1,9 @@
 use super::handle::Handle;
 use crate::factory::factory;
 use crate::syscalls::Syscall;
-use rtl::error::*;
+use rtl::error::ErrorType;
 use rtl::ipc::message::IpcMessage;
+use rtl::signal::Signal;
 
 pub struct Port {
     h: Handle,
@@ -42,5 +43,9 @@ impl Port {
 
     pub fn handle(&self) -> &Handle {
         &self.h
+    }
+
+    pub fn wait_message(&self) {
+        Syscall::object_wait(&self.h, Signal::MessageReady.into()).unwrap()
     }
 }

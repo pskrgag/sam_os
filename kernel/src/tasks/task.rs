@@ -8,10 +8,10 @@ use crate::sync::{mutex::MutexGuard, Mutex, Spinlock};
 use crate::tasks::thread::Thread;
 use alloc::collections::LinkedList;
 use hal::address::VirtAddr;
-use object_lib::object;
 use rtl::error::ErrorType;
 use rtl::handle::HandleBase;
 use rtl::handle::HANDLE_INVALID;
+use rtl::signal::Signal;
 use spin::Once;
 
 use alloc::string::String;
@@ -51,7 +51,6 @@ pub fn kernel_task() -> Arc<Task> {
     KERNEL_TASK.get().unwrap().clone()
 }
 
-#[derive(object)]
 pub struct Task {
     inner: Spinlock<TaskInner>,
     name: String,
@@ -60,6 +59,8 @@ pub struct Task {
     handles: Mutex<HandleTable>,
     base: KernelObjectBase,
 }
+
+crate::kernel_object!(Task, Signal::None.into());
 
 impl Task {
     pub fn new_kernel() -> Option<Arc<Task>> {

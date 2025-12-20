@@ -8,7 +8,6 @@ edition = "2024"
 [dependencies]
 bitmaps = {version = "3.2.0", default-features = false}
 spin = {version = "0.9.8", default-features = false, features = ["once", "lazy"] }
-object_lib = { path = "src/object/object_lib" }
 rtl = { path = "../rtl", features = ["kernel"] }
 hal = { path = "../hal", features = ["kernel"] }
 static_assertions = "1.1.0"
@@ -20,9 +19,8 @@ bitmask = { version = "0.5.0", default-features = false }
 arm-gic = "0.7.1"
 wavltree = { version = "0.0.8", features = ["dot"] }
 aarch64-cpu = "11.2.0"
-futures = { version = "0.3.31", default-features = false }
 slab = { path = "../../slab" }
-lazy_static = {version = "1.5.0", default-features = false, features = ["spin_no_std"] }
+lazy_static = { version = "1.5.0", default-features = false, features = ["spin_no_std"] }
 log = "0.4.29"
 
 [dev-dependencies]

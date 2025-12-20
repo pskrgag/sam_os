@@ -1,10 +1,10 @@
-use crate::object::KernelObjectBase;
 use crate::mm::allocators::page_alloc::page_allocator;
+use crate::object::KernelObjectBase;
 use crate::sync::Mutex;
 use alloc::sync::Arc;
 use hal::address::*;
 use hal::arch::PAGE_SIZE;
-use object_lib::object;
+use rtl::signal::Signal;
 use rtl::vmm::MappingType;
 
 #[derive(Debug)]
@@ -14,11 +14,12 @@ struct VmObjectInner {
     mt: MappingType,
 }
 
-#[derive(object)]
 pub struct VmObject {
     inner: Mutex<VmObjectInner>,
     base: KernelObjectBase,
 }
+
+crate::kernel_object!(VmObject, Signal::None.into());
 
 impl VmObjectInner {
     pub fn zeroed(size: usize, tp: MappingType) -> Option<Self> {

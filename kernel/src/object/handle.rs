@@ -5,16 +5,12 @@ use core::any::TypeId;
 
 #[derive(Clone)]
 pub struct Handle {
-    obj: Option<Arc<dyn KernelObject>>,
+    obj: Option<Arc<dyn KernelObject + Send + Sync>>,
     rights: CapabilityMask,
 }
 
-// dyn KernelObject is not Send by default, but all kernel objects are wrapped into Arc, so should
-// be fine??? (TODO: recheck if I lied to the compiler here)
-unsafe impl Send for Handle {}
-
 impl Handle {
-    pub fn new(o: Arc<dyn KernelObject>, rights: CapabilityMask) -> Self {
+    pub fn new(o: Arc<dyn KernelObject + Send + Sync>, rights: CapabilityMask) -> Self {
         Self {
             obj: Some(o),
             rights,
@@ -25,7 +21,7 @@ impl Handle {
         self.rights.is_set(caps)
     }
 
-    pub fn obj<T: KernelObject + Sized + 'static>(&self) -> Option<Arc<T>> {
+    pub fn obj<T: KernelObject + Sized + 'static + Send>(&self) -> Option<Arc<T>> {
         if let Some(o) = &self.obj {
             if o.as_any().type_id() == TypeId::of::<T>() {
                 Some(unsafe {
@@ -42,8 +38,7 @@ impl Handle {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn obj_poly(&self) -> Option<Arc<dyn KernelObject>> {
+    pub fn obj_poly(&self) -> Option<Arc<dyn KernelObject + Send + Sync>> {
         if let Some(o) = &self.obj {
             Some(o.clone())
         } else {

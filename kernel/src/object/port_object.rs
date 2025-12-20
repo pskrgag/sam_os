@@ -1,24 +1,25 @@
-use crate::tasks::task::Task;
 use crate::mm::user_buffer::UserPtr;
 use crate::object::capabilities::{Capability, CapabilityMask};
 use crate::object::KernelObjectBase;
 use crate::sched::current;
 use crate::sync::WaitQueue;
+use crate::tasks::task::Task;
 use alloc::boxed::Box;
 use alloc::sync::{Arc, Weak};
-use object_lib::object;
 use rtl::error::ErrorType;
 use rtl::handle::*;
 use rtl::ipc::*;
+use rtl::signal::Signal;
 
 /// Port holds weak reference to owner task, since thread may die while
 /// other task has handle to it
-#[derive(object)]
 pub struct Port {
     base: KernelObjectBase,
     task: Weak<Task>,
     queue: WaitQueue<IpcMessage<'static>>, // Kernel holds a copy, so just lie about lifetime for now
 }
+
+crate::kernel_object!(Port, Signal::MessageReady.into());
 
 fn copy_ipc_message_from_user(
     user_msg: UserPtr<IpcMessage<'static>>,
@@ -50,7 +51,9 @@ impl Port {
     }
 
     pub fn full_caps() -> CapabilityMask {
-        CapabilityMask::from(Capability::Call | Capability::Send | Capability::Receive)
+        CapabilityMask::from(
+            Capability::Call | Capability::Send | Capability::Receive | Capability::Wait,
+        )
     }
 
     fn transfer_handles_from_current(
@@ -90,7 +93,7 @@ impl Port {
 
         let my_port = task.handle_table().add(reply_port.clone());
         client_msg.set_reply_port(my_port);
-        self.queue.produce(client_msg);
+        self.produce(client_msg);
 
         let mut server_msg = reply_port.obj::<Self>().unwrap().queue.consume().await;
 
@@ -128,10 +131,8 @@ impl Port {
         drop(self_table);
 
         let mut user_msg = copy_ipc_message_from_user(msg)?;
-
         Self::transfer_handles_from_current(&task, &mut user_msg)?;
-
-        reply_port.queue.produce(user_msg);
+        reply_port.produce(user_msg);
         Ok(())
     }
 
@@ -171,5 +172,10 @@ impl Port {
         // Commit it to userspace
         server_msg_uptr.write(&server_msg)?;
         Ok(arena_len)
+    }
+
+    fn produce(&self, message: IpcMessage<'static>) {
+        self.queue.produce(message);
+        self.signal(Signal::MessageReady.into());
     }
 }
