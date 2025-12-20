@@ -1,5 +1,6 @@
-use crate::kernel::tasks::task::kernel_task;
-use crate::{kernel::locking::spinlock::Spinlock, mm::allocators::page_alloc::page_allocator};
+use crate::mm::allocators::page_alloc::page_allocator;
+use crate::sync::Spinlock;
+use crate::tasks::task::kernel_task;
 use core::alloc::Layout;
 use core::ptr::NonNull;
 use hal::address::*;

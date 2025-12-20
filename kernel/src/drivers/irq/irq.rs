@@ -1,5 +1,5 @@
 use super::gic::{ClaimedIrq, GIC};
-use crate::kernel::locking::spinlock::Spinlock;
+use crate::sync::Spinlock;
 use alloc::collections::LinkedList;
 use arm_gic::IntId;
 

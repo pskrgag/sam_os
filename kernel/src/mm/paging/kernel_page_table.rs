@@ -1,7 +1,5 @@
-use crate::{
-    kernel::locking::spinlock::{Spinlock, SpinlockGuard},
-    mm::paging::page_table::PageTable,
-};
+use crate::mm::paging::page_table::PageTable;
+use crate::sync::{Spinlock, spinlock::SpinlockGuard};
 use spin::once::Once;
 
 pub static KERNEL_PAGE_TABLE: Once<Spinlock<PageTable>> = Once::new();

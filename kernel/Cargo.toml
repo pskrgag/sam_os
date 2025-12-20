@@ -8,7 +8,7 @@ edition = "2024"
 [dependencies]
 bitmaps = {version = "3.2.0", default-features = false}
 spin = {version = "0.9.8", default-features = false, features = ["once", "lazy"] }
-object_lib = { path = "src/kernel/object/object_lib" }
+object_lib = { path = "src/object/object_lib" }
 rtl = { path = "../rtl", features = ["kernel"] }
 hal = { path = "../hal", features = ["kernel"] }
 static_assertions = "1.1.0"

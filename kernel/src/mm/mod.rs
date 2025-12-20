@@ -3,11 +3,9 @@ use hal::arch::PAGE_SIZE;
 use loader_protocol::LoaderArg;
 
 pub mod allocators;
-pub mod layout;
 pub mod paging;
 pub mod user_buffer;
-pub mod vma_list;
-pub mod vms;
+pub mod vmm;
 
 pub unsafe fn memset_pages(pa: PhysAddr, num: usize) {
     let linear = LinearAddr::from(pa);
@@ -17,7 +15,7 @@ pub unsafe fn memset_pages(pa: PhysAddr, num: usize) {
 }
 
 pub fn init(prot: &LoaderArg) {
-    layout::init(prot);
+    vmm::init(prot);
     allocators::page_alloc::init(prot);
     paging::kernel_page_table::init(prot);
     allocators::slab::init_kernel_slabs();

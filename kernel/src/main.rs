@@ -11,7 +11,7 @@
 #![reexport_test_harness_main = "test_main"]
 
 #[cfg(not(test))]
-use crate::{kernel::elf::parse_initial_task, kernel::tasks::task::init_task};
+use crate::{tasks::elf::parse_initial_task, tasks::task::init_task};
 
 extern crate alloc;
 
@@ -19,12 +19,15 @@ extern crate alloc;
 mod helper;
 mod arch;
 #[macro_use]
-mod kernel;
+mod smp;
 mod drivers;
 mod mm;
 mod panic;
-
-use kernel::sched;
+mod sync;
+mod sched;
+mod object;
+mod syscalls;
+mod tasks;
 
 #[cfg(test)]
 #[macro_use]
@@ -73,15 +76,13 @@ extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
     arch::init(prot);
 
     mm::init(prot);
-    kernel::percpu::init_percpu();
+    smp::init_percpu();
     drivers::init(prot);
 
     print!("{SAMOS_BANNER}");
 
     #[cfg(not(test))]
     init_userspace(prot);
-
-    kernel::sched::run();
 
     #[cfg(test)]
     #[allow(clippy::empty_loop)]
@@ -94,9 +95,7 @@ extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
     #[cfg(not(test))]
     #[allow(clippy::empty_loop)]
     {
-        init_userspace(prot);
-
-        #[allow(clippy::empty_loop)]
+        sched::run();
         loop {}
     }
 }

@@ -1,4 +1,4 @@
-use crate::kernel::syscalls::SyscallArgs;
+use crate::syscalls::SyscallArgs;
 use aarch64_cpu::registers::{ESR_EL1, Readable};
 use hal::address::VirtAddr;
 use rtl::error::ErrorType;

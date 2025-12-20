@@ -1,6 +1,6 @@
 use crate::arch::timer::{SYSTEM_TIMER, TIMER_IRQ_NUM};
 use crate::drivers::irq::{gic::ClaimedIrq, irq};
-use crate::kernel::sched::{current, ticks::SYSTEM_TICK};
+use crate::sched::{current, ticks::SYSTEM_TICK};
 use core::time::Duration;
 
 pub trait SystemTimer {
@@ -19,6 +19,6 @@ pub fn init() {
 pub fn timer_dispatch(_: &ClaimedIrq) {
     current().tick();
 
-    crate::kernel::sched::ticks::tick();
+    crate::sched::ticks::tick();
     SYSTEM_TIMER.reprogram(SYSTEM_TICK);
 }

@@ -1,4 +1,4 @@
-use crate::kernel::locking::spinlock::Spinlock;
+use crate::sync::Spinlock;
 use core::fmt;
 use hal::address::*;
 use hal::uart::{Uart as BackendUart, UartTrait};

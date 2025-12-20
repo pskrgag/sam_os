@@ -1,5 +1,5 @@
-use crate::kernel::locking::spinlock::*;
 use crate::mm::memset_pages;
+use crate::sync::{spinlock::SpinlockGuard, Spinlock};
 use alloc::vec::Vec;
 use bitmaps::Bitmap;
 use hal::address::*;
