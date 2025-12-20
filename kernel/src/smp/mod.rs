@@ -152,7 +152,7 @@ pub fn init_percpu() -> Option<()> {
     PER_CPU_BASE.call_once(|| LinearAddr::from(pa));
     PER_CPU_SIZE.call_once(|| per_cpu_size);
 
-    println!("Per cpu size {}", per_cpu_size);
+    info!("Per cpu size {per_cpu_size}\n");
     let range = vmm_range(loader_protocol::VmmLayoutKind::PerCpu);
     debug_assert!(range.size() >= per_cpu_size);
 

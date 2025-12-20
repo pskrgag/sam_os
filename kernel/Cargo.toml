@@ -23,6 +23,7 @@ aarch64-cpu = "11.2.0"
 futures = { version = "0.3.31", default-features = false }
 slab = { path = "../../slab" }
 lazy_static = {version = "1.5.0", default-features = false, features = ["spin_no_std"] }
+log = "0.4.29"
 
 [dev-dependencies]
 test_macros = {path = "./src/tests/test_macros/"}

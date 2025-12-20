@@ -144,7 +144,7 @@ pub fn init(arg: &LoaderArg) {
         .unwrap();
 
     for reg in &arg.pmm_layout {
-        println!("Page allocator region {:x} size {:x}", reg.start, reg.size);
+        info!("Page allocator region {:x} size {:x}\n", reg.start, reg.size);
 
         allocator
             .regions

@@ -58,5 +58,5 @@ pub fn init(arg: &LoaderArg) {
         res
     });
 
-    println!("Gic initalized");
+    info!("Gic initalized\n");
 }

@@ -12,14 +12,14 @@ fn on_panic(info: &PanicInfo) -> ! {
 
         arm_gic::irq_disable();
         let id: Result<String<100>, _> = crate::sched::current().task().name().try_into();
-        println!("--- cut here ---");
-        println!("Kernel Panic! In context of '{}'", id.unwrap());
+        error!("--- cut here ---\n");
+        error!("Kernel Panic! In context of '{}'\n", id.unwrap());
 
-        println!("{}", info.message());
+        error!("{}", info.message());
 
         if let Some(location) = info.location() {
-            println!(
-                "Happened in file '{}' at line {}",
+            error!(
+                "Happened in file '{}' at line {}\n",
                 location.file(),
                 location.line(),
             );
@@ -29,9 +29,9 @@ fn on_panic(info: &PanicInfo) -> ! {
         backtrace(&mut bt, VirtAddr::from(fp));
     };
 
-    println!("Kernel backtrace");
+    error!("Kernel backtrace\n");
     for (i, addr) in bt.iter().take_while(|x| !x.is_null()).enumerate() {
-        println!("#{} [{:p}]", i, addr.to_raw::<usize>());
+        error!("#{} [{:p}]\n", i, addr.to_raw::<usize>());
     }
 
     loop {}

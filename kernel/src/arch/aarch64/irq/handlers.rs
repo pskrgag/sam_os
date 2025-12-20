@@ -49,22 +49,21 @@ fn kern_sync(ctx: &mut Context) {
     let far_el1 = FAR_EL1.get();
 
     if !fixup(elr_el1, ctx) {
-        println!("!!! Kernel sync exception");
-        println!("{:?}", ctx);
-        println!(
-            "ESR_EL1 0x{:x} FAR_EL1 0x{:x}, ELR_EL1 0x{:x}",
-            esr_el1, far_el1, elr_el1
+        error!("!!! Kernel sync exception");
+        error!("{ctx:?}");
+        error!(
+            "ESR_EL1 0x{esr_el1:x} FAR_EL1 0x{far_el1:x}, ELR_EL1 0x{elr_el1:x}",
         );
 
         let mut bt = [VirtAddr::new(0); 50];
 
         unsafe { backtrace(&mut bt, ctx.x29.into()) };
 
-        println!("--- cut here ---");
-        println!("Kernel backtrace");
+        error!("--- cut here ---");
+        error!("Kernel backtrace");
 
         for (i, addr) in bt.iter().take_while(|x| !x.is_null()).enumerate() {
-            println!("#{} [{:p}]", i, addr.to_raw::<usize>());
+            error!("#{i} [{:p}]", addr.to_raw::<usize>());
         }
 
         loop {}
@@ -85,12 +84,11 @@ pub fn kern_exception_bug() -> ! {
     let far_el1 = FAR_EL1.get();
     let elr_el1 = ELR_EL1.get();
 
-    println!("Something weird happened");
-    println!(
-        "ESR_EL1 0x{:x} FAR_EL1 0x{:x}, ELR_EL1 0x{:x}",
-        esr_el1, far_el1, elr_el1
+    error!("Something weird happened");
+    error!(
+        "ESR_EL1 0x{esr_el1:x} FAR_EL1 0x{far_el1:x}, ELR_EL1 0x{elr_el1:x}",
     );
-    println!("No idea how to deal with 0x{:x}", esr_el1);
+    error!("No idea how to deal with 0x{esr_el1:x}");
 
     panic!();
 }

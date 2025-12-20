@@ -16,7 +16,8 @@ use crate::{tasks::elf::parse_initial_task, tasks::task::init_task};
 extern crate alloc;
 
 #[macro_use]
-mod helper;
+extern crate log;
+
 mod arch;
 #[macro_use]
 mod smp;
@@ -28,6 +29,7 @@ mod sched;
 mod object;
 mod syscalls;
 mod tasks;
+mod logger;
 
 #[cfg(test)]
 #[macro_use]
@@ -72,14 +74,15 @@ pub fn init_userspace(prot: &loader_protocol::LoaderArg) {
 extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
     drivers::init_logging(prot);
 
-    println!("Booting kernel...");
+    logger::init();
+    info!("Booting kernel...\n");
     arch::init(prot);
 
     mm::init(prot);
     smp::init_percpu();
     drivers::init(prot);
 
-    print!("{SAMOS_BANNER}");
+    info!("\n{SAMOS_BANNER}\n");
 
     #[cfg(not(test))]
     init_userspace(prot);
@@ -88,7 +91,7 @@ extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
     #[allow(clippy::empty_loop)]
     {
         test_main();
-        println!("Testing finishes!");
+        info!("Testing finishes!\n");
         loop {}
     }
 
