@@ -1,7 +1,7 @@
 use crate::arch::regs::Context;
 use crate::kernel::locking::spinlock::Spinlock;
-use crate::kernel::object::KernelObjectBase;
 use crate::kernel::object::task_object::Task;
+use crate::kernel::object::KernelObjectBase;
 use crate::kernel::sched::spawn;
 use crate::kernel::tasks::task::kernel_task;
 use crate::kernel::tasks::thread::ThreadInner;
@@ -14,6 +14,7 @@ use core::time::Duration;
 use hal::address::*;
 use hal::arch::PAGE_SIZE;
 use object_lib::object;
+use rtl::linker_var;
 use rtl::vmm::MappingType;
 
 const USER_THREAD_STACK_PAGES: usize = 100;
@@ -82,12 +83,37 @@ impl Thread {
 
         Arc::try_new(Self {
             id,
-            inner: Spinlock::new(ThreadInner::new(kernel_stack)),
+            inner: Spinlock::new(ThreadInner::new(MemRange::new(
+                kernel_stack,
+                KERNEL_STACK_PAGES * PAGE_SIZE,
+            ))),
             ticks: RR_TICKS.into(),
             preemtion: AtomicUsize::new(0),
             task: Arc::downgrade(&task),
             state: AtomicUsize::new(
                 ThreadRawState::from_raw_parts(ThreadState::Initialized, ThreadSleepReason::None)
+                    .into(),
+            ),
+            base: KernelObjectBase::new(),
+        })
+        .ok()
+    }
+
+    pub fn initial() -> Option<Arc<Thread>> {
+        unsafe extern "C" {
+            static __STACK_START: usize;
+        }
+
+        let stack_start = linker_var!(__STACK_START);
+
+        Arc::try_new(Self {
+            id: 0,
+            inner: Spinlock::new(ThreadInner::new(MemRange::new(stack_start.into(), 0x50000))),
+            ticks: RR_TICKS.into(),
+            preemtion: AtomicUsize::new(0),
+            task: Arc::downgrade(&kernel_task()),
+            state: AtomicUsize::new(
+                ThreadRawState::from_raw_parts(ThreadState::Running, ThreadSleepReason::None)
                     .into(),
             ),
             base: KernelObjectBase::new(),
@@ -181,7 +207,7 @@ impl Thread {
         inner.set_context(ctx)
     }
 
-    pub fn tick(self: Arc<Thread>) {
+    pub fn tick(self: &Arc<Thread>) {
         let old = self.ticks.fetch_sub(1, Ordering::Relaxed);
 
         if old == 0 {
@@ -217,7 +243,7 @@ impl Thread {
     }
 
     pub async fn sleep_for(dl: Duration) {
-        use crate::kernel::sched::timer::{TIMER_QUEUE, time_since_start};
+        use crate::kernel::sched::timer::{time_since_start, TIMER_QUEUE};
 
         struct Sleep {
             dl: Duration,

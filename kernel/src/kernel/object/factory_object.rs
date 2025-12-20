@@ -35,7 +35,7 @@ impl Factory {
     }
 
     pub fn create_port(&self) -> Result<Handle, ErrorType> {
-        let task = current().unwrap().task();
+        let task = current().task();
         let port = Port::new(task.clone()).ok_or(ErrorType::NoMemory)?;
 
         Ok(Handle::new(port, Port::full_caps()))

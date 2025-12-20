@@ -10,7 +10,7 @@ use core::{
 pub struct SpinLockInner {
     current: AtomicU16,
     next: AtomicU16,
-    t: AtomicPtr<Thread>,
+    owner: AtomicPtr<Thread>,
 }
 
 #[derive(Debug)]
@@ -48,7 +48,7 @@ impl<T> Spinlock<T> {
             inner: SpinLockInner {
                 current: AtomicU16::new(0),
                 next: AtomicU16::new(0),
-                t: AtomicPtr::new(core::ptr::null_mut()),
+                owner: AtomicPtr::new(core::ptr::null_mut()),
             },
             val: UnsafeCell::new(val),
         }
@@ -58,7 +58,7 @@ impl<T> Spinlock<T> {
         use crate::kernel::sched::current::get_current_raw;
 
         if let Some(cur) = get_current_raw()
-            && cur == self.inner.t.load(Ordering::Relaxed)
+            && cur == self.inner.owner.load(Ordering::Relaxed)
         {
             panic!("Deadlock");
         }
@@ -70,7 +70,7 @@ impl<T> Spinlock<T> {
         }
 
         if let Some(cur) = get_current_raw() {
-            self.inner.t.store(cur as *mut _, Ordering::Relaxed);
+            self.inner.owner.store(cur as *mut _, Ordering::Relaxed);
         }
 
         SpinlockGuard {
@@ -100,7 +100,7 @@ impl<T> Spinlock<T> {
 
 impl SpinLockInner {
     pub fn unlock(&self) {
-        self.t.store(core::ptr::null_mut(), Ordering::Relaxed);
+        self.owner.store(core::ptr::null_mut(), Ordering::Relaxed);
 
         self.current.fetch_add(1, Ordering::Release);
     }

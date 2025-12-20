@@ -32,7 +32,7 @@ impl<T> Mutex<T> {
     }
 
     fn lock_slow<'a>(&'a self) -> MutexGuard<'a, T> {
-        let cur = current().unwrap();
+        let cur = current();
         let mut list = self.waiters.lock();
 
         if self

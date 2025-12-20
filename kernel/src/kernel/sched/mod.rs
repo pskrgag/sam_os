@@ -18,7 +18,7 @@ unsafe extern "C" {
 }
 
 #[inline]
-pub fn current() -> Option<Arc<Thread>> {
+pub fn current() -> Arc<Thread> {
     crate::kernel::sched::current::get_current()
 }
 

@@ -38,7 +38,7 @@ impl KernelObjectBase {
         let mut inner = self.0.lock();
 
         if !obs(inner.signals) {
-            let cur = current().unwrap();
+            let cur = current();
 
             inner.observers.push((obs, Arc::downgrade(&cur)));
             // cur.sleep(thread_object::ThreadSleepReason::Event);

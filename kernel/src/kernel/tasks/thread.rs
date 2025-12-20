@@ -11,12 +11,12 @@ pub enum ThreadType {
 
 pub struct ThreadInner {
     arch_ctx: Option<Context>,
-    stack: VirtAddr,
+    stack: MemRange<VirtAddr>,
     waker: Option<Waker>,
 }
 
 impl ThreadInner {
-    pub fn new(stack: VirtAddr) -> Self {
+    pub fn new(stack: MemRange<VirtAddr>) -> Self {
         Self {
             arch_ctx: None,
             stack,

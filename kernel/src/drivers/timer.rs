@@ -17,9 +17,7 @@ pub fn init() {
 }
 
 pub fn timer_dispatch(_: &ClaimedIrq) {
-    if let Some(cur) = current() {
-        cur.tick();
-    }
+    current().tick();
 
     crate::kernel::sched::ticks::tick();
     SYSTEM_TIMER.reprogram(SYSTEM_TICK);

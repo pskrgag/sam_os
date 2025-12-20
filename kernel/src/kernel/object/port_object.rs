@@ -12,7 +12,7 @@ use rtl::handle::*;
 use rtl::ipc::*;
 
 /// Port holds weak reference to owner task, since thread may die while
-/// other task has cap to it
+/// other task has handle to it
 #[derive(object)]
 pub struct Port {
     base: KernelObjectBase,
@@ -57,7 +57,7 @@ impl Port {
         to: &Task,
         msg: &mut IpcMessage<'static>,
     ) -> Result<(), ErrorType> {
-        let cur_task = current().unwrap().task();
+        let cur_task = current().task();
         let cur_table = cur_task.handle_table();
         let mut to_table = to.handle_table();
 
@@ -80,7 +80,6 @@ impl Port {
         let mut client_msg = copy_ipc_message_from_user(client_msg_uptr)?;
         let task = self.task.upgrade().ok_or(ErrorType::TaskDead)?;
         let reply_port = current()
-            .unwrap()
             .task()
             .handle_table()
             .find_handle::<Self>(client_msg.reply_port(), CapabilityMask::any())
@@ -115,7 +114,7 @@ impl Port {
         reply_port_handle: HandleBase,
         msg: UserPtr<IpcMessage<'static>>,
     ) -> Result<(), ErrorType> {
-        let cur = current().unwrap();
+        let cur = current();
         let self_task = cur.task();
         let mut self_table = self_task.handle_table();
 

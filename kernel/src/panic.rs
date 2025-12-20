@@ -7,16 +7,11 @@ use heapless::String;
 fn on_panic(info: &PanicInfo) -> ! {
     let mut bt = [VirtAddr::from(0); 50];
 
-    println!("panic");
     unsafe {
         let fp: usize;
 
         arm_gic::irq_disable();
-        let id: Result<String<100>, _> = if let Some(c) = crate::sched::current() {
-            c.task().name().try_into()
-        } else {
-            "kernel".try_into()
-        };
+        let id: Result<String<100>, _> = crate::sched::current().task().name().try_into();
         println!("--- cut here ---");
         println!("Kernel Panic! In context of '{}'", id.unwrap());
 

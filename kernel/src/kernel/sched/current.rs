@@ -7,8 +7,13 @@ percpu_global!(
     static CURRENT: Option<Arc<Thread>> = None;
 );
 
-pub fn get_current() -> Option<Arc<Thread>> {
-    CURRENT.per_cpu_var_get().clone()
+// Using lazy_static! here, since LazyCell cannot be shared between threads...
+lazy_static::lazy_static! {
+    static ref DUMMY: Arc<Thread> = Thread::initial().unwrap();
+}
+
+pub fn get_current() -> Arc<Thread> {
+    CURRENT.per_cpu_var_get().as_ref().unwrap_or(&DUMMY).clone()
 }
 
 pub fn get_current_raw() -> Option<*const Thread> {

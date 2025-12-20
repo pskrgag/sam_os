@@ -64,7 +64,7 @@ fn read_user_string(source: usize, size: usize) -> Result<String, ErrorType> {
 }
 
 pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
-    let thread = current().unwrap();
+    let thread = current();
     let task = thread.task();
     let mut table = task.handle_table();
 

@@ -31,27 +31,23 @@ unsafe impl<T> Sync for PerCpu<T> {}
 #[macro_export]
 macro_rules! percpu_global {
     ($(#[$attr:meta])* static $N:ident : $T:ty = $e:expr;) => {
-        use $crate::kernel::percpu::PerCpu;
         #[unsafe(link_section = ".percpu.data")]
-        $(#[$attr])* static $N : PerCpu<$T> = PerCpu::new($e);
+        $(#[$attr])* static $N : $crate::kernel::percpu::PerCpu<$T> = $crate::kernel::percpu::PerCpu::new($e);
     };
 
     ($(#[$attr:meta])* pub static $N:ident : $T:ty = $e:expr;) => {
-        use $crate::kernel::percpu::PerCpu;
         #[unsafe(link_section = ".percpu.data")]
-        $(#[$attr])* pub static $N : PerCpu<$T> = PerCpu::new($e);
+        $(#[$attr])* pub static $N : $crate::kernel::percpu::PerCpu<$T> = $crate::kernel::percpu::PerCpu::new($e);
     };
 
     ($(#[$attr:meta])* pub static mut $N:ident : $T:ty = $e:expr;) => {
-        use $crate::kernel::percpu::PerCpu;
         #[unsafe(link_section = ".percpu.data")]
-        $(#[$attr])* pub static mut $N : PerCpu<$T> = PerCpu::new($e);
+        $(#[$attr])* pub static mut $N : $crate::kernel::percpu::PerCpu<$T> = $crate::kernel::percpu::PerCpu::new($e);
     };
 
     ($(#[$attr:meta])* static mut $N:ident : $T:ty = $e:expr;) => {
-        use $crate::kernel::percpu::PerCpu;
         #[unsafe(link_section = ".percpu.data")]
-        $(#[$attr])* static mut $N : PerCpu<$T> = PerCpu::new($e);
+        $(#[$attr])* static mut $N : $crate::kernel::percpu::PerCpu<$T> = $crate::kernel::percpu::PerCpu::new($e);
     };
 }
 
