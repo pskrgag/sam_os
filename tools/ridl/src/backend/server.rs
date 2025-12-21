@@ -1,7 +1,7 @@
 use super::utils;
 use crate::ast::{interface::Interface, module::Module};
 use std::io::Write;
-use utils::{Message, function_to_struct};
+use utils::{function_to_struct, Message};
 
 struct InterfaceCompiler<'a, W: Write> {
     interface: &'a Interface,
@@ -37,7 +37,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
             r#"
     pub fn do_one(&mut self) -> Result<(), ErrorType> {{
         let mut in_msg = IpcMessage::new();
-        let mut receive_buffer = [0u8; core::mem::size_of::<Tx>()];
+        let mut receive_buffer = [0u8; core::mem::size_of::<Tx>() + 1];
 
         in_msg.set_in_arena(receive_buffer.as_mut_slice());
 
@@ -76,7 +76,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
             r#"    pub fn run(&mut self) -> Result<(), ErrorType> {{
 
         let mut in_msg = IpcMessage::new();
-        let mut receive_buffer = [0u8; core::mem::size_of::<Tx>()];
+        let mut receive_buffer = [0u8; core::mem::size_of::<Tx>() + 1];
         let mut reply_vec;
 
         in_msg.set_in_arena(receive_buffer.as_mut_slice());

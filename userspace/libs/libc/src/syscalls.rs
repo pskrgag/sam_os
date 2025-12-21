@@ -9,7 +9,7 @@ use hal::address::{Address, PhysAddr, VirtAddr};
 use rtl::error::ErrorType;
 use rtl::handle::Handle as RawHandle;
 use rtl::ipc::IpcMessage;
-use rtl::signal::Signals;
+use rtl::signal::{Signals, WaitEntry};
 use rtl::syscalls::SyscallList;
 use rtl::vmm::MappingType;
 
@@ -33,6 +33,7 @@ pub enum Syscall<'a> {
     CloneHandle(RawHandle),
     GetFdt,
     ObjectWait(RawHandle, Signals),
+    ObjectWaitMany(&'a mut [WaitEntry]),
 }
 
 impl<'a> Syscall<'a> {
@@ -113,6 +114,10 @@ impl<'a> Syscall<'a> {
 
     pub fn object_wait(h: &Handle, sig: Signals) -> Result<(), ErrorType> {
         unsafe { syscall(Self::ObjectWait(h.as_raw(), sig).as_args()).map(|_| ()) }
+    }
+
+    pub fn object_wait_many(wait_entries: &'a mut [WaitEntry]) -> Result<(), ErrorType> {
+        unsafe { syscall(Self::ObjectWaitMany(wait_entries).as_args()).map(|_| ()) }
     }
 
     pub fn port_send_wait(
@@ -296,6 +301,16 @@ impl<'a> Syscall<'a> {
                 SyscallList::WaitObject.into(),
                 h,
                 (*sig).into(),
+                0,
+                0,
+                0,
+                0,
+                0,
+            ],
+            Syscall::ObjectWaitMany(entries) => [
+                SyscallList::WaitObjectMany.into(),
+                entries.as_mut_ptr() as usize,
+                entries.len(),
                 0,
                 0,
                 0,

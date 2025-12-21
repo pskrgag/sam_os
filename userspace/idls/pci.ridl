@@ -1,3 +1,7 @@
 interface Pci {
 	Device(in U16 vendor, in U16 device, out Handle handle);
 }
+
+interface Device {
+	Do();
+}

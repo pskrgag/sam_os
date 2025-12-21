@@ -14,7 +14,7 @@ impl Port {
         Self { h }
     }
 
-    pub fn create() -> Option<Self> {
+    pub fn create() -> Result<Self, ErrorType> {
         factory().create_port()
     }
 
@@ -31,7 +31,7 @@ impl Port {
     }
 
     pub fn call(&self, msg: &mut IpcMessage) -> Result<usize, ErrorType> {
-        let p = Port::create().ok_or(ErrorType::NoOperation)?;
+        let p = Port::create()?;
 
         msg.set_reply_port(unsafe { p.h.as_raw() });
         Syscall::port_call(&self.h, msg)

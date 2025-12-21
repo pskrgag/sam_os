@@ -23,8 +23,8 @@ impl Factory {
         ))
     }
 
-    pub fn create_port(&self) -> Option<Port> {
-        Some(Port::new(Syscall::create_port(&self.h).ok()?))
+    pub fn create_port(&self) -> Result<Port, ErrorType> {
+        Syscall::create_port(&self.h).map(Port::new)
     }
 }
 

@@ -26,7 +26,9 @@ struct KernelObjectBaseInner {
 
 impl KernelObjectBaseInner {
     fn add_observer(&mut self, obs: Observer) {
-        self.observers.push(obs);
+        if !obs(self.signals) {
+            self.observers.push(obs);
+        }
     }
 }
 
@@ -120,6 +122,7 @@ pub async fn wait_many(entries: &mut Vec<WaitManyArg>) {
                     }));
                 }
 
+                self.get_mut().polled = true;
                 Poll::Pending
             } else {
                 for i in self.entries {
@@ -135,7 +138,7 @@ pub async fn wait_many(entries: &mut Vec<WaitManyArg>) {
 
     // Wait for any object to signal
     WaitMany {
-        entries: &entries,
+        entries,
         polled: false,
     }
     .await;

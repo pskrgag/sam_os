@@ -17,15 +17,11 @@ pub fn start(p: Port) {
                 return Err(ErrorType::AlreadyExists);
             }
 
-            println!("Registering {:?}", &t.name);
             roottask.table.insert(t.name, t.handle);
-
             Ok(bindings::RegisterRx {})
         })
         .register_handler(|t: bindings::GetTx, roottask| {
             let roottask = roottask.lock();
-
-            println!("Getting {:?}", &t.name);
 
             if let Some(h) = roottask.table.get(&t.name) {
                 let h = h.clone_handle().unwrap();

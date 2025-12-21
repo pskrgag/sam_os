@@ -108,7 +108,7 @@ impl<T> UserPtr<T> {
             let res = arch_copy_to_user(
                 t as *const _ as usize,
                 size_of::<T>() * self.count,
-                self.p as usize,
+                self.p,
             );
             if res == 0 {
                 Ok(())
@@ -122,6 +122,7 @@ impl<T> UserPtr<T> {
         use core::mem::size_of;
 
         if self.count < t.len() {
+            info!("{} {}\n", self.count, t.len());
             return Err(ErrorType::InvalidArgument);
         }
 
@@ -129,7 +130,7 @@ impl<T> UserPtr<T> {
             let res = arch_copy_to_user(
                 t.as_ptr() as usize,
                 size_of::<T>() * t.len(),
-                self.p as usize,
+                self.p,
             );
             if res == 0 {
                 Ok(())

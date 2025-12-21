@@ -199,7 +199,7 @@ impl<'a> Parser<'a> {
         let mut mods = vec![];
         self.aliases = self.parse_aliases()?;
 
-        if self
+        while self
             .consume_token_type(TokenType::TokenId(IdType::Interface))
             .is_some()
         {

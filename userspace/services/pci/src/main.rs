@@ -3,17 +3,18 @@
 
 use alloc::boxed::Box;
 use bindings_NameServer::NameServer;
-use bindings_Pci::Pci;
+use bindings_Pci::{DeviceRx, DeviceTx, Pci};
+use device::PciDevice;
 use dispatch_loop::EndpointsDispatcher;
 use fdt::Fdt;
+use hal::address::VirtualAddress;
 use libc::{factory::factory, handle::Handle, main, port::Port, syscalls::Syscall};
 use rtl::locking::spinlock::Spinlock;
-use hal::address::VirtualAddress;
 
-mod dispatcher;
+mod device;
 mod ecam;
 
-pub static DISPATH_POOL: Spinlock<EndpointsDispatcher> = Spinlock::new(EndpointsDispatcher::new());
+pub static DISPATH_POOL: EndpointsDispatcher = EndpointsDispatcher::new();
 
 #[main]
 fn main(nameserver: Handle) {
@@ -29,9 +30,15 @@ fn main(nameserver: Handle) {
     ns.Register("pci", port.handle())
         .expect("Failed to register PCI handle");
 
-    let pci = Pci::new(port, ());
+    let pci = Pci::new(port, Spinlock::new(ecam)).register_handler(|d: DeviceTx, ecam| {
+        let (disp, handle) = PciDevice::new(d.vendor, d.device)?;
 
-    DISPATH_POOL.lock().add(Box::new(pci));
+        DISPATH_POOL.add(disp);
+        Ok(DeviceRx { handle })
+    });
+
+    DISPATH_POOL.add(Box::new(pci));
+    DISPATH_POOL.dispatch().unwrap();
 }
 
 include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));
