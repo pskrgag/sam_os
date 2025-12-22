@@ -1,5 +1,5 @@
+use crate::adt::Vec;
 use crate::mm::allocators::page_alloc::page_allocator;
-use alloc::vec::Vec;
 use elf::{
     abi::{PF_R, PF_W, PF_X, PT_LOAD},
     endian::LittleEndian,
@@ -80,11 +80,12 @@ pub fn parse_initial_task(prot: &loader_protocol::LoaderArg) -> Option<ElfData> 
             panic!("Unknown elf permissions");
         };
 
-        secs.push(Segment {
+        secs.try_push(Segment {
             va: virt_range,
             pa: phys_range,
             tp: perms,
-        });
+        })
+        .expect("Failed to allocate memory for init task");
     }
 
     Some(ElfData {

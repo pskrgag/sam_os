@@ -1,13 +1,14 @@
+use crate::adt::Vec;
 use crate::sync::Mutex;
 use alloc::boxed::Box;
 use alloc::sync::Arc;
-use alloc::vec::Vec;
 use core::any::Any;
 use core::future::Future;
 use core::ops::Deref;
 use core::pin::Pin;
 use core::task::{Context, Poll};
-use rtl::signal::{Signal, Signals};
+use rtl::error::ErrorType;
+use rtl::signal::Signals;
 
 pub mod capabilities;
 pub mod handle;
@@ -25,9 +26,11 @@ struct KernelObjectBaseInner {
 }
 
 impl KernelObjectBaseInner {
-    fn add_observer(&mut self, obs: Observer) {
+    fn add_observer(&mut self, obs: Observer) -> Result<(), ErrorType> {
         if !obs(self.signals) {
-            self.observers.push(obs);
+            self.observers.try_push(obs)
+        } else {
+            Ok(())
         }
     }
 }
@@ -43,36 +46,39 @@ impl KernelObjectBase {
         self.0.lock().signals
     }
 
-    pub fn add_observer(&self, obs: Observer) {
-        self.0.lock().add_observer(obs);
+    pub fn add_observer(&self, obs: Observer) -> Result<(), ErrorType> {
+        self.0.lock().add_observer(obs)
     }
 
-    pub async fn wait_signal(&self, sig: Signals) {
+    pub async fn wait_signal(&self, sig: Signals) -> Result<(), ErrorType> {
         struct Wait<'a> {
             sig: Signals,
             base: &'a KernelObjectBase,
         }
 
         impl Future for Wait<'_> {
-            type Output = ();
+            type Output = Result<(), ErrorType>;
 
             fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
                 let mut inner = self.base.0.lock();
 
                 if inner.signals.contains(self.sig) {
-                    Poll::Ready(())
+                    Poll::Ready(Ok(()))
                 } else {
                     let waker = cx.waker().clone();
                     let wait_sig = self.sig;
 
-                    inner.add_observer(Box::new(move |sig| {
-                        if sig.contains(wait_sig) {
-                            waker.wake_by_ref();
-                            true
-                        } else {
-                            false
-                        }
-                    }));
+                    inner.add_observer(
+                        Box::try_new(move |sig: Signals| {
+                            if sig.contains(wait_sig) {
+                                waker.wake_by_ref();
+                                true
+                            } else {
+                                false
+                            }
+                        })
+                        .map_err(|_| ErrorType::NoMemory)?,
+                    )?;
 
                     Poll::Pending
                 }
@@ -97,14 +103,14 @@ pub struct WaitManyArg {
     pub pending: Signals,
 }
 
-pub async fn wait_many(entries: &mut Vec<WaitManyArg>) {
+pub async fn wait_many(entries: &mut Vec<WaitManyArg>) -> Result<(), ErrorType> {
     struct WaitMany<'a> {
         entries: &'a Vec<WaitManyArg>,
         polled: bool,
     }
 
     impl Future for WaitMany<'_> {
-        type Output = ();
+        type Output = Result<(), ErrorType>;
 
         fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
             if !self.polled {
@@ -112,14 +118,17 @@ pub async fn wait_many(entries: &mut Vec<WaitManyArg>) {
                     let waitfor = i.waitfor;
                     let waker = cx.waker().clone();
 
-                    i.obj.add_observer(Box::new(move |sig| {
-                        if sig.contains(waitfor) {
-                            waker.wake_by_ref();
-                            true
-                        } else {
-                            false
-                        }
-                    }));
+                    i.obj.add_observer(
+                        Box::try_new(move |sig: Signals| {
+                            if sig.contains(waitfor) {
+                                waker.wake_by_ref();
+                                true
+                            } else {
+                                false
+                            }
+                        })
+                        .map_err(|_| ErrorType::NoMemory)?,
+                    )?;
                 }
 
                 self.get_mut().polled = true;
@@ -127,7 +136,7 @@ pub async fn wait_many(entries: &mut Vec<WaitManyArg>) {
             } else {
                 for i in self.entries {
                     if *(i.obj.signals() & i.waitfor) != 0 {
-                        return Poll::Ready(());
+                        return Poll::Ready(Ok(()));
                     }
                 }
 
@@ -141,11 +150,13 @@ pub async fn wait_many(entries: &mut Vec<WaitManyArg>) {
         entries,
         polled: false,
     }
-    .await;
+    .await?;
 
     for entry in entries {
         entry.pending = entry.obj.signals() & entry.waitfor;
     }
+
+    Ok(())
 }
 
 // All exposed kernel objects must be derived from this trait

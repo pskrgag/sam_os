@@ -1,5 +1,5 @@
 use alloc::boxed::Box;
-use alloc::vec::Vec;
+use crate::adt::Vec;
 use core::marker::PhantomData;
 use rtl::error::ErrorType;
 

@@ -141,7 +141,7 @@ impl Port {
         let mut server_msg = copy_ipc_message_from_user(server_msg_uptr)?;
         let mut arena_len = 0;
 
-        let mut client_msg = self.queue.consume().await;
+        let mut client_msg = self.queue.consume().await?;
 
         // Copy arena data
         if let Some(d) = server_msg.in_arena() {

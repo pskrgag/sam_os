@@ -1,35 +1,27 @@
 use super::run_queue::RunQueue;
 use super::task::Task;
 use crate::tasks::thread::Thread;
-use crate::tasks::task::kernel_task;
 use alloc::sync::Arc;
 use core::task::{Context, Poll};
-use hal::address::VirtAddr;
-use hal::arch::PAGE_SIZE;
-use rtl::vmm::MappingType;
-
-const STACK_PAGES: usize = 10;
+use rtl::error::ErrorType;
 
 pub struct Executor {
     rq: RunQueue,
-    stack: VirtAddr,
 }
 
 impl Executor {
     pub fn new() -> Self {
-        let stack = kernel_task()
-            .vms()
-            .vm_allocate(STACK_PAGES * PAGE_SIZE, MappingType::Data)
-            .expect("Failed to allocate stack for executor");
-
         Self {
-            stack,
             rq: RunQueue::new(),
         }
     }
 
-    pub fn add<F: Future<Output = ()> + 'static>(&mut self, future: F, thread: Arc<Thread>) {
-        self.rq.add(Task::new(future, thread));
+    pub fn add<F: Future<Output = ()> + 'static>(
+        &mut self,
+        future: F,
+        thread: Arc<Thread>,
+    ) -> Result<(), ErrorType> {
+        self.rq.add(Task::new(future, thread)?)
     }
 
     pub fn run(&mut self) {

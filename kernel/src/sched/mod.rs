@@ -1,10 +1,11 @@
 use crate::arch::regs::{Context, TrapReason};
 use crate::drivers::irq::irq::irq_dispatch;
-use crate::tasks::thread::Thread;
 use crate::syscalls::do_syscall;
+use crate::tasks::thread::Thread;
 use aarch64_cpu::registers::{Readable, ELR_EL1, ESR_EL1, FAR_EL1};
 use alloc::sync::Arc;
 use core::cell::LazyCell;
+use rtl::error::ErrorType;
 use runtime::executor::Executor;
 
 pub mod current;
@@ -37,8 +38,11 @@ impl Scheduler {
     }
 }
 
-pub fn spawn<F: Future<Output = ()> + 'static>(future: F, thread: Arc<Thread>) {
-    SCHEDULER.per_cpu_var_get_mut().rq.add(future, thread);
+pub fn spawn<F: Future<Output = ()> + 'static>(
+    future: F,
+    thread: Arc<Thread>,
+) -> Result<(), ErrorType> {
+    SCHEDULER.per_cpu_var_get_mut().rq.add(future, thread)
 }
 
 pub fn run() {

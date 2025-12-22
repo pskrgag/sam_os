@@ -1,6 +1,6 @@
+use crate::adt::Vec;
 use crate::mm::memset_pages;
 use crate::sync::{spinlock::SpinlockGuard, Spinlock};
-use alloc::vec::Vec;
 use bitmaps::Bitmap;
 use hal::address::*;
 use hal::arch::PAGE_SIZE;
@@ -53,7 +53,8 @@ impl Region {
         let mut pool = unsafe { Vec::from_raw_parts(virt_start.to_raw_mut(), 0, pool_size) };
 
         for _ in 0..pool_size {
-            pool.push(Bitmap::<64>::new());
+            pool.push_within_capacity(Bitmap::<64>::new())
+                .expect("Should never fail");
         }
 
         Some(Self {

@@ -5,6 +5,7 @@
 #![feature(coroutines, coroutine_trait, iter_from_coroutine)]
 #![feature(linked_list_cursors)]
 #![feature(iterator_try_collect)]
+#![feature(vec_push_within_capacity)]
 #![allow(unexpected_cfgs)]
 #![allow(dead_code)]
 #![allow(non_upper_case_globals)]
@@ -31,6 +32,7 @@ mod object;
 mod syscalls;
 mod tasks;
 mod logger;
+mod adt;
 
 #[cfg(test)]
 #[macro_use]

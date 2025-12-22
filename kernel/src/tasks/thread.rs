@@ -4,6 +4,7 @@ use crate::object::KernelObjectBase;
 use crate::sched::spawn;
 use crate::sync::Spinlock;
 use crate::tasks::task::kernel_task;
+use alloc::boxed::Box;
 use alloc::sync::Arc;
 use alloc::sync::Weak;
 use core::pin::Pin;
@@ -12,6 +13,7 @@ use core::task::{Context as PollContext, Poll, Waker};
 use core::time::Duration;
 use hal::address::*;
 use hal::arch::PAGE_SIZE;
+use rtl::error::ErrorType;
 use rtl::linker_var;
 use rtl::signal::Signal;
 use rtl::vmm::MappingType;
@@ -199,14 +201,16 @@ impl Thread {
         self.set_state(ThreadState::Running, ThreadSleepReason::None);
     }
 
-    pub fn start(self: &Arc<Self>) {
+    pub fn start(self: &Arc<Self>) -> Result<(), ErrorType> {
         use crate::sched::userspace_loop;
 
         self.set_running();
         spawn(
-            alloc::boxed::Box::pin(userspace_loop(self.clone())),
+            Box::into_pin(
+                Box::try_new(userspace_loop(self.clone())).map_err(|_| ErrorType::NoMemory)?,
+            ),
             self.clone(),
-        );
+        )
     }
 
     pub async fn context(self: &Arc<Self>) -> Context {
@@ -285,7 +289,7 @@ impl Thread {
         ThreadRawState(self.state.load(Ordering::Relaxed)).get_state()
     }
 
-    pub async fn sleep_for(dl: Duration) {
+    pub async fn sleep_for(dl: Duration) -> Result<(), ErrorType> {
         use crate::sched::timer::{set_timer, time_since_start};
 
         struct Sleep {
@@ -294,17 +298,18 @@ impl Thread {
         }
 
         impl Future for Sleep {
-            type Output = ();
+            type Output = Result<(), ErrorType>;
 
             fn poll(self: Pin<&mut Self>, cx: &mut PollContext) -> Poll<Self::Output> {
                 let waker = cx.waker().clone();
 
                 if time_since_start() >= self.dl {
-                    Poll::Ready(())
+                    Poll::Ready(Ok(()))
                 } else {
                     set_timer(
                         self.diff,
-                        alloc::boxed::Box::new(move || waker.wake_by_ref()),
+                        alloc::boxed::Box::try_new(move || waker.wake_by_ref())
+                            .map_err(|_| ErrorType::NoMemory)?,
                     );
                     Poll::Pending
                 }

@@ -1,9 +1,10 @@
 use super::mutex::Mutex;
+use crate::adt::Vec;
 use alloc::collections::VecDeque;
-use alloc::vec::Vec;
 use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll, Waker};
+use rtl::error::ErrorType;
 
 pub struct WaitQueue<T> {
     data: Mutex<VecDeque<T>>,
@@ -26,21 +27,21 @@ impl<T> WaitQueue<T> {
         }
     }
 
-    pub async fn consume(&self) -> T {
+    pub async fn consume(&self) -> Result<T, ErrorType> {
         struct ConsumeFuture<'a, T> {
             wq: &'a WaitQueue<T>,
         }
 
         impl<'a, T> Future for ConsumeFuture<'a, T> {
-            type Output = T;
+            type Output = Result<T, ErrorType>;
 
             fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
                 let mut data = self.wq.data.lock();
 
                 if let Some(elem) = data.pop_front() {
-                    Poll::Ready(elem)
+                    Poll::Ready(Ok(elem))
                 } else {
-                    self.wq.waiters.lock().push(cx.waker().clone());
+                    self.wq.waiters.lock().try_push(cx.waker().clone())?;
                     Poll::Pending
                 }
             }

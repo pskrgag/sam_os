@@ -1,3 +1,4 @@
+use crate::adt::Vec;
 use crate::drivers::fdt::fdt;
 use crate::logger::print_str;
 use crate::object::{
@@ -242,26 +243,27 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 .ok_or(ErrorType::InvalidHandle)?;
             let sig: Signals = args.try_arg(1)?;
 
-            obj.wait_signal(sig).await;
-            Ok(0)
+            obj.wait_signal(sig).await.map(|_| 0)
         }
         SyscallList::WaitObjectMany => {
-            let mut user_ptr = UserPtr::new_array(args.arg::<usize>(0) as *mut WaitEntry, args.arg(1));
+            let mut user_ptr =
+                UserPtr::new_array(args.arg::<usize>(0) as *mut WaitEntry, args.arg(1));
             let mut user_wait_entries = user_ptr.read_on_heap()?;
-            let mut wait_entries = user_wait_entries
-                .iter()
-                .map(|x| {
-                    Ok(WaitManyArg {
-                        obj: table
-                            .find_poly(x.handle, CapabilityMask::from(Capability::Wait))
-                            .ok_or(ErrorType::InvalidHandle)?,
-                        waitfor: x.waitfor,
-                        pending: Signal::None.into(),
-                    })
-                })
-                .try_collect::<alloc::vec::Vec<_>>()?;
+            let mut wait_entries = Vec::new();
 
-            wait_many(&mut wait_entries).await;
+            for e in user_wait_entries.iter().map(|x| {
+                Ok(WaitManyArg {
+                    obj: table
+                        .find_poly(x.handle, CapabilityMask::from(Capability::Wait))
+                        .ok_or(ErrorType::InvalidHandle)?,
+                    waitfor: x.waitfor,
+                    pending: Signal::None.into(),
+                })
+            }) {
+                wait_entries.try_push(e?)?;
+            }
+
+            wait_many(&mut wait_entries).await?;
 
             for (user, kernel) in core::iter::zip(user_wait_entries.iter_mut(), wait_entries.iter())
             {

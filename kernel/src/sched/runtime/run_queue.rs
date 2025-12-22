@@ -1,9 +1,10 @@
 use super::task::Task;
 use super::waker::WakerPage;
+use crate::adt::Vec;
 use alloc::sync::Arc;
-use alloc::vec::Vec;
 use core::num::NonZeroU32;
 use core::task::Waker;
+use rtl::error::ErrorType;
 use slab::{Key as SlabKey, Slab};
 
 pub struct RunQueue {
@@ -24,16 +25,18 @@ impl RunQueue {
         }
     }
 
-    pub fn add(&mut self, t: Task) {
-        // TODO: remove unwrap
-        let new = self.slab.add(Arc::new(t)).unwrap();
+    pub fn add(&mut self, t: Task) -> Result<(), ErrorType> {
+        let new = Arc::try_new(t)
+            .map_err(|_| ErrorType::NoMemory)
+            .and_then(|x| self.slab.add(x).ok_or(ErrorType::NoMemory))?;
         let key = RQKey(unsafe { new.into_inner().into() });
 
         if key.0 as usize >= self.wakers.len() * WakerPage::num_entries() {
-            self.wakers.push(WakerPage::new());
+            self.wakers.try_push(WakerPage::new())?;
         }
 
         self.wakers[key.waker() as usize].initialize(key.waker_index());
+        Ok(())
     }
 
     pub fn tasks(&mut self) -> impl Iterator<Item = TaskRef> {

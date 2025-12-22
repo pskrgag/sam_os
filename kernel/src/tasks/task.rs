@@ -35,9 +35,8 @@ impl TaskInner {
         self.threads.push_back(t);
     }
 
-    pub fn start(&mut self) {
-        let t = self.threads.front().unwrap();
-        t.start();
+    pub fn start(&mut self) -> Result<(), ErrorType> {
+        self.threads.front().unwrap().start()
     }
 }
 
@@ -107,8 +106,8 @@ impl Task {
         self.inner.lock().add_thread(t);
     }
 
-    pub fn start_inner(&self) {
-        self.inner.lock().start();
+    fn start_inner(&self) -> Result<(), ErrorType> {
+        self.inner.lock().start()
     }
 
     pub fn start(self: Arc<Self>, ep: VirtAddr, obj: Option<Handle>) -> Result<(), ErrorType> {
@@ -135,9 +134,7 @@ impl Task {
             ]),
         );
         self.inner.lock().add_thread(init_thread);
-
-        self.start_inner();
-        Ok(())
+        self.start_inner()
     }
 
     pub fn vms_handle(&self) -> HandleBase {
