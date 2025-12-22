@@ -42,12 +42,6 @@ _start:
 	isb
 	eret
 
-/*
- uint64_t r_offset;
- uint64_t r_info;
- int64_t r_addend;
-*/
-
 el1_1:
 	// Apply relocation
 	adr	x0, _rela_begin
@@ -58,24 +52,25 @@ loop:
 	cmp	x0, x1
 	b.eq	crt0
 
-	ldr	x3, [x0]	// r_offset
-	ldr	x4, [x0, #16]	// r_addend
-	add	x3, x2, x3	// x3 = load_addr + r_offset
-	ldr	x5, [x3]
-	add	x5, x2, x4	// add r_addend
-	str	x5, [x3]
+	ldp	x3, x4, [x0], #24
+	ldr	x5, [x0, #-8]
 
-	add	x0, x0, 24
+	// x3 - r_offset
+	// x4 - r_info
+	// x5 - r_addent
+
+	add	x5, x5, x2	// x5 = r_offset + __start
+	str	x5, [x3, x2]
 	b	loop
 
 crt0:
 	adrp	x0, __end
-	add	x0, x0, #:lo12:__end 
+	add	x0, x0, #:lo12:__end
 	mov	sp, x0
 
 	mov	x0, x10
 
-	// Jump to C
+	// Jump to Rust
 	b	main
 
 	ret

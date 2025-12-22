@@ -38,7 +38,7 @@ extern "C" fn main(fdt_base: PhysAddr) {
 
 #[panic_handler]
 fn on_panic(info: &PanicInfo) -> ! {
-    println!("panic! {}", info.message());
+    println!("panic! {} {:?}", info.message(), info.location());
 
     loop {
         unsafe {

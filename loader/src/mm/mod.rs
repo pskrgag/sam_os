@@ -1,5 +1,5 @@
 use fdt::Fdt;
-use hal::address::{MemRange, PhysAddr, VirtAddr, Address};
+use hal::address::{Address, MemRange, PhysAddr, VirtAddr};
 use page_table::{PageKind, PagePerms, PageTable};
 use rtl::linker_var;
 

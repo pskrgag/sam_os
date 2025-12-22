@@ -125,7 +125,7 @@ fn build_loader(kernel: String) -> Result<(), String> {
         None,
         None,
         Some(&[
-            ("RUSTFLAGS", "-C relocation-model=pie"),
+            ("RUSTFLAGS", "-C relocation-model=pie -C code-model=small"),
             ("KERNEL_PATH", &kernel),
             ("INIT_TASK_PATH", &binary("roottask")),
         ]),
