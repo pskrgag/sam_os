@@ -60,7 +60,7 @@ impl<T> Spinlock<T> {
         if let Some(cur) = get_current_raw()
             && cur == self.inner.owner.load(Ordering::Relaxed)
         {
-            panic!("Deadlock");
+            panic!("Spinlock deadlock");
         }
 
         let my = self.inner.next.fetch_add(1, Ordering::Acquire);

@@ -1,6 +1,5 @@
 use crate::mm::allocators::page_alloc::page_allocator;
 use crate::object::KernelObjectBase;
-use crate::sync::Mutex;
 use alloc::sync::Arc;
 use hal::address::*;
 use hal::arch::PAGE_SIZE;
@@ -15,7 +14,7 @@ struct VmObjectInner {
 }
 
 pub struct VmObject {
-    inner: Mutex<VmObjectInner>,
+    inner: VmObjectInner,
     base: KernelObjectBase,
 }
 
@@ -37,22 +36,20 @@ impl VmObjectInner {
 impl VmObject {
     pub fn zeroed(size: usize, tp: MappingType) -> Option<Arc<Self>> {
         Arc::try_new(Self {
-            inner: Mutex::new(VmObjectInner::zeroed(size, tp)?),
+            inner: VmObjectInner::zeroed(size, tp)?,
             base: KernelObjectBase::new(),
         })
         .ok()
     }
 
     pub fn range(&self) -> MemRange<PhysAddr> {
-        let inner = self.inner.lock();
+        let inner = &self.inner;
 
         MemRange::new(inner.start, inner.pages * PAGE_SIZE)
     }
 
     pub fn mapping_type(&self) -> MappingType {
-        let inner = self.inner.lock();
-
-        inner.mt
+        self.inner.mt
     }
 }
 
@@ -64,6 +61,6 @@ impl Drop for VmObjectInner {
 
 impl core::fmt::Debug for VmObject {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_fmt(format_args!("VmObject [ {:?} ]", *self.inner.lock()))
+        f.write_fmt(format_args!("VmObject [ {:?} ]", self.inner))
     }
 }

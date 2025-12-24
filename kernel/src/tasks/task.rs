@@ -4,7 +4,7 @@ use crate::object::factory_object::FACTORY;
 use crate::object::handle::Handle;
 use crate::object::handle_table::HandleTable;
 use crate::object::KernelObjectBase;
-use crate::sync::{mutex::MutexGuard, Mutex, Spinlock};
+use crate::sync::{async_mutex::MutexGuard, Mutex, Spinlock};
 use crate::tasks::thread::Thread;
 use alloc::collections::LinkedList;
 use hal::address::VirtAddr;
@@ -90,8 +90,8 @@ impl Task {
         self.id
     }
 
-    pub fn handle_table<'a>(&'a self) -> MutexGuard<'a, HandleTable> {
-        self.handles.lock()
+    pub async fn handle_table<'a>(&'a self) -> Result<MutexGuard<'a, HandleTable>, ErrorType> {
+        self.handles.lock().await
     }
 
     pub fn vms(&self) -> &Arc<Vms> {
@@ -110,35 +110,43 @@ impl Task {
         self.inner.lock().start()
     }
 
-    pub fn start(self: Arc<Self>, ep: VirtAddr, obj: Option<Handle>) -> Result<(), ErrorType> {
+    pub async fn start(
+        self: Arc<Self>,
+        ep: VirtAddr,
+        obj: Option<Handle>,
+    ) -> Result<(), ErrorType> {
         use core::sync::atomic::{AtomicU16, Ordering};
 
         static ID_THREAD: AtomicU16 = AtomicU16::new(1);
 
         let init_thread = Thread::new_user(self.clone(), ID_THREAD.fetch_add(1, Ordering::Relaxed))
+            .await
             .ok_or(ErrorType::NoMemory)?;
         let mut boot_handle: HandleBase = HANDLE_INVALID;
 
+        let mut table = self.handle_table().await?;
         if let Some(obj) = obj {
-            let mut new_table = self.handle_table();
-            boot_handle = new_table.add(obj);
+            boot_handle = table.add(obj);
         }
 
-        let mut table = self.handle_table();
-        init_thread.init_user(
-            ep,
-            Some([
-                table.add(Handle::new(self.vms().clone(), Vms::full_caps())),
-                table.add(Handle::new(FACTORY.clone(), CapabilityMask::any())),
-                boot_handle,
-            ]),
-        );
+        init_thread
+            .init_user(
+                ep,
+                Some([
+                    table.add(Handle::new(self.vms().clone(), Vms::full_caps())),
+                    table.add(Handle::new(FACTORY.clone(), CapabilityMask::any())),
+                    boot_handle,
+                ]),
+            )
+            .await;
         self.inner.lock().add_thread(init_thread);
         self.start_inner()
     }
 
-    pub fn vms_handle(&self) -> HandleBase {
-        self.handle_table()
-            .add(Handle::new(self.vms().clone(), Vms::full_caps()))
+    pub async fn vms_handle(&self) -> Result<HandleBase, ErrorType> {
+        Ok(self
+            .handle_table()
+            .await?
+            .add(Handle::new(self.vms().clone(), Vms::full_caps())))
     }
 }

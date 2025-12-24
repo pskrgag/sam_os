@@ -1,5 +1,6 @@
 use crate::mm::user_buffer::UserPtr;
 use crate::object::capabilities::{Capability, CapabilityMask};
+use crate::object::handle_table::HandleTable;
 use crate::object::KernelObjectBase;
 use crate::sched::current;
 use crate::sync::WaitQueue;
@@ -40,14 +41,12 @@ fn copy_ipc_message_from_user(
 
 impl Port {
     pub fn new(thread: Arc<Task>) -> Option<Arc<Self>> {
-        Some(
-            Arc::try_new(Self {
-                task: Arc::downgrade(&thread),
-                queue: WaitQueue::new(),
-                base: KernelObjectBase::new(),
-            })
-            .ok()?,
-        )
+        Arc::try_new(Self {
+            task: Arc::downgrade(&thread),
+            queue: WaitQueue::new(),
+            base: KernelObjectBase::new(),
+        })
+        .ok()
     }
 
     pub fn full_caps() -> CapabilityMask {
@@ -56,21 +55,16 @@ impl Port {
         )
     }
 
-    fn transfer_handles_from_current(
-        to: &Task,
+    async fn transfer_handles_from_current(
+        from: &HandleTable,
+        to: &Arc<Task>,
         msg: &mut IpcMessage<'static>,
     ) -> Result<(), ErrorType> {
-        let cur_task = current().task();
-        let cur_table = cur_task.handle_table();
-        let mut to_table = to.handle_table();
+        let mut to_table = to.handle_table().await?;
 
         // TODO remove handles in case of an error
         for i in msg.handles_mut() {
-            let h = cur_table
-                .find_raw_handle(*i)
-                .ok_or(ErrorType::InvalidHandle)?;
-
-            *i = to_table.add(h);
+            *i = to_table.add(from.find_raw_handle(*i).ok_or(ErrorType::InvalidHandle)?);
         }
 
         Ok(())
@@ -80,17 +74,20 @@ impl Port {
         &self,
         client_msg_uptr: UserPtr<IpcMessage<'static>>,
     ) -> Result<usize, ErrorType> {
+        let cur = current();
         let mut client_msg = copy_ipc_message_from_user(client_msg_uptr)?;
         let task = self.task.upgrade().ok_or(ErrorType::TaskDead)?;
-        let reply_port = current()
-            .task()
-            .handle_table()
+        let self_task = cur.task();
+        let self_table = self_task.handle_table().await?;
+        let reply_port = self_table
             .find_handle::<Self>(client_msg.reply_port(), CapabilityMask::any())
             .ok_or(ErrorType::InvalidHandle)?;
 
-        Self::transfer_handles_from_current(&task, &mut client_msg)?;
+        Self::transfer_handles_from_current(&self_table, &task, &mut client_msg).await?;
 
-        let my_port = task.handle_table().add(reply_port.clone());
+        // Drop self lock before waiting for the message
+        drop(self_table);
+        let my_port = task.handle_table().await?.add(reply_port.clone());
         client_msg.set_reply_port(my_port);
         self.produce(client_msg);
 
@@ -101,15 +98,14 @@ impl Port {
             .await
     }
 
-    pub fn send(
+    pub async fn send(
         &self,
         reply_port_handle: HandleBase,
         msg: UserPtr<IpcMessage<'static>>,
     ) -> Result<(), ErrorType> {
         let cur = current();
         let self_task = cur.task();
-        let mut self_table = self_task.handle_table();
-
+        let mut self_table = self_task.handle_table().await?;
         let reply_port = self_table
             .find::<Self>(reply_port_handle, CapabilityMask::any())
             .ok_or(ErrorType::InvalidHandle)?;
@@ -117,10 +113,9 @@ impl Port {
         let task = reply_port.task.upgrade().ok_or(ErrorType::TaskDead)?;
 
         self_table.remove(reply_port_handle);
-        drop(self_table);
 
         let mut user_msg = copy_ipc_message_from_user(msg)?;
-        Self::transfer_handles_from_current(&task, &mut user_msg)?;
+        Self::transfer_handles_from_current(&self_table, &task, &mut user_msg).await?;
         reply_port.produce(user_msg);
         Ok(())
     }
@@ -130,7 +125,7 @@ impl Port {
         reply_port_handle: HandleBase,
         msg: UserPtr<IpcMessage<'static>>,
     ) -> Result<usize, ErrorType> {
-        self.send(reply_port_handle, msg)?;
+        self.send(reply_port_handle, msg).await?;
         self.receive(msg).await
     }
 

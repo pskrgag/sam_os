@@ -1,5 +1,5 @@
 use crate::adt::Vec;
-use crate::sync::Mutex;
+use crate::sync::Spinlock;
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use core::any::Any;
@@ -35,11 +35,11 @@ impl KernelObjectBaseInner {
     }
 }
 
-pub struct KernelObjectBase(Mutex<KernelObjectBaseInner>);
+pub struct KernelObjectBase(Spinlock<KernelObjectBaseInner>);
 
 impl KernelObjectBase {
     pub fn new() -> Self {
-        Self(Mutex::new(KernelObjectBaseInner::default()))
+        Self(Spinlock::new(KernelObjectBaseInner::default()))
     }
 
     pub fn signals(&self) -> Signals {

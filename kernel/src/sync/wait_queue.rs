@@ -1,4 +1,4 @@
-use super::mutex::Mutex;
+use super::Spinlock;
 use crate::adt::Vec;
 use alloc::collections::VecDeque;
 use core::future::Future;
@@ -6,16 +6,17 @@ use core::pin::Pin;
 use core::task::{Context, Poll, Waker};
 use rtl::error::ErrorType;
 
+// TODO: move this to lock-free queue. Allocating memory under spinlock is bad idea
 pub struct WaitQueue<T> {
-    data: Mutex<VecDeque<T>>,
-    waiters: Mutex<Vec<Waker>>,
+    data: Spinlock<VecDeque<T>>,
+    waiters: Spinlock<Vec<Waker>>,
 }
 
 impl<T> WaitQueue<T> {
     pub fn new() -> Self {
         Self {
-            data: Mutex::new(VecDeque::new()),
-            waiters: Mutex::new(Vec::new()),
+            data: Spinlock::new(VecDeque::new()),
+            waiters: Spinlock::new(Vec::new()),
         }
     }
 

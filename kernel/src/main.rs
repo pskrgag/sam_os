@@ -54,7 +54,7 @@ unsafe extern "C" {
 }
 
 #[cfg(not(test))]
-pub fn init_userspace(prot: &loader_protocol::LoaderArg) {
+pub async fn init_userspace(prot: &loader_protocol::LoaderArg) {
     let data = parse_initial_task(prot).unwrap();
     let init_task = init_task();
 
@@ -65,16 +65,18 @@ pub fn init_userspace(prot: &loader_protocol::LoaderArg) {
         i.pa.align_page();
         init_vms
             .vm_map(Some(i.va), i.pa, i.tp)
+            .await
             .expect("Failed to map");
     }
 
     init_task
         .start(data.ep, None)
+        .await
         .expect("Failed to start first task");
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
+extern "C" fn start_kernel(prot: &'static loader_protocol::LoaderArg) -> ! {
     drivers::init_logging(prot);
 
     logger::init();
@@ -88,7 +90,7 @@ extern "C" fn start_kernel(prot: &mut loader_protocol::LoaderArg) -> ! {
     info!("\n{SAMOS_BANNER}\n");
 
     #[cfg(not(test))]
-    init_userspace(prot);
+    sched::spawn(init_userspace(prot), sched::current()).unwrap();
 
     #[cfg(test)]
     #[allow(clippy::empty_loop)]

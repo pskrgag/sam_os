@@ -1,11 +1,9 @@
 use crate::mm::allocators::page_alloc::page_allocator;
 use crate::sync::Spinlock;
-use crate::tasks::task::kernel_task;
 use core::alloc::Layout;
 use core::ptr::NonNull;
 use hal::address::*;
 use hal::arch::PAGE_SIZE;
-use rtl::vmm::MappingType;
 
 const MIN_SLAB_SIZE: usize = 8;
 
@@ -27,11 +25,12 @@ pub fn alloc(size: usize) -> Option<*mut u8> {
     let slab_index = (size.next_power_of_two().ilog2() as usize) - 3;
 
     if slab_index >= KERNEL_SLABS.len() {
-        return kernel_task()
-            .vms()
-            .vm_allocate(size, MappingType::Data)
-            .map(|x| x.to_raw_mut())
-            .ok();
+        panic!("");
+        // return kernel_task()
+        //     .vms()
+        //     .vm_allocate(size, MappingType::Data)
+        //     .map(|x| x.to_raw_mut())
+        //     .ok();
     }
 
     KERNEL_SLABS[slab_index].lock().alloc()
@@ -42,7 +41,7 @@ pub fn free(ptr: *mut u8, l: Layout) {
 
     let slab_index = (size.next_power_of_two().ilog2() as usize) - 3;
     if slab_index >= KERNEL_SLABS.len() {
-        kernel_task().vms().vm_free(ptr.into(), l.size()).ok();
+        // kernel_task().vms().vm_free(ptr.into(), l.size()).ok();
     } else {
         unsafe { KERNEL_SLABS[slab_index].lock().free(ptr) }
     }

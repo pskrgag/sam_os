@@ -123,6 +123,7 @@ impl VmsInner {
 
 pub struct Vms {
     inner: Mutex<VmsInner>,
+    tt_base: PhysAddr,
     base: KernelObjectBase,
 }
 
@@ -130,32 +131,38 @@ crate::kernel_object!(Vms, Signal::None.into());
 
 impl Vms {
     pub fn new_user() -> Option<Arc<Self>> {
-        Arc::try_new(Self {
-            inner: Mutex::new(VmsInner::new_user()?),
+        let vms = VmsInner::new_user()?;
+        let new = Self {
+            tt_base: vms.ttbr0().unwrap(),
+            inner: Mutex::new(vms),
             base: KernelObjectBase::new(),
-        })
-        .ok()
+        };
+
+        Arc::try_new(new).ok()
     }
 
     pub fn new_kernel() -> Option<Arc<Self>> {
-        Arc::try_new(Self {
-            inner: Mutex::new(VmsInner::new_kernel()),
+        let vms = VmsInner::new_kernel();
+        let new = Self {
+            tt_base: kernel_page_table().base(),
+            inner: Mutex::new(vms),
             base: KernelObjectBase::new(),
-        })
-        .ok()
+        };
+
+        Arc::try_new(new).ok()
     }
 
     pub fn full_caps() -> CapabilityMask {
         CapabilityMask::from(Capability::MapPhys)
     }
 
-    pub fn vm_map(
+    pub async fn vm_map(
         &self,
         v: Option<MemRange<VirtAddr>>,
         p: MemRange<PhysAddr>,
         tp: MappingType,
     ) -> Result<VirtAddr, ErrorType> {
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.lock().await?;
 
         debug_assert!(p.start().is_page_aligned());
         debug_assert_eq!(p.size().next_multiple_of(PAGE_SIZE), p.size());
@@ -163,16 +170,16 @@ impl Vms {
         inner.vm_map(v, p, tp)
     }
 
-    pub fn vm_allocate(&self, size: usize, tp: MappingType) -> Result<VirtAddr, ErrorType> {
-        let mut inner = self.inner.lock();
+    pub async fn vm_allocate(&self, size: usize, tp: MappingType) -> Result<VirtAddr, ErrorType> {
+        let mut inner = self.inner.lock().await?;
         let res = inner.vm_allocate(size, tp)?;
 
         debug_assert!(res.is_page_aligned());
         Ok(res)
     }
 
-    pub fn vm_free(&self, base: VirtAddr, size: usize) -> Result<(), ErrorType> {
-        let mut inner = self.inner.lock();
+    pub async fn vm_free(&self, base: VirtAddr, size: usize) -> Result<(), ErrorType> {
+        let mut inner = self.inner.lock().await?;
 
         inner
             .vm_free(MemRange::new(base, size))
@@ -180,9 +187,7 @@ impl Vms {
     }
 
     pub fn base(&self) -> PhysAddr {
-        let inner = self.inner.lock();
-
-        inner.ttbr0().unwrap()
+        self.tt_base
     }
 
     pub fn create_vmo(&self, size: usize, mt: MappingType) -> Result<Handle, ErrorType> {
@@ -191,8 +196,8 @@ impl Vms {
         Ok(Handle::new(vmo, CapabilityMask::any()))
     }
 
-    pub fn map_phys(&self, pa: PhysAddr, size: usize) -> Result<*mut u8, ErrorType> {
-        let mut inner = self.inner.lock();
+    pub async fn map_phys(&self, pa: PhysAddr, size: usize) -> Result<*mut u8, ErrorType> {
+        let mut inner = self.inner.lock().await?;
 
         let va = inner.vm_map(None, MemRange::new(pa, size), MappingType::Device)?;
         Ok(va.to_raw_mut::<u8>())
@@ -202,7 +207,7 @@ impl Vms {
         switch_context(self.base());
     }
 
-    pub fn translate(&self, va: VirtAddr) -> Option<PhysAddr> {
-        self.inner.lock().translate(va)
+    pub async fn translate(&self, va: VirtAddr) -> Option<PhysAddr> {
+        self.inner.lock().await.ok().and_then(|x| x.translate(va))
     }
 }

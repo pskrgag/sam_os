@@ -68,7 +68,6 @@ fn read_user_string(source: usize, size: usize) -> Result<String, ErrorType> {
 pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
     let thread = current();
     let task = thread.task();
-    let mut table = task.handle_table();
 
     match args.number() {
         SyscallList::Write => {
@@ -79,6 +78,7 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
         }
         SyscallList::CreateTask => {
             let name = read_user_string(args.arg(1), args.arg(2))?;
+            let mut table = task.handle_table().await?;
 
             let factory = table
                 .find::<Factory>(args.arg(0), CapabilityMask::any())
@@ -87,6 +87,7 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             Ok(table.add(factory.create_task(name.as_str())?))
         }
         SyscallList::CreatePort => {
+            let mut table = task.handle_table().await?;
             let factory = table
                 .find::<Factory>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
@@ -95,6 +96,7 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             Ok(table.add(handle))
         }
         SyscallList::VmAllocate => {
+            let table = task.handle_table().await?;
             let vms = table
                 .find::<Vms>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
@@ -103,16 +105,19 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 args.arg(1),
                 args.try_arg(2).map_err(|_| ErrorType::InvalidArgument)?,
             )
+            .await
             .map(|x| x.bits())
         }
         SyscallList::VmFree => {
+            let table = task.handle_table().await?;
             let vms = table
                 .find::<Vms>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
 
-            vms.vm_free(args.arg(1), args.arg(2)).map(|_| 0)
+            vms.vm_free(args.arg(1), args.arg(2)).await.map(|_| 0)
         }
         SyscallList::CreateVmo => {
+            let mut table = task.handle_table().await?;
             let vms = table
                 .find::<Vms>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
@@ -123,6 +128,7 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             )?))
         }
         SyscallList::MapVmo => {
+            let table = task.handle_table().await?;
             let vms = table
                 .find::<Vms>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
@@ -143,20 +149,24 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 Some(MemRange::new(to, range.size()))
             };
 
-            vms.vm_map(va_range, range, tp).map(|x| x.into())
+            vms.vm_map(va_range, range, tp).await.map(|x| x.into())
         }
         SyscallList::MapPhys => {
+            let table = task.handle_table().await?;
             let vms = table
                 .find::<Vms>(args.arg(0), CapabilityMask::from(Capability::MapPhys))
                 .ok_or(ErrorType::InvalidHandle)?;
 
-            vms.map_phys(args.arg(1), args.arg(2)).map(|x| x as usize)
+            vms.map_phys(args.arg(1), args.arg(2))
+                .await
+                .map(|x| x as usize)
         }
         SyscallList::Yield => {
             Thread::self_yield().await;
             Ok(0)
         }
         SyscallList::TaskStart => {
+            let table = task.handle_table().await?;
             let task = table
                 .find::<Task>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
@@ -171,9 +181,10 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 None
             };
 
-            task.start(args.arg(1), obj).map(|_| 0)
+            task.start(args.arg(1), obj).await.map(|_| 0)
         }
         SyscallList::TaskGetVms => {
+            let mut table = task.handle_table().await?;
             let task = table
                 .find::<Task>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
@@ -182,42 +193,56 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             Ok(table.add(Handle::new(vms.clone(), CapabilityMask::any())))
         }
         SyscallList::PortCall => {
-            let port = table
-                .find::<Port>(args.arg(0), CapabilityMask::from(Capability::Call))
-                .ok_or(ErrorType::InvalidHandle)?;
+            let port = {
+                let table = task.handle_table().await?;
 
-            drop(table);
+                table
+                    .find::<Port>(args.arg(0), CapabilityMask::from(Capability::Call))
+                    .ok_or(ErrorType::InvalidHandle)?
+            };
+
             port.call(UserPtr::new(args.arg::<usize>(1) as *mut IpcMessage))
                 .await
         }
         SyscallList::PortSendWait => {
-            let port = table
-                .find::<Port>(args.arg(0), CapabilityMask::from(Capability::Send))
-                .ok_or(ErrorType::InvalidHandle)?;
             let msg = UserPtr::new(args.arg::<usize>(2) as *mut IpcMessage);
+            let port = {
+                let table = task.handle_table().await?;
 
-            drop(table);
+                table
+                    .find::<Port>(args.arg(0), CapabilityMask::from(Capability::Send))
+                    .ok_or(ErrorType::InvalidHandle)?
+            };
+
             port.send_wait(args.arg(1), msg).await
         }
         SyscallList::PortSend => {
-            let port = table
-                .find::<Port>(args.arg(0), CapabilityMask::from(Capability::Send))
-                .ok_or(ErrorType::InvalidHandle)?;
             let msg = UserPtr::new(args.arg::<usize>(2) as *mut IpcMessage);
+            let port = {
+                let table = task.handle_table().await?;
 
-            drop(table);
-            port.send(args.arg(1), msg).map(|_| 0)
+                table
+                    .find::<Port>(args.arg(0), CapabilityMask::from(Capability::Send))
+                    .ok_or(ErrorType::InvalidHandle)?
+            };
+
+            port.send(args.arg(1), msg).await.map(|_| 0)
         }
         SyscallList::PortReceive => {
-            let port = table
-                .find::<Port>(args.arg(0), CapabilityMask::from(Capability::Receive))
-                .ok_or(ErrorType::InvalidHandle)?;
             let in_msg = UserPtr::new(args.arg::<usize>(1) as *mut IpcMessage);
+            let port = {
+                let table = task.handle_table().await?;
 
-            drop(table);
+                table
+                    .find::<Port>(args.arg(0), CapabilityMask::from(Capability::Receive))
+                    .ok_or(ErrorType::InvalidHandle)?
+            };
+
             port.receive(in_msg).await
         }
         SyscallList::CloseHandle => {
+            let mut table = task.handle_table().await?;
+
             if table.remove(args.arg(0)) {
                 Ok(0)
             } else {
@@ -225,6 +250,7 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             }
         }
         SyscallList::CloneHandle => {
+            let mut table = task.handle_table().await?;
             let obj = table
                 .find_raw_handle(args.arg(0))
                 .ok_or(ErrorType::InvalidHandle)?;
@@ -235,13 +261,20 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             let fdt_pa: PhysAddr = fdt().base.into();
             let fdt_size = fdt().size;
 
-            task.vms().map_phys(fdt_pa, fdt_size).map(|x| x as usize)
+            task.vms()
+                .map_phys(fdt_pa, fdt_size)
+                .await
+                .map(|x| x as usize)
         }
         SyscallList::WaitObject => {
-            let obj = table
-                .find_poly(args.arg(0), CapabilityMask::from(Capability::Wait))
-                .ok_or(ErrorType::InvalidHandle)?;
             let sig: Signals = args.try_arg(1)?;
+            let obj = {
+                let table = task.handle_table().await?;
+
+                table
+                    .find_poly(args.arg(0), CapabilityMask::from(Capability::Wait))
+                    .ok_or(ErrorType::InvalidHandle)?
+            };
 
             obj.wait_signal(sig).await.map(|_| 0)
         }
@@ -251,16 +284,20 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             let mut user_wait_entries = user_ptr.read_on_heap()?;
             let mut wait_entries = Vec::new();
 
-            for e in user_wait_entries.iter().map(|x| {
-                Ok(WaitManyArg {
-                    obj: table
-                        .find_poly(x.handle, CapabilityMask::from(Capability::Wait))
-                        .ok_or(ErrorType::InvalidHandle)?,
-                    waitfor: x.waitfor,
-                    pending: Signal::None.into(),
-                })
-            }) {
-                wait_entries.try_push(e?)?;
+            {
+                let table = task.handle_table().await?;
+
+                for e in user_wait_entries.iter().map(|x| {
+                    Ok(WaitManyArg {
+                        obj: table
+                            .find_poly(x.handle, CapabilityMask::from(Capability::Wait))
+                            .ok_or(ErrorType::InvalidHandle)?,
+                        waitfor: x.waitfor,
+                        pending: Signal::None.into(),
+                    })
+                }) {
+                    wait_entries.try_push(e?)?;
+                }
             }
 
             wait_many(&mut wait_entries).await?;
