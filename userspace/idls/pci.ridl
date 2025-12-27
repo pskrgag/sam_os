@@ -3,5 +3,5 @@ interface Pci {
 }
 
 interface Device {
-	Do();
+	Map(out U64 pa, out U64 size);
 }

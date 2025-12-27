@@ -1,11 +1,13 @@
+use alloc::collections::BTreeMap;
+use alloc::vec::Vec;
 use core::ptr;
 use fdt::Fdt;
-use hal::address::{MemRange, VirtAddr, VirtualAddress};
+use hal::address::{MemRange, PhysAddr, VirtAddr, VirtualAddress};
 use libc::vmm::vms::vms;
-use pci_types::{Bar, ConfigRegionAccess, EndpointHeader, PciAddress, PciHeader};
+use pci_types::{Bar, CommandRegister, ConfigRegionAccess, EndpointHeader, PciAddress, PciHeader};
 use rtl::error::ErrorType;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum AddressSpace {
     ConfigSpace,
     IOSpace,
@@ -27,8 +29,37 @@ impl TryFrom<u8> for AddressSpace {
     }
 }
 
+#[derive(Debug)]
+struct PciMemRange {
+    kind: AddressSpace,
+    cpu_base: usize,
+    size: usize,
+    offset: usize,
+}
+
+struct FoundDevices {
+    vendor: u16,
+    device: u16,
+    mmio: Vec<MemRange<PhysAddr>>,
+}
+
 pub struct PciEcam {
     base: VirtAddr,
+    ranges: Vec<PciMemRange>,
+    devices: BTreeMap<(u16, u16), (u8, u8)>,
+}
+
+impl PciMemRange {
+    fn allocate(&mut self, size: usize) -> Option<usize> {
+        if size > self.size - self.offset {
+            None
+        } else {
+            let res = self.cpu_base + self.offset;
+
+            self.offset += size;
+            Some(res)
+        }
+    }
 }
 
 // ranges = <
@@ -54,32 +85,44 @@ impl PciEcam {
             .ok_or(ErrorType::InvalidArgument)?
             .next()
             .ok_or(ErrorType::InvalidArgument)?;
-        let ranges = node.ranges().ok_or(ErrorType::InvalidArgument)?;
 
-        for r in ranges {
-            let kind = (r.child_bus_address_hi >> 24) & 0b11;
-            let space: AddressSpace = (kind as u8).try_into()?;
+        let ranges: Vec<_> = node
+            .ranges()
+            .ok_or(ErrorType::InvalidArgument)?
+            .map(|r| {
+                let kind = ((r.child_bus_address_hi >> 24) & 0b11) as u8;
 
-            println!("{:?}", space);
-        }
+                PciMemRange {
+                    offset: 0,
+                    kind: kind.try_into().unwrap(),
+                    size: r.size,
+                    cpu_base: r.parent_bus_address,
+                }
+            })
+            .collect();
 
-        Ok(Self {
+        let mut new = Self {
             base: vms().map_phys(MemRange::new(
                 (reg.starting_address as usize).into(),
                 reg.size.ok_or(ErrorType::InvalidArgument)?,
             ))?,
-        })
+            ranges,
+            devices: BTreeMap::new(),
+        };
+
+        new.enumerate();
+        Ok(new)
     }
 
-    pub fn enumerate(&self) {
+    fn enumerate(&mut self) {
         for bus in 0..=255 {
             for dev in 0..32 {
                 let address = PciAddress::new(0, bus, dev, 0);
                 let header = PciHeader::new(address);
-                let (vendor, device) = header.id(self);
-                let (_, class, subclass, interface) = header.revision_and_class(self);
+                let (vendor, device) = header.id(&*self);
+                let (_, class, subclass, interface) = header.revision_and_class(&*self);
 
-                if let Some(endpoint) = EndpointHeader::from_header(header, self) {
+                if let Some(mut endpoint) = EndpointHeader::from_header(header, &*self) {
                     if vendor == u16::MAX {
                         continue;
                     }
@@ -89,22 +132,64 @@ impl PciEcam {
                         vendor, device, class, subclass, interface
                     );
 
+                    self.devices.insert((vendor, device), (bus, dev));
+
                     let mut slot = 0;
+                    let mut need_mmio = false;
 
                     while slot < 6 {
-                        if let Some(bar) = endpoint.bar(slot, self) {
-                            if matches!(bar, Bar::Memory64 { .. }) {
-                                slot += 2;
-                            } else {
-                                slot += 1;
+                        if let Some(bar) = endpoint.bar(slot, &*self) && matches!(bar, Bar::Memory64 { .. } | Bar::Memory32 { .. }) {
+                            let addr = self.ranges.iter_mut().find_map(|x| {
+                                match bar {
+                                    Bar::Memory64 { size, .. } => {
+                                        if x.kind != AddressSpace::MemorySpace64 {
+                                            return None;
+                                        }
+
+                                        x.allocate(size as usize)
+                                    },
+                                    Bar::Memory32 { size, .. } => {
+                                        if x.kind != AddressSpace::MemorySpace32 {
+                                            return None;
+                                        }
+
+                                        x.allocate(size as usize)
+                                    },
+                                    _ => todo!(),
+                                }
+                            }).expect("Failed to allocate memory");
+
+                            unsafe { endpoint.write_bar(slot, &*self, addr).unwrap() };
+
+                            match bar {
+                                Bar::Memory64 { .. } => slot += 2,
+                                Bar::Memory32 { .. } => slot += 1,
+                                _ => unreachable!(),
                             }
+
+                            need_mmio = true;
                         } else {
                             slot += 1;
                         }
                     }
+
+                    if need_mmio {
+                        endpoint.update_command(&*self, |_| {
+                            CommandRegister::MEMORY_ENABLE | CommandRegister::BUS_MASTER_ENABLE
+                        });
+                    }
                 }
             }
         }
+    }
+
+    pub fn mapping_address(&self, vendor: u16, device: u16) -> Option<MemRange<PhysAddr>> {
+        let (bus, dev) = self.devices.get(&(vendor, device))?;
+        let address = PciAddress::new(0, *bus, *dev, 0);
+        let header = PciHeader::new(address);
+        let endpoint = EndpointHeader::from_header(header, &*self).unwrap();
+
+        todo!()
     }
 
     fn translate(&self, pci_address: PciAddress) -> *const u8 {

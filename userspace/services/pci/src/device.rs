@@ -1,24 +1,40 @@
-use crate::bindings_Device::{Device, DoTx};
+use super::ecam::PciEcam;
+use crate::bindings_Device::{Device, MapRx, MapTx};
 use alloc::boxed::Box;
+use alloc::sync::Arc;
 use libc::handle::Handle;
 use libc::port::Port;
 use rtl::error::ErrorType;
+use rtl::locking::spinlock::Spinlock;
 
 pub struct PciDevice {
     vendor: u16,
     device: u16,
+    bus: Arc<Spinlock<PciEcam>>,
 }
 
 impl PciDevice {
-    pub fn new(vendor: u16, device: u16) -> Result<(Box<Device<Self>>, Handle), ErrorType> {
+    pub fn new(
+        vendor: u16,
+        device: u16,
+        bus: Arc<Spinlock<PciEcam>>,
+    ) -> Result<(Box<Device<Self>>, Handle), ErrorType> {
         let port = Port::create()?;
-        let val = Self { vendor, device };
+        let val = Self {
+            vendor,
+            device,
+            bus,
+        };
         let raw_handle = port.handle().clone_handle()?;
 
         Ok((
-            Box::new(Device::new(port, val).register_handler(|v: DoTx, _| todo!())),
+            Box::new(Device::new(port, val).register_handler(|v: MapTx, _| {
+                Ok(MapRx {
+                    pa: 0x10001000,
+                    size: 256,
+                })
+            })),
             raw_handle,
         ))
     }
 }
-

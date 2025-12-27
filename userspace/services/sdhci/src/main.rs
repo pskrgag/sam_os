@@ -4,7 +4,11 @@
 use bindings_Device::Device;
 use bindings_NameServer::NameServer;
 use bindings_Pci::Pci;
-use libc::{handle::Handle, main, port::Port};
+use hal::{
+    address::{MemRange, VirtualAddress},
+    arch::PAGE_SIZE,
+};
+use libc::{handle::Handle, main, port::Port, vmm::vms::vms};
 
 #[main]
 fn main(nameserver: Handle) {
@@ -19,8 +23,16 @@ fn main(nameserver: Handle) {
     let pci = Pci::new(Port::new(ns.Get("pci").expect("Failed to get PCI").handle));
     let pci_handle = Device::new(Port::new(pci.Device(0x1b36, 0x7).unwrap().handle));
 
-    pci_handle.Do().unwrap();
-    println!("Hello, world!");
+    let res = pci_handle.Map().unwrap();
+    println!("Hello, world! {:x} {:x}", res.pa, res.size);
+
+    let va = vms()
+        .map_phys(MemRange::new(
+            (res.pa as usize).into(),
+            (res.size as usize).next_multiple_of(PAGE_SIZE),
+        ))
+        .unwrap();
+    unsafe { println!("{:x}", va.to_raw::<u32>().add(0xFE / 4).read_volatile()) };
 }
 
 include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));

@@ -23,19 +23,18 @@ fn main(nameserver: Handle) {
     let ecam = ecam::PciEcam::new(&fdt).unwrap();
     let port = factory().create_port().unwrap();
 
-    ecam.enumerate();
-
     let ns = NameServer::new(Port::new(nameserver));
 
     ns.Register("pci", port.handle())
         .expect("Failed to register PCI handle");
 
-    let pci = Pci::new(port, Spinlock::new(ecam)).register_handler(|d: DeviceTx, ecam| {
-        let (disp, handle) = PciDevice::new(d.vendor, d.device)?;
+    let pci =
+        Pci::new(port, Spinlock::new(ecam)).register_handler(|d: DeviceTx, ecam| {
+            let (disp, handle) = PciDevice::new(d.vendor, d.device, ecam.clone())?;
 
-        DISPATH_POOL.add(disp);
-        Ok(DeviceRx { handle })
-    });
+            DISPATH_POOL.add(disp);
+            Ok(DeviceRx { handle })
+        });
 
     DISPATH_POOL.add(Box::new(pci));
     DISPATH_POOL.dispatch().unwrap();
