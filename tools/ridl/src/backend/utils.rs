@@ -1,13 +1,8 @@
 use crate::ast::{
-    argtype::{BuiltinTypes, Type},
+    argtype::{BuiltinTypes, Struct, Type},
     function::{Argument, Function},
 };
 use std::io::Write;
-
-#[derive(Clone)]
-pub struct Struct {
-    pub data: Vec<(String, Type)>,
-}
 
 static WIRE_SUFFIX: &str = "Wire";
 
@@ -59,16 +54,17 @@ pub fn includes<W: Write>(buf: &mut W) {
     writeln!(buf, "use libc::port::Port;").unwrap();
     writeln!(buf, "use alloc::sync::Arc;").unwrap();
     writeln!(buf, "use alloc::string::String;").unwrap();
+    writeln!(buf, "use alloc::vec::Vec;").unwrap();
     writeln!(buf, "use crate::alloc::borrow::ToOwned;").unwrap();
     writeln!(buf, "use serde::ser::SerializeTuple;").unwrap();
     writeln!(
         buf,
         r#"
         fn clone_into_array<T, const N: usize>(slice: &[T]) -> Result<(usize, [T; N]), ()>
-    where
-        T: Clone + Default + Copy
+        where
+            T: Clone + Default
     {{
-        let mut a = [T::default(); N];
+        let mut a: [T; N] = core::array::from_fn(|_| T::default());
 
         if a.as_mut().len() < slice.len() {{
             Err(())
@@ -168,7 +164,7 @@ fn produce_wire_type<W: Write>(buf: &mut W, s: &Struct, name: &str, tx: bool) {
 
     writeln!(
         buf,
-        "#[derive(Serialize, Deserialize, Debug, Clone)]\npub struct {name} {{",
+        "#[derive(Serialize, Deserialize, Debug, Clone)]\nstruct {name} {{",
     )
     .unwrap();
 
@@ -281,7 +277,7 @@ impl TryInto<{rx}> for Rx {{
         .unwrap();
     }
 
-    wire_to_public(buf, s, name, tx);
+    wire_to_public(buf, s);
 }
 
 fn produce_final_enum<W: Write>(buf: &mut W, data: &Vec<Message>, tx: bool) {
@@ -301,17 +297,50 @@ fn produce_final_enum<W: Write>(buf: &mut W, data: &Vec<Message>, tx: bool) {
     writeln!(buf, "}}").unwrap();
 }
 
-fn wire_to_public<W: Write>(buf: &mut W, s: &Struct, name: &str, tx: bool) {
-    let wire_name = if tx {
-        wire_type_tx(name)
-    } else {
-        wire_type_rx(name)
-    };
-    let name = if tx {
-        public_type_tx(name)
-    } else {
-        public_type_rx(name)
-    };
+fn type_wire_to_public<S: AsRef<str>>(tp: &Type, var: S) -> String {
+    let name = var.as_ref();
+
+    match tp {
+        Type::Sequence { inner, .. } => {
+            if **inner == Type::Builtin(BuiltinTypes::Char) {
+                format!("core::str::from_utf8(&{name}.1[..{name}.0]).unwrap().to_owned()",)
+            } else if matches!(**inner, Type::Builtin(_)) {
+                format!("{name}.1[..{name}.0].to_vec()",)
+            } else {
+                format!("(&{name}.1[..{name}.0]).into_iter().map(|x| x.clone().try_to_public(_message).unwrap()).collect()")
+            }
+        }
+        Type::Builtin(BuiltinTypes::Handle) => format!("Handle::new(_message.handles()[{name}])"),
+        Type::Struct(_) => format!("{name}.try_to_public().unwrap()"),
+        _ => name.to_string(),
+    }
+}
+
+fn type_public_to_wire<S: AsRef<str>>(tp: &Type, var: S) -> String {
+    let name = var.as_ref();
+
+    match tp {
+        Type::Sequence { inner, .. } => {
+            let f = match **inner {
+                Type::Builtin(BuiltinTypes::Char) => ".as_bytes()",
+                Type::Struct(_) => ".iter().map(|x| x.clone().try_to_wire(_message).unwrap()).collect::<Vec<_>>().as_slice()",
+                _ => ".as_slice()",
+            };
+
+            format!(
+                "clone_into_array({name}{f}).unwrap()",
+            )
+        }
+        Type::Builtin(BuiltinTypes::Handle) => format!(
+            "_message.add_handle(unsafe {{ let res = {name}.as_raw(); core::mem::forget({name}); res }})",
+        ),
+        _ => name.to_string(),
+    }
+}
+
+fn wire_to_public<W: Write>(buf: &mut W, s: &Struct) {
+    let name = &s.name;
+    let wire_name = format!("{}Wire", s.name);
 
     writeln!(
         buf,
@@ -326,25 +355,9 @@ impl WireToPublic<{name}> for {wire_name} {{
 "#,
         s.data
             .iter()
-            .map(|x| match &x.1 {
-                Type::Sequence { inner, .. } => {
-                    if **inner != Type::Builtin(BuiltinTypes::Char) {
-                        format!(
-                            "{name}: self.{name}.1[..self.{name}.0].to_vec()",
-                            name = x.0
-                        )
-                    } else {
-                        format!(
-                            "{name}: core::str::from_utf8(&self.{name}.1[..self.{name}.0]).unwrap().to_owned()",
-                            name = x.0
-                        )
-                    }
-                }
-                Type::Builtin(BuiltinTypes::Handle) => format!(
-                    "{name}: Handle::new(_message.handles()[self.{name}])",
-                    name = x.0
-                ),
-                _ => format!("{name}: self.{name}", name = x.0),
+            .map(|x| {
+                let expr = type_wire_to_public(&x.1, format!("self.{name}", name = x.0));
+                format!("{name}: {expr}", name = x.0)
             })
             .collect::<Vec<_>>()
             .join(", "),
@@ -364,18 +377,9 @@ impl PublicToWire<{wire_name}> for {name} {{
 "#,
         s.data
             .iter()
-            .map(|x| match &x.1 {
-                Type::Sequence { .. } => {
-                    format!(
-                        "{name}: clone_into_array(self.{name}.as_bytes()).unwrap()",
-                        name = x.0
-                    )
-                }
-                Type::Builtin(BuiltinTypes::Handle) => format!(
-                    "{name}: _message.add_handle(unsafe {{ let res = self.{name}.as_raw(); core::mem::forget(self.{name}); res }})",
-                    name = x.0
-                ),
-                _ => format!("{name}: self.{name}", name = x.0),
+            .map(|x| {
+                let expr = type_public_to_wire(&x.1, format!("self.{name}", name = x.0));
+                format!("{name}: {expr}", name = x.0)
             })
             .collect::<Vec<_>>()
             .join(", "),
@@ -387,21 +391,21 @@ pub fn produce_enums<W: Write>(buf: &mut W, messages: &Vec<Message>) {
     writeln!(
         buf,
         r#"
-pub trait WireMessage: Sized {{
+trait WireMessage: Sized {{
     const NUMBER: usize;
     type Reply;
 }}
 
-pub trait Message: Sized {{
+trait Message: Sized {{
     type Reply;
     type Wire;
 }}
 
-pub trait WireToPublic<T>: Sized {{
+trait WireToPublic<T>: Sized {{
     fn try_to_public(self, _message: &IpcMessage) -> Result<T, ()>;
 }}
 
-pub trait PublicToWire<T>: Sized {{
+trait PublicToWire<T>: Sized {{
     fn try_to_wire(self, _message: &mut IpcMessage) -> Result<T, ()>;
 }}
 
@@ -437,8 +441,45 @@ pub fn function_to_struct(f: &Function) -> Message {
     }
 
     Message {
-        tx: Struct { data: tx },
-        rx: Struct { data: rx },
+        tx: Struct {
+            data: tx,
+            name: format!("{}Tx", f.name()),
+        },
+        rx: Struct {
+            data: rx,
+            name: format!("{}Rx", f.name()),
+        },
         name: f.name().to_string(),
     }
+}
+
+pub fn produce_struct<W: Write>(buf: &mut W, s: &Struct) {
+    writeln!(
+        buf,
+        r#"
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+struct {name}Wire {{
+    {}
+}}
+
+#[derive(Debug, Default, Clone)]
+pub struct {name} {{
+    {}
+}}
+"#,
+        s.data
+            .iter()
+            .map(|x| format!("pub {}: {},", x.0, x.1.as_wire()))
+            .collect::<Vec<_>>()
+            .join("\n"),
+        s.data
+            .iter()
+            .map(|x| format!("pub {}: {},", x.0, x.1.as_public()))
+            .collect::<Vec<_>>()
+            .join("\n"),
+        name = s.name,
+    )
+    .unwrap();
+
+    wire_to_public(buf, s);
 }

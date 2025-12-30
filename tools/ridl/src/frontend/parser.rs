@@ -2,7 +2,7 @@ use super::lexer::Lexer;
 use super::token::*;
 use std::collections::HashMap;
 
-use crate::ast::argtype::Type;
+use crate::ast::argtype::{Struct, Type};
 use crate::ast::function::{Argument, Function};
 use crate::ast::interface::Interface;
 use crate::ast::module::Module;
@@ -12,6 +12,7 @@ pub struct Parser<'a> {
     lexer: Lexer<'a>,
     reporter: &'a ErrorReporter<'a>,
     aliases: HashMap<String, Type>,
+    custom_types: HashMap<String, Type>,
     lookahead: Option<Token>,
 }
 
@@ -21,6 +22,7 @@ impl<'a> Parser<'a> {
             lexer,
             reporter,
             aliases: HashMap::new(),
+            custom_types: HashMap::new(),
             lookahead: None,
         }
     }
@@ -65,10 +67,29 @@ impl<'a> Parser<'a> {
         self.lexer.next_token()
     }
 
+    fn peek_token(&mut self) -> Option<Token> {
+        if let Some(la) = self.lookahead.as_ref() {
+            Some(la.clone())
+        } else {
+            let next = self.consume_token()?;
+
+            self.lookahead = Some(next.clone());
+            Some(next)
+        }
+    }
+
     fn parse_type(&mut self) -> Option<Type> {
         if let Some(tp) = self.lookahead_token_type(TokenType::TokenId(IdType::Identifier)) {
+            let name = tp.get_str().to_owned();
+
             // There could be recursive aliases... Don't care for now
-            Type::new(tp.get_str().to_owned()).or(self.aliases.get(tp.get_str()).cloned())
+            self.aliases
+                .get(&name)
+                .or(self
+                    .custom_types
+                    .get(&name)
+                    .or(Type::new(name.clone()).as_ref()))
+                .cloned()
         } else if self
             .lookahead_token_type(TokenType::TokenId(IdType::Sequence))
             .is_some()
@@ -149,6 +170,9 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_interface(&mut self) -> Option<Interface> {
+        self.consume_token_type(TokenType::TokenId(IdType::Interface))
+            .unwrap();
+
         let name = self.consume_token_type(TokenType::TokenId(IdType::Identifier))?;
         let mut interface = Interface::new(name.get_str().to_owned());
 
@@ -177,36 +201,71 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_aliases(&mut self) -> Option<HashMap<String, Type>> {
-        let mut map = HashMap::new();
+    fn parse_aliase(&mut self) -> Option<()> {
+        self.consume_token_type(TokenType::TokenId(IdType::Type))
+            .unwrap();
+
+        let name = self.consume_token_type(TokenType::TokenId(IdType::Identifier))?;
+
+        self.consume_token_type(TokenType::Equal)?;
+        let tp = self.parse_type()?;
+
+        self.consume_token_type(TokenType::Semicolumn)?;
+        self.aliases.insert(name.get_str().to_owned(), tp);
+
+        Some(())
+    }
+
+    fn parse_struct(&mut self) -> Option<(String, Type)> {
+        self.consume_token_type(TokenType::TokenId(IdType::Struct))
+            .unwrap();
+
+        let mut data = vec![];
+        let name = self.consume_token_type(TokenType::TokenId(IdType::Identifier))?;
+        self.consume_token_type(TokenType::LeftCurlParen)?;
 
         while self
-            .lookahead_token_type(TokenType::TokenId(IdType::Type))
-            .is_some()
+            .lookahead_token_type(TokenType::RightCurlParen)
+            .is_none()
         {
-            let name = self.consume_token_type(TokenType::TokenId(IdType::Identifier))?;
-            self.consume_token_type(TokenType::Equal)?;
             let tp = self.parse_type()?;
+            let name = self.consume_token_type(TokenType::TokenId(IdType::Identifier))?;
 
             self.consume_token_type(TokenType::Semicolumn)?;
-            map.insert(name.get_str().to_owned(), tp);
+            data.push((name.get_str().to_owned(), tp));
         }
 
-        Some(map)
+        let name = name.get_str().to_owned();
+        Some((name.clone(), Type::Struct(Struct { name, data })))
     }
 
     pub fn parse(mut self) -> Option<Module> {
         let mut mods = vec![];
-        self.aliases = self.parse_aliases()?;
 
-        while self
-            .consume_token_type(TokenType::TokenId(IdType::Interface))
-            .is_some()
-        {
-            mods.push(self.parse_interface()?);
+        while let Some(token) = self.peek_token() {
+            match token.get_type() {
+                TokenType::TokenId(IdType::Type) => self.parse_aliase()?,
+                TokenType::TokenId(IdType::Interface) => mods.push(self.parse_interface()?),
+                TokenType::TokenId(IdType::Struct) => {
+                    let (name, tp) = self.parse_struct().unwrap();
+                    self.custom_types.insert(name, tp);
+                }
+                _ => panic!("{:?}", token),
+            }
         }
 
-        Some(Module::new(mods))
+        Some(Module::new(
+            mods,
+            self.custom_types
+                .into_values()
+                .map(|x| {
+                    let Type::Struct(s) = x else {
+                        panic!("");
+                    };
+                    s
+                })
+                .collect(),
+        ))
     }
 }
 

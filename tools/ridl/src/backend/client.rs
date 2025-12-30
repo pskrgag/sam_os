@@ -9,11 +9,13 @@ use crate::{
     backend::utils,
 };
 use std::io::Write;
+use crate::ast::argtype::Struct;
 
 struct InterfaceCompiler<'a, W: Write> {
     interface: &'a Interface,
     buf: &'a mut W,
     messages: Vec<Message>,
+    structs: &'a Vec<Struct>,
 }
 
 impl<'a, W: Write> InterfaceCompiler<'a, W> {
@@ -104,6 +106,11 @@ impl {name} {{
     pub fn compile(mut self) {
         utils::start_mod(self.buf, self.interface.name());
         utils::includes(self.buf);
+
+        for s in self.structs {
+            utils::produce_struct(self.buf, s);
+        }
+
         self.make_struct();
 
         for func in self.interface.functions() {
@@ -122,6 +129,7 @@ pub fn compile_client<W: Write>(ir: Module, buf: &mut W) {
             interface,
             buf,
             messages: vec![],
+            structs: ir.structs(),
         }
         .compile()
     }

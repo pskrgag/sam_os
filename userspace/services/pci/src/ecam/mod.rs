@@ -37,12 +37,6 @@ struct PciMemRange {
     offset: usize,
 }
 
-struct FoundDevices {
-    vendor: u16,
-    device: u16,
-    mmio: Vec<MemRange<PhysAddr>>,
-}
-
 pub struct PciEcam {
     base: VirtAddr,
     ranges: Vec<PciMemRange>,
@@ -114,82 +108,91 @@ impl PciEcam {
         Ok(new)
     }
 
+    fn for_each_bar<F: FnMut(&mut EndpointHeader, Bar, u8, &mut Self)>(
+        &mut self,
+        bus: u8,
+        dev: u8,
+        mut f: F,
+    ) {
+        let address = PciAddress::new(0, bus, dev, 0);
+        let header = PciHeader::new(address);
+
+        if let Some(mut endpoint) = EndpointHeader::from_header(header, &*self) {
+            let mut slot = 0;
+
+            while slot < 6 {
+                if let Some(bar) = endpoint.bar(slot, &*self) {
+                    let old_slot = slot;
+
+                    match bar {
+                        Bar::Memory64 { .. } => slot += 2,
+                        _ => slot += 1,
+                    };
+
+                    f(&mut endpoint, bar, old_slot, self);
+                } else {
+                    slot += 1;
+                }
+            }
+        }
+    }
+
     fn enumerate(&mut self) {
         for bus in 0..=255 {
             for dev in 0..32 {
                 let address = PciAddress::new(0, bus, dev, 0);
                 let header = PciHeader::new(address);
                 let (vendor, device) = header.id(&*self);
-                let (_, class, subclass, interface) = header.revision_and_class(&*self);
 
-                if let Some(mut endpoint) = EndpointHeader::from_header(header, &*self) {
-                    if vendor == u16::MAX {
-                        continue;
-                    }
+                if vendor == u16::MAX {
+                    continue;
+                }
 
-                    println!(
-                        "vendor: {:x}, device: {:x}, class: {}, subclass: {}, iface: {}",
-                        vendor, device, class, subclass, interface
-                    );
-
-                    self.devices.insert((vendor, device), (bus, dev));
-
-                    let mut slot = 0;
-                    let mut need_mmio = false;
-
-                    while slot < 6 {
-                        if let Some(bar) = endpoint.bar(slot, &*self) && matches!(bar, Bar::Memory64 { .. } | Bar::Memory32 { .. }) {
-                            let addr = self.ranges.iter_mut().find_map(|x| {
-                                match bar {
-                                    Bar::Memory64 { size, .. } => {
-                                        if x.kind != AddressSpace::MemorySpace64 {
-                                            return None;
-                                        }
-
-                                        x.allocate(size as usize)
-                                    },
-                                    Bar::Memory32 { size, .. } => {
-                                        if x.kind != AddressSpace::MemorySpace32 {
-                                            return None;
-                                        }
-
-                                        x.allocate(size as usize)
-                                    },
-                                    _ => todo!(),
-                                }
-                            }).expect("Failed to allocate memory");
-
-                            unsafe { endpoint.write_bar(slot, &*self, addr).unwrap() };
-
-                            match bar {
-                                Bar::Memory64 { .. } => slot += 2,
-                                Bar::Memory32 { .. } => slot += 1,
-                                _ => unreachable!(),
+                self.devices.insert((vendor, device), (bus, dev));
+                self.for_each_bar(bus, dev, |endpoint, bar, slot, access| {
+                    let addr = access.ranges.iter_mut().find_map(|x| match bar {
+                        Bar::Memory64 { size, .. } => {
+                            if x.kind != AddressSpace::MemorySpace64 {
+                                return None;
                             }
 
-                            need_mmio = true;
-                        } else {
-                            slot += 1;
+                            x.allocate(size as usize)
                         }
-                    }
+                        Bar::Memory32 { size, .. } => {
+                            if x.kind != AddressSpace::MemorySpace32 {
+                                return None;
+                            }
 
-                    if need_mmio {
-                        endpoint.update_command(&*self, |_| {
-                            CommandRegister::MEMORY_ENABLE | CommandRegister::BUS_MASTER_ENABLE
-                        });
+                            x.allocate(size as usize)
+                        }
+                        _ => None,
+                    });
+
+                    if let Some(addr) = addr {
+                        unsafe {
+                            endpoint.update_command(&*access, |_| {
+                                CommandRegister::MEMORY_ENABLE | CommandRegister::BUS_MASTER_ENABLE
+                            });
+
+                            endpoint.write_bar(slot, &*access, addr).unwrap()
+                        };
                     }
-                }
+                });
             }
         }
     }
 
-    pub fn mapping_address(&self, vendor: u16, device: u16) -> Option<MemRange<PhysAddr>> {
+    pub fn mapping_address(&mut self, vendor: u16, device: u16) -> Option<Vec<MemRange<PhysAddr>>> {
         let (bus, dev) = self.devices.get(&(vendor, device))?;
-        let address = PciAddress::new(0, *bus, *dev, 0);
-        let header = PciHeader::new(address);
-        let endpoint = EndpointHeader::from_header(header, &*self).unwrap();
+        let mut mappings = Vec::new();
 
-        todo!()
+        self.for_each_bar(*bus, *dev, |_, bar, _, _| {
+            let (base, size) = bar.unwrap_mem();
+
+            mappings.push(MemRange::new(base.into(), size));
+        });
+
+        Some(mappings)
     }
 
     fn translate(&self, pci_address: PciAddress) -> *const u8 {

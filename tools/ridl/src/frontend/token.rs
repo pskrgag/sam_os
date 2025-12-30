@@ -8,6 +8,7 @@ pub enum IdType {
     In,
     Out,
     Sequence,
+    Struct,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -21,6 +22,7 @@ pub enum TokenType {
     Greater,
     Comma,
     Equal,
+    Colon,
     Semicolumn,
     Number(i64),
 }
@@ -46,6 +48,7 @@ lazy_static::lazy_static! {
             ("out", TokenType::TokenId(IdType::Out)),
             ("type", TokenType::TokenId(IdType::Type)),
             ("Sequence", TokenType::TokenId(IdType::Sequence)),
+            ("struct", TokenType::TokenId(IdType::Struct)),
         ]);
 }
 

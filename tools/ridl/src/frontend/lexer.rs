@@ -158,6 +158,10 @@ impl<'a> Lexer<'a> {
                     let t = self.finish_token();
                     Some(Token::new(TokenType::Equal, t.0, t.1))
                 }
+                b':' => {
+                    let t = self.finish_token();
+                    Some(Token::new(TokenType::Colon, t.0, t.1))
+                }
                 other => {
                     if other.is_ascii_alphabetic() {
                         self.consume_word()

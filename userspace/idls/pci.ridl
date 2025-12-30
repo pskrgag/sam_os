@@ -1,7 +1,16 @@
+type PhysAddr = U64;
+
+struct PciMapping {
+	PhysAddr base;
+	U64 size;
+}
+
+type PciDeviceData = Sequence<PciMapping, 6>;
+
 interface Pci {
 	Device(in U16 vendor, in U16 device, out Handle handle);
 }
 
 interface Device {
-	Map(out U64 pa, out U64 size);
+	Map(out PciDeviceData data);
 }

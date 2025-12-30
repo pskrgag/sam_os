@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 use strum_macros::Display;
 
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
-pub struct UserStruct {}
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct Struct {
+    pub data: Vec<(String, Type)>,
+    pub name: String,
+}
 
 #[derive(Clone, Copy, Debug, Display, Hash, PartialEq, Eq)]
 pub enum BuiltinTypes {
@@ -25,8 +28,7 @@ pub enum Type {
         inner: Box<Type>,
         count: usize,
     },
-    #[allow(dead_code)]
-    UserDefined(UserStruct),
+    Struct(Struct),
 }
 
 lazy_static::lazy_static! {
@@ -104,12 +106,12 @@ impl Type {
             }
             Self::Sequence { inner, .. } => {
                 if **inner != Self::Builtin(BuiltinTypes::Char) {
-                    format!("Vec<{}>", inner.as_wire())
+                    format!("Vec<{}>", inner.as_public())
                 } else {
                     "String".to_string()
                 }
-            }
-            _ => todo!(),
+            },
+            Self::Struct(s) => s.name.clone(),
         }
     }
 
@@ -132,7 +134,7 @@ impl Type {
                 s.to_string()
             }
             Self::Sequence { inner, count } => format!("(usize, [{}; {count}])", inner.as_wire()),
-            _ => todo!(),
+            Self::Struct(s) => format!("{}Wire", s.name),
         }
     }
 }

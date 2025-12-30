@@ -1,5 +1,5 @@
 use super::utils;
-use crate::ast::{interface::Interface, module::Module};
+use crate::ast::{argtype::Struct, interface::Interface, module::Module};
 use std::io::Write;
 use utils::{function_to_struct, Message};
 
@@ -8,6 +8,7 @@ struct InterfaceCompiler<'a, W: Write> {
     buf: &'a mut W,
     messages: Vec<Message>,
     dispatch_loop: bool,
+    structs: &'a Vec<Struct>,
 }
 
 impl<'a, W: Write> InterfaceCompiler<'a, W> {
@@ -143,7 +144,6 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                 let public = wire.try_to_public(in_msg).unwrap();
                 let out = f(public, state.clone())?;
                 let wire: <<M as Message>::Reply as Message>::Wire = out.try_to_wire(out_msg).unwrap();
-
                 Ok(Rx::from(<<<M as Message>::Reply as Message>::Wire as TryInto<_>>::try_into(wire).unwrap()))
             }}));
 
@@ -203,8 +203,12 @@ impl<S: 'static + Send + Sync> Endpoint for {name}<S> {{
     pub fn compile(mut self) {
         utils::start_mod(self.buf, self.interface.name());
         utils::includes(self.buf);
-        self.make_struct();
 
+        for s in self.structs {
+            utils::produce_struct(self.buf, s);
+        }
+
+        self.make_struct();
         for i in self.interface.functions() {
             let msg = function_to_struct(i);
 
@@ -234,6 +238,7 @@ pub fn compile_server<W: Write>(ir: Module, buf: &mut W, dispatch_loop: bool) {
             buf,
             messages: vec![],
             dispatch_loop,
+            structs: ir.structs(),
         }
         .compile()
     }

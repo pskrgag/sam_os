@@ -1,7 +1,8 @@
 use super::ecam::PciEcam;
-use crate::bindings_Device::{Device, MapRx, MapTx};
+use crate::bindings_Device::{Device, MapRx, MapTx, PciMapping};
 use alloc::boxed::Box;
 use alloc::sync::Arc;
+use hal::address::Address;
 use libc::handle::Handle;
 use libc::port::Port;
 use rtl::error::ErrorType;
@@ -28,10 +29,21 @@ impl PciDevice {
         let raw_handle = port.handle().clone_handle()?;
 
         Ok((
-            Box::new(Device::new(port, val).register_handler(|v: MapTx, _| {
+            Box::new(Device::new(port, val).register_handler(|_: MapTx, val| {
+                let mappings = val
+                    .bus
+                    .lock()
+                    .mapping_address(val.vendor, val.device)
+                    .unwrap();
+
                 Ok(MapRx {
-                    pa: 0x10001000,
-                    size: 256,
+                    data: mappings
+                        .into_iter()
+                        .map(|x| PciMapping {
+                            base: x.start().bits() as _,
+                            size: x.size() as _,
+                        })
+                        .collect(),
                 })
             })),
             raw_handle,
