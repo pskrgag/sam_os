@@ -9,6 +9,7 @@ rtl = { path = "../../../rtl/" }
 hal = { path = "../../../hal/" }
 postcard = { version = "1", features = ["alloc"] }
 serde = { version = "1", default-features = false  }
+safe-mmio = "0.2.6"
 
 [build-dependencies]
 ridl = { path = "../../../tools/ridl" }

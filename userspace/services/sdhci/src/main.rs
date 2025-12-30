@@ -4,11 +4,10 @@
 use bindings_Device::Device;
 use bindings_NameServer::NameServer;
 use bindings_Pci::Pci;
-use hal::{
-    address::{MemRange, VirtualAddress},
-    arch::PAGE_SIZE,
-};
+use hal::{address::MemRange, arch::PAGE_SIZE};
 use libc::{handle::Handle, main, port::Port, vmm::vms::vms};
+
+mod sdhci;
 
 #[main]
 fn main(nameserver: Handle) {
@@ -21,6 +20,8 @@ fn main(nameserver: Handle) {
     };
 
     let pci = Pci::new(Port::new(ns.Get("pci").expect("Failed to get PCI").handle));
+
+    // These IDS are from QEMU
     let pci_handle = Device::new(Port::new(pci.Device(0x1b36, 0x7).unwrap().handle));
 
     let res = pci_handle.Map().unwrap();
@@ -32,7 +33,8 @@ fn main(nameserver: Handle) {
             (res.data[0].size as usize).next_multiple_of(PAGE_SIZE),
         ))
         .unwrap();
-    unsafe { println!("{:x}", va.to_raw::<u32>().add(0xFE / 4).read_volatile()) };
+    let mut sdhci = sdhci::Sdhci::new(va);
+    println!("block size {}", sdhci.block_size());
 }
 
 include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));
