@@ -28,7 +28,8 @@ impl<T> Vec<T> {
                     .try_reserve(self.0.capacity().max(8))
                     .map_err(|_| ErrorType::NoMemory)?;
 
-                debug_assert!(self.0.push_within_capacity(val).is_ok());
+                let res = self.0.push_within_capacity(val).is_ok();
+                debug_assert!(res);
                 Ok(())
             }
         }

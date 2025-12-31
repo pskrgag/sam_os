@@ -138,7 +138,7 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             let to: VirtAddr = args.arg(2);
             let tp: MappingType = args.try_arg(3).map_err(|_| ErrorType::InvalidArgument)?;
 
-            if !vmo.mapping_type().is_greater(tp) {
+            if tp.is_greater(vmo.mapping_type()) {
                 return Err(ErrorType::InvalidArgument);
             }
 

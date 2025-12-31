@@ -1,17 +1,6 @@
-[target.'cfg(target_os = "none")']
-runner = "qemu-system-aarch64 -machine virt,gic-version=2 -m 2048M -cpu cortex-a53 -smp 2 -nographic -kernel "
-
 [alias]
-# WHY?? Target host did work, but now it's broken. WTF?
-xtask = "run --package xtask --target x86_64-unknown-linux-gnu --"
+xtask = "run"
 
 [env]
 CARGO_WORKSPACE_DIR = { value = "", relative = true, force = true }
-
-[build]
-rustflags = [
-	"-C", "force-frame-pointers",
-	"-C", "link-dead-code",
-]
-
-target = "aarch64-unknown-none-softfloat"
+CARGO_TARGET_DIR = { value = "target/", relative = true, force = true }

@@ -13,5 +13,5 @@ rtl = { path = "../rtl" }
 hal = { path = "../hal" }
 loader_protocol = { path = "../loader_protocol" }
 
-[[bin]]
-name = "loader"
+[build-dependencies]
+cc = "1.0.46"

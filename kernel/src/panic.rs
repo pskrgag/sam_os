@@ -15,7 +15,7 @@ fn on_panic(info: &PanicInfo) -> ! {
         error!("--- cut here ---\n");
         error!("Kernel Panic! In context of '{}'\n", id.unwrap());
 
-        error!("{}", info.message());
+        error!("{}\n", info.message());
 
         if let Some(location) = info.location() {
             error!(

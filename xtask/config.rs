@@ -6,6 +6,7 @@ pub struct BuildScript {
     pub board: String,
     pub component: Vec<Component>,
     pub extra_qemu_args: Option<String>,
+    pub opt_level: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]

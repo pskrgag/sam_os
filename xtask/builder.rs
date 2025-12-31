@@ -1,9 +1,67 @@
 use crate::{config::*, utils::run_prog};
 use regex::Regex;
+use std::path::{Path, PathBuf};
 use std::str::from_utf8;
-use std::{fs::OpenOptions, io::Write};
+use std::{
+    fs::{read_dir, symlink_metadata, OpenOptions},
+    io::Write,
+};
 
 static TARGET: &str = "aarch64-unknown-none-softfloat";
+
+fn has_manifest(path: &Path) -> std::io::Result<bool> {
+    for entry in read_dir(path)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_file() && let Some(name) = path.file_name() && name == "Cargo.toml" {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
+
+fn find_manifest_dir<P: AsRef<Path>>(
+    dir: P,
+    target: &str,
+    results: &mut Vec<PathBuf>,
+) -> std::io::Result<()> {
+    for entry in read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            if let Some(name) = path.file_name() && name == target && has_manifest(&path)? {
+                results.push(path.clone());
+            }
+
+            let metadata = symlink_metadata(&path)?;
+            if !metadata.file_type().is_symlink() {
+                find_manifest_dir(&path, target, results)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn find_root_of<S: AsRef<str> + std::fmt::Display>(name: S) -> String {
+    let mut res = vec![];
+
+    find_manifest_dir(env!("CARGO_WORKSPACE_DIR"), name.as_ref(), &mut res).unwrap();
+
+    if res.len() == 1 {
+        res[0].as_os_str().to_str().unwrap().to_owned()
+    } else if res.len() > 1 {
+        panic!("There are multiply {name} packages {:?}", res)
+    } else {
+        panic!("There is no {name} package")
+    }
+}
+
+fn find_manifest_of<S: AsRef<str> + std::fmt::Display>(name: S) -> String {
+    format!("{}/Cargo.toml", find_root_of(name))
+}
 
 fn binary(name: &str) -> String {
     format!(
@@ -25,15 +83,21 @@ fn loader_binary() -> String {
     )
 }
 
-fn build_component(c: &Component, b: &BuildScript, command: &str) -> Result<(), String> {
-    info!("[INFO]     Builing {:?}...", c.name);
+fn build_component(name: &str, b: &BuildScript, command: &str) -> Result<(), String> {
+    info!("[INFO]     Building {:?}...", name);
+
+    let opt_level = if let Some(ref lvl) = b.opt_level {
+        format!("-C opt-level={}", lvl)
+    } else {
+        String::new()
+    };
 
     run_prog(
         "cargo",
         &[
             command,
-            "-p",
-            c.name.as_str(),
+            "--manifest-path",
+            &find_manifest_of(name),
             "--target",
             TARGET,
             "--color=always",
@@ -42,30 +106,11 @@ fn build_component(c: &Component, b: &BuildScript, command: &str) -> Result<(), 
         None,
         None,
         None,
-        Some(&[("BOARD_TYPE", b.board.as_str())]),
-    )
-}
-
-fn build_kernel(_b: &BuildScript) -> Result<(), String> {
-    info!("[INFO]     Builing kernel...");
-
-    run_prog(
-        "cargo",
-        &[
-            "build",
-            "-p",
-            "sam_kernel",
-            "--target",
-            TARGET,
-            "--color=always",
-            "--quiet",
-            // "-Z",
-            // "build-std=core,alloc",
-        ],
-        None,
-        None,
-        None,
-        Some(&[("RUSTFLAGS", "-C force-frame-pointers")]),
+        Some(&[
+            ("BOARD_TYPE", b.board.as_str()),
+            ("RUSTFLAGS", &format!("-C force-frame-pointers {opt_level}")),
+            ("CARGO_TARGET_DIR", env!("CARGO_TARGET_DIR")),
+        ]),
     )
 }
 
@@ -81,8 +126,8 @@ fn build_test_kernel() -> Result<String, String> {
         &[
             "test",
             "--no-run",
-            "-p",
-            "sam_kernel",
+            "--manifest-path",
+            &find_manifest_of("kernel"),
             "--target",
             TARGET,
             "--color=always",
@@ -106,14 +151,16 @@ fn build_test_kernel() -> Result<String, String> {
 }
 
 fn build_loader(kernel: String) -> Result<(), String> {
-    info!("[INFO]     Builing loader...");
+    info!("[INFO]     Building loader...");
 
+    // Do not raise opt level here, since for some reason rust generates weird ASM for linker var
+    // access
     run_prog(
         "cargo",
         &[
             "build",
-            "-p",
-            "loader",
+            "--manifest-path",
+            &find_manifest_of("loader"),
             "--target",
             TARGET,
             "--color=always",
@@ -198,20 +245,14 @@ pub fn test() -> Result<(), String> {
 
 fn build_impl(c: &BuildScript, command: &str) -> Result<(), String> {
     for comp in &c.component {
-        build_component(comp, c, command)?;
+        build_component(&comp.name, c, command)?;
     }
 
     prepare_cpio(&c.component, "/tmp/archive.cpio")?;
-    build_component(
-        &Component {
-            name: "roottask".to_string(),
-        },
-        c,
-        command,
-    )?;
+    build_component("roottask", c, command)?;
 
-    build_kernel(c)?;
-    build_loader(binary("sam_kernel"))
+    build_component("kernel", c, command)?;
+    build_loader(binary("kernel"))
 }
 
 fn run_impl(gdb: bool, c: Option<&BuildScript>) -> Result<(), String> {
