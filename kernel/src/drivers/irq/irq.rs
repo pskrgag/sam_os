@@ -43,7 +43,6 @@ pub fn irq_dispatch() {
     gic.pending().map(|pending| {
         if let Some(x) = IRQS.lock().iter().find(|x| x.num() == pending.0) {
             (x.dispatcher)(&pending);
-            drop(pending);
         }
     });
 }

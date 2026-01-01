@@ -25,3 +25,6 @@ log = "0.4.29"
 
 [dev-dependencies]
 test_macros = {path = "./src/tests/test_macros/"}
+
+[build]
+target = "aarch64-unknown-none-softfloat"

@@ -47,7 +47,7 @@ impl Gic {
 
 impl Drop for ClaimedIrq {
     fn drop(&mut self) {
-        GicCpuInterface::end_interrupt(self.0, InterruptGroup::Group0)
+        GicCpuInterface::end_interrupt(self.0, InterruptGroup::Group1)
     }
 }
 

@@ -108,7 +108,7 @@ fn build_component(name: &str, b: &BuildScript, command: &str) -> Result<(), Str
         None,
         Some(&[
             ("BOARD_TYPE", b.board.as_str()),
-            ("RUSTFLAGS", &format!("-C force-frame-pointers {opt_level}")),
+            ("RUSTFLAGS", &format!("-C force-frame-pointers {opt_level} -C debug-assertions")),
             ("CARGO_TARGET_DIR", env!("CARGO_TARGET_DIR")),
         ]),
     )
@@ -172,7 +172,7 @@ fn build_loader(kernel: String) -> Result<(), String> {
         None,
         None,
         Some(&[
-            ("RUSTFLAGS", "-C relocation-model=pie -C code-model=small"),
+            ("RUSTFLAGS", "-C relocation-model=pie -C code-model=small -C debug-assertions"),
             ("KERNEL_PATH", &kernel),
             ("INIT_TASK_PATH", &binary("roottask")),
         ]),

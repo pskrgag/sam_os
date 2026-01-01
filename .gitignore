@@ -3,3 +3,4 @@ u-boot
 .gdb_history
 /src/userspace/interfaces/src/client/
 /src/userspace/interfaces/src/server/
+**/target/

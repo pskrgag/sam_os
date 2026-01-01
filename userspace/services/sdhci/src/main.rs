@@ -1,5 +1,6 @@
 #![no_std]
 #![no_main]
+#![allow(unexpected_cfgs)]
 
 use bindings_Device::Device;
 use bindings_NameServer::NameServer;
@@ -8,6 +9,7 @@ use hal::{address::MemRange, arch::PAGE_SIZE};
 use libc::{handle::Handle, main, port::Port, vmm::vms::vms};
 
 mod sdhci;
+mod regs;
 
 #[main]
 fn main(nameserver: Handle) {
@@ -34,7 +36,8 @@ fn main(nameserver: Handle) {
         ))
         .unwrap();
     let mut sdhci = sdhci::Sdhci::new(va);
-    println!("block size {}", sdhci.block_size());
+    println!("SDHCI version {:?}", sdhci.version());
+    sdhci.setup().unwrap();
 }
 
 include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));
