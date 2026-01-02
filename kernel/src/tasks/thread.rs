@@ -102,7 +102,7 @@ pub struct Thread {
     inner: Spinlock<ThreadInner>,
     base: KernelObjectBase,
     state: AtomicUsize,
-    ticks: AtomicUsize,
+    pub ticks: AtomicUsize,
     preemtion_counter: AtomicUsize,
 }
 
@@ -220,7 +220,7 @@ impl Thread {
         )
     }
 
-    fn resched(self: &Arc<Self>) {
+    fn request_resched(self: &Arc<Self>) {
         self.set_state(ThreadState::NeedResched, ThreadSleepReason::None);
 
         // TODO: better move to scheduler
@@ -235,7 +235,7 @@ impl Thread {
         let enable = self.preemtion_counter.fetch_sub(1, Ordering::Relaxed) == 1;
 
         if enable {
-            self.resched();
+            self.request_resched();
         }
     }
 
@@ -301,10 +301,10 @@ impl Thread {
                 }
             });
 
-        // old.is_err() means thread had preemption disabled. When it will be re-enabled thread
+        // old.is_err() means thread run out of quantum. When it will be re-enabled thread
         // will be punished by force reschedule
-        if let Ok(old) = old && old == 0 && self.is_preemtion_enabled() {
-            self.resched();
+        if old.is_err() && self.is_preemtion_enabled() {
+            self.request_resched();
         }
     }
 

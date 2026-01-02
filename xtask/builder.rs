@@ -1,4 +1,5 @@
 use crate::{config::*, utils::run_prog};
+use postcard::to_io;
 use regex::Regex;
 use std::path::{Path, PathBuf};
 use std::str::from_utf8;
@@ -6,6 +7,7 @@ use std::{
     fs::{read_dir, symlink_metadata, OpenOptions},
     io::Write,
 };
+use tempfile::NamedTempFile;
 
 static TARGET: &str = "aarch64-unknown-none-softfloat";
 
@@ -83,6 +85,42 @@ fn loader_binary() -> String {
     )
 }
 
+fn build_component_with_manifest(
+    comp: &Component,
+    b: &BuildScript,
+    command: &str,
+) -> Result<(), String> {
+    // Build the binary
+    build_component(&comp.name, b, command)?;
+
+    // Append the serialized component manifest
+    let bin = binary(&comp.name);
+    let tmpfile = NamedTempFile::new().unwrap();
+    let (tmpfile, path) = tmpfile.into_parts();
+    let path_buf = path.to_path_buf();
+    let path = path_buf.to_str().unwrap();
+
+    // Serialize manifest
+    to_io(comp, tmpfile).unwrap();
+
+    // Add to to section
+    run_prog(
+        "llvm-objcopy",
+        &[
+            "--add-section",
+            &format!(".manifest={path}"),
+            "--set-section-flags",
+            ".manifest=noload,readonly",
+            &bin,
+            &bin,
+        ],
+        None,
+        None,
+        None,
+        None,
+    )
+}
+
 fn build_component(name: &str, b: &BuildScript, command: &str) -> Result<(), String> {
     info!("[INFO]     Building {:?}...", name);
 
@@ -108,7 +146,10 @@ fn build_component(name: &str, b: &BuildScript, command: &str) -> Result<(), Str
         None,
         Some(&[
             ("BOARD_TYPE", b.board.as_str()),
-            ("RUSTFLAGS", &format!("-C force-frame-pointers {opt_level} -C debug-assertions")),
+            (
+                "RUSTFLAGS",
+                &format!("-C force-frame-pointers {opt_level} -C debug-assertions"),
+            ),
             ("CARGO_TARGET_DIR", env!("CARGO_TARGET_DIR")),
         ]),
     )
@@ -172,7 +213,10 @@ fn build_loader(kernel: String) -> Result<(), String> {
         None,
         None,
         Some(&[
-            ("RUSTFLAGS", "-C relocation-model=pie -C code-model=small -C debug-assertions"),
+            (
+                "RUSTFLAGS",
+                "-C relocation-model=pie -C code-model=small -C debug-assertions",
+            ),
             ("KERNEL_PATH", &kernel),
             ("INIT_TASK_PATH", &binary("roottask")),
         ]),
@@ -245,7 +289,7 @@ pub fn test() -> Result<(), String> {
 
 fn build_impl(c: &BuildScript, command: &str) -> Result<(), String> {
     for comp in &c.component {
-        build_component(&comp.name, c, command)?;
+        build_component_with_manifest(comp, c, command)?;
     }
 
     prepare_cpio(&c.component, "/tmp/archive.cpio")?;

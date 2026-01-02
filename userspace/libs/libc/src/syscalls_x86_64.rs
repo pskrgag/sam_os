@@ -1,4 +1,3 @@
-use core::arch::asm;
 use rtl::error::ErrorType;
 
 #[inline]

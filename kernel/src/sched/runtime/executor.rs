@@ -40,6 +40,9 @@ impl Executor {
                     // Noting to do
                 }
             }
+
+            // Thread should not return to executor with disabled preemption
+            assert!(thread.is_preemtion_enabled());
         }
     }
 }

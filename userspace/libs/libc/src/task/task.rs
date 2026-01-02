@@ -1,6 +1,7 @@
-use super::handle::Handle;
+use super::Manifest;
 use crate::elf::Elf;
 use crate::factory::factory;
+use crate::handle::Handle;
 use crate::syscalls::Syscall;
 use crate::vmm::vms::vms;
 use crate::vmm::vms::Vms;
@@ -8,6 +9,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use hal::address::{Address, VirtAddr, VirtualAddress};
 use hal::arch::{PAGE_MASK, PAGE_SIZE};
+use postcard::from_bytes;
 use rtl::error::ErrorType;
 use rtl::vmm::MappingType;
 
@@ -15,6 +17,7 @@ pub struct Task {
     name: String,
     h: Handle,
     ep: VirtAddr,
+    manifest: Option<Manifest>,
 }
 
 impl Task {
@@ -23,6 +26,7 @@ impl Task {
             h,
             name,
             ep: 0.into(),
+            manifest: None,
         }
     }
 
@@ -30,10 +34,21 @@ impl Task {
         self.ep = ep;
     }
 
+    fn parse_manifest(elf: &Elf) -> Result<Manifest, ErrorType> {
+        let manifest = elf.section_data(".manifest").ok_or(ErrorType::NotFound)?;
+
+        from_bytes(manifest).map_err(|_| ErrorType::InternalError)
+    }
+
+    pub fn manifest(&self) -> &Option<Manifest> {
+        &self.manifest
+    }
+
     pub fn create_from_elf(elf_data: &[u8], name: String) -> Result<Self, ErrorType> {
         let elf = Elf::new(elf_data).ok_or(ErrorType::InvalidArgument)?;
         let ph = elf.program_headers().ok_or(ErrorType::InvalidArgument)?;
         let mut h = Vec::with_capacity(ph.len());
+        let manifest = Self::parse_manifest(&elf)?;
 
         for phdr in ph {
             let load_addr = VirtAddr::from(phdr.p_vaddr as usize);
@@ -74,6 +89,7 @@ impl Task {
         }
 
         new_task.set_ep(elf.entry_point());
+        new_task.manifest = Some(manifest);
         Ok(new_task)
     }
 

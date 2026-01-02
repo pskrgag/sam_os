@@ -57,4 +57,16 @@ impl<'a> Elf<'a> {
             MappingType::RoData
         }
     }
+
+    pub fn section_data(&self, section_name: &str) -> Option<&[u8]> {
+        if let Ok((shdrs, strtab)) = self.elf_data.section_headers_with_strtab() && let Some(strtab) = strtab && let Some(shdrs) = shdrs {
+            for section in shdrs {
+                if let Ok(name) = strtab.get(section.sh_name as usize) && name == section_name {
+                    return Some(self.elf_data.section_data(&section).unwrap().0);
+                }
+            }
+        }
+
+        None
+    }
 }

@@ -12,11 +12,11 @@ static ALLOCATOR: Allocator = Allocator(Spinlock::new(Dlmalloc::new_with_allocat
 
 unsafe impl GlobalAlloc for Allocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        self.0.lock().malloc(layout.size(), layout.align())
+        unsafe { self.0.lock().malloc(layout.size(), layout.align()) }
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        self.0.lock().free(ptr, layout.size(), layout.align());
+        unsafe { self.0.lock().free(ptr, layout.size(), layout.align()) }
     }
 }
 

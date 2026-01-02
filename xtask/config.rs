@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
 pub struct BuildScript {
@@ -9,7 +9,8 @@ pub struct BuildScript {
     pub opt_level: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default, Serialize)]
 pub struct Component {
     pub name: String,
+    pub env: Option<String>,
 }
