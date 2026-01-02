@@ -35,9 +35,11 @@ fn main(nameserver: Handle) {
             (res.data[0].size as usize).next_multiple_of(PAGE_SIZE),
         ))
         .unwrap();
-    let mut sdhci = sdhci::Sdhci::new(va);
+    let mut sdhci = sdhci::Sdhci::new(va).unwrap();
     println!("SDHCI version {:?}", sdhci.version());
-    sdhci.setup().unwrap();
+
+    let mut buffer = [0; 512];
+    sdhci.read_block(0, &mut buffer).unwrap();
 }
 
 include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));

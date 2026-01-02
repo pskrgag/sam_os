@@ -12,6 +12,7 @@ pub enum ErrorType {
     NotFound = 9,
     Generic = 10,
     InternalError = 11,
+    BufferTooSmall = 12,
 }
 
 impl From<ErrorType> for usize {

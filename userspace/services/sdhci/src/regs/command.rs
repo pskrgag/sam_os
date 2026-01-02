@@ -6,7 +6,9 @@ pub enum NormalOpcode {
     GoIdleState = 0,
     CID = 2,
     RCA = 3,
+    SelectCard = 7,
     VoltageCheck = 8,
+    ReadOneBlock = 17,
     AppCmd = 55,
 }
 
@@ -19,6 +21,7 @@ bitmask! {
     pub mask CommandFlags: u8 where flags CommandFlag {
         NoResponse = 0,
         HasReponse = 1,
+        DataPresent = 1 << 5,
     }
 }
 
@@ -30,20 +33,24 @@ pub struct Command {
 }
 
 impl Command {
-    pub fn new_normal(opcode: NormalOpcode, arg: u32, flags: CommandFlags) -> Self {
+    pub fn new_normal<F: Into<CommandFlags>>(opcode: NormalOpcode, arg: u32, flags: F) -> Self {
         Self {
             opcode: opcode as u8,
             arg,
-            flags,
+            flags: flags.into(),
             app: false,
         }
     }
 
-    pub fn new_application(opcode: ApplicationOpcode, arg: u32, flags: CommandFlags) -> Self {
+    pub fn new_application<F: Into<CommandFlags>>(
+        opcode: ApplicationOpcode,
+        arg: u32,
+        flags: F,
+    ) -> Self {
         Self {
             opcode: opcode as u8,
             arg,
-            flags,
+            flags: flags.into(),
             app: true,
         }
     }
