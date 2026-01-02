@@ -9,7 +9,7 @@ static CPIO: &[u8] = include_bytes!("/tmp/archive.cpio");
 mod roottask;
 
 #[main]
-fn main(_: Handle) {
+fn main(_: Option<Handle>) {
     let p = Port::create().unwrap();
 
     for i in cpio_reader::iter_files(CPIO) {

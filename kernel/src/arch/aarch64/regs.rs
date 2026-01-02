@@ -79,14 +79,12 @@ impl TryInto<SyscallArgs> for Context {
 }
 
 impl Context {
-    pub fn new(ep: VirtAddr, user_stack: VirtAddr, args: [usize; 3]) -> Self {
+    pub fn new(ep: VirtAddr, user_stack: VirtAddr, arg: usize) -> Self {
         let mut new: Self = unsafe { core::mem::zeroed() };
 
         new.elr = ep.into();
         new.sp_el0 = user_stack.into();
-        new.x0 = args[0];
-        new.x1 = args[1];
-        new.x2 = args[2];
+        new.x0 = arg;
 
         new
     }

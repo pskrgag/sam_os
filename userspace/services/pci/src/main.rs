@@ -17,13 +17,13 @@ mod ecam;
 pub static DISPATH_POOL: EndpointsDispatcher = EndpointsDispatcher::new();
 
 #[main]
-fn main(nameserver: Handle) {
+fn main(nameserver: Option<Handle>) {
     let fdt = Syscall::get_fdt().unwrap();
     let fdt = unsafe { Fdt::from_ptr(fdt.to_raw::<u8>()).unwrap() };
     let ecam = ecam::PciEcam::new(&fdt).unwrap();
     let port = factory().create_port().unwrap();
 
-    let ns = NameServer::new(Port::new(nameserver));
+    let ns = NameServer::new(Port::new(nameserver.unwrap()));
 
     ns.Register("pci", port.handle())
         .expect("Failed to register PCI handle");

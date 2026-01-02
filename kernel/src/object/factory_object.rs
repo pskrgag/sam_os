@@ -3,8 +3,7 @@ use crate::object::capabilities::CapabilityMask;
 use crate::object::handle::Handle;
 use crate::object::KernelObjectBase;
 use crate::sched::current;
-use crate::tasks::task::Task;
-use alloc::string::ToString;
+use crate::tasks::task::{Task, TaskName};
 use alloc::sync::Arc;
 use rtl::error::ErrorType;
 use rtl::signal::Signal;
@@ -20,16 +19,15 @@ pub static FACTORY: Lazy<Arc<Factory>> = Lazy::new(|| Factory::new().unwrap());
 
 impl Factory {
     fn new() -> Option<Arc<Factory>> {
-        Some(
-            Arc::try_new(Self {
-                base: KernelObjectBase::new(),
-            })
-            .ok()?,
-        )
+        Arc::try_new(Self {
+            base: KernelObjectBase::new(),
+        })
+        .ok()
     }
 
     pub fn create_task(&self, name: &str) -> Result<Handle, ErrorType> {
-        let task = Task::new(name.to_string()).ok_or(ErrorType::NoMemory)?;
+        let name = TaskName::try_from(name).map_err(|_| ErrorType::BufferTooBig)?;
+        let task = Task::new(name).ok_or(ErrorType::NoMemory)?;
         let handle = Handle::new(task, CapabilityMask::any());
 
         Ok(handle)

@@ -6,3 +6,6 @@ pub const HANDLE_CLOSE: usize = usize::MAX;
 
 #[cfg(feature = "user")]
 pub type Handle = HandleBase;
+
+/// Maximum handle name in handle page
+pub const MAX_HANDLE_NAME: usize = 100;

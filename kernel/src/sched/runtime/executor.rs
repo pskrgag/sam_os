@@ -37,7 +37,7 @@ impl Executor {
             match task_ref.task.poll(&mut ctx) {
                 Poll::Ready(_) => {}
                 Poll::Pending => {
-                    // Noting to dod
+                    // Noting to do
                 }
             }
         }

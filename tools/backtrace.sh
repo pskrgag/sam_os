@@ -5,7 +5,7 @@ BACKTRACE=$(cat $FILENAME | awk '{$1=$2=""; print $0}' | sed -n "/--- cut here -
 
 while read -r line
 do
-  T=$(echo "$line" | grep -o "\[.*\]" | tr -d '[]' | xargs llvm-addr2line -e ./target/aarch64-unknown-none-softfloat/debug/sam_kernel)
+  T=$(echo "$line" | grep -o "\[.*\]" | tr -d '[]' | xargs llvm-addr2line -e ./target/aarch64-unknown-none-softfloat/debug/kernel)
 
   echo "$line		$T"
 done <<< "$BACKTRACE"

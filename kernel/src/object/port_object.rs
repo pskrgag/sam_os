@@ -2,7 +2,7 @@ use crate::mm::user_buffer::UserPtr;
 use crate::object::capabilities::{Capability, CapabilityMask};
 use crate::object::handle_table::HandleTable;
 use crate::object::KernelObjectBase;
-use crate::sched::current;
+use crate::sched::current_task;
 use crate::sync::WaitQueue;
 use crate::tasks::task::Task;
 use alloc::boxed::Box;
@@ -74,10 +74,9 @@ impl Port {
         &self,
         client_msg_uptr: UserPtr<IpcMessage<'static>>,
     ) -> Result<usize, ErrorType> {
-        let cur = current();
         let mut client_msg = copy_ipc_message_from_user(client_msg_uptr)?;
         let task = self.task.upgrade().ok_or(ErrorType::TaskDead)?;
-        let self_task = cur.task();
+        let self_task = current_task();
         let self_table = self_task.handle_table().await?;
         let reply_port = self_table
             .find_handle::<Self>(client_msg.reply_port(), CapabilityMask::any())
@@ -103,8 +102,7 @@ impl Port {
         reply_port_handle: HandleBase,
         msg: UserPtr<IpcMessage<'static>>,
     ) -> Result<(), ErrorType> {
-        let cur = current();
-        let self_task = cur.task();
+        let self_task = current_task();
         let mut self_table = self_task.handle_table().await?;
         let reply_port = self_table
             .find::<Self>(reply_port_handle, CapabilityMask::any())

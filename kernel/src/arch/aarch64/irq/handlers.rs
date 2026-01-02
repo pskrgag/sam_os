@@ -49,21 +49,21 @@ fn kern_sync(ctx: &mut Context) {
     let far_el1 = FAR_EL1.get();
 
     if !fixup(elr_el1, ctx) {
-        error!("!!! Kernel sync exception");
-        error!("{ctx:?}");
+        error!("!!! Kernel sync exception\n");
+        error!("{ctx:?}\n");
         error!(
-            "ESR_EL1 0x{esr_el1:x} FAR_EL1 0x{far_el1:x}, ELR_EL1 0x{elr_el1:x}",
+            "ESR_EL1 0x{esr_el1:x} FAR_EL1 0x{far_el1:x}, ELR_EL1 0x{elr_el1:x}\n",
         );
 
         let mut bt = [VirtAddr::from_bits(0); 50];
 
         unsafe { backtrace(&mut bt, ctx.x29.into()) };
 
-        error!("--- cut here ---");
-        error!("Kernel backtrace");
+        error!("--- cut here ---\n");
+        error!("Kernel backtrace\n");
 
         for (i, addr) in bt.iter().take_while(|x| !x.is_null()).enumerate() {
-            error!("#{i} [{:p}]", addr.to_raw::<usize>());
+            error!("#{i} [{:p}]\n", addr.to_raw::<usize>());
         }
 
         loop {}

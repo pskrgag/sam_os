@@ -47,7 +47,7 @@ impl<T> Vec<T> {
         self.0.into_boxed_slice()
     }
 
-    #[deprecated(note="Please use `try_push` instead")]
+    #[deprecated(note = "Please use `try_push` instead")]
     pub fn push(&mut self, _val: T) {
         unreachable!()
     }

@@ -2,6 +2,7 @@ use crate::arch::regs::{Context, TrapReason};
 use crate::drivers::irq::irq::irq_dispatch;
 use crate::syscalls::do_syscall;
 use crate::tasks::thread::Thread;
+use crate::tasks::task::Task;
 use aarch64_cpu::registers::{Readable, ELR_EL1, ESR_EL1, FAR_EL1};
 use alloc::sync::Arc;
 use core::cell::LazyCell;
@@ -20,6 +21,11 @@ unsafe extern "C" {
 #[inline]
 pub fn current() -> Arc<Thread> {
     crate::sched::current::get_current()
+}
+
+#[inline]
+pub fn current_task() -> Arc<Task> {
+    current().task()
 }
 
 pub struct Scheduler {

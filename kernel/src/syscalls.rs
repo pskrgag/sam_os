@@ -13,7 +13,7 @@ use crate::{
         user_buffer::UserPtr,
         vmm::{vmo::VmObject, vms::Vms},
     },
-    sched::current,
+    sched::current_task,
     tasks::{task::Task, thread::Thread},
 };
 use alloc::string::String;
@@ -66,8 +66,7 @@ fn read_user_string(source: usize, size: usize) -> Result<String, ErrorType> {
 }
 
 pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
-    let thread = current();
-    let task = thread.task();
+    let task = current_task();
 
     match args.number() {
         SyscallList::Write => {

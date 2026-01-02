@@ -1,5 +1,5 @@
-use alloc::boxed::Box;
 use crate::adt::Vec;
+use alloc::boxed::Box;
 use core::marker::PhantomData;
 use rtl::error::ErrorType;
 
@@ -40,8 +40,6 @@ impl<T> UserPtr<T> {
     pub fn read_on_heap(&self) -> Result<Box<[T]>, ErrorType> {
         use core::mem::size_of;
 
-        // TODO: add error handling of OMM. This is no good
-        // let heap = vec![0; self.count * size_of::<T>()];
         let mut heap = Vec::new();
         let len = self.count * size_of::<T>();
 
@@ -50,11 +48,7 @@ impl<T> UserPtr<T> {
         let slice = heap.spare_capacity_mut();
 
         unsafe {
-            let res = arch_copy_from_user(
-                self.p as usize,
-                size_of::<T>() * self.count,
-                slice.as_ptr() as _,
-            );
+            let res = arch_copy_from_user(self.p, size_of::<T>() * self.count, slice.as_ptr() as _);
             if res == 0 {
                 heap.set_len(self.count);
                 Ok(heap.into_boxed_slice())
@@ -68,11 +62,7 @@ impl<T> UserPtr<T> {
         let s = usize::min(self.count, to.len());
 
         unsafe {
-            let res = arch_copy_from_user(
-                self.p as usize,
-                core::mem::size_of::<T>() * s,
-                to.as_ptr() as _,
-            );
+            let res = arch_copy_from_user(self.p, core::mem::size_of::<T>() * s, to.as_ptr() as _);
 
             if res == 0 {
                 Some(s)
@@ -88,11 +78,7 @@ impl<T> UserPtr<T> {
         let t = MaybeUninit::uninit();
 
         unsafe {
-            let res = arch_copy_from_user(
-                self.p as usize,
-                size_of::<T>() * self.count,
-                t.as_ptr() as _,
-            );
+            let res = arch_copy_from_user(self.p, size_of::<T>() * self.count, t.as_ptr() as _);
             if res == 0 {
                 Some(t.assume_init())
             } else {
@@ -105,11 +91,8 @@ impl<T> UserPtr<T> {
         use core::mem::size_of;
 
         unsafe {
-            let res = arch_copy_to_user(
-                t as *const _ as usize,
-                size_of::<T>() * self.count,
-                self.p,
-            );
+            let res =
+                arch_copy_to_user(t as *const _ as usize, size_of::<T>() * self.count, self.p);
             if res == 0 {
                 Ok(())
             } else {
@@ -119,7 +102,7 @@ impl<T> UserPtr<T> {
     }
 
     pub fn write_array(&mut self, t: &[T]) -> Result<(), ErrorType> {
-        use core::mem::size_of;
+        use core::mem::size_of_val;
 
         if self.count < t.len() {
             info!("{} {}\n", self.count, t.len());
@@ -127,11 +110,7 @@ impl<T> UserPtr<T> {
         }
 
         unsafe {
-            let res = arch_copy_to_user(
-                t.as_ptr() as usize,
-                size_of::<T>() * t.len(),
-                self.p,
-            );
+            let res = arch_copy_to_user(t.as_ptr() as usize, size_of_val(t), self.p);
             if res == 0 {
                 Ok(())
             } else {

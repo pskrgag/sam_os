@@ -49,11 +49,13 @@ impl ThreadInner {
     }
 
     pub fn wake(&mut self) {
-        self.waker.take().map(|x| x.wake());
+        if let Some(x) = self.waker.take() {
+            x.wake()
+        }
     }
 
-    pub fn init_context(&mut self, ep: VirtAddr, user_stack: VirtAddr, args: [usize; 3]) {
-        self.arch_ctx = Some(Context::new(ep, user_stack, args));
+    pub fn init_context(&mut self, ep: VirtAddr, user_stack: VirtAddr, arg: usize) {
+        self.arch_ctx = Some(Context::new(ep, user_stack, arg));
     }
 
     pub fn take_context(&mut self) -> Option<Context> {
@@ -87,9 +89,9 @@ pub enum ThreadSleepReason {
 #[derive(Clone)]
 pub struct ThreadRawState(usize);
 
-impl Into<usize> for ThreadRawState {
-    fn into(self) -> usize {
-        self.0
+impl From<ThreadRawState> for usize {
+    fn from(state: ThreadRawState) -> usize {
+        state.0
     }
 }
 
@@ -175,7 +177,7 @@ impl Thread {
         self.task.upgrade().unwrap()
     }
 
-    pub async fn init_user(self: &Arc<Thread>, ep: VirtAddr, args: Option<[usize; 3]>) {
+    pub async fn init_user(self: &Arc<Thread>, ep: VirtAddr, args: Option<usize>) {
         let task = self.task.upgrade().unwrap();
         let vms = task.vms();
         let user_stack = vms
@@ -188,7 +190,7 @@ impl Thread {
         inner.init_context(
             ep,
             VirtAddr::from(user_stack.bits() + USER_THREAD_STACK_PAGES * PAGE_SIZE),
-            args.unwrap_or([0; 3]),
+            args.unwrap_or(0),
         );
     }
 
@@ -281,10 +283,6 @@ impl Thread {
         }
 
         Yield.await
-    }
-
-    pub fn wake(self: &Arc<Thread>) {
-        self.set_state(ThreadState::Running, ThreadSleepReason::None);
     }
 
     pub fn state(self: &Arc<Thread>) -> ThreadState {

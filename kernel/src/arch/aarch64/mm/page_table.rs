@@ -2,6 +2,7 @@ use crate::arch::PTE_PER_PAGE;
 use aarch64_cpu::registers::{TTBR0_EL1, Writeable};
 use core::arch::asm;
 use hal::address::*;
+use core::sync::atomic::{compiler_fence, Ordering};
 
 #[inline]
 pub fn l0_linear_offset(va: VirtAddr) -> usize {
@@ -32,4 +33,7 @@ pub fn flush_tlb_all() {
     unsafe {
         asm!("tlbi  vmalle1is");
     }
+
+    // Disallow compiler reordering (just in case)
+    compiler_fence(Ordering::SeqCst);
 }

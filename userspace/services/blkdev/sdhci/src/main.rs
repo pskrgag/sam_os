@@ -13,8 +13,8 @@ mod regs;
 mod server;
 
 #[main]
-fn main(nameserver: Handle) {
-    let ns = NameServer::new(Port::new(nameserver));
+fn main(nameserver: Option<Handle>) {
+    let ns = NameServer::new(Port::new(nameserver.unwrap()));
     let _pci = loop {
         // TODO: add support for loading in dependency
         if let Ok(pci) = ns.Get("pci") {

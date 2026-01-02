@@ -11,7 +11,7 @@ fn on_panic(info: &PanicInfo) -> ! {
         let fp: usize;
 
         arm_gic::irq_disable();
-        let id: Result<String<100>, _> = crate::sched::current().task().name().try_into();
+        let id: Result<String<100>, _> = crate::sched::current_task().name().try_into();
         error!("--- cut here ---\n");
         error!("Kernel Panic! In context of '{}'\n", id.unwrap());
 

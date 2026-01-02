@@ -10,14 +10,14 @@ use rtl::locking::spinlock::Spinlock;
 mod pl011;
 
 #[main]
-fn main(nameserver: Handle) {
+fn main(nameserver: Option<Handle>) {
     let fdt = Syscall::get_fdt().unwrap();
     let fdt = unsafe { Fdt::from_ptr(fdt.to_raw::<u8>()).unwrap() };
 
     let pl011 = pl011::probe(&fdt).unwrap();
     let p = Port::create().unwrap();
 
-    let nameserver = bindings_NameServer::NameServer::new(Port::new(nameserver));
+    let nameserver = bindings_NameServer::NameServer::new(Port::new(nameserver.unwrap()));
     nameserver
         .Register("serial", p.handle())
         .expect("Failed to register handle in nameserver");

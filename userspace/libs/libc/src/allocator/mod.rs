@@ -7,7 +7,6 @@ use rtl::vmm::MappingType;
 
 struct Allocator(Spinlock<Dlmalloc<PageAllocator>>);
 
-#[cfg(not(target_os = "linux"))]
 #[global_allocator]
 static ALLOCATOR: Allocator = Allocator(Spinlock::new(Dlmalloc::new_with_allocator(PageAllocator)));
 
@@ -49,9 +48,8 @@ unsafe impl AllocatorApi for PageAllocator {
         false
     }
 
-    fn free(&self, _ptr: *mut u8, _size: usize) -> bool {
-        // TODO: implement
-        false
+    fn free(&self, addr: *mut u8, size: usize) -> bool {
+        vms().vm_free(addr, size).is_ok()
     }
 
     fn can_release_part(&self, _flags: u32) -> bool {

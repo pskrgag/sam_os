@@ -7,8 +7,8 @@ use libc::{main, port::Port};
 mod console;
 
 #[main]
-fn main(root: Handle) {
-    let client = bindings_NameServer::NameServer::new(Port::new(root));
+fn main(root: Option<Handle>) {
+    let client = bindings_NameServer::NameServer::new(Port::new(root.unwrap()));
     let serial_backend = client
         .Get("serial")
         .expect("Failed to find serial backend")
