@@ -98,11 +98,12 @@ impl From<ThreadRawState> for usize {
 pub struct Thread {
     id: u16,
     task: Weak<Task>,
-    ticks: AtomicUsize,
     preemtion: AtomicUsize,
     inner: Spinlock<ThreadInner>,
-    state: AtomicUsize,
     base: KernelObjectBase,
+    state: AtomicUsize,
+    ticks: AtomicUsize,
+    preemtion_counter: AtomicUsize,
 }
 
 crate::kernel_object!(Thread, Signal::None.into());
@@ -143,6 +144,7 @@ impl Thread {
                     .into(),
             ),
             base: KernelObjectBase::new(),
+            preemtion_counter: 0.into(),
         })
         .ok()
     }
@@ -165,6 +167,7 @@ impl Thread {
                     .into(),
             ),
             base: KernelObjectBase::new(),
+            preemtion_counter: 0.into(),
         })
         .ok()
     }
@@ -217,6 +220,35 @@ impl Thread {
         )
     }
 
+    fn resched(self: &Arc<Self>) {
+        self.set_state(ThreadState::NeedResched, ThreadSleepReason::None);
+
+        // TODO: better move to scheduler
+        self.ticks.store(RR_TICKS, Ordering::Relaxed);
+    }
+
+    fn disable_preemtion(self: &Arc<Self>) {
+        self.preemtion_counter.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn enable_preemtion(self: &Arc<Self>) {
+        let enable = self.preemtion_counter.fetch_sub(1, Ordering::Relaxed) == 1;
+
+        if enable {
+            self.resched();
+        }
+    }
+
+    pub fn is_preemtion_enabled(self: &Arc<Self>) -> bool {
+        self.preemtion_counter.load(Ordering::Relaxed) == 0
+    }
+
+    pub fn with_disabled_preemption<F: FnOnce()>(self: &Arc<Self>, f: F) {
+        self.disable_preemtion();
+        f();
+        self.enable_preemtion();
+    }
+
     pub async fn context(self: &Arc<Self>) -> Context {
         struct RunnableChecker {
             thread: Arc<Thread>,
@@ -259,13 +291,20 @@ impl Thread {
     }
 
     pub fn tick(self: &Arc<Thread>) {
-        let old = self.ticks.fetch_sub(1, Ordering::Relaxed);
+        let old = self
+            .ticks
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |x| {
+                if x == 0 {
+                    None
+                } else {
+                    Some(x - 1)
+                }
+            });
 
-        if old == 0 {
-            self.set_state(ThreadState::NeedResched, ThreadSleepReason::None);
-
-            // TODO: better move to scheduler
-            self.ticks.store(RR_TICKS, Ordering::Relaxed);
+        // old.is_err() means thread had preemption disabled. When it will be re-enabled thread
+        // will be punished by force reschedule
+        if let Ok(old) = old && old == 0 && self.is_preemtion_enabled() {
+            self.resched();
         }
     }
 

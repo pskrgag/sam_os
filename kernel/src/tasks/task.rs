@@ -5,7 +5,7 @@ use crate::object::factory_object::FACTORY;
 use crate::object::handle::Handle;
 use crate::object::handle_table::HandleTable;
 use crate::object::KernelObjectBase;
-use crate::sched::current_task;
+use crate::sched::{current, current_task};
 use crate::sync::{async_mutex::MutexGuard, Mutex, Spinlock};
 use crate::tasks::thread::Thread;
 use alloc::collections::LinkedList;
@@ -156,12 +156,14 @@ impl Task {
     }
 
     pub fn with_attached_task<F: FnOnce()>(self: Arc<Self>, f: F) {
-        let cur_task = current_task();
+        current().with_disabled_preemption(|| {
+            let cur_task = current_task();
 
-        // TODO: disallow nested switching
-        self.vms().switch_to();
-        f();
-        cur_task.vms().switch_to();
+            // TODO: disallow nested switching
+            self.vms().switch_to();
+            f();
+            cur_task.vms().switch_to();
+        });
     }
 
     pub async fn vms_handle(&self) -> Result<HandleBase, ErrorType> {
