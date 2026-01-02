@@ -10,6 +10,7 @@ use libc::{handle::Handle, main, port::Port, vmm::vms::vms};
 
 mod sdhci;
 mod regs;
+mod server;
 
 #[main]
 fn main(nameserver: Handle) {
@@ -38,9 +39,9 @@ fn main(nameserver: Handle) {
     let mut sdhci = sdhci::Sdhci::new(va).unwrap();
     println!("SDHCI version {:?}", sdhci.version());
 
-    let mut buffer = [0; 512];
-    sdhci.read_block(0, &mut buffer).unwrap();
+    server::start_server(sdhci, &ns).unwrap();
 }
 
 include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));
 include!(concat!(env!("OUT_DIR"), "/pci.rs"));
+include!(concat!(env!("OUT_DIR"), "/blkdev.rs"));

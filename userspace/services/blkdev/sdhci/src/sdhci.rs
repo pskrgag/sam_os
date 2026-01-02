@@ -50,6 +50,7 @@ struct SdhciRegs {
 
 /// Host Controller Register
 #[derive(Debug, Copy, Clone)]
+#[allow(dead_code)]
 pub struct SdhciVersion {
     /// Specification Version Number
     pub sdhc_version: u8,
