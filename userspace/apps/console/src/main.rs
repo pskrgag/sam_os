@@ -8,16 +8,16 @@ mod console;
 
 #[main]
 fn main(root: Option<Handle>) {
-    let nameserver = bindings_NameServer::NameServer::new(Port::new(root.unwrap()));
+    let nameserver = bindings_NameServer::NameServer::new(unsafe { Port::new(root.unwrap()) });
 
     let serial = loop {
         // TODO: add support for loading in dependency
         if let Ok(serial) = nameserver.Get("serial") {
-            break serial.handle
+            break serial.handle;
         }
     };
 
-    let serial_backend = Port::new(serial);
+    let serial_backend = unsafe { Port::new(serial) };
     let serial_backend = bindings_Serial::Serial::new(serial_backend);
 
     console::Console::new(serial_backend).serve();

@@ -17,7 +17,8 @@ fn main(nameserver: Option<Handle>) {
     let pl011 = pl011::probe(&fdt).unwrap();
     let p = Port::create().unwrap();
 
-    let nameserver = bindings_NameServer::NameServer::new(Port::new(nameserver.unwrap()));
+    let nameserver =
+        bindings_NameServer::NameServer::new(unsafe { Port::new(nameserver.unwrap()) });
     nameserver
         .Register("serial", p.handle())
         .expect("Failed to register handle in nameserver");

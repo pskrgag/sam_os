@@ -10,7 +10,7 @@ pub struct Port {
 }
 
 impl Port {
-    pub fn new(h: Handle) -> Self {
+    pub unsafe fn new(h: Handle) -> Self {
         Self { h }
     }
 
@@ -18,7 +18,7 @@ impl Port {
         factory().create_port()
     }
 
-    pub fn send_and_wait(
+    pub fn reply_and_wait(
         &self,
         reply_port: Handle,
         reply: &mut IpcMessage,
@@ -26,8 +26,8 @@ impl Port {
         Syscall::port_send_wait(&self.h, reply_port, reply)
     }
 
-    pub fn send(&self, reply_port: Handle, reply: &mut IpcMessage) -> Result<(), ErrorType> {
-        Syscall::port_send(&self.h, reply_port, reply)
+    pub fn reply(&self, reply_port: Handle, reply: &mut IpcMessage) -> Result<(), ErrorType> {
+        Syscall::port_reply(&self.h, reply_port, reply)
     }
 
     pub fn call(&self, msg: &mut IpcMessage) -> Result<usize, ErrorType> {
@@ -35,6 +35,13 @@ impl Port {
 
         msg.set_reply_port(unsafe { p.h.as_raw() });
         Syscall::port_call(&self.h, msg)
+    }
+
+    pub fn send(&self, msg: &mut IpcMessage) -> Result<Port, ErrorType> {
+        let p = Port::create()?;
+
+        msg.set_reply_port(unsafe { p.h.as_raw() });
+        Syscall::port_send(&self.h, msg).map(|_| p)
     }
 
     pub fn receive(&self, msg: &mut IpcMessage) -> Result<usize, ErrorType> {

@@ -1,0 +1,11 @@
+[package]
+name = "rokio"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-task = { version = "4.7.1", default-features = false }
+crossbeam = { version = "0.8.4", features = ["alloc"], default-features = false }
+libc = { path = "../libc" }
+rtl = { path = "../../../rtl" }
+spin = "0.10.0"

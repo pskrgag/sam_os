@@ -14,6 +14,7 @@ pub enum ErrorType {
     InternalError = 11,
     BufferTooSmall = 12,
     BufferTooBig = 13,
+    WouldBlock = 14,
 }
 
 impl From<ErrorType> for usize {

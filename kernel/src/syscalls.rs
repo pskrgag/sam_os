@@ -203,7 +203,7 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             port.call(UserPtr::new(args.arg::<usize>(1) as *mut IpcMessage))
                 .await
         }
-        SyscallList::PortSendWait => {
+        SyscallList::PortReplyWait => {
             let msg = UserPtr::new(args.arg::<usize>(2) as *mut IpcMessage);
             let port = {
                 let table = task.handle_table().await?;
@@ -213,9 +213,9 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                     .ok_or(ErrorType::InvalidHandle)?
             };
 
-            port.send_wait(args.arg(1), msg).await
+            port.reply_wait(args.arg(1), msg).await
         }
-        SyscallList::PortSend => {
+        SyscallList::PortReply => {
             let msg = UserPtr::new(args.arg::<usize>(2) as *mut IpcMessage);
             let port = {
                 let table = task.handle_table().await?;
@@ -225,7 +225,7 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                     .ok_or(ErrorType::InvalidHandle)?
             };
 
-            port.send(args.arg(1), msg).await.map(|_| 0)
+            port.reply(args.arg(1), msg).await.map(|_| 0)
         }
         SyscallList::PortReceive => {
             let in_msg = UserPtr::new(args.arg::<usize>(1) as *mut IpcMessage);
@@ -238,6 +238,18 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             };
 
             port.receive(in_msg).await
+        }
+        SyscallList::PortSend => {
+            let in_msg = UserPtr::new(args.arg::<usize>(1) as *mut IpcMessage);
+            let port = {
+                let table = task.handle_table().await?;
+
+                table
+                    .find::<Port>(args.arg(0), CapabilityMask::from(Capability::Receive))
+                    .ok_or(ErrorType::InvalidHandle)?
+            };
+
+            port.send(in_msg).await.map(|_| 0)
         }
         SyscallList::CloseHandle => {
             let mut table = task.handle_table().await?;

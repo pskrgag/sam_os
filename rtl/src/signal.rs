@@ -34,4 +34,6 @@ pub struct WaitEntry {
     pub handle: Handle,
     pub waitfor: Signals,
     pub pendind: Signals,
+    pub context: usize,
+    pub context1: usize,
 }

@@ -1,5 +1,6 @@
 use crate::mm::user_buffer::UserPtr;
 use crate::object::capabilities::{Capability, CapabilityMask};
+use crate::object::handle::Handle;
 use crate::object::handle_table::HandleTable;
 use crate::object::KernelObjectBase;
 use crate::sched::current_task;
@@ -70,10 +71,10 @@ impl Port {
         Ok(())
     }
 
-    pub async fn call(
+    async fn send_impl(
         &self,
         client_msg_uptr: UserPtr<IpcMessage<'static>>,
-    ) -> Result<usize, ErrorType> {
+    ) -> Result<Handle, ErrorType> {
         let mut client_msg = copy_ipc_message_from_user(client_msg_uptr)?;
         let task = self.task.upgrade().ok_or(ErrorType::TaskDead)?;
         let self_task = current_task();
@@ -90,6 +91,22 @@ impl Port {
         client_msg.set_reply_port(my_port);
         self.produce(client_msg);
 
+        Ok(reply_port)
+    }
+
+    pub async fn send(
+        &self,
+        client_msg_uptr: UserPtr<IpcMessage<'static>>,
+    ) -> Result<(), ErrorType> {
+        self.send_impl(client_msg_uptr).await.map(|_| ())
+    }
+
+    pub async fn call(
+        &self,
+        client_msg_uptr: UserPtr<IpcMessage<'static>>,
+    ) -> Result<usize, ErrorType> {
+        let reply_port = self.send_impl(client_msg_uptr).await?;
+
         reply_port
             .obj::<Self>()
             .unwrap()
@@ -97,7 +114,7 @@ impl Port {
             .await
     }
 
-    pub async fn send(
+    pub async fn reply(
         &self,
         reply_port_handle: HandleBase,
         msg: UserPtr<IpcMessage<'static>>,
@@ -118,12 +135,12 @@ impl Port {
         Ok(())
     }
 
-    pub async fn send_wait(
+    pub async fn reply_wait(
         &self,
         reply_port_handle: HandleBase,
         msg: UserPtr<IpcMessage<'static>>,
     ) -> Result<usize, ErrorType> {
-        self.send(reply_port_handle, msg).await?;
+        self.reply(reply_port_handle, msg).await?;
         self.receive(msg).await
     }
 
@@ -134,7 +151,7 @@ impl Port {
         let mut server_msg = copy_ipc_message_from_user(server_msg_uptr)?;
         let mut arena_len = 0;
 
-        let mut client_msg = self.queue.consume().await?;
+        let mut client_msg = self.queue.try_consume().ok_or(ErrorType::WouldBlock)?;
 
         // Copy arena data
         if let Some(d) = server_msg.in_arena() {

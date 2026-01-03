@@ -16,13 +16,14 @@ pub enum SyscallList {
     TaskGetVms = 10,
     CloseHandle = 11,
     PortCall = 12,
-    PortSendWait = 13,
+    PortReplyWait = 13,
     PortReceive = 14,
     CloneHandle = 15,
     MapFdt = 16,
-    PortSend = 17,
+    PortReply = 17,
     WaitObject = 18,
     WaitObjectMany = 19,
+    PortSend = 20,
 }
 
 impl TryFrom<usize> for SyscallList {

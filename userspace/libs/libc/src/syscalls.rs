@@ -27,8 +27,9 @@ pub enum Syscall<'a> {
     VmsHandle(RawHandle),
     CloseHandle(RawHandle),
     PortCall(RawHandle, *mut IpcMessage<'a>),
-    PortSendWait(RawHandle, RawHandle, *mut IpcMessage<'a>),
-    PortSend(RawHandle, RawHandle, *mut IpcMessage<'a>),
+    PortSend(RawHandle, *mut IpcMessage<'a>),
+    PortReplyWait(RawHandle, RawHandle, *mut IpcMessage<'a>),
+    PortReply(RawHandle, RawHandle, *mut IpcMessage<'a>),
     PortReceive(RawHandle, *mut IpcMessage<'a>),
     CloneHandle(RawHandle),
     GetFdt,
@@ -100,6 +101,10 @@ impl<'a> Syscall<'a> {
         unsafe { syscall(Self::PortCall(h.as_raw(), msg).as_args()) }
     }
 
+    pub fn port_send(h: &Handle, msg: *mut IpcMessage<'a>) -> Result<(), ErrorType> {
+        unsafe { syscall(Self::PortSend(h.as_raw(), msg).as_args()).map(|_| ()) }
+    }
+
     pub fn port_receive(h: &Handle, msg: *mut IpcMessage<'a>) -> Result<usize, ErrorType> {
         unsafe { syscall(Self::PortReceive(h.as_raw(), msg).as_args()) }
     }
@@ -127,7 +132,7 @@ impl<'a> Syscall<'a> {
     ) -> Result<usize, ErrorType> {
         unsafe {
             syscall(
-                Self::PortSendWait(
+                Self::PortReplyWait(
                     h.as_raw(),
                     {
                         let raw = reply_port.as_raw();
@@ -142,14 +147,14 @@ impl<'a> Syscall<'a> {
         }
     }
 
-    pub fn port_send(
+    pub fn port_reply(
         h: &Handle,
         reply_port: Handle,
         msg: *mut IpcMessage<'a>,
     ) -> Result<(), ErrorType> {
         unsafe {
             syscall(
-                Self::PortSend(
+                Self::PortReply(
                     h.as_raw(),
                     {
                         let raw = reply_port.as_raw();
@@ -263,6 +268,16 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
+            Syscall::PortSend(handle, msg) => [
+                SyscallList::PortSend.into(),
+                handle,
+                msg as *mut _ as usize,
+                0,
+                0,
+                0,
+                0,
+                0,
+            ],
             Syscall::PortReceive(handle, msg) => [
                 SyscallList::PortReceive.into(),
                 handle,
@@ -273,8 +288,8 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
-            Syscall::PortSendWait(handle, reply_port, msg) => [
-                SyscallList::PortSendWait.into(),
+            Syscall::PortReplyWait(handle, reply_port, msg) => [
+                SyscallList::PortReplyWait.into(),
                 handle,
                 reply_port,
                 msg as *const _ as usize,
@@ -283,8 +298,8 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
-            Syscall::PortSend(handle, reply_port, msg) => [
-                SyscallList::PortSend.into(),
+            Syscall::PortReply(handle, reply_port, msg) => [
+                SyscallList::PortReply.into(),
                 handle,
                 reply_port,
                 msg as *const _ as usize,

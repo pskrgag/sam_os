@@ -24,7 +24,7 @@ impl Factory {
     }
 
     pub fn create_port(&self) -> Result<Port, ErrorType> {
-        Syscall::create_port(&self.h).map(Port::new)
+        Syscall::create_port(&self.h).map(|x| unsafe { Port::new(x) })
     }
 }
 

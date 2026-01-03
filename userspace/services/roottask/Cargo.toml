@@ -9,6 +9,7 @@ rtl = { path = "../../../rtl/" }
 postcard = { version = "1", features = ["alloc"] }
 serde = { version = "1", default-features = false  }
 cpio_reader = "0.1.2"
+rokio = { path = "../../libs/rokio" }
 
 [build-dependencies]
 ridl = { path = "../../../tools/ridl/" }
