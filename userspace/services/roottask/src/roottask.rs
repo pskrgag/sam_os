@@ -2,7 +2,7 @@ use super::bindings_NameServer as bindings;
 use alloc::borrow::ToOwned;
 use alloc::sync::Arc;
 use alloc::{collections::btree_map::BTreeMap, string::String};
-use bindings::{GetRx, NameServerRequest, RegisterRx};
+use bindings::NameServerRequest;
 use libc::handle::Handle;
 use rokio::port::Port;
 use rtl::{error::ErrorType, locking::spinlock::Spinlock};
@@ -23,20 +23,19 @@ pub async fn start(p: Port) {
         async move {
             match request {
                 NameServerRequest::Get { value, responder } => {
-                    responder.reply(GetRx {
-                        handle: ns
-                            .lock()
+                    responder.reply(
+                        &ns.lock()
                             .table
                             .get(value.name.as_str())
                             .ok_or(ErrorType::NotFound)?
                             .clone_handle()?,
-                    })?;
+                    )?;
                 }
                 NameServerRequest::Register { value, responder } => {
                     ns.lock()
                         .table
                         .insert(value.name.as_str().to_owned(), value.handle);
-                    responder.reply(RegisterRx {})?;
+                    responder.reply()?;
                 }
             };
 

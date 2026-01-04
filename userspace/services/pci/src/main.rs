@@ -3,7 +3,7 @@
 
 use alloc::sync::Arc;
 use bindings_NameServer::NameServer;
-use bindings_Pci::{DeviceRx, DeviceTx, Pci, PciRequest};
+use bindings_Pci::{Pci, PciRequest};
 use device::PciDevice;
 use fdt::Fdt;
 use hal::address::VirtualAddress;
@@ -36,7 +36,7 @@ async fn main(nameserver: Option<Handle>) {
                     let (disp, handle) = PciDevice::new(value.vendor, value.device, ecam.clone())?;
 
                     rokio::executor::spawn(disp);
-                    responder.reply(DeviceRx { handle })?;
+                    responder.reply(&handle)?;
                 }
             }
             Ok(())

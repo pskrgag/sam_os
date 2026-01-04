@@ -2,7 +2,7 @@ use super::bindings_NameServer::NameServer;
 use super::sdhci::Sdhci;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use bindings_BlkDev::{BlkDev, BlkDevRequest, ReadBlockRx, ReadBlockTx};
+use bindings_BlkDev::{BlkDev, BlkDevRequest};
 use rokio::port::Port;
 use rtl::error::ErrorType;
 use rtl::locking::spinlock::Spinlock;
@@ -27,7 +27,7 @@ pub async fn start_server(sdhci: Sdhci, ns: &NameServer) -> Result<(), ErrorType
                     data.resize(card.block_size(), 0);
 
                     card.read_block(value.blockIdx, data.as_mut_slice())?;
-                    responder.reply(ReadBlockRx { data: data.into_iter().collect() })?;
+                    responder.reply(data.into_iter().collect())?;
                 }
             }
             Ok(())

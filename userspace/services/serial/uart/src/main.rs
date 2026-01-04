@@ -2,7 +2,7 @@
 #![no_std]
 
 use alloc::sync::Arc;
-use bindings_Serial::{GetByteRx, PutRx, Serial, SerialRequest};
+use bindings_Serial::{Serial, SerialRequest};
 use fdt::Fdt;
 use hal::address::VirtualAddress;
 use libc::handle::Handle;
@@ -24,7 +24,7 @@ async fn main(nameserver: Option<Handle>) {
         bindings_NameServer::NameServer::new(unsafe { Port::new(nameserver.unwrap()) });
 
     nameserver
-        .Register("serial".try_into().unwrap(), p.handle().clone())
+        .Register("serial".try_into().unwrap(), p.handle())
         .await
         .expect("Failed to register handle in nameserver");
 
@@ -42,12 +42,12 @@ async fn main(nameserver: Option<Handle>) {
                         pl011.write_byte(bt);
                     }
 
-                    responder.reply(PutRx {})?;
+                    responder.reply()?;
                 }
                 SerialRequest::GetByte { responder, .. } => {
                     let byte = pl011.lock().read_byte();
 
-                    responder.reply(GetByteRx { byte })?;
+                    responder.reply(byte)?;
                 }
             };
 

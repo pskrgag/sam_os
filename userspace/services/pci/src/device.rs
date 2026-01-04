@@ -1,5 +1,5 @@
 use super::ecam::PciEcam;
-use crate::bindings_Device::{Device, DeviceRequest, MapRx, PciMapping};
+use crate::bindings_Device::{Device, DeviceRequest, PciMapping};
 use alloc::sync::Arc;
 use core::future::Future;
 use hal::address::Address;
@@ -50,7 +50,7 @@ impl PciDevice {
                                 })
                                 .collect();
 
-                            responder.reply(MapRx { data: mappings })?;
+                            responder.reply(mappings)?;
                         }
                     }
 

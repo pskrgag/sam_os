@@ -38,6 +38,7 @@ pub fn start_mod<W: Write>(buf: &mut W, suffix: &str) {
     writeln!(buf, "#[allow(clippy::type_complexity)]").unwrap();
     writeln!(buf, "#[allow(clippy::missing_transmute_annotations)]").unwrap();
     writeln!(buf, "#[allow(clippy::large_enum_variant)]").unwrap();
+    writeln!(buf, "#[allow(forgetting_references)]").unwrap();
     writeln!(buf, "mod bindings_{suffix} {{").unwrap();
 }
 
@@ -308,20 +309,32 @@ fn produce_send_struct<W: Write>(buf: &mut W, interface: &Interface, message: &M
     }}
 
     impl {int_name}{message_name}Reply {{
-        pub fn reply(self, msg: {tp}) -> Result<(), ErrorType> {{
+        pub fn reply(self {args}) -> Result<(), ErrorType> {{
             let mut out_msg = IpcMessage::new();
-            let wire = RxMessage::Ok(Rx::{message_name}(msg.try_to_wire(&mut out_msg)?));
+            let _message = &mut out_msg;
+            let msg = {wire_name_rx} {{ {} }};
+            let wire = RxMessage::Ok(Rx::{message_name}(msg));
             let vec = to_allocvec(&wire).unwrap();
             let port = core::mem::ManuallyDrop::new(unsafe {{ Port::new(Handle::new(self.port)) }});
 
-            out_msg.set_out_arena(vec.as_slice());
+            _message.set_out_arena(vec.as_slice());
 
-            port.reply(libc::handle::Handle::new(self.reply_port), &out_msg)
+            port.reply(libc::handle::Handle::new(self.reply_port), &out_msg )
         }}
     }}
 "#,
-        message_name = message.name,
-        tp = message.rx.name,
+    message.rx
+        .data
+        .iter()
+        .map(|x| {
+            let expr = type_public_to_wire(&x.1, &x.0);
+            format!("{name}: {expr}", name = x.0)
+        })
+        .collect::<Vec<_>>()
+        .join(", "),
+    wire_name_rx = wire_type_rx(&message.name),
+    message_name = message.name,
+    args = message.rx.data.iter().map(|x| format!(", {}: {}", x.0, x.1.as_arg())).collect::<Vec<_>>().join(" "),
     )
     .unwrap();
 }
