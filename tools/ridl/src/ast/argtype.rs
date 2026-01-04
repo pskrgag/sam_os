@@ -24,10 +24,7 @@ pub enum BuiltinTypes {
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum Type {
     Builtin(BuiltinTypes),
-    Sequence {
-        inner: Box<Type>,
-        count: usize,
-    },
+    Sequence { inner: Box<Type>, count: usize },
     Struct(Struct),
 }
 
@@ -52,41 +49,14 @@ impl Type {
         Some(Type::Builtin(*KEYWORDS.get(name.as_str())?))
     }
 
-    pub fn is_sequence(&self) -> bool {
-        matches!(self, Self::Sequence { .. })
-    }
-
     pub fn as_arg(&self) -> String {
         match self {
-            Self::Builtin(bt) => {
-                let s = match bt {
-                    BuiltinTypes::U8 => "u8",
-                    BuiltinTypes::I8 => "i8",
-                    BuiltinTypes::U16 => "u16",
-                    BuiltinTypes::I16 => "i16",
-                    BuiltinTypes::U32 => "u32",
-                    BuiltinTypes::I32 => "i32",
-                    BuiltinTypes::U64 => "u64",
-                    BuiltinTypes::I64 => "i64",
-                    BuiltinTypes::Char => "u8",
-                    BuiltinTypes::Handle => "&Handle",
-                };
-
-                s.to_string()
-            }
-            Self::Sequence { inner, .. } => {
-                if **inner != Self::Builtin(BuiltinTypes::Char) {
-                    format!("&[{}]", inner.as_wire())
-                } else {
-                    // Special case, since &[char] != &str in rust
-                    "&str".to_string()
-                }
-            }
-            _ => todo!(),
+            Self::Builtin(BuiltinTypes::Handle) => "&Handle".to_string(),
+            _ => self.as_rust(),
         }
     }
 
-    pub fn as_public(&self) -> String {
+    pub fn as_rust(&self) -> String {
         match self {
             Self::Builtin(bt) => {
                 let s = match bt {
@@ -104,37 +74,29 @@ impl Type {
 
                 s.to_string()
             }
-            Self::Sequence { inner, .. } => {
+            Self::Sequence { inner, count } => {
                 if **inner != Self::Builtin(BuiltinTypes::Char) {
-                    format!("Vec<{}>", inner.as_public())
+                    format!("HLVec<{inner}, {count}>", inner = inner.as_rust())
                 } else {
-                    "String".to_string()
+                    format!("HLString<{count}>")
                 }
-            },
+            }
             Self::Struct(s) => s.name.clone(),
         }
     }
 
     pub fn as_wire(&self) -> String {
         match self {
-            Self::Builtin(bt) => {
-                let s = match bt {
-                    BuiltinTypes::U8 => "u8",
-                    BuiltinTypes::I8 => "i8",
-                    BuiltinTypes::U16 => "u16",
-                    BuiltinTypes::I16 => "i16",
-                    BuiltinTypes::U32 => "u32",
-                    BuiltinTypes::I32 => "i32",
-                    BuiltinTypes::U64 => "u64",
-                    BuiltinTypes::I64 => "i64",
-                    BuiltinTypes::Char => "u8",
-                    BuiltinTypes::Handle => "usize",
-                };
-
-                s.to_string()
+            Self::Builtin(BuiltinTypes::Handle) => "usize".to_string(),
+            Self::Struct(s) => format!("{}Wire", s.name.clone()),
+            Self::Sequence { inner, count } => {
+                if **inner != Self::Builtin(BuiltinTypes::Char) {
+                    format!("HLVec<{inner}, {count}>", inner = inner.as_wire())
+                } else {
+                    format!("HLString<{count}>")
+                }
             }
-            Self::Sequence { inner, count } => format!("(usize, [{}; {count}])", inner.as_wire()),
-            Self::Struct(s) => format!("{}Wire", s.name),
+            _ => self.as_rust(),
         }
     }
 }

@@ -2,17 +2,17 @@
 #![no_std]
 
 use libc::handle::Handle;
-use libc::{main, port::Port};
+use rokio::{main, port::Port};
 
 mod console;
 
 #[main]
-fn main(root: Option<Handle>) {
+async fn main(root: Option<Handle>) {
     let nameserver = bindings_NameServer::NameServer::new(unsafe { Port::new(root.unwrap()) });
 
     let serial = loop {
         // TODO: add support for loading in dependency
-        if let Ok(serial) = nameserver.Get("serial") {
+        if let Ok(serial) = nameserver.Get("serial".try_into().unwrap()).await {
             break serial.handle;
         }
     };
@@ -20,7 +20,7 @@ fn main(root: Option<Handle>) {
     let serial_backend = unsafe { Port::new(serial) };
     let serial_backend = bindings_Serial::Serial::new(serial_backend);
 
-    console::Console::new(serial_backend).serve();
+    console::Console::new(serial_backend).serve().await;
 }
 
 include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));

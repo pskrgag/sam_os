@@ -10,34 +10,37 @@ impl Console {
         Self { backend }
     }
 
-    pub fn put_str<S: AsRef<str>>(&self, s: S) {
-        self.backend.Put(s.as_ref()).unwrap();
+    pub async fn put_str<S: AsRef<str>>(&self, s: S) {
+        self.backend
+            .Put(s.as_ref().try_into().unwrap())
+            .await
+            .unwrap();
     }
 
-    pub fn read_until_newline(&self) -> String {
+    pub async fn read_until_newline(&self) -> String {
         let mut res = String::new();
 
         loop {
-            let new = self.backend.GetByte().unwrap();
+            let new = self.backend.GetByte().await.unwrap();
 
             if new.byte == b'\r' {
-                self.put_str("\n");
+                self.put_str("\n").await;
                 break res;
             } else {
                 let mut s = String::with_capacity(1);
 
                 s.push(new.byte as char);
-                self.put_str(&s);
+                self.put_str(&s).await;
             }
 
             res.push(new.byte as char);
         }
     }
 
-    pub fn serve(self) {
+    pub async fn serve(self) {
         loop {
-            self.put_str("> ");
-            let cmd = self.read_until_newline();
+            self.put_str("> ").await;
+            let cmd = self.read_until_newline().await;
 
             if cmd.is_empty() {
                 continue;
@@ -51,12 +54,15 @@ impl Console {
                     "echo" => {
                         let echo = parts.collect::<Vec<_>>().join(" ");
 
-                        self.put_str(alloc::format!("{echo}\n"));
+                        self.put_str(alloc::format!("{echo}\n")).await;
                     }
-                    _ => self.put_str(alloc::format!("Unknown command '{cmd_name}'\n")),
+                    _ => {
+                        self.put_str(alloc::format!("Unknown command '{cmd_name}'\n"))
+                            .await
+                    }
                 }
             } else {
-                self.put_str("Failed to parse command\n");
+                self.put_str("Failed to parse command\n").await;
             }
         }
     }

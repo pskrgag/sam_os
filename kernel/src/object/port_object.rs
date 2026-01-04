@@ -151,7 +151,7 @@ impl Port {
         let mut server_msg = copy_ipc_message_from_user(server_msg_uptr)?;
         let mut arena_len = 0;
 
-        let mut client_msg = self.queue.try_consume().ok_or(ErrorType::WouldBlock)?;
+        let mut client_msg = self.try_consume().ok_or(ErrorType::WouldBlock)?;
 
         // Copy arena data
         if let Some(d) = server_msg.in_arena() {
@@ -173,8 +173,15 @@ impl Port {
         Ok(arena_len)
     }
 
+    fn try_consume(&self) -> Option<IpcMessage<'static>> {
+        let msg = self.queue.try_consume()?;
+
+        self.signal_clear(Signal::MessageReady.into());
+        Some(msg)
+    }
+
     fn produce(&self, message: IpcMessage<'static>) {
         self.queue.produce(message);
-        self.signal(Signal::MessageReady.into());
+        self.signal_fire(Signal::MessageReady.into());
     }
 }

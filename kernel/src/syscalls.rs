@@ -326,5 +326,6 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
 
 fn do_write(string: &[u8]) {
     let str = unsafe { core::str::from_utf8_unchecked(string) };
+    // let str = alloc::format!("{} --> {str}\n", current_task().name());
     print_str(str);
 }

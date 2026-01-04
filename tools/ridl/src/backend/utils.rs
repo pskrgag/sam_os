@@ -1,6 +1,7 @@
 use crate::ast::{
     argtype::{BuiltinTypes, Struct, Type},
     function::{Argument, Function},
+    interface::Interface,
 };
 use std::io::Write;
 
@@ -50,104 +51,19 @@ pub fn includes<W: Write>(buf: &mut W) {
     writeln!(buf, "use rtl::error::ErrorType;").unwrap();
     writeln!(buf, "use serde::{{Deserialize, Serialize}};").unwrap();
     writeln!(buf, "use alloc::boxed::Box;").unwrap();
-    writeln!(buf, "use postcard::{{to_allocvec, from_bytes, to_slice}};").unwrap();
-    writeln!(buf, "use libc::port::Port;").unwrap();
+    writeln!(
+        buf,
+        "use postcard::{{to_vec, to_allocvec, from_bytes, to_slice}};"
+    )
+    .unwrap();
+    writeln!(buf, "use rokio::port::Port;").unwrap();
     writeln!(buf, "use alloc::sync::Arc;").unwrap();
-    writeln!(buf, "use alloc::string::String;").unwrap();
+    writeln!(buf, "use heapless::String as HLString;").unwrap();
+    writeln!(buf, "use heapless::Vec as HLVec;").unwrap();
     writeln!(buf, "use alloc::vec::Vec;").unwrap();
     writeln!(buf, "use crate::alloc::borrow::ToOwned;").unwrap();
     writeln!(buf, "use serde::ser::SerializeTuple;").unwrap();
-    writeln!(
-        buf,
-        r#"
-        fn clone_into_array<T, const N: usize>(slice: &[T]) -> Result<(usize, [T; N]), ()>
-        where
-            T: Clone + Default
-    {{
-        let mut a: [T; N] = core::array::from_fn(|_| T::default());
-
-        if a.as_mut().len() < slice.len() {{
-            Err(())
-        }} else {{
-            (a[..slice.len()]).clone_from_slice(slice);
-            Ok((slice.len(), a))
-        }}
-     }}
-    "#
-    )
-    .unwrap();
-
-    // Custom (de)serialization functions for slices (usize, [T; N])
-
-    writeln!(
-        buf,
-        r#"
-use core::mem::MaybeUninit;
-use serde::de::{{Error, SeqAccess, Unexpected, Visitor}};
-use serde::ser::SerializeSeq;
-use serde::{{Deserializer, Serializer}};
-
-        fn serialize<const N: usize, S, T>(t: &(usize, [T; N]), serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-            T: Serialize,
-            {{
-                 {{
-                      let mut seq = serializer.serialize_seq(Some(t.0 + 1))?;
-
-                      seq.serialize_element(&t.0)?;
-
-                      for elem in 0..t.0 {{
-                          seq.serialize_element(&t.1[elem])?;
-                      }}
-
-                      seq.end()
-                  }}
-             }}
-
-    fn deserialize<'de, D, const N: usize, T>(data: D) -> Result<(usize, [T; N]), D::Error>
-    where
-        D: Deserializer<'de>,
-        T: Deserialize<'de>,
-        {{
-             {{
-                  struct Vis<'de, T: Deserialize<'de>, const N: usize>(
-                      (
-                          core::marker::PhantomData<[T; N]>,
-                          core::marker::PhantomData<&'de u8>,
-                      ),
-                  );
-
-                  impl<'de, T: Deserialize<'de>, const N: usize> Visitor<'de> for Vis<'de, T, N> {{
-                      type Value = (usize, [T; N]);
-
-                      fn expecting(&self, _formatter: &mut core::fmt::Formatter) -> core::fmt::Result {{
-                          Ok(())
-                      }}
-
-                      fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-                      where
-                          A: SeqAccess<'de>,
-                      {{
-                           let len = seq.next_element::<u64>()?.ok_or(Error::custom("wtf"))? as usize;
-                           let mut res = [const {{ MaybeUninit::uninit() }}; N];
-
-                           assert!(len < N);
-
-                           for i in res.iter_mut().take(len) {{
-                               i.write(seq.next_element::<T>()?.ok_or(Error::custom("wtf1"))?);
-                           }}
-
-                           Ok(unsafe {{ (len, res.map(|x| x.assume_init())) }})
-                       }}
-                  }}
-
-                  data.deserialize_seq(unsafe {{ core::mem::zeroed::<Vis<T, N>>() }})
-              }}
-         }}
-    "#
-    )
-    .unwrap();
+    writeln!(buf, "use rtl::handle::Handle as RawHandle;").unwrap();
     writeln!(buf).unwrap();
 }
 
@@ -169,11 +85,6 @@ fn produce_wire_type<W: Write>(buf: &mut W, s: &Struct, name: &str, tx: bool) {
     .unwrap();
 
     for data in &s.data {
-        if data.1.is_sequence() {
-            writeln!(buf, "    #[serde(serialize_with = \"serialize\")]").unwrap();
-            writeln!(buf, "    #[serde(deserialize_with = \"deserialize\")]").unwrap();
-        }
-
         writeln!(buf, "    pub {}: {},", data.0, data.1.as_wire()).unwrap();
     }
 
@@ -190,7 +101,7 @@ fn produce_public_type<W: Write>(buf: &mut W, s: &Struct, name: &str, tx: bool) 
     writeln!(buf, "#[derive(Debug)]\npub struct {struct_name} {{",).unwrap();
 
     for data in &s.data {
-        writeln!(buf, "    pub {}: {},", data.0, data.1.as_public()).unwrap();
+        writeln!(buf, "    pub {}: {},", data.0, data.1.as_rust()).unwrap();
     }
 
     writeln!(buf, "}}").unwrap();
@@ -302,12 +213,10 @@ fn type_wire_to_public<S: AsRef<str>>(tp: &Type, var: S) -> String {
 
     match tp {
         Type::Sequence { inner, .. } => {
-            if **inner == Type::Builtin(BuiltinTypes::Char) {
-                format!("core::str::from_utf8(&{name}.1[..{name}.0]).unwrap().to_owned()",)
-            } else if matches!(**inner, Type::Builtin(_)) {
-                format!("{name}.1[..{name}.0].to_vec()",)
+            if matches!(**inner, Type::Builtin(_)) {
+                format!("{name}.clone()")
             } else {
-                format!("(&{name}.1[..{name}.0]).into_iter().map(|x| x.clone().try_to_public(_message).unwrap()).collect()")
+                format!("{name}.into_iter().map(|x| x.clone().try_to_public(_message).unwrap()).collect()")
             }
         }
         Type::Builtin(BuiltinTypes::Handle) => format!("Handle::new(_message.handles()[{name}])"),
@@ -320,15 +229,15 @@ fn type_public_to_wire<S: AsRef<str>>(tp: &Type, var: S) -> String {
     let name = var.as_ref();
 
     match tp {
-        Type::Sequence { inner, .. } => {
+        Type::Sequence { inner, count } => {
             let f = match **inner {
-                Type::Builtin(BuiltinTypes::Char) => ".as_bytes()",
-                Type::Struct(_) => ".iter().map(|x| x.clone().try_to_wire(_message).unwrap()).collect::<Vec<_>>().as_slice()",
-                _ => ".as_slice()",
+                Type::Builtin(_) => ".clone()",
+                Type::Struct(_) => &format!(".iter().map(|x| x.clone().try_to_wire(_message).unwrap()).collect::<HLVec<_, {count}>>()"),
+                _ => todo!(),
             };
 
             format!(
-                "clone_into_array({name}{f}).unwrap()",
+                "{name}{f}.clone()",
             )
         }
         Type::Builtin(BuiltinTypes::Handle) => format!(
@@ -346,7 +255,7 @@ fn wire_to_public<W: Write>(buf: &mut W, s: &Struct) {
         buf,
         r#"
 impl WireToPublic<{name}> for {wire_name} {{
-    fn try_to_public(self, _message: &IpcMessage) -> Result<{name}, ()> {{
+    fn try_to_public(self, _message: &IpcMessage) -> Result<{name}, ErrorType> {{
         Ok({name} {{
             {}
         }})
@@ -368,7 +277,7 @@ impl WireToPublic<{name}> for {wire_name} {{
         buf,
         r#"
 impl PublicToWire<{wire_name}> for {name} {{
-    fn try_to_wire(self, _message: &mut IpcMessage) -> Result<{wire_name}, ()> {{
+    fn try_to_wire(self, _message: &mut IpcMessage) -> Result<{wire_name}, ErrorType> {{
         Ok({wire_name} {{
             {}
         }})
@@ -383,6 +292,94 @@ impl PublicToWire<{wire_name}> for {name} {{
             })
             .collect::<Vec<_>>()
             .join(", "),
+    )
+    .unwrap();
+}
+
+fn produce_send_struct<W: Write>(buf: &mut W, interface: &Interface, message: &Message) {
+    let int_name = interface.name();
+
+    writeln!(
+        buf,
+        r#"
+    pub struct {int_name}{message_name}Reply {{
+        port: RawHandle,
+        reply_port: RawHandle,
+    }}
+
+    impl {int_name}{message_name}Reply {{
+        pub fn reply(self, msg: {tp}) -> Result<(), ErrorType> {{
+            let mut out_msg = IpcMessage::new();
+            let wire = RxMessage::Ok(Rx::{message_name}(msg.try_to_wire(&mut out_msg)?));
+            let vec = to_allocvec(&wire).unwrap();
+            let port = core::mem::ManuallyDrop::new(unsafe {{ Port::new(Handle::new(self.port)) }});
+
+            out_msg.set_out_arena(vec.as_slice());
+
+            port.reply(libc::handle::Handle::new(self.reply_port), &out_msg)
+        }}
+    }}
+"#,
+        message_name = message.name,
+        tp = message.rx.name,
+    )
+    .unwrap();
+}
+
+pub fn produce_server_public_enum<W: Write>(
+    buf: &mut W,
+    interface: &Interface,
+    messages: &Vec<Message>,
+) {
+    let int_name = interface.name();
+
+    for msg in messages {
+        produce_send_struct(buf, interface, msg);
+    }
+
+    writeln!(buf, "pub enum {int_name}Request {{").unwrap();
+    for msg in messages {
+        let message_name = &msg.name;
+
+        writeln!(buf, "    {message_name}{{ value: {message_name}Tx, responder: {int_name}{message_name}Reply }},").unwrap();
+    }
+    writeln!(buf, "}}").unwrap();
+
+    writeln!(
+        buf,
+        r#"
+impl Tx {{
+    fn to_public(
+        self,
+        old_message: &IpcMessage,
+        port: &mut Port)
+    -> Result<{int_name}Request, ErrorType> 
+    {{
+        match self {{
+            {}
+        }}
+    }}
+}}
+"#,
+        messages
+            .iter()
+            .map(|x| {
+                let message_name = &x.name;
+
+                format!(r#"
+                    Self::{strname}(x) => {{
+                        x.try_to_public(old_message).map(|value| {{
+                            {int_name}Request::{strname} {{ value, responder: {int_name}{message_name}Reply {{
+                                    port: unsafe {{ port.handle().as_raw() }},
+                                    reply_port: old_message.reply_port(),
+                                }}
+                            }}
+                        }})
+                    }}"#, 
+                    strname = x.name) 
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
     )
     .unwrap();
 }
@@ -402,11 +399,11 @@ trait Message: Sized {{
 }}
 
 trait WireToPublic<T>: Sized {{
-    fn try_to_public(self, _message: &IpcMessage) -> Result<T, ()>;
+    fn try_to_public(self, _message: &IpcMessage) -> Result<T, ErrorType>;
 }}
 
 trait PublicToWire<T>: Sized {{
-    fn try_to_wire(self, _message: &mut IpcMessage) -> Result<T, ()>;
+    fn try_to_wire(self, _message: &mut IpcMessage) -> Result<T, ErrorType>;
 }}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -474,7 +471,7 @@ pub struct {name} {{
             .join("\n"),
         s.data
             .iter()
-            .map(|x| format!("pub {}: {},", x.0, x.1.as_public()))
+            .map(|x| format!("pub {}: {},", x.0, x.1.as_rust()))
             .collect::<Vec<_>>()
             .join("\n"),
         name = s.name,

@@ -6,28 +6,30 @@ use bindings_Device::Device;
 use bindings_NameServer::NameServer;
 use bindings_Pci::Pci;
 use hal::{address::MemRange, arch::PAGE_SIZE};
-use libc::{handle::Handle, main, port::Port, vmm::vms::vms};
+use libc::{handle::Handle, vmm::vms::vms};
+use rokio::port::Port;
 
-mod sdhci;
 mod regs;
+mod sdhci;
 mod server;
 
-#[main]
-fn main(nameserver: Option<Handle>) {
-    let ns = NameServer::new(Port::new(nameserver.unwrap()));
-    let _pci = loop {
+#[rokio::main]
+async fn main(nameserver: Option<Handle>) {
+    let ns = NameServer::new(unsafe { Port::new(nameserver.unwrap()) });
+    let pci = loop {
         // TODO: add support for loading in dependency
-        if let Ok(pci) = ns.Get("pci") {
+        if let Ok(pci) = ns.Get("pci".try_into().unwrap()).await {
             break pci;
         }
     };
 
-    let pci = Pci::new(Port::new(ns.Get("pci").expect("Failed to get PCI").handle));
+    let pci = unsafe { Pci::new(Port::new(pci.handle)) };
 
     // These IDS are from QEMU
-    let pci_handle = Device::new(Port::new(pci.Device(0x1b36, 0x7).unwrap().handle));
+    let pci_handle =
+        Device::new(unsafe { Port::new(pci.Device(0x1b36, 0x7).await.unwrap().handle) });
 
-    let res = pci_handle.Map().unwrap();
+    let res = pci_handle.Map().await.unwrap();
     assert_eq!(res.data.len(), 1);
 
     let va = vms()
@@ -39,7 +41,7 @@ fn main(nameserver: Option<Handle>) {
     let mut sdhci = sdhci::Sdhci::new(va).unwrap();
     println!("SDHCI version {:?}", sdhci.version());
 
-    server::start_server(sdhci, &ns).unwrap();
+    server::start_server(sdhci, &ns).await.unwrap();
 }
 
 include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));

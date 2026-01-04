@@ -22,7 +22,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
     fn compile_function(&mut self, f: &Function) {
         let msg = function_to_struct(f);
 
-        write!(self.buf, "    pub fn {}(&self", f.name()).unwrap();
+        write!(self.buf, "    pub async fn {}(&self", f.name()).unwrap();
 
         for arg in &msg.tx.data {
             write!(self.buf, ", {}: {}", arg.0, arg.1.as_arg()).unwrap();
@@ -40,9 +40,8 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
         _message.set_out_arena(data_vec.as_slice());
         _message.set_in_arena(receive_buffer.as_mut_slice());
 
-        self.port.call(&mut _message)?;
-
-        let res: RxMessage = from_bytes(_message.in_data.unwrap()).unwrap();
+        let size = self.port.call(&mut _message).await?;
+        let res: RxMessage = from_bytes(&_message.in_data.unwrap()[..size]).unwrap();
 
         let wire: {name}RxWire = match res {{
             RxMessage::Ok(e) => Ok::<{name}RxWire, ErrorType>(e.try_into().unwrap()),
@@ -57,7 +56,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                     .map(|x| match &x.1 {
                         Type::Sequence { .. } => {
                             format!(
-                                "{name}: clone_into_array({name}.as_bytes()).unwrap()",
+                                "{name}: {name}.clone()",
                                 name = x.0
                             )
                         }

@@ -1,6 +1,10 @@
 use super::bindings_NameServer as bindings;
+use alloc::borrow::ToOwned;
+use alloc::sync::Arc;
 use alloc::{collections::btree_map::BTreeMap, string::String};
-use libc::{handle::Handle, port::Port};
+use bindings::{GetRx, NameServerRequest, RegisterRx};
+use libc::handle::Handle;
+use rokio::port::Port;
 use rtl::{error::ErrorType, locking::spinlock::Spinlock};
 
 #[derive(Default)]
@@ -8,30 +12,37 @@ struct NameServer {
     table: BTreeMap<String, Handle>,
 }
 
-pub fn start(p: Port) {
-    let mut server = bindings::NameServer::new(p, Spinlock::new(NameServer::default()))
-        .register_handler(|t: bindings::RegisterTx, roottask| {
-            let mut roottask = roottask.lock();
-
-            if roottask.table.contains_key(&t.name) {
-                return Err(ErrorType::AlreadyExists);
-            }
-
-            roottask.table.insert(t.name, t.handle);
-            Ok(bindings::RegisterRx {})
-        })
-        .register_handler(|t: bindings::GetTx, roottask| {
-            let roottask = roottask.lock();
-
-            if let Some(h) = roottask.table.get(&t.name) {
-                let h = h.clone_handle().unwrap();
-
-                Ok(bindings::GetRx { handle: h })
-            } else {
-                Err(ErrorType::NotFound)
-            }
-        });
-
+pub async fn start(p: Port) {
     println!("Starting nameserver...");
-    server.run().unwrap();
+
+    let ns = Arc::new(Spinlock::new(NameServer::default()));
+
+    bindings::NameServer::for_each(p, |request| {
+        let ns = ns.clone();
+
+        async move {
+            match request {
+                NameServerRequest::Get { value, responder } => {
+                    responder.reply(GetRx {
+                        handle: ns
+                            .lock()
+                            .table
+                            .get(value.name.as_str())
+                            .ok_or(ErrorType::NotFound)?
+                            .clone_handle()?,
+                    })?;
+                }
+                NameServerRequest::Register { value, responder } => {
+                    ns.lock()
+                        .table
+                        .insert(value.name.as_str().to_owned(), value.handle);
+                    responder.reply(RegisterRx {})?;
+                }
+            };
+
+            Ok(())
+        }
+    })
+    .await
+    .unwrap();
 }

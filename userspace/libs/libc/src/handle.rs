@@ -11,7 +11,6 @@ use rtl::{error::ErrorType, handle};
 use spin::Once;
 
 /// Owning RAII wrapper around handle
-#[repr(transparent)]
 #[derive(Debug)]
 pub struct Handle(handle::Handle);
 

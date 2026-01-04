@@ -1,43 +1,49 @@
 #![no_std]
 #![no_main]
 
-use alloc::boxed::Box;
+use alloc::sync::Arc;
 use bindings_NameServer::NameServer;
-use bindings_Pci::{DeviceRx, DeviceTx, Pci};
+use bindings_Pci::{DeviceRx, DeviceTx, Pci, PciRequest};
 use device::PciDevice;
-use dispatch_loop::EndpointsDispatcher;
 use fdt::Fdt;
 use hal::address::VirtualAddress;
-use libc::{factory::factory, handle::Handle, main, port::Port, syscalls::Syscall};
+use libc::{handle::Handle, syscalls::Syscall};
+use rokio::port::Port;
 use rtl::locking::spinlock::Spinlock;
 
 mod device;
 mod ecam;
 
-pub static DISPATH_POOL: EndpointsDispatcher = EndpointsDispatcher::new();
-
-#[main]
-fn main(nameserver: Option<Handle>) {
+#[rokio::main]
+async fn main(nameserver: Option<Handle>) {
     let fdt = Syscall::get_fdt().unwrap();
     let fdt = unsafe { Fdt::from_ptr(fdt.to_raw::<u8>()).unwrap() };
-    let ecam = ecam::PciEcam::new(&fdt).unwrap();
-    let port = factory().create_port().unwrap();
+    let ecam = Arc::new(Spinlock::new(ecam::PciEcam::new(&fdt).unwrap()));
+    let port = Port::create().unwrap();
 
-    let ns = NameServer::new(Port::new(nameserver.unwrap()));
+    let ns = NameServer::new(unsafe { Port::new(nameserver.unwrap()) });
 
-    ns.Register("pci", port.handle())
+    ns.Register("pci".try_into().unwrap(), port.handle())
+        .await
         .expect("Failed to register PCI handle");
 
-    let pci =
-        Pci::new(port, Spinlock::new(ecam)).register_handler(|d: DeviceTx, ecam| {
-            let (disp, handle) = PciDevice::new(d.vendor, d.device, ecam.clone())?;
+    Pci::for_each(port, move |req| {
+        let ecam = ecam.clone();
 
-            DISPATH_POOL.add(disp);
-            Ok(DeviceRx { handle })
-        });
+        async move {
+            match req {
+                PciRequest::Device { value, responder } => {
+                    let (disp, handle) = PciDevice::new(value.vendor, value.device, ecam.clone())?;
 
-    DISPATH_POOL.add(Box::new(pci));
-    DISPATH_POOL.dispatch().unwrap();
+                    rokio::executor::spawn(disp);
+                    responder.reply(DeviceRx { handle })?;
+                }
+            }
+            Ok(())
+        }
+    })
+    .await
+    .unwrap()
 }
 
 include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));

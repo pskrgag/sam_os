@@ -88,7 +88,13 @@ impl KernelObjectBase {
         Wait { base: self, sig }.await
     }
 
-    pub fn signal(&self, sig: Signals) {
+    pub fn signal_clear(&self, sig: Signals) {
+        let mut inner = self.0.lock();
+
+        inner.signals &= !sig;
+    }
+
+    pub fn signal_fire(&self, sig: Signals) {
         let mut inner = self.0.lock();
         inner.signals |= sig;
 

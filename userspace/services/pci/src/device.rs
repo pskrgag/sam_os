@@ -1,10 +1,11 @@
 use super::ecam::PciEcam;
-use crate::bindings_Device::{Device, MapRx, MapTx, PciMapping};
-use alloc::boxed::Box;
+use crate::bindings_Device::{Device, DeviceRequest, MapRx, PciMapping};
 use alloc::sync::Arc;
+use core::future::Future;
 use hal::address::Address;
+use heapless::Vec;
 use libc::handle::Handle;
-use libc::port::Port;
+use rokio::port::Port;
 use rtl::error::ErrorType;
 use rtl::locking::spinlock::Spinlock;
 
@@ -19,33 +20,43 @@ impl PciDevice {
         vendor: u16,
         device: u16,
         bus: Arc<Spinlock<PciEcam>>,
-    ) -> Result<(Box<Device<Self>>, Handle), ErrorType> {
+    ) -> Result<(impl Future<Output = Result<(), ErrorType>>, Handle), ErrorType> {
         let port = Port::create()?;
-        let val = Self {
+        let device = Arc::new(Spinlock::new(Self {
             vendor,
             device,
             bus,
-        };
+        }));
         let raw_handle = port.handle().clone_handle()?;
 
         Ok((
-            Box::new(Device::new(port, val).register_handler(|_: MapTx, val| {
-                let mappings = val
-                    .bus
-                    .lock()
-                    .mapping_address(val.vendor, val.device)
-                    .unwrap();
+            Device::for_each(port, move |req| {
+                let device = device.clone();
 
-                Ok(MapRx {
-                    data: mappings
-                        .into_iter()
-                        .map(|x| PciMapping {
-                            base: x.start().bits() as _,
-                            size: x.size() as _,
-                        })
-                        .collect(),
-                })
-            })),
+                async move {
+                    match req {
+                        DeviceRequest::Map { responder, .. } => {
+                            let device = device.lock();
+
+                            let mappings: Vec<PciMapping, 6> = device
+                                .bus
+                                .lock()
+                                .mapping_address(device.vendor, device.device)
+                                .unwrap()
+                                .into_iter()
+                                .map(|x| PciMapping {
+                                    base: x.start().bits() as _,
+                                    size: x.size() as _,
+                                })
+                                .collect();
+
+                            responder.reply(MapRx { data: mappings })?;
+                        }
+                    }
+
+                    Ok(())
+                }
+            }),
             raw_handle,
         ))
     }

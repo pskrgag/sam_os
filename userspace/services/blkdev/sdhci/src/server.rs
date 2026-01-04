@@ -1,28 +1,39 @@
 use super::bindings_NameServer::NameServer;
 use super::sdhci::Sdhci;
+use alloc::sync::Arc;
 use alloc::vec::Vec;
-use bindings_BlkDev::{BlkDev, ReadBlockRx, ReadBlockTx};
-use libc::port::Port;
+use bindings_BlkDev::{BlkDev, BlkDevRequest, ReadBlockRx, ReadBlockTx};
+use rokio::port::Port;
 use rtl::error::ErrorType;
 use rtl::locking::spinlock::Spinlock;
 
-pub fn start_server(sdhci: Sdhci, ns: &NameServer) -> Result<(), ErrorType> {
+pub async fn start_server(sdhci: Sdhci, ns: &NameServer) -> Result<(), ErrorType> {
     let port = Port::create()?;
+    let sdhci = Arc::new(Spinlock::new(sdhci));
 
-    ns.Register("blkdev", port.handle())
+    ns.Register("blkdev".try_into().unwrap(), port.handle())
+        .await
         .expect("Failed to register handle in nameserver");
 
-    BlkDev::new(port, Spinlock::new(sdhci))
-        .register_handler(|req: ReadBlockTx, card| {
-            let mut card = card.lock();
-            let mut data = Vec::with_capacity(card.block_size());
+    BlkDev::for_each(port, move |req| {
+        let sdhci = sdhci.clone();
 
-            data.resize(card.block_size(), 0);
+        async move {
+            match req {
+                BlkDevRequest::ReadBlock { value, responder } => {
+                    let mut card = sdhci.lock();
+                    let mut data = Vec::with_capacity(card.block_size());
 
-            card.read_block(req.blockIdx, data.as_mut_slice())?;
-            Ok(ReadBlockRx { data })
-        })
-        .run()
+                    data.resize(card.block_size(), 0);
+
+                    card.read_block(value.blockIdx, data.as_mut_slice())?;
+                    responder.reply(ReadBlockRx { data: data.into_iter().collect() })?;
+                }
+            }
+            Ok(())
+        }
+    })
+    .await
 }
 
 include!(concat!(env!("OUT_DIR"), "/blkdev.rs"));

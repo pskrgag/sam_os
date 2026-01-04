@@ -9,3 +9,4 @@ crossbeam = { version = "0.8.4", features = ["alloc"], default-features = false 
 libc = { path = "../libc" }
 rtl = { path = "../../../rtl" }
 spin = "0.10.0"
+rokio_proc = { path = "procmacro" }

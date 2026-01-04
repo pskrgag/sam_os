@@ -2,14 +2,15 @@
 #![no_std]
 
 use alloc::string::ToString;
-use libc::{handle::Handle, main, port::Port, task::Task};
+use libc::{handle::Handle, task::Task};
+use rokio::port::Port;
 
 static CPIO: &[u8] = include_bytes!("/tmp/archive.cpio");
 
 mod roottask;
 
-#[main]
-fn main(_: Option<Handle>) {
+#[rokio::main]
+async fn main(_: Option<Handle>) {
     let p = Port::create().unwrap();
 
     for i in cpio_reader::iter_files(CPIO) {
@@ -29,7 +30,7 @@ fn main(_: Option<Handle>) {
         core::mem::forget(task);
     }
 
-    roottask::start(p);
+    roottask::start(p).await;
 }
 
 include!(concat!(env!("OUT_DIR"), "/hello.rs"));

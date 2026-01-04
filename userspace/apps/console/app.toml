@@ -8,11 +8,11 @@ extra_qemu_args = "-drive file=sd.img,format=raw,if=none,id=mydrive -device sdhc
 [[component]]
 name = "console"
 
-# [[component]]
-# name = "pci"
+[[component]]
+name = "pci"
 
 [[component]]
 name = "uart"
 
-# [[component]]
-# name = "sdhci"
+[[component]]
+name = "sdhci"

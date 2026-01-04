@@ -1,8 +1,7 @@
-use alloc::boxed::Box;
 use alloc::vec::Vec;
-use async_task::{spawn, Runnable};
+use async_task::Runnable;
 use core::future::Future;
-use core::pin::Pin;
+use core::mem::forget;
 use core::task::{RawWakerVTable, Waker};
 use crossbeam::queue::SegQueue;
 use libc::syscalls::Syscall;
@@ -46,13 +45,18 @@ impl Runtime {
         }
     }
 
-    pub fn spawn<F: Future<Output = ()> + 'static>(&self, f: F) {
+    pub fn spawn<F: Future + 'static + Send>(&'static self, f: F)
+    where
+        F::Output: Send,
+    {
         let (runnable, task) =
-            unsafe { async_task::spawn_unchecked(f, |runnable| self.runnable.push(runnable)) };
+            async_task::spawn(f, |runnable: Runnable| self.runnable.push(runnable));
 
-        self.runnable.push(runnable);
+        task.detach();
+        runnable.schedule();
     }
 
+    #[inline(never)]
     fn poll_runnable(&'static self) {
         while let Some(task) = self.runnable.pop() {
             task.run();
@@ -63,20 +67,30 @@ impl Runtime {
         self.waiting.push(w);
     }
 
-    fn wait(&self) -> Result<(), ErrorType> {
+    fn wait(&self) -> Result<usize, ErrorType> {
         let mut wait_entries = Vec::new();
 
         while let Some(entry) = self.waiting.pop() {
-            wait_entries.push(WaitEntry {
+            let we = WaitEntry {
                 handle: entry.handle,
                 waitfor: entry.waitfor,
                 pendind: Signal::None.into(),
                 context: entry.waker.data() as usize,
-                context1: unsafe { entry.waker.vtable() as *const _ as usize },
-            })
+                context1: entry.waker.vtable() as *const _ as usize,
+            };
+            wait_entries.push(we);
+
+            // Waker was disassembled. Don't drop the reference here
+            forget(entry.waker);
+        }
+
+        if wait_entries.len() == 0 {
+            return Ok(0);
         }
 
         Syscall::object_wait_many(&mut wait_entries)?;
+
+        let mut waked = 0;
 
         for entry in wait_entries {
             let waker = unsafe {
@@ -87,7 +101,8 @@ impl Runtime {
             };
 
             if *(entry.pendind & entry.waitfor) != 0 {
-                waker.wake();
+                waker.wake_by_ref();
+                waked += 1;
             } else {
                 self.waiting.push(Waiter {
                     waker,
@@ -97,20 +112,32 @@ impl Runtime {
             }
         }
 
-        Ok(())
+        Ok(waked)
     }
 
     pub fn run(&'static self) {
-        loop {
+        while {
             // Poll ready tasks
             self.poll_runnable();
 
             // Wait for events to occur
-            self.wait().unwrap();
-        }
+            self.wait().unwrap() != 0
+        } {}
     }
 }
 
 pub(crate) fn current_runtime() -> &'static Runtime {
     &*CURRENT_RUNTIME
+}
+
+pub fn spawn<F: Future + 'static + Send>(f: F)
+where
+    F::Output: Send,
+{
+    CURRENT_RUNTIME.spawn(f)
+}
+
+pub fn block_on<F: Future<Output = ()> + 'static + Send>(f: F) {
+    CURRENT_RUNTIME.spawn(f);
+    CURRENT_RUNTIME.run();
 }

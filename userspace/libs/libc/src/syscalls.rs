@@ -29,7 +29,7 @@ pub enum Syscall<'a> {
     PortCall(RawHandle, *mut IpcMessage<'a>),
     PortSend(RawHandle, *mut IpcMessage<'a>),
     PortReplyWait(RawHandle, RawHandle, *mut IpcMessage<'a>),
-    PortReply(RawHandle, RawHandle, *mut IpcMessage<'a>),
+    PortReply(RawHandle, RawHandle, *const IpcMessage<'a>),
     PortReceive(RawHandle, *mut IpcMessage<'a>),
     CloneHandle(RawHandle),
     GetFdt,
@@ -150,7 +150,7 @@ impl<'a> Syscall<'a> {
     pub fn port_reply(
         h: &Handle,
         reply_port: Handle,
-        msg: *mut IpcMessage<'a>,
+        msg: *const IpcMessage<'a>,
     ) -> Result<(), ErrorType> {
         unsafe {
             syscall(
