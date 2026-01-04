@@ -1,5 +1,5 @@
 use super::alloc::alloc_pages;
-use crate::arch::mmu::{lvl_to_order, va_to_index, Pte, PAGE_TABLE_LAST_LVL, PTE_COUNT};
+use crate::arch::mmu::{PAGE_TABLE_LAST_LVL, PTE_COUNT, Pte, lvl_to_order, va_to_index};
 use hal::address::{Address, MemRange, PhysAddr, VirtAddr};
 use hal::arch::PAGE_SIZE;
 

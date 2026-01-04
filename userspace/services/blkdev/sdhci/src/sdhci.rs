@@ -6,9 +6,8 @@ use core::ptr::NonNull;
 use hal::address::{VirtAddr, VirtualAddress};
 use rtl::error::ErrorType;
 use safe_mmio::{
-    field,
+    UniqueMmioPointer, field,
     fields::{ReadOnly, ReadWrite},
-    UniqueMmioPointer,
 };
 
 #[repr(C, packed)]

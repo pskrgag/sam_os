@@ -1,7 +1,7 @@
 use super::utils;
 use crate::ast::{argtype::Struct, interface::Interface, module::Module};
 use std::io::Write;
-use utils::{function_to_struct, Message};
+use utils::{Message, function_to_struct};
 
 struct InterfaceCompiler<'a, W: Write> {
     interface: &'a Interface,
@@ -67,7 +67,9 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
 
     fn traits(&self) -> String {
         let name = self.interface.name();
-        format!("F: Fn({name}Request) -> Fut + Send + Sync + 'static,\nFut: Future<Output = Result<(), ErrorType>> + 'static + Send + Sync")
+        format!(
+            "F: Fn({name}Request) -> Fut + Send + Sync + 'static,\nFut: Future<Output = Result<(), ErrorType>> + 'static + Send + Sync"
+        )
     }
 
     fn register_handler(&mut self) {

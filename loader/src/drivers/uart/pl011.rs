@@ -1,9 +1,9 @@
-use super::{UartProbe, UARTS};
+use super::{UARTS, UartProbe};
 use core::fmt::{Result, Write};
 use core::mem::MaybeUninit;
 use fdt::node::FdtNode;
 use hal::arch::PAGE_SIZE;
-use hal::uart::{pl011::Uart, UartTrait};
+use hal::uart::{UartTrait, pl011::Uart};
 use linkme::distributed_slice;
 use loader_protocol::{DeviceKind, DeviceMapping, LoaderArg};
 use rtl::locking::fakelock::FakeLock;

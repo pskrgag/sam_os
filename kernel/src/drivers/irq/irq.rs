@@ -40,7 +40,9 @@ pub fn register_handler(irq: IntId, func: fn(&ClaimedIrq)) {
 pub fn irq_dispatch() {
     let gic = GIC.get().unwrap().lock();
 
-    if let Some(pending) = gic.pending() && let Some(x) = IRQS.lock().iter().find(|x| x.num() == pending.0) {
+    if let Some(pending) = gic.pending()
+        && let Some(x) = IRQS.lock().iter().find(|x| x.num() == pending.0)
+    {
         (x.dispatcher)(&pending);
     }
 }

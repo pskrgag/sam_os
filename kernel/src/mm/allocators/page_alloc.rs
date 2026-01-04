@@ -1,6 +1,6 @@
 use crate::adt::Vec;
 use crate::mm::memset_pages;
-use crate::sync::{spinlock::SpinlockGuard, Spinlock};
+use crate::sync::{Spinlock, spinlock::SpinlockGuard};
 use bitmaps::Bitmap;
 use hal::address::*;
 use hal::arch::PAGE_SIZE;

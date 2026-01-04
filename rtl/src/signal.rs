@@ -1,6 +1,6 @@
 use super::error::ErrorType;
-use bitmask::bitmask;
 use super::handle::Handle;
+use bitmask::bitmask;
 
 bitmask! {
     pub mask Signals: u8 where flags Signal {

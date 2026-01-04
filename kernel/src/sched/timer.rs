@@ -1,5 +1,5 @@
 use super::ticks::SYSTEM_TICK;
-use super::ticks::{sched_ticks, SchedTicks};
+use super::ticks::{SchedTicks, sched_ticks};
 use crate::sync::Spinlock;
 use alloc::boxed::Box;
 use alloc::collections::LinkedList;

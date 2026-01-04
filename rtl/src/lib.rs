@@ -10,6 +10,6 @@ pub mod handle;
 pub mod ipc;
 pub mod locking;
 pub mod misc;
+pub mod signal;
 pub mod syscalls;
 pub mod vmm;
-pub mod signal;

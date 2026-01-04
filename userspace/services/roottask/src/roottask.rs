@@ -16,7 +16,7 @@ pub async fn start(p: Port) {
         async move {
             match request {
                 NameServerRequest::Get { value, responder } => {
-                    responder.reply(&ns.get(value.name.as_str()).await.clone_handle()?)?;
+                    responder.reply(ns.get(value.name.as_str()).await)?;
                 }
                 NameServerRequest::Register { value, responder } => {
                     ns.insert(value.name.as_str().to_owned(), value.handle);

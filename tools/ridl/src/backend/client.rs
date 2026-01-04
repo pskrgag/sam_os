@@ -1,4 +1,5 @@
 use super::utils::{Message, function_to_struct};
+use crate::ast::argtype::Struct;
 use crate::{
     ast::{
         argtype::{BuiltinTypes, Type},
@@ -9,7 +10,6 @@ use crate::{
     backend::utils,
 };
 use std::io::Write;
-use crate::ast::argtype::Struct;
 
 struct InterfaceCompiler<'a, W: Write> {
     interface: &'a Interface,
@@ -55,10 +55,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                     .iter()
                     .map(|x| match &x.1 {
                         Type::Sequence { .. } => {
-                            format!(
-                                "{name}: {name}.clone()",
-                                name = x.0
-                            )
+                            format!("{name}: {name}.clone()", name = x.0)
                         }
                         Type::Builtin(BuiltinTypes::Handle) => format!(
                             "{name}: _message.add_handle(unsafe {{ {name}.as_raw() }})",

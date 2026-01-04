@@ -1,7 +1,7 @@
 use super::port_object::Port;
+use crate::object::KernelObjectBase;
 use crate::object::capabilities::CapabilityMask;
 use crate::object::handle::Handle;
-use crate::object::KernelObjectBase;
 use crate::sched::current;
 use crate::tasks::task::{Task, TaskName};
 use alloc::sync::Arc;

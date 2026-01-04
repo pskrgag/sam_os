@@ -29,6 +29,7 @@ enum Commands {
     },
     Clippy,
     Test,
+    Fmt,
 }
 
 fn main() {
@@ -54,5 +55,6 @@ fn main() {
         }
         Commands::Clippy => builder::clippy(config).unwrap(),
         Commands::Test => builder::test().unwrap(),
+        Commands::Fmt => builder::fmt().unwrap(),
     }
 }

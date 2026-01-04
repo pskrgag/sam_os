@@ -7,8 +7,8 @@ use rokio::port::Port;
 
 static CPIO: &[u8] = include_bytes!("/tmp/archive.cpio");
 
-mod roottask;
 mod handle_table;
+mod roottask;
 
 #[rokio::main]
 async fn main(_: Option<Handle>) {

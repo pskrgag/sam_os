@@ -51,9 +51,7 @@ fn kern_sync(ctx: &mut Context) {
     if !fixup(elr_el1, ctx) {
         error!("!!! Kernel sync exception\n");
         error!("{ctx:?}\n");
-        error!(
-            "ESR_EL1 0x{esr_el1:x} FAR_EL1 0x{far_el1:x}, ELR_EL1 0x{elr_el1:x}\n",
-        );
+        error!("ESR_EL1 0x{esr_el1:x} FAR_EL1 0x{far_el1:x}, ELR_EL1 0x{elr_el1:x}\n",);
 
         let mut bt = [VirtAddr::from_bits(0); 50];
 
@@ -85,9 +83,7 @@ pub fn kern_exception_bug() -> ! {
     let elr_el1 = ELR_EL1.get();
 
     error!("Something weird happened");
-    error!(
-        "ESR_EL1 0x{esr_el1:x} FAR_EL1 0x{far_el1:x}, ELR_EL1 0x{elr_el1:x}",
-    );
+    error!("ESR_EL1 0x{esr_el1:x} FAR_EL1 0x{far_el1:x}, ELR_EL1 0x{elr_el1:x}",);
     error!("No idea how to deal with 0x{esr_el1:x}");
 
     panic!();

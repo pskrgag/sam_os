@@ -1,5 +1,5 @@
 use fdt::Fdt;
-use hal::address::{MemRange, PhysAddr, Address};
+use hal::address::{Address, MemRange, PhysAddr};
 use hal::uart::{UartTrait, pl011::Uart};
 use libc::vmm::vms::vms;
 

@@ -294,11 +294,7 @@ impl Thread {
         let old = self
             .ticks
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |x| {
-                if x == 0 {
-                    None
-                } else {
-                    Some(x - 1)
-                }
+                if x == 0 { None } else { Some(x - 1) }
             });
 
         // old.is_err() means thread run out of quantum. When it will be re-enabled thread

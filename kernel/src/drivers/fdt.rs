@@ -1,4 +1,4 @@
-use hal::address::{LinearAddr, PhysAddr, Address};
+use hal::address::{Address, LinearAddr, PhysAddr};
 use loader_protocol::LoaderArg;
 use spin::Once;
 

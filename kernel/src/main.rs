@@ -23,16 +23,16 @@ extern crate log;
 mod arch;
 #[macro_use]
 mod smp;
+mod adt;
 mod drivers;
+mod logger;
 mod mm;
-mod panic;
-mod sync;
-mod sched;
 mod object;
+mod panic;
+mod sched;
+mod sync;
 mod syscalls;
 mod tasks;
-mod logger;
-mod adt;
 
 #[cfg(test)]
 #[macro_use]

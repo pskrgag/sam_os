@@ -10,7 +10,11 @@ mod console;
 async fn main(root: Option<Handle>) {
     let nameserver = bindings_NameServer::NameServer::new(unsafe { Port::new(root.unwrap()) });
 
-    let serial = nameserver.Get("serial".try_into().unwrap()).await.unwrap().handle;
+    let serial = nameserver
+        .Get("serial".try_into().unwrap())
+        .await
+        .unwrap()
+        .handle;
     let serial_backend = unsafe { Port::new(serial) };
     let serial_backend = bindings_Serial::Serial::new(serial_backend);
 

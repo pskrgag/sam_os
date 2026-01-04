@@ -1,12 +1,12 @@
 use super::handle_page::{HandleName, HandlePage};
 use crate::mm::vmm::vms::Vms;
+use crate::object::KernelObjectBase;
 use crate::object::capabilities::CapabilityMask;
 use crate::object::factory_object::FACTORY;
 use crate::object::handle::Handle;
 use crate::object::handle_table::HandleTable;
-use crate::object::KernelObjectBase;
 use crate::sched::{current, current_task};
-use crate::sync::{async_mutex::MutexGuard, Mutex, Spinlock};
+use crate::sync::{Mutex, Spinlock, async_mutex::MutexGuard};
 use crate::tasks::thread::Thread;
 use alloc::collections::LinkedList;
 use alloc::sync::Arc;

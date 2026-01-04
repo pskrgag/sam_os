@@ -1,12 +1,12 @@
 use crate::sync::Spinlock;
 use arm_gic::{
-    gicv3::{GicCpuInterface, GicV3, Group, InterruptGroup},
     IntId, UniqueMmioPointer,
+    gicv3::{GicCpuInterface, GicV3, Group, InterruptGroup},
 };
 use core::ptr::NonNull;
+use hal::address::VirtualAddress;
 use loader_protocol::{DeviceKind, LoaderArg};
 use spin::Once;
-use hal::address::VirtualAddress;
 
 pub struct Gic(GicV3<'static>);
 

@@ -64,16 +64,12 @@ impl<T> UserPtr<T> {
         unsafe {
             let res = arch_copy_from_user(self.p, core::mem::size_of::<T>() * s, to.as_ptr() as _);
 
-            if res == 0 {
-                Some(s)
-            } else {
-                None
-            }
+            if res == 0 { Some(s) } else { None }
         }
     }
 
     pub fn read(&self) -> Option<T> {
-        use core::mem::{size_of, MaybeUninit};
+        use core::mem::{MaybeUninit, size_of};
 
         let t = MaybeUninit::uninit();
 

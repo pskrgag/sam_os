@@ -1,8 +1,8 @@
 use crate::arch::PTE_PER_PAGE;
 use aarch64_cpu::registers::{TTBR0_EL1, Writeable};
 use core::arch::asm;
+use core::sync::atomic::{Ordering, compiler_fence};
 use hal::address::*;
-use core::sync::atomic::{compiler_fence, Ordering};
 
 #[inline]
 pub fn l0_linear_offset(va: VirtAddr) -> usize {

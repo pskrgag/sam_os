@@ -1,5 +1,5 @@
-use crate::tasks::thread::Thread;
 use crate::smp::percpu_ready;
+use crate::tasks::thread::Thread;
 use alloc::sync::Arc;
 
 percpu_global!(

@@ -4,7 +4,7 @@ use regex::Regex;
 use std::path::{Path, PathBuf};
 use std::str::from_utf8;
 use std::{
-    fs::{OpenOptions, read_dir, symlink_metadata},
+    fs::{read_dir, symlink_metadata, OpenOptions},
     io::Write,
 };
 use tempfile::NamedTempFile;
@@ -69,6 +69,33 @@ fn find_root_of<S: AsRef<str> + std::fmt::Display>(name: S) -> String {
 
 fn find_manifest_of<S: AsRef<str> + std::fmt::Display>(name: S) -> String {
     format!("{}/Cargo.toml", find_root_of(name))
+}
+
+fn for_each_manifest<F: Fn(&Path)>(f: F) -> std::io::Result<()> {
+    fn for_each_manifest_impl<P: AsRef<Path>, F: Fn(&Path)>(p: P, f: &F) -> std::io::Result<()> {
+        for entry in read_dir(p)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_dir() && has_manifest(&path)? {
+                let mut path = path.clone();
+
+                path.push("Cargo.toml");
+                f(&path);
+            }
+
+            if path.is_dir() {
+                let metadata = symlink_metadata(&path)?;
+                if !metadata.file_type().is_symlink() {
+                    for_each_manifest_impl(&path, f)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    for_each_manifest_impl(env!("CARGO_WORKSPACE_DIR"), &f)
 }
 
 fn binary(name: &str) -> String {
@@ -348,4 +375,19 @@ pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
 
 pub fn clippy(c: BuildScript) -> Result<(), String> {
     build_impl(&c, "clippy")
+}
+
+pub fn fmt() -> Result<(), ()> {
+    for_each_manifest(|path| {
+        run_prog(
+            "cargo",
+            &["fmt", "--manifest-path", path.as_os_str().to_str().unwrap()],
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap()
+    })
+    .map_err(|_| ())
 }

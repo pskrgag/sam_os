@@ -3,7 +3,7 @@ use crate::drivers::irq::irq::irq_dispatch;
 use crate::syscalls::do_syscall;
 use crate::tasks::task::Task;
 use crate::tasks::thread::Thread;
-use aarch64_cpu::registers::{Readable, ELR_EL1, ESR_EL1, FAR_EL1};
+use aarch64_cpu::registers::{ELR_EL1, ESR_EL1, FAR_EL1, Readable};
 use alloc::sync::Arc;
 use core::cell::LazyCell;
 use rtl::error::ErrorType;

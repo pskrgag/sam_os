@@ -217,7 +217,9 @@ fn type_wire_to_public<S: AsRef<str>>(tp: &Type, var: S) -> String {
             if matches!(**inner, Type::Builtin(_)) {
                 format!("{name}.clone()")
             } else {
-                format!("{name}.into_iter().map(|x| x.clone().try_to_public(_message).unwrap()).collect()")
+                format!(
+                    "{name}.into_iter().map(|x| x.clone().try_to_public(_message).unwrap()).collect()"
+                )
             }
         }
         Type::Builtin(BuiltinTypes::Handle) => format!("Handle::new(_message.handles()[{name}])"),
@@ -233,13 +235,13 @@ fn type_public_to_wire<S: AsRef<str>>(tp: &Type, var: S) -> String {
         Type::Sequence { inner, count } => {
             let f = match **inner {
                 Type::Builtin(_) => ".clone()",
-                Type::Struct(_) => &format!(".iter().map(|x| x.clone().try_to_wire(_message).unwrap()).collect::<HLVec<_, {count}>>()"),
+                Type::Struct(_) => &format!(
+                    ".iter().map(|x| x.clone().try_to_wire(_message).unwrap()).collect::<HLVec<_, {count}>>()"
+                ),
                 _ => todo!(),
             };
 
-            format!(
-                "{name}{f}.clone()",
-            )
+            format!("{name}{f}.clone()",)
         }
         Type::Builtin(BuiltinTypes::Handle) => format!(
             "_message.add_handle(unsafe {{ let res = {name}.as_raw(); core::mem::forget({name}); res }})",
@@ -323,18 +325,25 @@ fn produce_send_struct<W: Write>(buf: &mut W, interface: &Interface, message: &M
         }}
     }}
 "#,
-    message.rx
-        .data
-        .iter()
-        .map(|x| {
-            let expr = type_public_to_wire(&x.1, &x.0);
-            format!("{name}: {expr}", name = x.0)
-        })
-        .collect::<Vec<_>>()
-        .join(", "),
-    wire_name_rx = wire_type_rx(&message.name),
-    message_name = message.name,
-    args = message.rx.data.iter().map(|x| format!(", {}: {}", x.0, x.1.as_arg())).collect::<Vec<_>>().join(" "),
+        message
+            .rx
+            .data
+            .iter()
+            .map(|x| {
+                let expr = type_public_to_wire(&x.1, &x.0);
+                format!("{name}: {expr}", name = x.0)
+            })
+            .collect::<Vec<_>>()
+            .join(", "),
+        wire_name_rx = wire_type_rx(&message.name),
+        message_name = message.name,
+        args = message
+            .rx
+            .data
+            .iter()
+            .map(|x| format!(", {}: {}", x.0, x.1.as_arg()))
+            .collect::<Vec<_>>()
+            .join(" "),
     )
     .unwrap();
 }
@@ -389,7 +398,7 @@ impl Tx {{
                             }}
                         }})
                     }}"#, 
-                    strname = x.name) 
+                    strname = x.name)
             })
             .collect::<Vec<_>>()
             .join("\n")
