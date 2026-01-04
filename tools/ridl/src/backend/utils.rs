@@ -365,7 +365,7 @@ impl Tx {{
     fn to_public(
         self,
         old_message: &IpcMessage,
-        port: &mut Port)
+        port: &Port)
     -> Result<{int_name}Request, ErrorType> 
     {{
         match self {{

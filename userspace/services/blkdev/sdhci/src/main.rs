@@ -16,13 +16,7 @@ mod server;
 #[rokio::main]
 async fn main(nameserver: Option<Handle>) {
     let ns = NameServer::new(unsafe { Port::new(nameserver.unwrap()) });
-    let pci = loop {
-        // TODO: add support for loading in dependency
-        if let Ok(pci) = ns.Get("pci".try_into().unwrap()).await {
-            break pci;
-        }
-    };
-
+    let pci = ns.Get("pci".try_into().unwrap()).await.unwrap();
     let pci = unsafe { Pci::new(Port::new(pci.handle)) };
 
     // These IDS are from QEMU

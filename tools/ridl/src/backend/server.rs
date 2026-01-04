@@ -35,19 +35,27 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                 let size = self.port.receive(&mut in_msg).await?;
 
                 let payload: Tx = from_bytes(&in_msg.in_arena().unwrap()[..size]).unwrap();
-                let public = payload.to_public(&in_msg, &mut self.port)?;
+                let public = payload.to_public(&in_msg, &self.port)?;
 
-                match (self.handler)(public).await {{
-                    Ok(_) => {{}}, // message has been sent by closure
-                    Err(e) => {{
-                        let res = RxMessage::Err(e.into());
-                        let res = to_allocvec(&res).unwrap();
-                        let mut msg = IpcMessage::new();
+                let port = self.port.clone();
+                let handler = self.handler.clone();
+                let reply_port = in_msg.reply_port();
 
-                        msg.set_out_arena(res.as_slice());
-                        self.port.reply(Handle::new(in_msg.reply_port()), &mut msg)?;
-                    }},
-                }}
+                rokio::executor::spawn((async move || {{
+                    match (handler)(public).await {{
+                        Ok(_) => {{}}, // message has been sent by closure
+                        Err(e) => {{
+                            let res = RxMessage::Err(e.into());
+                            let res = to_allocvec(&res).unwrap();
+                            let mut msg = IpcMessage::new();
+
+                            msg.set_out_arena(res.as_slice());
+                            port.reply(Handle::new(reply_port), &mut msg)?;
+                        }},
+                    }}
+
+                    Ok::<(), ErrorType>(())
+                }})())
             }}
         }}
     }}
@@ -59,7 +67,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
 
     fn traits(&self) -> String {
         let name = self.interface.name();
-        format!("F: FnMut({name}Request) -> Fut,\nFut: Future<Output = Result<(), ErrorType>> + 'static")
+        format!("F: Fn({name}Request) -> Fut + Send + Sync + 'static,\nFut: Future<Output = Result<(), ErrorType>> + 'static + Send + Sync")
     }
 
     fn register_handler(&mut self) {
@@ -71,7 +79,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
     impl<{traits}> {name}<F, Fut>
     {{
         pub async fn for_each(port: Port, f: F) -> Result<(), ErrorType> {{
-            let mut new = Self {{ handler: Box::new(f), port }};
+            let mut new = Self {{ handler: alloc::sync::Arc::new(f), port: alloc::sync::Arc::new(port) }};
             new.run().await
         }}
     }}
@@ -88,8 +96,8 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
             self.buf,
             r#"
 pub struct {name}<{traits}>{{
-    port: Port,
-    handler: Box<F>
+    port: Arc<Port>,
+    handler: Arc<F>,
 }}
 
 unsafe impl<{traits}> Send for {name}<F, Fut> {{ }}

@@ -4,7 +4,7 @@ use regex::Regex;
 use std::path::{Path, PathBuf};
 use std::str::from_utf8;
 use std::{
-    fs::{read_dir, symlink_metadata, OpenOptions},
+    fs::{OpenOptions, read_dir, symlink_metadata},
     io::Write,
 };
 use tempfile::NamedTempFile;
@@ -16,7 +16,10 @@ fn has_manifest(path: &Path) -> std::io::Result<bool> {
         let entry = entry?;
         let path = entry.path();
 
-        if path.is_file() && let Some(name) = path.file_name() && name == "Cargo.toml" {
+        if path.is_file()
+            && let Some(name) = path.file_name()
+            && name == "Cargo.toml"
+        {
             return Ok(true);
         }
     }
@@ -34,7 +37,10 @@ fn find_manifest_dir<P: AsRef<Path>>(
         let path = entry.path();
 
         if path.is_dir() {
-            if let Some(name) = path.file_name() && name == target && has_manifest(&path)? {
+            if let Some(name) = path.file_name()
+                && name == target
+                && has_manifest(&path)?
+            {
                 results.push(path.clone());
             }
 

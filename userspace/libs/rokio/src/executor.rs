@@ -116,13 +116,13 @@ impl Runtime {
     }
 
     pub fn run(&'static self) {
-        while {
+        loop {
             // Poll ready tasks
             self.poll_runnable();
 
             // Wait for events to occur
-            self.wait().unwrap() != 0
-        } {}
+            self.wait().unwrap();
+        }
     }
 }
 

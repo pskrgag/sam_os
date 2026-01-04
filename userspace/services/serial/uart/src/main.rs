@@ -30,7 +30,7 @@ async fn main(nameserver: Option<Handle>) {
 
     println!("Starting 'uart' server...");
 
-    Serial::for_each(p, |req| {
+    Serial::for_each(p, move |req| {
         let pl011 = pl011.clone();
 
         async move {

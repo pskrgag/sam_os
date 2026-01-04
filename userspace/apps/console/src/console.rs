@@ -41,7 +41,6 @@ impl Console {
         loop {
             self.put_str("> ").await;
             let cmd = self.read_until_newline().await;
-
             if cmd.is_empty() {
                 continue;
             }
