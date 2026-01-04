@@ -223,7 +223,7 @@ fn type_wire_to_public<S: AsRef<str>>(tp: &Type, var: S) -> String {
             }
         }
         Type::Builtin(BuiltinTypes::Handle) => format!("Handle::new(_message.handles()[{name}])"),
-        Type::Struct(_) => format!("{name}.try_to_public().unwrap()"),
+        Type::Struct(_) => format!("{name}.try_to_public(_message).unwrap()"),
         _ => name.to_string(),
     }
 }
@@ -246,6 +246,7 @@ fn type_public_to_wire<S: AsRef<str>>(tp: &Type, var: S) -> String {
         Type::Builtin(BuiltinTypes::Handle) => format!(
             "_message.add_handle(unsafe {{ let res = {name}.as_raw(); core::mem::forget({name}); res }})",
         ),
+        Type::Struct(_) => format!("{name}.try_to_wire(_message).unwrap()"),
         _ => name.to_string(),
     }
 }

@@ -6,6 +6,9 @@ opt_level = "1"
 extra_qemu_args = "-drive file=sd.img,format=raw,if=none,id=mydrive -device sdhci-pci -device sd-card,drive=mydrive -serial mon:stdio -serial pty"
 
 [[component]]
+name = "vfs"
+
+[[component]]
 name = "console"
 
 [[component]]

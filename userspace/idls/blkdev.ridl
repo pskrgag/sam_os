@@ -1,5 +1,11 @@
 type Data = Sequence<U8, 1024>;
 
+struct BlockInfo {
+	USize blockCount;
+	USize blockSize;
+}
+
 interface BlkDev {
+	GetInfo(out BlockInfo info);
 	ReadBlock(in U32 blockIdx, out Data data);
 }

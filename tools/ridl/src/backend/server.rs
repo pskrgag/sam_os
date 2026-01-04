@@ -134,7 +134,7 @@ unsafe impl<{traits}> Send for {name}<F, Fut> {{ }}
     }
 }
 
-pub fn compile_server<W: Write>(ir: Module, buf: &mut W, _dispatch_loop: bool) {
+pub fn compile_server<W: Write>(ir: Module, buf: &mut W) {
     for interface in ir.interfaces() {
         InterfaceCompiler {
             interface,

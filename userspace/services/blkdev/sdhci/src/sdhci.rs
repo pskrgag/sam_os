@@ -6,8 +6,9 @@ use core::ptr::NonNull;
 use hal::address::{VirtAddr, VirtualAddress};
 use rtl::error::ErrorType;
 use safe_mmio::{
-    UniqueMmioPointer, field,
+    field,
     fields::{ReadOnly, ReadWrite},
+    UniqueMmioPointer,
 };
 
 #[repr(C, packed)]
@@ -99,7 +100,8 @@ impl Sdhci {
             // Issue block read
             card.send_command(Command::new_normal(
                 NormalOpcode::ReadOneBlock,
-                block_address,
+                // This is relative address, but not block number
+                block_address * card.block_size() as u32,
                 CommandFlag::HasReponse | CommandFlag::DataPresent,
             ))?;
 

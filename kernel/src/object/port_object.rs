@@ -135,15 +135,6 @@ impl Port {
         Ok(())
     }
 
-    pub async fn reply_wait(
-        &self,
-        reply_port_handle: HandleBase,
-        msg: UserPtr<IpcMessage<'static>>,
-    ) -> Result<usize, ErrorType> {
-        self.reply(reply_port_handle, msg).await?;
-        self.receive(msg).await
-    }
-
     pub async fn receive(
         &self,
         mut server_msg_uptr: UserPtr<IpcMessage<'static>>,

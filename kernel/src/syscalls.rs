@@ -6,7 +6,7 @@ use crate::object::{
     factory_object::Factory,
     handle::Handle,
     port_object::Port,
-    {WaitManyArg, wait_many},
+    {wait_many, WaitManyArg},
 };
 use crate::{
     mm::{
@@ -19,7 +19,7 @@ use crate::{
 use alloc::string::String;
 use alloc::string::ToString;
 use hal::address::*;
-use rtl::handle::{HANDLE_INVALID, HandleBase};
+use rtl::handle::{HandleBase, HANDLE_INVALID};
 use rtl::signal::{Signal, Signals, WaitEntry};
 use rtl::vmm::MappingType;
 use rtl::{error::ErrorType, ipc::IpcMessage, syscalls::SyscallList};
@@ -202,18 +202,6 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
 
             port.call(UserPtr::new(args.arg::<usize>(1) as *mut IpcMessage))
                 .await
-        }
-        SyscallList::PortReplyWait => {
-            let msg = UserPtr::new(args.arg::<usize>(2) as *mut IpcMessage);
-            let port = {
-                let table = task.handle_table().await?;
-
-                table
-                    .find::<Port>(args.arg(0), CapabilityMask::from(Capability::Send))
-                    .ok_or(ErrorType::InvalidHandle)?
-            };
-
-            port.reply_wait(args.arg(1), msg).await
         }
         SyscallList::PortReply => {
             let msg = UserPtr::new(args.arg::<usize>(2) as *mut IpcMessage);

@@ -19,6 +19,7 @@ pub enum BuiltinTypes {
     I64,
     Char,
     Handle,
+    USize,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -41,6 +42,7 @@ lazy_static::lazy_static! {
             ("U64", BuiltinTypes::U64),
             ("Char", BuiltinTypes::Char),
             ("Handle", BuiltinTypes::Handle),
+            ("USize", BuiltinTypes::USize),
         ]);
 }
 
@@ -68,6 +70,7 @@ impl Type {
                     BuiltinTypes::I32 => "i32",
                     BuiltinTypes::U64 => "u64",
                     BuiltinTypes::I64 => "i64",
+                    BuiltinTypes::USize => "usize",
                     BuiltinTypes::Char => "u8",
                     BuiltinTypes::Handle => "Handle",
                 };

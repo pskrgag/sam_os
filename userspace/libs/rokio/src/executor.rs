@@ -56,7 +56,6 @@ impl Runtime {
         runnable.schedule();
     }
 
-    #[inline(never)]
     fn poll_runnable(&'static self) {
         while let Some(task) = self.runnable.pop() {
             task.run();
@@ -137,7 +136,10 @@ where
     CURRENT_RUNTIME.spawn(f)
 }
 
-pub fn block_on<F: Future<Output = ()> + 'static + Send>(f: F) {
+pub fn block_on<F: Future + 'static + Send>(f: F)
+where
+    F::Output: Send,
+{
     CURRENT_RUNTIME.spawn(f);
     CURRENT_RUNTIME.run();
 }

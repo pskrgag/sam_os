@@ -28,7 +28,6 @@ pub enum Syscall<'a> {
     CloseHandle(RawHandle),
     PortCall(RawHandle, *mut IpcMessage<'a>),
     PortSend(RawHandle, *mut IpcMessage<'a>),
-    PortReplyWait(RawHandle, RawHandle, *mut IpcMessage<'a>),
     PortReply(RawHandle, RawHandle, *const IpcMessage<'a>),
     PortReceive(RawHandle, *mut IpcMessage<'a>),
     CloneHandle(RawHandle),
@@ -123,28 +122,6 @@ impl<'a> Syscall<'a> {
 
     pub fn object_wait_many(wait_entries: &'a mut [WaitEntry]) -> Result<(), ErrorType> {
         unsafe { syscall(Self::ObjectWaitMany(wait_entries).as_args()).map(|_| ()) }
-    }
-
-    pub fn port_send_wait(
-        h: &Handle,
-        reply_port: Handle,
-        msg: *mut IpcMessage<'a>,
-    ) -> Result<usize, ErrorType> {
-        unsafe {
-            syscall(
-                Self::PortReplyWait(
-                    h.as_raw(),
-                    {
-                        let raw = reply_port.as_raw();
-
-                        core::mem::forget(reply_port);
-                        raw
-                    },
-                    msg,
-                )
-                .as_args(),
-            )
-        }
     }
 
     pub fn port_reply(
@@ -283,16 +260,6 @@ impl<'a> Syscall<'a> {
                 handle,
                 msg as *mut _ as usize,
                 0,
-                0,
-                0,
-                0,
-                0,
-            ],
-            Syscall::PortReplyWait(handle, reply_port, msg) => [
-                SyscallList::PortReplyWait.into(),
-                handle,
-                reply_port,
-                msg as *const _ as usize,
                 0,
                 0,
                 0,
