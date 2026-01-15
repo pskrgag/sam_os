@@ -1,10 +1,13 @@
+use crate::regs::{Response, NoResponse};
 use bitmask::bitmask;
+use core::marker::PhantomData;
 
 // https://users.ece.utexas.edu/~valvano/EE345M/SD_Physical_Layer_Spec.pdf
 #[repr(u8)]
 pub enum NormalOpcode {
     GoIdleState = 0,
     CID = 2,
+    CSD = 9,
     RCA = 3,
     SelectCard = 7,
     VoltageCheck = 8,
@@ -25,20 +28,22 @@ bitmask! {
     }
 }
 
-pub struct Command {
+pub struct Command<R: Response = NoResponse> {
     opcode: u8,
     arg: u32,
     flags: CommandFlags,
     app: bool,
+    _pd: PhantomData<R>,
 }
 
-impl Command {
+impl<R: Response> Command<R> {
     pub fn new_normal<F: Into<CommandFlags>>(opcode: NormalOpcode, arg: u32, flags: F) -> Self {
         Self {
             opcode: opcode as u8,
             arg,
             flags: flags.into(),
             app: false,
+            _pd: PhantomData,
         }
     }
 
@@ -52,6 +57,7 @@ impl Command {
             arg,
             flags: flags.into(),
             app: true,
+            _pd: PhantomData,
         }
     }
 
@@ -68,7 +74,7 @@ impl Command {
     }
 }
 
-impl Into<u16> for Command {
+impl<R: Response> Into<u16> for Command<R> {
     fn into(self) -> u16 {
         // 13-08 -- command index (opcode)
         // 07-06 -- command type

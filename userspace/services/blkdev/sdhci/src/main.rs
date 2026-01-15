@@ -9,6 +9,7 @@ use hal::{address::MemRange, arch::PAGE_SIZE};
 use libc::{handle::Handle, vmm::vms::vms};
 use rokio::port::Port;
 
+mod cards;
 mod regs;
 mod sdhci;
 mod server;
@@ -32,10 +33,10 @@ async fn main(nameserver: Option<Handle>) {
             (res.data[0].size as usize).next_multiple_of(PAGE_SIZE),
         ))
         .unwrap();
-    let mut sdhci = sdhci::Sdhci::new(va).unwrap();
+    let sdhci = sdhci::probe(va).unwrap();
     println!("SDHCI version {:?}", sdhci.version());
 
-    server::start_server(sdhci, &ns).await.unwrap();
+    server::start_server(sdhci, ns).await.unwrap();
 }
 
 include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));

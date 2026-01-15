@@ -1,13 +1,13 @@
 use super::bindings_NameServer::NameServer;
-use super::sdhci::Sdhci;
+use crate::cards::Card;
+use alloc::boxed::Box;
 use alloc::sync::Arc;
-use alloc::vec::Vec;
 use bindings_BlkDev::{BlkDev, BlkDevRequest, BlockInfo};
 use rokio::port::Port;
 use rtl::error::ErrorType;
 use rtl::locking::spinlock::Spinlock;
 
-pub async fn start_server(sdhci: Sdhci, ns: &NameServer) -> Result<(), ErrorType> {
+pub async fn start_server(sdhci: Box<dyn Card>, ns: NameServer) -> Result<(), ErrorType> {
     let port = Port::create()?;
     let sdhci = Arc::new(Spinlock::new(sdhci));
 
@@ -22,11 +22,8 @@ pub async fn start_server(sdhci: Sdhci, ns: &NameServer) -> Result<(), ErrorType
             match req {
                 BlkDevRequest::ReadBlock { value, responder } => {
                     let mut card = sdhci.lock();
-                    let mut data = Vec::with_capacity(card.block_size());
+                    let data = card.read_block(value.blockIdx)?;
 
-                    data.resize(card.block_size(), 0);
-
-                    card.read_block(value.blockIdx, data.as_mut_slice())?;
                     responder.reply(data.into_iter().collect())?;
                 }
                 BlkDevRequest::GetInfo { responder, .. } => {
@@ -34,7 +31,7 @@ pub async fn start_server(sdhci: Sdhci, ns: &NameServer) -> Result<(), ErrorType
 
                     responder.reply(BlockInfo {
                         blockSize: card.block_size(),
-                        blockCount: 0,
+                        blockCount: card.device_size() / card.block_size() as usize,
                     })?;
                 }
             }

@@ -45,12 +45,13 @@ impl Runtime {
         }
     }
 
-    pub fn spawn<F: Future + 'static + Send>(&'static self, f: F)
+    pub fn spawn<F: Future + 'static>(&'static self, f: F)
     where
         F::Output: Send,
     {
-        let (runnable, task) =
-            async_task::spawn(f, |runnable: Runnable| self.runnable.push(runnable));
+        let (runnable, task) = unsafe {
+            async_task::spawn_unchecked(f, |runnable: Runnable| self.runnable.push(runnable))
+        };
 
         task.detach();
         runnable.schedule();
@@ -136,7 +137,8 @@ where
     CURRENT_RUNTIME.spawn(f)
 }
 
-pub fn block_on<F: Future + 'static + Send>(f: F)
+// TODO: add back + Send when I figure out wtf rust wants from me
+pub fn block_on<F: Future + 'static>(f: F)
 where
     F::Output: Send,
 {

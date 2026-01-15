@@ -1,12 +1,17 @@
+use super::cards::sd::SDCard;
+use super::cards::Card;
+use super::regs::response::*;
 use super::regs::SdhciError;
 use super::regs::SdhciIrq;
-use super::regs::{ApplicationOpcode, Command, CommandFlag, NormalOpcode, Response};
+use super::regs::{ApplicationOpcode, Command, CommandFlag, NormalOpcode, ResponseU128};
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 use bitvec::field::BitField;
 use core::ptr::NonNull;
 use hal::address::{VirtAddr, VirtualAddress};
 use rtl::error::ErrorType;
 use safe_mmio::{
-    field,
+    field, field_shared,
     fields::{ReadOnly, ReadWrite},
     UniqueMmioPointer,
 };
@@ -58,67 +63,70 @@ pub struct SdhciVersion {
     pub vendor: u8,
 }
 
-/// SDHCI driver
-pub struct Sdhci {
-    regs: UniqueMmioPointer<'static, SdhciRegs>,
-    rca: u16,
-    block_size: usize,
+#[allow(dead_code)]
+enum AddressingMode {
+    Byte,
+    Block,
 }
 
-impl Sdhci {
-    pub fn new(base: VirtAddr) -> Result<Self, ErrorType> {
-        debug_assert!(!base.is_null());
+/// SDHCI interface
+pub struct SdhciIface {
+    regs: UniqueMmioPointer<'static, SdhciRegs>,
+    rca: u16,
+    mode: AddressingMode,
+}
 
-        let mut new = Self {
-            regs: unsafe { UniqueMmioPointer::new(NonNull::new_unchecked(base.to_raw_mut())) },
-            rca: 0,
-            block_size: 512,
-        };
+pub struct SelectedCard<'a> {
+    sdhci: &'a mut SdhciIface,
+}
 
-        new.setup()?;
-        Ok(new)
-    }
+impl SelectedCard<'_> {
+    pub fn read_block(
+        &mut self,
+        block_address: u32,
+        block_size: u16,
+    ) -> Result<Vec<u8>, ErrorType> {
+        let mut data = Vec::new();
 
-    /// Retrieves block size
-    pub fn block_size(&self) -> usize {
-        self.block_size
-    }
+        // Setup block size
+        field!(self.sdhci.regs, block_size).write(block_size);
 
-    /// Reads one block
-    pub fn read_block(&mut self, block_address: u32, data: &mut [u8]) -> Result<(), ErrorType> {
-        if data.len() != self.block_size() {
-            return Err(ErrorType::BufferTooSmall);
+        if field!(self.sdhci.regs, block_size).read() as u16 != block_size {
+            return Err(ErrorType::InvalidArgument);
         }
 
-        self.with_selected_card(|card| {
-            // Setup block size as 512
-            field!(card.regs, block_size).write(0x0200);
+        data.resize(block_size as _, 0);
 
-            // Set direction
-            field!(card.regs, transfer_mode).write(0x0010);
+        // Set direction to write
+        field!(self.sdhci.regs, transfer_mode).write(0x0010);
 
-            // Issue block read
-            card.send_command(Command::new_normal(
-                NormalOpcode::ReadOneBlock,
-                // This is relative address, but not block number
-                block_address * card.block_size() as u32,
-                CommandFlag::HasReponse | CommandFlag::DataPresent,
-            ))?;
+        let addr = match self.sdhci.mode {
+            AddressingMode::Byte => block_address * block_size as u32,
+            AddressingMode::Block => block_address,
+        };
 
-            for chunk in data.chunks_mut(core::mem::size_of::<u32>()) {
-                let ch = field!(card.regs, buffer_data).read();
+        // Issue block read
+        self.sdhci.send_command::<ResponseU128>(Command::new_normal(
+            NormalOpcode::ReadOneBlock,
+            addr,
+            CommandFlag::HasReponse | CommandFlag::DataPresent,
+        ))?;
 
-                chunk.copy_from_slice(&ch.to_ne_bytes());
-            }
+        for chunk in data.chunks_mut(core::mem::size_of::<u32>()) {
+            let ch = field!(self.sdhci.regs, buffer_data).read();
 
-            Ok(())
-        })
-        .map_err(|x| x.into())
+            chunk.copy_from_slice(&ch.to_ne_bytes());
+        }
+
+        Ok(data)
     }
+}
 
+impl SdhciIface {
     /// Retrieves SDHCI version.
-    pub fn version(&mut self) -> SdhciVersion {
-        let raw = field!(self.regs, version).read();
+    pub fn version(&self) -> SdhciVersion {
+        // SAFETY: reading version does not causes side effects.
+        let raw = unsafe { field_shared!(self.regs, version).read_unsafe() }.0;
 
         SdhciVersion {
             sdhc_version: (raw & 0xFF) as _,
@@ -127,25 +135,26 @@ impl Sdhci {
     }
 
     // Calls callback with current card selected
-    fn with_selected_card<F: FnMut(&mut Self) -> Result<(), SdhciError>>(
+    pub fn with_selected_card<T, F: FnMut(SelectedCard) -> Result<T, ErrorType>>(
         &mut self,
         mut f: F,
-    ) -> Result<(), SdhciError> {
+    ) -> Result<T, ErrorType> {
         // Select current card
-        self.send_command(Command::new_normal(
+        self.send_command::<ResponseU32>(Command::new_normal(
             NormalOpcode::SelectCard,
             (self.rca as u32) << 16,
             CommandFlag::HasReponse,
         ))?;
 
-        let res = f(self);
+        let res = f(SelectedCard { sdhci: self });
 
         // Set 0 as RCA to deselect card
-        self.send_command(Command::new_normal(
+        self.send_command(Command::<ResponseU32>::new_normal(
             NormalOpcode::SelectCard,
             0,
             CommandFlag::HasReponse,
         ))?;
+
         res
     }
 
@@ -161,60 +170,95 @@ impl Sdhci {
     }
 
     /// Initializes the hw
-    fn setup(&mut self) -> Result<(), ErrorType> {
+    fn setup(regs: UniqueMmioPointer<'static, SdhciRegs>) -> Result<Box<dyn Card>, ErrorType> {
+        let mut card = Self {
+            regs,
+            rca: 0,
+            mode: AddressingMode::Byte,
+        };
+
         // Enable clocks: Enable internal clock and SD clock
-        field!(self.regs, clock_on).write(0b101);
+        field!(card.regs, clock_on).write(0b101);
 
         // Wait for clocks to stabilize
-        if !Self::spin_retry(|| field!(self.regs, clock_on).read() & 0b01 != 0, 100) {
+        if !Self::spin_retry(|| field!(card.regs, clock_on).read() & 0b01 != 0, 100) {
             return Err(ErrorType::TryAgain);
         }
 
         // Send CMD0 (reset)
-        let cmd0 = Command::new_normal(NormalOpcode::GoIdleState, 0, CommandFlag::NoResponse);
-        self.send_command(cmd0)?;
+        let cmd0 = Command::<NoResponse>::new_normal(
+            NormalOpcode::GoIdleState,
+            0,
+            CommandFlag::NoResponse,
+        );
+        card.send_command(cmd0)?;
 
         // Send CMD8 (check voltage)
         // 1 is 2.7-3.6V
-        let cmd8 = Command::new_normal(
+        let cmd8 = Command::<ResponseU32>::new_normal(
             NormalOpcode::VoltageCheck,
             (1 << 16) | 0xAA,
             CommandFlag::HasReponse,
         );
         // TODO: verify check pattern
-        let _f8 = self.send_command(cmd8)?.is_some();
+        let _f8 = card.send_command(cmd8)?.is_some();
 
         // CMD5 is not implemented in QEMU. Assuming !SDIO
 
         // Send ACMD41
-        while {
-            let acmd41 = Command::new_application(
-                ApplicationOpcode::OpCond,
-                0x40020000,
-                CommandFlag::HasReponse,
-            );
-            let resp = self.send_command(acmd41)?.unwrap();
+        let acmd41 = Command::<ResponseU32>::new_application(
+            ApplicationOpcode::OpCond,
+            0x40020000,
+            CommandFlag::HasReponse,
+        );
 
-            // Loop while it is not ready
-            resp.range(31..32).first().unwrap() == false
-        } {}
+        if let Some(resp) = card.send_command(acmd41)? {
+            if resp.range(30..31).first().unwrap() == false {
+                // It is SDSC.
 
-        // Get CID
-        let cmd2 = Command::new_normal(NormalOpcode::CID, 0, CommandFlag::HasReponse);
-        let _cid = self.send_command(cmd2)?;
+                // This will advance card to standby state
+                let _cid = card
+                    .send_command(Command::<ResponseU32>::new_normal(
+                        NormalOpcode::CID,
+                        0,
+                        CommandFlag::HasReponse,
+                    ))?
+                    .unwrap();
 
-        // Get relative address
-        let cmd3 = Command::new_normal(NormalOpcode::RCA, 0, CommandFlag::HasReponse);
-        let rca = self.send_command(cmd3)?.unwrap();
-        self.rca = rca.range(16..32).load();
+                // Get relative address.
+                let rca = card
+                    .send_command(Command::<ResponseU32>::new_normal(
+                        NormalOpcode::RCA,
+                        0,
+                        CommandFlag::HasReponse,
+                    ))?
+                    .unwrap();
 
-        println!("Card RCA {:x}", self.rca);
-        Ok(())
+                card.rca = rca.range(16..32).load();
+                return Ok(Box::new(SDCard::new(card)?));
+            } else {
+                // If it's zero then it is SDHC
+                todo!("{:?}", resp.range(31..32));
+            }
+        }
+
+        todo!()
     }
 
-    fn send_command(&mut self, cmd: Command) -> Result<Option<Response>, SdhciError> {
+    pub fn csd(&mut self) -> Result<ResponseU128, SdhciError> {
+        Ok(self
+            .send_command(Command::<ResponseU128>::new_normal(
+                NormalOpcode::CSD,
+                (self.rca as u32) << 16,
+                CommandFlag::HasReponse,
+            ))?
+            .unwrap())
+    }
+
+    fn send_command<R: Response>(&mut self, cmd: Command<R>) -> Result<Option<R>, SdhciError> {
         if cmd.is_application() {
-            let app = Command::new_normal(NormalOpcode::AppCmd, 0, CommandFlag::HasReponse);
+            let app =
+                Command::<ResponseU32>::new_normal(NormalOpcode::AppCmd, 0, CommandFlag::HasReponse);
 
             self.send_one_command(app)?;
             self.send_one_command(cmd)
@@ -223,7 +267,7 @@ impl Sdhci {
         }
     }
 
-    fn send_one_command(&mut self, cmd: Command) -> Result<Option<Response>, SdhciError> {
+    fn send_one_command<R: Response>(&mut self, cmd: Command<R>) -> Result<Option<R>, SdhciError> {
         // Setup error registers
         field!(self.regs, error_interrupt_enable)
             .write(*(SdhciError::Timeout | SdhciError::CommandIndex));
@@ -255,4 +299,10 @@ impl Sdhci {
             Err(unsafe { core::mem::transmute(errors) })
         }
     }
+}
+
+pub fn probe(base: VirtAddr) -> Result<Box<dyn Card>, ErrorType> {
+    debug_assert!(!base.is_null());
+
+    SdhciIface::setup(unsafe { UniqueMmioPointer::new(NonNull::new_unchecked(base.to_raw_mut())) })
 }

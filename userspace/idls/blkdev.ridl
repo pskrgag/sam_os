@@ -2,7 +2,7 @@ type Data = Sequence<U8, 1024>;
 
 struct BlockInfo {
 	USize blockCount;
-	USize blockSize;
+	U16 blockSize;
 }
 
 interface BlkDev {
