@@ -244,9 +244,9 @@ impl SuperBlock {
         Ok(())
     }
 
-    pub async fn root(self: &Arc<Self>) -> Result<Arc<dyn Inode>, ErrorType> {
-        Ok(Arc::new(
+    pub async fn root(self: &Arc<Self>) -> Result<Arc<Inode>, ErrorType> {
+        Ok(Arc::new(Inode::Directory(Arc::new(
             Fat32Dir::new(self.clone(), self.root_cluster).await?,
-        ))
+        ))))
     }
 }

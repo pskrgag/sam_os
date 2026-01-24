@@ -45,7 +45,7 @@ impl Runtime {
         }
     }
 
-    pub fn spawn<F: Future + 'static>(&'static self, f: F)
+    pub fn spawn<F: Future>(&'static self, f: F)
     where
         F::Output: Send,
     {
@@ -130,7 +130,7 @@ pub(crate) fn current_runtime() -> &'static Runtime {
     &*CURRENT_RUNTIME
 }
 
-pub fn spawn<F: Future + 'static + Send>(f: F)
+pub fn spawn<F: Future + Send>(f: F)
 where
     F::Output: Send,
 {
@@ -138,7 +138,7 @@ where
 }
 
 // TODO: add back + Send when I figure out wtf rust wants from me
-pub fn block_on<F: Future + 'static>(f: F)
+pub fn block_on<F: Future>(f: F)
 where
     F::Output: Send,
 {

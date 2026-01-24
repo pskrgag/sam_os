@@ -1,23 +1,27 @@
+use super::bindings_Directory::Directory;
 use super::bindings_Serial::Serial;
+use super::bindings_Vfs::Vfs;
 use alloc::{string::String, vec::Vec};
+use rokio::port::Port;
 
 pub struct Console {
     backend: Serial,
+    vfs: Vfs,
 }
 
 impl Console {
-    pub fn new(backend: Serial) -> Self {
-        Self { backend }
+    pub fn new(backend: Serial, vfs: Vfs) -> Self {
+        Self { backend, vfs }
     }
 
-    pub async fn put_str<S: AsRef<str>>(&self, s: S) {
+    async fn put_str<S: AsRef<str>>(&self, s: S) {
         self.backend
             .Put(s.as_ref().try_into().unwrap())
             .await
             .unwrap();
     }
 
-    pub async fn read_until_newline(&self) -> String {
+    async fn read_until_newline(&self) -> String {
         let mut res = String::new();
 
         loop {
@@ -37,6 +41,14 @@ impl Console {
         }
     }
 
+    async fn ls(&self, path: &str) -> String {
+        let root = self.vfs.Root().await.unwrap().handle;
+        let root = Directory::new(unsafe { Port::new(root) });
+        let dir = root.Open(path.try_into().unwrap()).await.unwrap();
+
+        String::new()
+    }
+
     pub async fn serve(self) {
         loop {
             self.put_str("> ").await;
@@ -54,6 +66,12 @@ impl Console {
                         let echo = parts.collect::<Vec<_>>().join(" ");
 
                         self.put_str(alloc::format!("{echo}\n")).await;
+                    }
+                    "ls" => {
+                        let dir = parts.next().unwrap_or("");
+                        let res = self.ls(dir).await;
+
+                        self.put_str(res).await;
                     }
                     _ => {
                         self.put_str(alloc::format!("Unknown command '{cmd_name}'\n"))

@@ -1,8 +1,7 @@
 use super::sb::{data_from_bytes, Cluster, SuperBlockRef};
-use crate::fs::inode::Inode;
+use crate::fs::inode::{DirectoryOperations, FileOperations, Inode};
 use alloc::vec;
 use rtl::error::ErrorType;
-use rtl::locking::spinlock::Spinlock;
 
 // On disk representation
 #[repr(C)]
@@ -39,4 +38,8 @@ impl Fat32Dir {
     }
 }
 
-impl Inode for Fat32Dir {}
+impl DirectoryOperations for Fat32Dir {
+    fn open(&self, path: &str) -> Result<Inode, ErrorType> {
+        todo!()
+    }
+}

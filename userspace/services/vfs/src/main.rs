@@ -1,9 +1,10 @@
 #![no_std]
 #![no_main]
 
+use alloc::sync::Arc;
 use bindings_BlkDev::BlkDev;
 use bindings_NameServer::NameServer;
-use fs::fat32::Fat32;
+use bindings_Vfs::{Vfs, VfsRequest};
 use fs::Filesystem;
 use libc::handle::Handle;
 use rokio::port::Port;
@@ -14,13 +15,36 @@ mod vfs;
 
 #[rokio::main]
 async fn main(root: Option<Handle>) -> Result<(), ErrorType> {
-    let nameserver = NameServer::new(unsafe { Port::new(root.unwrap()) });
-    let root = nameserver.Get("blkdev".try_into().unwrap()).await?;
+    let ns = NameServer::new(unsafe { Port::new(root.unwrap()) });
+    let root = ns.Get("blkdev".try_into().unwrap()).await?;
     let root = BlkDev::new(unsafe { Port::new(root.handle) });
 
-    let mut vfs = vfs::Vfs::new(root, "fat32").await.unwrap();
-    Ok(())
+    let vfs = Arc::new(vfs::Vfs::new(root, "fat32").await.unwrap());
+    let port = Port::create()?;
+
+    ns.Register("vfs".try_into().unwrap(), port.handle())
+        .await
+        .expect("Failed to register handle in nameserver");
+
+    Vfs::for_each(port, move |req| {
+        let vfs = vfs.clone();
+
+        async move {
+            match req {
+                VfsRequest::Root { responder, .. } => {
+                    let (disp, handle) = vfs.open_dir("/")?;
+
+                    println!("Open root");
+                    rokio::executor::spawn(disp);
+                    responder.reply(&handle)?;
+                }
+            }
+            Ok(())
+        }
+    })
+    .await
 }
 
 include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));
 include!(concat!(env!("OUT_DIR"), "/blkdev.rs"));
+include!(concat!(env!("OUT_DIR"), "/vfs.rs"));

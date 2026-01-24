@@ -8,5 +8,5 @@ pub mod inode;
 
 pub trait Filesystem {
     /// Mounts device and return root directory inode
-    async fn try_mount(blk: BlkDev) -> Result<Arc<dyn Inode>, ErrorType>;
+    async fn try_mount(blk: BlkDev) -> Result<Arc<Inode>, ErrorType>;
 }

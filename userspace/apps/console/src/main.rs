@@ -2,11 +2,11 @@
 #![no_std]
 
 use libc::handle::Handle;
-use rokio::{main, port::Port};
+use rokio::port::Port;
 
 mod console;
 
-#[main]
+#[rokio::main]
 async fn main(root: Option<Handle>) {
     let nameserver = bindings_NameServer::NameServer::new(unsafe { Port::new(root.unwrap()) });
 
@@ -15,12 +15,18 @@ async fn main(root: Option<Handle>) {
         .await
         .unwrap()
         .handle;
-    let serial_backend = unsafe { Port::new(serial) };
-    let serial_backend = bindings_Serial::Serial::new(serial_backend);
+    let vfs = nameserver
+        .Get("vfs".try_into().unwrap())
+        .await
+        .unwrap()
+        .handle;
+    let serial_backend = bindings_Serial::Serial::new(unsafe { Port::new(serial) });
+    let vfs = bindings_Vfs::Vfs::new(unsafe { Port::new(vfs) });
 
     println!("Starting console...");
-    console::Console::new(serial_backend).serve().await;
+    console::Console::new(serial_backend, vfs).serve().await;
 }
 
 include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));
 include!(concat!(env!("OUT_DIR"), "/serial.rs"));
+include!(concat!(env!("OUT_DIR"), "/vfs.rs"));

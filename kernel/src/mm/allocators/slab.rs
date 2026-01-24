@@ -7,7 +7,9 @@ use hal::arch::PAGE_SIZE;
 
 const MIN_SLAB_SIZE: usize = 8;
 
-static KERNEL_SLABS: [Spinlock<SlabAllocator>; 10] = [
+static KERNEL_SLABS: [Spinlock<SlabAllocator>; 12] = [
+    Spinlock::new(SlabAllocator::default()),
+    Spinlock::new(SlabAllocator::default()),
     Spinlock::new(SlabAllocator::default()),
     Spinlock::new(SlabAllocator::default()),
     Spinlock::new(SlabAllocator::default()),
@@ -91,7 +93,7 @@ impl SlabAllocator {
                 let new_list = FreeList::new(self.slab_size)?;
 
                 unsafe {
-                    self.freelist.add_to_freelist(new_list.next.unwrap());
+                    self.freelist.add_to_freelist(new_list.next.expect("Next is null on newly allocated slab"));
 
                     self.freelist
                         .alloc()
