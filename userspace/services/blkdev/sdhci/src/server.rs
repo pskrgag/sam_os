@@ -34,6 +34,12 @@ pub async fn start_server(sdhci: Box<dyn Card>, ns: NameServer) -> Result<(), Er
                         blockCount: card.device_size() / card.block_size() as usize,
                     })?;
                 }
+                BlkDevRequest::SetBlockSize { value, responder } => {
+                    let mut card = sdhci.lock();
+
+                    card.set_block_size(value.blockSize)?;
+                    responder.reply()?;
+                }
             }
             Ok(())
         }

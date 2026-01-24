@@ -32,8 +32,9 @@ impl From<[u32; 4]> for ResponseU32 {
     }
 }
 
+// TODO: this is not good
 impl From<[u32; 4]> for NoResponse {
-    fn from(val: [u32; 4]) -> NoResponse {
+    fn from(_val: [u32; 4]) -> NoResponse {
         Self
     }
 }

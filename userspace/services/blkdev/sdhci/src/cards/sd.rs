@@ -40,6 +40,7 @@ impl From<ResponseU128> for CSD {
 pub struct SDCard {
     iface: SdhciIface,
     csd: CSD,
+    block_size: u16,
 }
 
 impl SDCard {
@@ -47,6 +48,7 @@ impl SDCard {
         Ok(Self {
             csd: iface.csd()?.into(),
             iface,
+            block_size: 512,
         })
     }
 }
@@ -68,10 +70,19 @@ impl Card for SDCard {
     }
 
     fn block_size(&self) -> u16 {
-        512
+        self.block_size
     }
 
     fn device_size(&self) -> usize {
         self.csd.device_size
+    }
+
+    fn set_block_size(&mut self, block_size: u16) -> Result<(), ErrorType> {
+        if !(block_size >= 512 && block_size <= 4096) {
+            return Err(ErrorType::InvalidArgument);
+        }
+
+        self.block_size = block_size;
+        Ok(())
     }
 }
