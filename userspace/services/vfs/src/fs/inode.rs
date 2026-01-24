@@ -1,8 +1,12 @@
+use crate::bindings_Vfs::DirEntry;
 use alloc::sync::Arc;
+use alloc::vec::Vec;
 use rtl::error::ErrorType;
+use alloc::boxed::Box;
 
+#[async_trait::async_trait]
 pub trait DirectoryOperations: Send + Sync {
-    fn open(&self, path: &str) -> Result<Inode, ErrorType>;
+    async fn list(&self) -> Result<Vec<DirEntry>, ErrorType>;
 }
 
 pub trait FileOperations: Send + Sync {

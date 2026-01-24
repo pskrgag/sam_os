@@ -68,7 +68,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
     fn traits(&self) -> String {
         let name = self.interface.name();
         format!(
-            "F: Fn({name}Request) -> Fut + Send + Sync + 'static,\nFut: Future<Output = Result<(), ErrorType>> + 'static + Send + Sync"
+            "F: Fn({name}Request) -> Fut + Send + Sync + 'static,\nFut: Future<Output = Result<(), ErrorType>> + 'static + Send"
         )
     }
 
@@ -132,6 +132,10 @@ pub fn compile_server<W: Write>(ir: Module, buf: &mut W) {
 
     for s in ir.structs() {
         utils::produce_struct(buf, s);
+    }
+
+    for s in ir.enums() {
+        utils::produce_enum(buf, s);
     }
 
     for interface in ir.interfaces() {

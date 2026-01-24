@@ -10,7 +10,7 @@ hal = { path = "../../../../hal/" }
 postcard = { version = "1.1.3", features = ["alloc"] }
 serde = { version = "1", default-features = false  }
 safe-mmio = "0.2.6"
-bitmask = { version = "0.5.0", default-features = false }
+bitmask = { git = "https://github.com/pskrgag/bitmask.git", default-features = false }
 bitvec = { version = "1.0.1", default-features = false }
 heapless = "0.9.2"
 rokio = { path = "../../../libs/rokio" }

@@ -114,8 +114,13 @@ pub fn compile_client<W: Write>(ir: Module, buf: &mut W) {
     utils::start_mod(buf, ir.name());
     utils::includes(buf);
     utils::common_traits(buf);
+
     for s in ir.structs() {
         utils::produce_struct(buf, s);
+    }
+
+    for s in ir.enums() {
+        utils::produce_enum(buf, s);
     }
 
     for interface in ir.interfaces() {

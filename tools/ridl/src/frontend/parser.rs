@@ -2,7 +2,8 @@ use super::lexer::Lexer;
 use super::token::*;
 use std::collections::HashMap;
 
-use crate::ast::argtype::{Struct, Type};
+use crate::ast::argtype::BuiltinTypes;
+use crate::ast::argtype::{Enum, Struct, Type};
 use crate::ast::function::{Argument, Function};
 use crate::ast::interface::Interface;
 use crate::ast::module::Module;
@@ -239,6 +240,53 @@ impl<'a> Parser<'a> {
         Some((name.clone(), Type::Struct(Struct { name, data })))
     }
 
+    // enum Name : <type> {
+    //      Entry1,
+    //      Entry2,
+    // }
+    fn parse_enum(&mut self) -> Option<(String, Type)> {
+        self.consume_token_type(TokenType::TokenId(IdType::Enum))
+            .unwrap();
+
+        let mut data = vec![];
+        let name = self.consume_token_type(TokenType::TokenId(IdType::Identifier))?;
+        self.consume_token_type(TokenType::Colon)?;
+        let tp = self.parse_type()?;
+
+        match tp {
+            Type::Builtin(bt) => {
+                if bt == BuiltinTypes::Handle {
+                    println!("Unsupported type for the enum {tp:?}");
+                    return None;
+                }
+            }
+            _ => {
+                println!("Unsupported type for the enum {tp:?}");
+                return None;
+            }
+        }
+        self.consume_token_type(TokenType::LeftCurlParen)?;
+
+        while self
+            .lookahead_token_type(TokenType::RightCurlParen)
+            .is_none()
+        {
+            let name = self.consume_token_type(TokenType::TokenId(IdType::Identifier))?;
+
+            self.consume_token_type(TokenType::Comma)?;
+            data.push(name.get_str().to_owned());
+        }
+
+        Some((
+            name.get_str().to_owned(),
+            Type::Enum(Enum {
+                name: name.get_str().to_owned(),
+                inner: Box::new(tp),
+                entries: data,
+            }),
+        ))
+    }
+
     pub fn parse(mut self) -> Option<Module> {
         let mut mods = vec![];
 
@@ -251,6 +299,10 @@ impl<'a> Parser<'a> {
             match token.get_type() {
                 TokenType::TokenId(IdType::Type) => self.parse_aliase()?,
                 TokenType::TokenId(IdType::Interface) => mods.push(self.parse_interface()?),
+                TokenType::TokenId(IdType::Enum) => {
+                    let (name, tp) = self.parse_enum().unwrap();
+                    self.custom_types.insert(name, tp);
+                }
                 TokenType::TokenId(IdType::Struct) => {
                     let (name, tp) = self.parse_struct().unwrap();
                     self.custom_types.insert(name, tp);
@@ -263,12 +315,23 @@ impl<'a> Parser<'a> {
             name.get_str().to_owned(),
             mods,
             self.custom_types
-                .into_values()
-                .map(|x| {
-                    let Type::Struct(s) = x else {
-                        panic!("");
-                    };
-                    s
+                .values()
+                .filter_map(|x| {
+                    if let Type::Struct(s) = x {
+                        Some(s.clone())
+                    } else {
+                        None
+                    }
+                })
+                .collect(),
+            self.custom_types
+                .values()
+                .filter_map(|x| {
+                    if let Type::Enum(s) = x {
+                        Some(s.clone())
+                    } else {
+                        None
+                    }
                 })
                 .collect(),
         ))

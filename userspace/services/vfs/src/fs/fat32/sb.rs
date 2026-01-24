@@ -1,4 +1,5 @@
 use super::dir::{Fat32Dir, FsDirEntry};
+use super::fat::FatEntry;
 use crate::bindings_BlkDev::BlkDev;
 use crate::fs::inode::Inode;
 use alloc::sync::Arc;
@@ -138,7 +139,7 @@ pub struct Sector(u32);
 
 /// Cluster
 #[derive(Copy, Clone, Debug)]
-pub struct Cluster(u32);
+pub struct Cluster(pub(super) u32);
 
 impl Into<Cluster> for u32 {
     fn into(self) -> Cluster {
@@ -166,7 +167,7 @@ pub struct SuperBlock {
     /// Number of FATs
     fats: u8,
     /// Start of the first FAT
-    fat_start: u16,
+    fat_start: Sector,
     /// Cluster of the root directory
     root_cluster: Cluster,
     /// Data start sector
@@ -216,7 +217,7 @@ impl SuperBlock {
             cluster_size,
             fat_length,
             fats,
-            fat_start,
+            fat_start: Sector(fat_start as _),
             root_cluster: Cluster(root_cluster),
             data_start: Sector(data_start as u32),
             sectors_per_cluster,
@@ -224,8 +225,69 @@ impl SuperBlock {
         })
     }
 
+    fn cluster_to_sector(&self, s: Cluster) -> Sector {
+        Sector(s.0 * self.sectors_per_cluster as u32)
+    }
+
+    async fn fat_entry_for_cluster(
+        self: &Arc<Self>,
+        cluster: Cluster,
+    ) -> Result<FatEntry, ErrorType> {
+        let fats_per_sector = (self.sector_size() / core::mem::size_of::<FatEntry>()) as u32;
+        let offset = cluster.0 % fats_per_sector;
+        let cluster =
+            Sector(self.fat_start.0 + self.cluster_to_sector(cluster).0 / fats_per_sector);
+        let mut cluster_data = [0u8; 512];
+
+        self.read_sector(cluster, &mut cluster_data).await?;
+        let fats = unsafe {
+            core::slice::from_raw_parts::<FatEntry>(
+                cluster_data.as_ptr() as _,
+                fats_per_sector as usize,
+            )
+        };
+
+        Ok(fats[offset as usize])
+    }
+
     pub fn cluster_size(self: &Arc<Self>) -> usize {
         self.cluster_size
+    }
+
+    pub fn sector_size(self: &Arc<Self>) -> usize {
+        512
+    }
+
+    pub async fn for_each_allocated_cluster_from<F: FnMut(&[u8]) -> bool + Send + Sync>(
+        self: &Arc<Self>,
+        start: Cluster,
+        to: &mut [u8],
+        mut f: F,
+    ) -> Result<(), ErrorType> {
+        let mut start = Some(start);
+
+        while let Some(s) = start {
+            self.read_cluster(s, to).await?;
+
+            if !f(to) {
+                break;
+            }
+
+            let entry = self.fat_entry_for_cluster(s).await?;
+            start = entry.next()
+        }
+
+        Ok(())
+    }
+
+    pub async fn read_sector(
+        self: &Arc<Self>,
+        sector: Sector,
+        to: &mut [u8],
+    ) -> Result<(), ErrorType> {
+        let res = self.inner.lock().blk.ReadBlock(sector.0).await?;
+        to.copy_from_slice(&res.data);
+        Ok(())
     }
 
     pub async fn read_cluster(

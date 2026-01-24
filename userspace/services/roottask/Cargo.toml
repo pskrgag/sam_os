@@ -11,6 +11,7 @@ serde = { version = "1", default-features = false  }
 cpio_reader = "0.1.2"
 rokio = { path = "../../libs/rokio" }
 heapless = "0.9.2"
+bitmask = { git = "https://github.com/pskrgag/bitmask.git", default-features = false }
 
 [build-dependencies]
 ridl = { path = "../../../tools/ridl/" }

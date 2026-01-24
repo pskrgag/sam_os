@@ -8,6 +8,7 @@ use crate::fs::inode::Inode;
 mod dir;
 mod inode;
 mod sb;
+mod fat;
 
 pub struct Fat32;
 

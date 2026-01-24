@@ -93,7 +93,9 @@ impl SlabAllocator {
                 let new_list = FreeList::new(self.slab_size)?;
 
                 unsafe {
-                    self.freelist.add_to_freelist(new_list.next.expect("Next is null on newly allocated slab"));
+                    self.freelist.add_to_freelist(
+                        new_list.next.expect("Next is null on newly allocated slab"),
+                    );
 
                     self.freelist
                         .alloc()
@@ -124,6 +126,8 @@ impl FreeList {
         let mut va = VirtAddr::from(LinearAddr::from(page_allocator().alloc(1)?));
         let block_count = PAGE_SIZE / size;
         let mut list = Self::default();
+
+        // assert!(block_count != 0);
 
         for _ in 0..block_count {
             let new = va.to_raw_mut::<Self>();

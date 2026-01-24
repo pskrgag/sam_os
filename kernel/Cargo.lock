@@ -47,8 +47,7 @@ checksum = "703642b98a00b3b90513279a8ede3fcfa479c126c5fb46e78f3051522f021403"
 [[package]]
 name = "bitmask"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5da9b3d9f6f585199287a473f4f8dfab6566cf827d15c00c219f53c645687ead"
+source = "git+https://github.com/pskrgag/bitmask.git#0bf57189b0ea9a362c8505b4b0ed3f8c26b8f320"
 
 [[package]]
 name = "bytemuck"

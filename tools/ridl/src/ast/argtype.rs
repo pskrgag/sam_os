@@ -7,6 +7,13 @@ pub struct Struct {
     pub name: String,
 }
 
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct Enum {
+    pub name: String,
+    pub inner: Box<Type>,
+    pub entries: Vec<String>,
+}
+
 #[derive(Clone, Copy, Debug, Display, Hash, PartialEq, Eq)]
 pub enum BuiltinTypes {
     U8,
@@ -27,6 +34,7 @@ pub enum Type {
     Builtin(BuiltinTypes),
     Sequence { inner: Box<Type>, count: usize },
     Struct(Struct),
+    Enum(Enum),
 }
 
 lazy_static::lazy_static! {
@@ -86,6 +94,7 @@ impl Type {
                 }
             }
             Self::Struct(s) => s.name.clone(),
+            Self::Enum(s) => s.name.clone(),
         }
     }
 
@@ -93,6 +102,7 @@ impl Type {
         match self {
             Self::Builtin(BuiltinTypes::Handle) => "usize".to_string(),
             Self::Struct(s) => format!("{}Wire", s.name.clone()),
+            Self::Enum(s) => s.inner.as_wire(),
             Self::Sequence { inner, count } => {
                 if **inner != Self::Builtin(BuiltinTypes::Char) {
                     format!("HLVec<{inner}, {count}>", inner = inner.as_wire())

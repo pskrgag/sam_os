@@ -1,9 +1,9 @@
 use crate::bindings_Vfs::{Directory, DirectoryRequest};
 use crate::fs::inode::{DirectoryOperations, Inode};
 use alloc::sync::Arc;
+use libc::handle::Handle;
 use rokio::port::Port;
 use rtl::error::ErrorType;
-use libc::handle::Handle;
 
 pub struct OpenDirectory {
     inode: Arc<dyn DirectoryOperations>,
@@ -28,10 +28,12 @@ impl OpenDirectory {
 
                 async move {
                     match req {
-                        DirectoryRequest::Open { value, responder } => {
-                            let new = dir.inode.open(&value.path)?;
+                        DirectoryRequest::List { value, responder } => {
+                            let res = dir.inode.list().await?;
+                            let mut wire_res = heapless::Vec::new();
 
-                            todo!()
+                            wire_res.extend_from_slice(&res).unwrap();
+                            responder.reply(wire_res)?;
                         }
                     }
 

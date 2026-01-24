@@ -1,5 +1,5 @@
 use crate::ast::{
-    argtype::{BuiltinTypes, Struct, Type},
+    argtype::{BuiltinTypes, Enum, Struct, Type},
     function::{Argument, Function},
     interface::Interface,
 };
@@ -31,6 +31,7 @@ pub struct Message {
 
 pub fn start_mod<W: Write>(buf: &mut W, suffix: &str) {
     writeln!(buf, "#[allow(dead_code)]").unwrap();
+    writeln!(buf, "#[allow(unexpected_cfgs)]").unwrap();
     writeln!(buf, "#[allow(non_snake_case)]").unwrap();
     writeln!(buf, "#[allow(unused_imports)]").unwrap();
     writeln!(buf, "#[allow(unreachable_patterns)]").unwrap();
@@ -65,6 +66,7 @@ pub fn includes<W: Write>(buf: &mut W) {
     writeln!(buf, "use crate::alloc::borrow::ToOwned;").unwrap();
     writeln!(buf, "use serde::ser::SerializeTuple;").unwrap();
     writeln!(buf, "use rtl::handle::Handle as RawHandle;").unwrap();
+    writeln!(buf, "use bitmask::bitmask;").unwrap();
     writeln!(buf).unwrap();
 }
 
@@ -229,6 +231,9 @@ fn type_wire_to_public<S: AsRef<str>>(tp: &Type, var: S) -> String {
         }
         Type::Builtin(BuiltinTypes::Handle) => format!("Handle::new(_message.handles()[{name}])"),
         Type::Struct(_) => format!("{name}.try_to_public(_message).unwrap()"),
+        Type::Enum(s) => {
+            format!("{enum_name} {{ mask: {name} }}", enum_name = s.name)
+        }
         _ => name.to_string(),
     }
 }
@@ -252,6 +257,9 @@ fn type_public_to_wire<S: AsRef<str>>(tp: &Type, var: S) -> String {
             "_message.add_handle(unsafe {{ let res = {name}.as_raw(); core::mem::forget({name}); res }})",
         ),
         Type::Struct(_) => format!("{name}.try_to_wire(_message).unwrap()"),
+        Type::Enum(_) => {
+            format!("*{name}",)
+        },
         _ => name.to_string(),
     }
 }
@@ -491,12 +499,12 @@ pub fn produce_struct<W: Write>(buf: &mut W, s: &Struct) {
     writeln!(
         buf,
         r#"
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct {name}Wire {{
     {}
 }}
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct {name} {{
     {}
 }}
@@ -516,4 +524,27 @@ pub struct {name} {{
     .unwrap();
 
     wire_to_public(buf, s);
+}
+
+pub fn produce_enum<W: Write>(buf: &mut W, s: &Enum) {
+    writeln!(
+        buf,
+        r#"
+bitmask! {{
+    pub mask {name}: {inner} where flags {name}Flag {{
+        {flags}
+    }}
+}}
+"#,
+        name = s.name,
+        inner = s.inner.as_rust(),
+        flags = s
+            .entries
+            .iter()
+            .enumerate()
+            .map(|(i, e)| { format!("{e} = {},", 1 << i) })
+            .collect::<Vec<_>>()
+            .join("\n"),
+    )
+    .unwrap();
 }

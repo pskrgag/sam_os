@@ -43,7 +43,7 @@ impl Console {
     async fn ls(&self, path: &str) -> String {
         let root = self.vfs.Root().await.unwrap().handle;
         let root = Directory::new(unsafe { Port::new(root) });
-        let dir = root.Open(path.try_into().unwrap()).await.unwrap();
+        let dir = root.List().await.unwrap();
 
         String::new()
     }

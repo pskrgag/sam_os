@@ -1,7 +1,20 @@
 use super::sb::{data_from_bytes, Cluster, SuperBlockRef};
+use crate::bindings_Vfs::{DirEntry, DirEntryFlagsFlag};
 use crate::fs::inode::{DirectoryOperations, FileOperations, Inode};
+use alloc::boxed::Box;
 use alloc::vec;
+use alloc::vec::Vec;
+use heapless::String;
 use rtl::error::ErrorType;
+
+pub const ATTR_NORMAL_FILE: u8 = 0b0000000;
+pub const ATTR_READ_ONLY: u8 = 0b00000001;
+pub const ATTR_HIDDEN: u8 = 0b00000010;
+pub const ATTR_SYSTEM: u8 = 0b00000100;
+pub const ATTR_VOLUME_ID: u8 = 0b00001000;
+pub const ATTR_DIRECTORY: u8 = 0b00010000;
+pub const ATTR_ARCHIVE: u8 = 0b00100000;
+pub const ATTR_LONG_NAME: u8 = 0b00001111;
 
 // On disk representation
 #[repr(C)]
@@ -38,8 +51,37 @@ impl Fat32Dir {
     }
 }
 
+#[async_trait::async_trait]
 impl DirectoryOperations for Fat32Dir {
-    fn open(&self, path: &str) -> Result<Inode, ErrorType> {
-        todo!()
+    async fn list(&self) -> Result<Vec<DirEntry>, ErrorType> {
+        let mut cluster = alloc::vec![0; self.sb.cluster_size()];
+        let mut res = vec![];
+
+        self.sb
+            .for_each_allocated_cluster_from(self.start, &mut cluster, |data| {
+                let len = self.sb.cluster_size() / core::mem::size_of::<FsDirEntry>();
+                let entries =
+                    unsafe { core::slice::from_raw_parts(data.as_ptr() as *const FsDirEntry, len) };
+
+                for entry in entries {
+                    if entry.is_used() {
+                        res.push(DirEntry {
+                            name: String::from_utf8((&entry.name[1..]).try_into().unwrap())
+                                .unwrap(),
+                            flags: if entry.attr == ATTR_DIRECTORY {
+                                DirEntryFlagsFlag::Directory
+                            } else {
+                                DirEntryFlagsFlag::File
+                            }
+                            .into(),
+                        });
+                    }
+                }
+
+                true
+            })
+            .await?;
+
+        Ok(res)
     }
 }

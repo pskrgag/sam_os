@@ -10,6 +10,7 @@ pub enum IdType {
     Sequence,
     Struct,
     Package,
+    Enum,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -51,6 +52,7 @@ lazy_static::lazy_static! {
             ("Sequence", TokenType::TokenId(IdType::Sequence)),
             ("struct", TokenType::TokenId(IdType::Struct)),
             ("package", TokenType::TokenId(IdType::Package)),
+            ("enum", TokenType::TokenId(IdType::Enum)),
         ]);
 }
 

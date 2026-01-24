@@ -1,13 +1,24 @@
 package Vfs;
 
 type Path = Sequence<Char, 500>;
+type Name = Sequence<Char, 500>;
 
 interface Vfs {
 	Root(out Handle handle);
 }
 
+enum DirEntryFlags : U8 {
+	File,
+	Directory,
+}
+
+struct DirEntry {
+	Name name;
+	DirEntryFlags flags;
+}
+
 interface Directory {
-	Open(in Path path);
+	List(out Sequence<DirEntry, 1000> entries);
 }
 
 interface File {

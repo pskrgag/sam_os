@@ -9,7 +9,7 @@ edition = "2021"
 static_assertions = "1.1.0"
 bytemuck = {version = "1.14", features = ["derive"]}
 hal = { path = "../hal", features = [] }
-bitmask = { version = "0.5.0", default-features = false }
+bitmask = { git = "https://github.com/pskrgag/bitmask.git", default-features = false }
 
 [features]
 default = ["user"]

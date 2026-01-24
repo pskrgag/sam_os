@@ -18,7 +18,7 @@ use rtl::linker_var;
 use rtl::signal::Signal;
 use rtl::vmm::MappingType;
 
-const USER_THREAD_STACK_PAGES: usize = 100;
+const USER_THREAD_STACK_PAGES: usize = 2000;
 const KERNEL_STACK_PAGES: usize = 100;
 const RR_TICKS: usize = 10;
 
@@ -294,7 +294,11 @@ impl Thread {
         let old = self
             .ticks
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |x| {
-                if x == 0 { None } else { Some(x - 1) }
+                if x == 0 {
+                    None
+                } else {
+                    Some(x - 1)
+                }
             });
 
         // old.is_err() means thread run out of quantum. When it will be re-enabled thread
