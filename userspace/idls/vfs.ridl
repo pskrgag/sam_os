@@ -1,0 +1,15 @@
+package Vfs;
+
+type Path = Sequence<Char, 500>;
+
+interface Vfs {
+	Root(out Handle handle);
+}
+
+interface Directory {
+	Open(in Path path);
+}
+
+interface File {
+	Read(in USize offset, in USize size);
+}

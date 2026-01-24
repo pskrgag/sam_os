@@ -1,5 +1,5 @@
 use super::ecam::PciEcam;
-use crate::bindings_Device::{Device, DeviceRequest, PciMapping};
+use crate::bindings_Pci::{Device, DeviceRequest, PciMapping};
 use alloc::sync::Arc;
 use core::future::Future;
 use hal::address::Address;

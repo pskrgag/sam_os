@@ -1,18 +1,17 @@
 use super::utils;
-use crate::ast::{argtype::Struct, interface::Interface, module::Module};
+use crate::ast::{interface::Interface, module::Module};
 use std::io::Write;
-use utils::{Message, function_to_struct};
+use utils::{function_to_struct, Message};
 
 struct InterfaceCompiler<'a, W: Write> {
     interface: &'a Interface,
     buf: &'a mut W,
     messages: Vec<Message>,
-    structs: &'a Vec<Struct>,
 }
 
 impl<'a, W: Write> InterfaceCompiler<'a, W> {
     fn produce_enums(&mut self) {
-        utils::produce_enums(self.buf, &self.messages);
+        utils::produce_enums(self.buf, &self.messages, self.interface.name());
         utils::produce_server_public_enum(self.buf, self.interface, &self.messages);
     }
 
@@ -29,12 +28,12 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                 let mut receive_buffer: Vec<u8> = Vec::new();
                 let mut in_msg = IpcMessage::new();
 
-                receive_buffer.resize(core::mem::size_of::<Tx>() + 1, 0);
+                receive_buffer.resize(core::mem::size_of::<Tx{iface_name}>() + 1, 0);
 
                 in_msg.set_in_arena(receive_buffer.as_mut_slice());
                 let size = self.port.receive(&mut in_msg).await?;
 
-                let payload: Tx = from_bytes(&in_msg.in_arena().unwrap()[..size]).unwrap();
+                let payload: Tx{iface_name} = from_bytes(&in_msg.in_arena().unwrap()[..size]).unwrap();
                 let public = payload.to_public(&in_msg, &self.port)?;
 
                 let port = self.port.clone();
@@ -45,7 +44,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                     match (handler)(public).await {{
                         Ok(_) => {{}}, // message has been sent by closure
                         Err(e) => {{
-                            let res = RxMessage::Err(e.into());
+                            let res = RxMessage{iface_name}::Err(e.into());
                             let res = to_allocvec(&res).unwrap();
                             let mut msg = IpcMessage::new();
 
@@ -60,7 +59,8 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
         }}
     }}
 "#,
-            traits = self.traits()
+            traits = self.traits(),
+            iface_name = self.interface.name(),
         )
         .unwrap();
     }
@@ -110,13 +110,6 @@ unsafe impl<{traits}> Send for {name}<F, Fut> {{ }}
     }
 
     pub fn compile(mut self) {
-        utils::start_mod(self.buf, self.interface.name());
-        utils::includes(self.buf);
-
-        for s in self.structs {
-            utils::produce_struct(self.buf, s);
-        }
-
         self.make_struct();
         for i in self.interface.functions() {
             let msg = function_to_struct(i);
@@ -129,19 +122,25 @@ unsafe impl<{traits}> Send for {name}<F, Fut> {{ }}
 
         self.register_handler();
         self.produce_enums();
-
-        utils::end_mod(self.buf);
     }
 }
 
 pub fn compile_server<W: Write>(ir: Module, buf: &mut W) {
+    utils::start_mod(buf, ir.name());
+    utils::includes(buf);
+    utils::common_traits(buf);
+
+    for s in ir.structs() {
+        utils::produce_struct(buf, s);
+    }
+
     for interface in ir.interfaces() {
         InterfaceCompiler {
             interface,
             buf,
             messages: vec![],
-            structs: ir.structs(),
         }
         .compile()
     }
+    utils::end_mod(buf);
 }

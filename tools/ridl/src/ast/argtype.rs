@@ -43,6 +43,7 @@ lazy_static::lazy_static! {
             ("Char", BuiltinTypes::Char),
             ("Handle", BuiltinTypes::Handle),
             ("USize", BuiltinTypes::USize),
+            ("IFace", BuiltinTypes::USize),
         ]);
 }
 

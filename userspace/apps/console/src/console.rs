@@ -1,6 +1,5 @@
-use super::bindings_Directory::Directory;
 use super::bindings_Serial::Serial;
-use super::bindings_Vfs::Vfs;
+use super::bindings_Vfs::{Vfs, Directory};
 use alloc::{string::String, vec::Vec};
 use rokio::port::Port;
 

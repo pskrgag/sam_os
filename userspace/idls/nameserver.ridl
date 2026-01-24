@@ -1,3 +1,5 @@
+package NameServer;
+
 type Name = Sequence<Char, 20>;
 
 interface NameServer {

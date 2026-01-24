@@ -1,3 +1,5 @@
+package BlkDev;
+
 type Data = Sequence<U8, 1024>;
 
 struct BlockInfo {

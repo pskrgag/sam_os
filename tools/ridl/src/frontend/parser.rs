@@ -242,6 +242,11 @@ impl<'a> Parser<'a> {
     pub fn parse(mut self) -> Option<Module> {
         let mut mods = vec![];
 
+        // Expect the package at the beginning
+        self.consume_token_type(TokenType::TokenId(IdType::Package))?;
+        let name = self.consume_token_type(TokenType::TokenId(IdType::Identifier))?;
+        self.consume_token_type(TokenType::Semicolumn);
+
         while let Some(token) = self.peek_token() {
             match token.get_type() {
                 TokenType::TokenId(IdType::Type) => self.parse_aliase()?,
@@ -255,6 +260,7 @@ impl<'a> Parser<'a> {
         }
 
         Some(Module::new(
+            name.get_str().to_owned(),
             mods,
             self.custom_types
                 .into_values()

@@ -1,3 +1,5 @@
+package Serial;
+
 type String = Sequence<Char, 500>;
 
 interface Serial {

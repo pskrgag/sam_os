@@ -2,9 +2,8 @@
 #![no_main]
 #![allow(unexpected_cfgs)]
 
-use bindings_Device::Device;
 use bindings_NameServer::NameServer;
-use bindings_Pci::Pci;
+use bindings_Pci::{Pci, Device};
 use hal::{address::MemRange, arch::PAGE_SIZE};
 use libc::{handle::Handle, vmm::vms::vms};
 use rokio::port::Port;

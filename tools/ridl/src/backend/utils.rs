@@ -135,56 +135,61 @@ impl Message for {struct_name} {{
     }
 }
 
-fn produce_compound_enum<W: Write>(buf: &mut W, s: &Struct, name: &str, tx: bool, number: usize) {
-    produce_wire_type(buf, s, name, tx);
-    produce_public_type(buf, s, name, tx);
+fn produce_compound_enum<W: Write>(
+    buf: &mut W,
+    s: &Struct,
+    func_name: &str,
+    iface_name: &str,
+    tx: bool,
+) {
+    produce_wire_type(buf, s, func_name, tx);
+    produce_public_type(buf, s, func_name, tx);
 
     if tx {
         writeln!(
             buf,
             r#"
 impl WireMessage for {tx} {{
-    const NUMBER: usize = {number};
     type Reply = {rx};
 }}
 
-impl TryInto<{tx}> for Tx {{
+impl TryInto<{tx}> for Tx{iface_name} {{
     type Error = ();
 
     fn try_into(self) -> Result<{tx}, Self::Error> {{
         match self {{
-            Self::{name}(e) => Ok(e),
+            Self::{func_name}(e) => Ok(e),
             _ => Err(()),
         }}
     }}
 }}
 "#,
-            tx = wire_type_tx(name),
-            rx = wire_type_rx(name),
+            tx = wire_type_tx(func_name),
+            rx = wire_type_rx(func_name),
         )
         .unwrap();
     } else {
         writeln!(
             buf,
             r#"
-impl From<{rx}> for Rx {{
+impl From<{rx}> for Rx{iface_name} {{
     fn from(value: {rx}) -> Self {{
-        Self::{name}(value)
+        Self::{func_name}(value)
     }}
 }}
 
-impl TryInto<{rx}> for Rx {{
+impl TryInto<{rx}> for Rx{iface_name} {{
     type Error = ();
 
     fn try_into(self) -> Result<{rx}, Self::Error> {{
         match self {{
-            Self::{name}(e) => Ok(e),
+            Self::{func_name}(e) => Ok(e),
             _ => Err(()),
         }}
     }}
 }}
 "#,
-            rx = wire_type_rx(name),
+            rx = wire_type_rx(func_name),
         )
         .unwrap();
     }
@@ -192,13 +197,13 @@ impl TryInto<{rx}> for Rx {{
     wire_to_public(buf, s);
 }
 
-fn produce_final_enum<W: Write>(buf: &mut W, data: &Vec<Message>, tx: bool) {
+fn produce_final_enum<W: Write>(buf: &mut W, data: &Vec<Message>, iface_name: &str, tx: bool) {
     let wire_suffix = if tx { "TxWire" } else { "RxWire" };
     let name = if tx { "Tx" } else { "Rx" };
 
     writeln!(
         buf,
-        "#[derive(Serialize, Deserialize, Debug, Clone)]\nenum {name} {{"
+        "#[derive(Serialize, Deserialize, Debug, Clone)]\nenum {name}{iface_name} {{"
     )
     .unwrap();
 
@@ -316,7 +321,7 @@ fn produce_send_struct<W: Write>(buf: &mut W, interface: &Interface, message: &M
             let mut out_msg = IpcMessage::new();
             let _message = &mut out_msg;
             let msg = {wire_name_rx} {{ {} }};
-            let wire = RxMessage::Ok(Rx::{message_name}(msg));
+            let wire = RxMessage{iface_name}::Ok(Rx{iface_name}::{message_name}(msg));
             let vec = to_allocvec(&wire).unwrap();
             let port = core::mem::ManuallyDrop::new(unsafe {{ Port::new(Handle::new(self.port)) }});
 
@@ -345,6 +350,7 @@ fn produce_send_struct<W: Write>(buf: &mut W, interface: &Interface, message: &M
             .map(|x| format!(", {}: {}", x.0, x.1.as_arg()))
             .collect::<Vec<_>>()
             .join(" "),
+        iface_name = interface.name(),
     )
     .unwrap();
 }
@@ -371,7 +377,7 @@ pub fn produce_server_public_enum<W: Write>(
     writeln!(
         buf,
         r#"
-impl Tx {{
+impl Tx{iface_name} {{
     fn to_public(
         self,
         old_message: &IpcMessage,
@@ -402,17 +408,17 @@ impl Tx {{
                     strname = x.name)
             })
             .collect::<Vec<_>>()
-            .join("\n")
+            .join("\n"),
+        iface_name = interface.name(),
     )
     .unwrap();
 }
 
-pub fn produce_enums<W: Write>(buf: &mut W, messages: &Vec<Message>) {
+pub fn common_traits<W: Write>(buf: &mut W) {
     writeln!(
         buf,
         r#"
 trait WireMessage: Sized {{
-    const NUMBER: usize;
     type Reply;
 }}
 
@@ -428,23 +434,31 @@ trait WireToPublic<T>: Sized {{
 trait PublicToWire<T>: Sized {{
     fn try_to_wire(self, _message: &mut IpcMessage) -> Result<T, ErrorType>;
 }}
+"#
+    )
+    .unwrap();
+}
 
+pub fn produce_enums<W: Write>(buf: &mut W, messages: &Vec<Message>, name: &str) {
+    writeln!(
+        buf,
+        r#"
 #[derive(Serialize, Deserialize, Debug, Clone)]
-enum RxMessage {{
-    Ok(Rx),
+enum RxMessage{name} {{
+    Ok(Rx{name}),
     Err(usize),
 }}
 "#
     )
     .unwrap();
 
-    for (num, msg) in messages.iter().enumerate() {
-        produce_compound_enum(buf, &msg.tx, &msg.name, true, num);
-        produce_compound_enum(buf, &msg.rx, &msg.name, false, num);
+    for msg in messages.iter() {
+        produce_compound_enum(buf, &msg.tx, &msg.name, name, true);
+        produce_compound_enum(buf, &msg.rx, &msg.name, name, false);
     }
 
-    produce_final_enum(buf, messages, true);
-    produce_final_enum(buf, messages, false);
+    produce_final_enum(buf, messages, name, true);
+    produce_final_enum(buf, messages, name, false);
 }
 
 pub fn function_to_struct(f: &Function) -> Message {

@@ -1,5 +1,4 @@
-use super::utils::{Message, function_to_struct};
-use crate::ast::argtype::Struct;
+use super::utils::{function_to_struct, Message};
 use crate::{
     ast::{
         argtype::{BuiltinTypes, Type},
@@ -15,7 +14,6 @@ struct InterfaceCompiler<'a, W: Write> {
     interface: &'a Interface,
     buf: &'a mut W,
     messages: Vec<Message>,
-    structs: &'a Vec<Struct>,
 }
 
 impl<'a, W: Write> InterfaceCompiler<'a, W> {
@@ -33,19 +31,19 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                 self.buf,
                 r#") -> Result<{name}Rx, ErrorType> {{
         let mut _message = IpcMessage::new();
-        let data = Tx::{name}({wire_name_tx} {{ {} }});
+        let data = Tx{iface_name}::{name}({wire_name_tx} {{ {} }});
         let data_vec = to_allocvec(&data).unwrap();
-        let mut receive_buffer = [0u8; core::mem::size_of::<RxMessage>()];
+        let mut receive_buffer = [0u8; core::mem::size_of::<RxMessage{iface_name}>()];
 
         _message.set_out_arena(data_vec.as_slice());
         _message.set_in_arena(receive_buffer.as_mut_slice());
 
         let size = self.port.call(&mut _message).await?;
-        let res: RxMessage = from_bytes(&_message.in_data.unwrap()[..size]).unwrap();
+        let res: RxMessage{iface_name} = from_bytes(&_message.in_data.unwrap()[..size]).unwrap();
 
         let wire: {name}RxWire = match res {{
-            RxMessage::Ok(e) => Ok::<{name}RxWire, ErrorType>(e.try_into().unwrap()),
-            RxMessage::Err(e) => Err(unsafe {{ core::mem::transmute::<_, ErrorType>(e) }}),
+            RxMessage{iface_name}::Ok(e) => Ok::<{name}RxWire, ErrorType>(e.try_into().unwrap()),
+            RxMessage{iface_name}::Err(e) => Err(unsafe {{ core::mem::transmute::<_, ErrorType>(e) }}),
         }}?;
 
         Ok(wire.try_to_public(&_message).unwrap())
@@ -67,6 +65,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                     .join(", "),
                 name = f.name(),
                 wire_name_tx = utils::wire_type_tx(f.name()),
+                iface_name = self.interface.name(),
             )
             .unwrap();
 
@@ -77,7 +76,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
     }
 
     fn produce_enums(&mut self) {
-        utils::produce_enums(self.buf, &self.messages);
+        utils::produce_enums(self.buf, &self.messages, self.interface.name());
     }
 
     fn make_struct(&mut self) {
@@ -100,13 +99,6 @@ impl {name} {{
     }
 
     pub fn compile(mut self) {
-        utils::start_mod(self.buf, self.interface.name());
-        utils::includes(self.buf);
-
-        for s in self.structs {
-            utils::produce_struct(self.buf, s);
-        }
-
         self.make_struct();
 
         for func in self.interface.functions() {
@@ -115,18 +107,25 @@ impl {name} {{
         utils::end_impl(self.buf);
 
         self.produce_enums();
-        utils::end_mod(self.buf);
     }
 }
 
 pub fn compile_client<W: Write>(ir: Module, buf: &mut W) {
+    utils::start_mod(buf, ir.name());
+    utils::includes(buf);
+    utils::common_traits(buf);
+    for s in ir.structs() {
+        utils::produce_struct(buf, s);
+    }
+
     for interface in ir.interfaces() {
         InterfaceCompiler {
             interface,
             buf,
             messages: vec![],
-            structs: ir.structs(),
         }
         .compile()
     }
+
+    utils::end_mod(buf);
 }

@@ -1,3 +1,5 @@
+package Pci;
+
 type PhysAddr = U64;
 
 struct PciMapping {
