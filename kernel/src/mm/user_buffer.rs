@@ -41,9 +41,7 @@ impl<T> UserPtr<T> {
         use core::mem::size_of;
 
         let mut heap = Vec::new();
-        let len = self.count * size_of::<T>();
-
-        heap.try_reserve_exact(len)
+        heap.try_reserve_exact(self.count)
             .map_err(|_| ErrorType::NoMemory)?;
         let slice = heap.spare_capacity_mut();
 
@@ -64,12 +62,16 @@ impl<T> UserPtr<T> {
         unsafe {
             let res = arch_copy_from_user(self.p, core::mem::size_of::<T>() * s, to.as_ptr() as _);
 
-            if res == 0 { Some(s) } else { None }
+            if res == 0 {
+                Some(s)
+            } else {
+                None
+            }
         }
     }
 
     pub fn read(&self) -> Option<T> {
-        use core::mem::{MaybeUninit, size_of};
+        use core::mem::{size_of, MaybeUninit};
 
         let t = MaybeUninit::uninit();
 

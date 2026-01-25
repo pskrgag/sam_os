@@ -60,7 +60,7 @@ impl VmsInner {
         Ok(va)
     }
 
-    // ToDo: on-demang allocation of physical memory
+    // ToDo: on-demand allocation of physical memory
     pub fn vm_allocate(&mut self, mut size: usize, tp: MappingType) -> Result<VirtAddr, ErrorType> {
         if !size.next_multiple_of(PAGE_SIZE) == size {
             return Err(ErrorType::InvalidArgument);

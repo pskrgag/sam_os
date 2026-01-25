@@ -27,12 +27,7 @@ pub fn alloc(size: usize) -> Option<*mut u8> {
     let slab_index = (size.next_power_of_two().ilog2() as usize) - 3;
 
     if slab_index >= KERNEL_SLABS.len() {
-        panic!("");
-        // return kernel_task()
-        //     .vms()
-        //     .vm_allocate(size, MappingType::Data)
-        //     .map(|x| x.to_raw_mut())
-        //     .ok();
+        return None;
     }
 
     KERNEL_SLABS[slab_index].lock().alloc()
@@ -43,7 +38,7 @@ pub fn free(ptr: *mut u8, l: Layout) {
 
     let slab_index = (size.next_power_of_two().ilog2() as usize) - 3;
     if slab_index >= KERNEL_SLABS.len() {
-        // kernel_task().vms().vm_free(ptr.into(), l.size()).ok();
+        panic!("{size}")
     } else {
         unsafe { KERNEL_SLABS[slab_index].lock().free(ptr) }
     }
@@ -111,6 +106,7 @@ impl SlabAllocator {
             debug_assert!((addr as *mut FreeList).is_aligned());
 
             let slice = core::slice::from_raw_parts_mut(addr, self.slab_size);
+
             slice.fill(0xa5);
             self.freelist
                 .add_to_freelist(NonNull::new_unchecked(addr as *mut FreeList));
@@ -123,11 +119,12 @@ impl FreeList {
     pub fn new(size: usize) -> Option<Self> {
         assert!(size.is_power_of_two());
 
-        let mut va = VirtAddr::from(LinearAddr::from(page_allocator().alloc(1)?));
-        let block_count = PAGE_SIZE / size;
+        let pages = size.next_multiple_of(PAGE_SIZE) / PAGE_SIZE;
+        let mut va = VirtAddr::from(LinearAddr::from(page_allocator().alloc(pages)?));
+        let block_count = size.next_multiple_of(PAGE_SIZE) / size;
         let mut list = Self::default();
 
-        // assert!(block_count != 0);
+        assert!(block_count != 0);
 
         for _ in 0..block_count {
             let new = va.to_raw_mut::<Self>();

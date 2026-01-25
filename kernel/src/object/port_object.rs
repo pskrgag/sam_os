@@ -1,8 +1,8 @@
 use crate::mm::user_buffer::UserPtr;
-use crate::object::KernelObjectBase;
 use crate::object::capabilities::{Capability, CapabilityMask};
 use crate::object::handle::Handle;
 use crate::object::handle_table::HandleTable;
+use crate::object::KernelObjectBase;
 use crate::sched::current_task;
 use crate::sync::WaitQueue;
 use crate::tasks::task::Task;
