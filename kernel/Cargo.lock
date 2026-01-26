@@ -12,6 +12,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "adt"
+version = "0.1.0"
+dependencies = [
+ "rtl",
+]
+
+[[package]]
 name = "arm-gic"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -160,6 +167,7 @@ name = "kernel"
 version = "0.1.0"
 dependencies = [
  "aarch64-cpu",
+ "adt",
  "arm-gic",
  "bitmaps",
  "bitmask",

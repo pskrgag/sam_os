@@ -1,4 +1,4 @@
-use crate::adt::Vec;
+use adt::Vec;
 use alloc::boxed::Box;
 use core::marker::PhantomData;
 use rtl::error::ErrorType;

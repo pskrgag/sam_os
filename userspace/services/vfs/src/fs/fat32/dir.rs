@@ -115,7 +115,7 @@ impl DirectoryOperations for Fat32Dir {
     async fn list(&self) -> Result<Vec<DirEntry>, ErrorType> {
         let mut res = alloc::vec![];
 
-        self.for_each_dir_entry(|entry, idx| {
+        self.for_each_dir_entry(|entry, _| {
             if !entry.is_free() {
                 res.push(DirEntry {
                     name: String::from_utf8((&entry.name[1..]).try_into().unwrap()).unwrap(),

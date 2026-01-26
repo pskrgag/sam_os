@@ -23,7 +23,6 @@ extern crate log;
 mod arch;
 #[macro_use]
 mod smp;
-mod adt;
 mod drivers;
 mod logger;
 mod mm;
@@ -48,10 +47,6 @@ static SAMOS_BANNER: &str = "
 \\_______)|/     \\||/     \\|  (_______)\\_______)
                                                
 ";
-
-unsafe extern "C" {
-    static __start: usize;
-}
 
 #[cfg(not(test))]
 pub async fn init_userspace(prot: &loader_protocol::LoaderArg) {

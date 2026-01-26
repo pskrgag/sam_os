@@ -1,4 +1,4 @@
-use crate::adt::Vec;
+use adt::Vec;
 use crate::sync::Spinlock;
 use alloc::boxed::Box;
 use alloc::sync::Arc;

@@ -1,6 +1,6 @@
 use super::task::Task;
 use super::waker::WakerPage;
-use crate::adt::Vec;
+use adt::Vec;
 use alloc::sync::Arc;
 use core::num::NonZeroU32;
 use core::task::Waker;

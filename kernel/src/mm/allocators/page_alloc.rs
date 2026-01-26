@@ -1,4 +1,4 @@
-use crate::adt::Vec;
+use adt::Vec;
 use crate::mm::memset_pages;
 use crate::sync::{Spinlock, spinlock::SpinlockGuard};
 use bitmaps::Bitmap;

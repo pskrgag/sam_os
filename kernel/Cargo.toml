@@ -12,6 +12,7 @@ rtl = { path = "../rtl", features = ["kernel"] }
 hal = { path = "../hal", features = ["kernel"] }
 static_assertions = "1.1.0"
 loader_protocol = { path = "../loader_protocol" }
+adt = { path = "../adt" }
 heapless = { version = "0.9.1", features = ["serde"] }
 safe-mmio = "0.2.5"
 elf = { version = "0.8.0", default-features = false }

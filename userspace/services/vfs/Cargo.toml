@@ -15,6 +15,7 @@ heapless = "0.9.2"
 downcast-rs = { version = "2.0.1", default-features = false }
 bitmask = { path = "/home/paskripkin/Documents/git/bitmask", default-features = false }
 async-trait = "0.1.89"
+adt = { path = "../../../adt" }
 
 [build-dependencies]
 ridl = { path = "../../../tools/ridl/" }

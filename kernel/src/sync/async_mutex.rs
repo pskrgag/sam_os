@@ -1,5 +1,5 @@
 use super::spinlock::Spinlock;
-use crate::adt::Vec;
+use adt::Vec;
 use core::future::Future;
 use core::sync::atomic::{AtomicU8, Ordering};
 use core::task::{Context, Poll, Waker};

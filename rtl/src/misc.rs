@@ -24,21 +24,6 @@ where
     (!zero - (one << l) + one) & (!zero >> (bits_per_t - one - h))
 }
 
-pub fn ref_to_usize<T>(rf: &T) -> usize {
-    rf as *const _ as usize
-}
-
-pub fn ref_mut_to_usize<T>(rf: &mut T) -> usize {
-    rf as *mut _ as usize
-}
-
-/// # Safety
-///
-/// [`v`] should be created by ref_mut_to_usize of ref_to_usize
-pub unsafe fn usize_to_ref<T>(v: usize) -> &'static T {
-    &*(v as *const u8 as *const T)
-}
-
 #[repr(C)]
 pub struct AlignedAs<Align, Bytes: ?Sized> {
     pub _align: [Align; 0],

@@ -1,4 +1,4 @@
-use crate::adt::Vec;
+use adt::vec::Vec;
 use crate::drivers::fdt::fdt;
 use crate::logger::print_str;
 use crate::object::{

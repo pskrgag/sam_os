@@ -29,4 +29,12 @@ impl FatEntry {
             None
         }
     }
+
+    pub fn new_tail() -> Self {
+        Self(FAT_EOF_MAX)
+    }
+
+    pub fn new_chain(next: Cluster) -> Self {
+        Self(next.0)
+    }
 }

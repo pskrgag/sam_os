@@ -1,5 +1,5 @@
 use super::Spinlock;
-use crate::adt::Vec;
+use adt::Vec;
 use alloc::collections::LinkedList;
 use core::future::Future;
 use core::pin::Pin;

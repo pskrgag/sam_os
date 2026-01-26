@@ -1,8 +1,11 @@
 use super::dir::Fat32Dir;
 use super::fat::FatEntry;
+use super::fat_alloc::FatAlloc;
 use crate::bindings_BlkDev::BlkDev;
 use crate::fs::inode::Inode;
 use alloc::sync::Arc;
+use alloc::vec::Vec;
+use core::ops::Add;
 use core::ops::{BitOr, BitOrAssign};
 use rtl::error::ErrorType;
 use rtl::locking::spinlock::Spinlock;
@@ -138,8 +141,16 @@ impl FatBiosParamBlock {
 #[derive(Copy, Clone, Debug)]
 pub struct Sector(u32);
 
+impl Add<u32> for Sector {
+    type Output = Self;
+
+    fn add(self, rhs: u32) -> Self::Output {
+        Self(self.0 + rhs)
+    }
+}
+
 /// Cluster
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct Cluster(pub(super) u32);
 
 impl Into<Cluster> for u32 {
@@ -178,14 +189,67 @@ impl BitOrAssign for CallbackRes {
 /// Super-block reference
 pub type SuperBlockRef = Arc<SuperBlock>;
 
-/// Fat32 superblock structure
-struct SuperBlockInner {
-    /// Free clusters
-    free_clusters: Option<u32>,
-    /// The device
-    blk: BlkDev,
+/// Wrapper for block device
+pub(super) struct BlockDevice(BlkDev);
+
+impl BlockDevice {
+    /// Reads one sector of data from the backing block device
+    pub async fn read_sector(&self, sector: Sector, to: &mut [u8]) -> Result<(), ErrorType> {
+        let res = self.0.ReadBlock(sector.0).await?;
+
+        to.copy_from_slice(&res.data);
+        Ok(())
+    }
+
+    /// Writes one sector of data to the backing block device
+    pub async fn write_sector(&self, sector: Sector, from: &[u8]) -> Result<(), ErrorType> {
+        self.0
+            .WriteBlock(sector.0, from.try_into().unwrap())
+            .await?;
+
+        Ok(())
+    }
 }
 
+/// Inner structure for FAT32 superblock.
+/// Should be protected by the lock
+pub(super) struct SuperBlockInner {
+    /// Free clusters
+    free_clusters: FatAlloc,
+    /// The device
+    blk: BlockDevice,
+}
+
+impl SuperBlockInner {
+    pub async fn new(blk: BlkDev, fat_start: Sector, fat_length: usize) -> Result<Self, ErrorType> {
+        let blk = BlockDevice(blk);
+        let free_clusters = FatAlloc::new(fat_start, fat_length, &blk).await?;
+
+        Ok(Self { free_clusters, blk })
+    }
+
+    /// Reads one sector of data from the backing block device
+    pub async fn read_sector(&self, sector: Sector, to: &mut [u8]) -> Result<(), ErrorType> {
+        self.blk.read_sector(sector, to).await
+    }
+
+    /// Writes one sector of data to the backing block device
+    pub async fn write_sector(&self, sector: Sector, from: &[u8]) -> Result<(), ErrorType> {
+        self.blk.write_sector(sector, from).await
+    }
+
+    pub async fn allocate_clusters(
+        &mut self,
+        start: Option<Cluster>,
+        num_clusters: usize,
+    ) -> Result<Vec<Cluster>, ErrorType> {
+        self.free_clusters
+            .allocate_clusters(start, num_clusters, &self.blk)
+            .await
+    }
+}
+
+/// Fat32 superblock structure
 pub struct SuperBlock {
     inner: Spinlock<SuperBlockInner>,
     /// Size of cluster
@@ -215,7 +279,7 @@ impl SuperBlock {
         let fat_start = bpb.fat_reserved;
         let mut fat_length = bpb.fat_fat_length as u32;
         let mut root_cluster = 0;
-        let mut free_clusters = None;
+        // let mut free_clusters = None;
 
         if fat_length == 0 && bpb.fat32_length != 0 {
             fat_length = bpb.fat32_length;
@@ -230,7 +294,7 @@ impl SuperBlock {
                 return Err(ErrorType::InvalidArgument);
             }
 
-            free_clusters = (info.free_clusters != u32::MAX).then_some(info.free_clusters);
+            // free_clusters = (info.free_clusters != u32::MAX).then_some(info.free_clusters);
         }
 
         let data_start = fat_start + fats as u16 * fat_length as u16;
@@ -249,12 +313,10 @@ impl SuperBlock {
             root_cluster: Cluster(root_cluster),
             data_start: Sector(data_start as u32),
             sectors_per_cluster,
-            inner: Spinlock::new(SuperBlockInner { free_clusters, blk }),
+            inner: Spinlock::new(
+                SuperBlockInner::new(blk, Sector(fat_start as _), fat_length as _).await?,
+            ),
         })
-    }
-
-    fn cluster_to_sector(&self, s: Cluster) -> Sector {
-        Sector(s.0 * self.sectors_per_cluster as u32)
     }
 
     async fn fat_entry_for_cluster(
@@ -263,14 +325,17 @@ impl SuperBlock {
     ) -> Result<FatEntry, ErrorType> {
         let fats_per_sector = (self.sector_size() / core::mem::size_of::<FatEntry>()) as u32;
         let offset = cluster.0 % fats_per_sector;
-        let cluster =
-            Sector(self.fat_start.0 + self.cluster_to_sector(cluster).0 / fats_per_sector);
-        let mut cluster_data = [0u8; 512];
+        let sector = Sector(self.fat_start.0 + self.cluster_to_sector(cluster).0 / fats_per_sector);
+        let mut sector_data = [0u8; 512];
 
-        self.read_sector(cluster, &mut cluster_data).await?;
+        self.inner
+            .lock()
+            .read_sector(sector, &mut sector_data)
+            .await?;
+
         let fats = unsafe {
             core::slice::from_raw_parts::<FatEntry>(
-                cluster_data.as_ptr() as _,
+                sector_data.as_ptr() as _,
                 fats_per_sector as usize,
             )
         };
@@ -319,14 +384,8 @@ impl SuperBlock {
         Ok(())
     }
 
-    pub async fn read_sector(
-        self: &Arc<Self>,
-        sector: Sector,
-        to: &mut [u8],
-    ) -> Result<(), ErrorType> {
-        let res = self.inner.lock().blk.ReadBlock(sector.0).await?;
-        to.copy_from_slice(&res.data);
-        Ok(())
+    fn cluster_to_sector(&self, cluster: Cluster) -> Sector {
+        Sector((cluster.0 - 2) * (self.sectors_per_cluster as u32) + self.data_start.0)
     }
 
     pub async fn read_cluster(
@@ -338,11 +397,10 @@ impl SuperBlock {
         // TODO: fuck off I am too lazy
         assert!(self.cluster_size == 512);
 
-        let sector = (cluster.0 - 2) * (self.sectors_per_cluster as u32) + self.data_start.0;
-        let res = self.inner.lock().blk.ReadBlock(sector).await?;
-
-        to.copy_from_slice(&res.data);
-        Ok(())
+        self.inner
+            .lock()
+            .read_sector(self.cluster_to_sector(cluster), to)
+            .await
     }
 
     pub async fn write_cluster(
@@ -354,20 +412,28 @@ impl SuperBlock {
         // TODO: fuck off I am too lazy
         assert!(self.cluster_size == 512);
 
-        let sector = (cluster.0 - 2) * (self.sectors_per_cluster as u32) + self.data_start.0;
-
         self.inner
             .lock()
-            .blk
-            .WriteBlock(sector, from.try_into().unwrap())
+            .write_sector(self.cluster_to_sector(cluster), from)
             .await?;
-
         Ok(())
     }
 
     pub async fn root(self: &Arc<Self>) -> Result<Arc<Inode>, ErrorType> {
-        Ok(Arc::new(Inode::Directory(Arc::new(
-            Fat32Dir::new(self.clone(), self.root_cluster).await?,
-        ))))
+        Fat32Dir::new(self.clone(), self.root_cluster)
+            .await
+            .map(|x| Arc::new(Inode::Directory(Arc::new(x))))
+    }
+
+    /// Allocates clusters and links them to chain starting from start
+    pub(super) async fn allocate_clusters(
+        &mut self,
+        start: Option<Cluster>,
+        num_clusters: usize,
+    ) -> Result<Vec<Cluster>, ErrorType> {
+        self.inner
+            .lock()
+            .allocate_clusters(start, num_clusters)
+            .await
     }
 }

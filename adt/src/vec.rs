@@ -1,3 +1,4 @@
+//! OOM friendly version of vector
 use alloc::boxed::Box;
 use core::fmt::{Debug, Formatter};
 use core::ops::{Deref, DerefMut};
@@ -39,6 +40,8 @@ impl<T> Vec<T> {
         Self(alloc::vec::Vec::new())
     }
 
+    /// # Safety
+    /// The same as for alloc::vec::from_raw_parts
     pub unsafe fn from_raw_parts(ptr: *mut T, length: usize, capacity: usize) -> Self {
         unsafe { Self(alloc::vec::Vec::from_raw_parts(ptr, length, capacity)) }
     }
