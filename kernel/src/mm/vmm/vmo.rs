@@ -22,7 +22,7 @@ crate::kernel_object!(VmObject, Signal::None.into());
 
 impl VmObjectInner {
     pub fn zeroed(size: usize, tp: MappingType) -> Option<Self> {
-        let pages = size.next_multiple_of(PAGE_SIZE) / PAGE_SIZE;
+        let pages = size.div_ceil(PAGE_SIZE);
         let p = page_allocator().alloc(pages)?;
 
         Some(Self {

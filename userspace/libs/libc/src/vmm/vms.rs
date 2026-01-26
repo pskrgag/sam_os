@@ -27,7 +27,8 @@ impl Vms {
     pub fn create_vm_object(&self, size: usize, tp: MappingType) -> Result<VmObject, ErrorType> {
         let h: Handle = Syscall::vm_create_vmo(&self.h, size, tp)?;
 
-        Ok(VmObject::new(h))
+        // SAFETY: we believe that kernel does not fool us.
+        Ok(unsafe { VmObject::new(h) })
     }
 
     pub fn map_vm_object(

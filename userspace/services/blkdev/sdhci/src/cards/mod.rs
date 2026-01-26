@@ -9,6 +9,9 @@ pub trait Card: Send + Deref<Target = SdhciIface> {
     /// Reads one block of data from the device
     fn read_block(&mut self, block: u32) -> Result<Vec<u8>, ErrorType>;
 
+    /// Writes one block of data to the device
+    fn write_block(&mut self, block: u32, data: &[u8]) -> Result<(), ErrorType>;
+
     /// Returns current block count
     fn block_size(&self) -> u16;
 

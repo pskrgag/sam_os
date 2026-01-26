@@ -28,12 +28,18 @@ impl OpenDirectory {
 
                 async move {
                     match req {
-                        DirectoryRequest::List { value, responder } => {
+                        DirectoryRequest::List { responder, .. } => {
                             let res = dir.inode.list().await?;
                             let mut wire_res = heapless::Vec::new();
 
                             wire_res.extend_from_slice(&res).unwrap();
                             responder.reply(wire_res)?;
+                        }
+                        DirectoryRequest::CreateFile { value, responder } => {
+                            let res = dir.inode.create_file(&value.name).await?;
+
+                            rokio::executor::spawn(res.handler);
+                            responder.reply(&res.handle)?;
                         }
                     }
 

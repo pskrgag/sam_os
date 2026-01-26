@@ -1,8 +1,9 @@
-use super::dir::{Fat32Dir, FsDirEntry};
+use super::dir::Fat32Dir;
 use super::fat::FatEntry;
 use crate::bindings_BlkDev::BlkDev;
 use crate::fs::inode::Inode;
 use alloc::sync::Arc;
+use core::ops::{BitOr, BitOrAssign};
 use rtl::error::ErrorType;
 use rtl::locking::spinlock::Spinlock;
 
@@ -147,6 +148,33 @@ impl Into<Cluster> for u32 {
     }
 }
 
+/// Result of walk cb
+#[derive(Debug, Clone, Copy)]
+#[repr(u8)]
+pub enum CallbackRes {
+    StopSync = 3,
+    ContinueSync = 2,
+    Stop = 1,
+    Continue = 0,
+}
+
+impl BitOr for CallbackRes {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        let s = self as u8;
+        let rhs = rhs as u8;
+
+        unsafe { core::mem::transmute(s | rhs) }
+    }
+}
+
+impl BitOrAssign for CallbackRes {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
+    }
+}
+
 /// Super-block reference
 pub type SuperBlockRef = Arc<SuperBlock>;
 
@@ -258,7 +286,9 @@ impl SuperBlock {
         512
     }
 
-    pub async fn for_each_allocated_cluster_from<F: FnMut(&[u8]) -> bool + Send + Sync>(
+    pub async fn for_each_allocated_cluster_from<
+        F: FnMut(&mut [u8]) -> CallbackRes + Send + Sync,
+    >(
         self: &Arc<Self>,
         start: Cluster,
         to: &mut [u8],
@@ -269,8 +299,17 @@ impl SuperBlock {
         while let Some(s) = start {
             self.read_cluster(s, to).await?;
 
-            if !f(to) {
-                break;
+            let res = f(to);
+            match res {
+                CallbackRes::Stop => break,
+                CallbackRes::Continue => {}
+                CallbackRes::StopSync => {
+                    self.write_cluster(s, to).await?;
+                    break;
+                }
+                CallbackRes::ContinueSync => {
+                    self.write_cluster(s, to).await?;
+                }
             }
 
             let entry = self.fat_entry_for_cluster(s).await?;
@@ -303,6 +342,26 @@ impl SuperBlock {
         let res = self.inner.lock().blk.ReadBlock(sector).await?;
 
         to.copy_from_slice(&res.data);
+        Ok(())
+    }
+
+    pub async fn write_cluster(
+        self: &Arc<Self>,
+        cluster: Cluster,
+        from: &[u8],
+    ) -> Result<(), ErrorType> {
+        assert!(cluster.0 >= 2);
+        // TODO: fuck off I am too lazy
+        assert!(self.cluster_size == 512);
+
+        let sector = (cluster.0 - 2) * (self.sectors_per_cluster as u32) + self.data_start.0;
+
+        self.inner
+            .lock()
+            .blk
+            .WriteBlock(sector, from.try_into().unwrap())
+            .await?;
+
         Ok(())
     }
 

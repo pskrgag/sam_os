@@ -1,8 +1,9 @@
-use super::sb::{data_from_bytes, Cluster, SuperBlockRef};
+use super::file::FatFile;
+use super::sb::{CallbackRes, Cluster, SuperBlockRef};
 use crate::bindings_Vfs::{DirEntry, DirEntryFlagsFlag};
-use crate::fs::inode::{DirectoryOperations, FileOperations, Inode};
+use crate::fs::inode::{DirectoryOperations, OpenFile};
 use alloc::boxed::Box;
-use alloc::vec;
+use alloc::sync::Arc;
 use alloc::vec::Vec;
 use heapless::String;
 use rtl::error::ErrorType;
@@ -18,7 +19,7 @@ pub const ATTR_LONG_NAME: u8 = 0b00001111;
 
 // On disk representation
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct FsDirEntry {
     name: [u8; 11], /* name and extension */
     attr: u8,       /* attribute bits */
@@ -35,53 +36,125 @@ pub struct FsDirEntry {
 }
 
 impl FsDirEntry {
-    pub fn is_used(&self) -> bool {
+    pub fn is_free(&self) -> bool {
         self.name[0] == 0 || self.name[0] == 0xe5
+    }
+
+    pub fn new_empty(name: &str) -> Self {
+        let mut real_name: [u8; 11] = [0; 11];
+
+        real_name[0] = 0xaa;
+        real_name[1..1 + name.len()].copy_from_slice(name.as_bytes());
+
+        Self {
+            name: real_name,
+            attr: ATTR_NORMAL_FILE,
+            ..Default::default()
+        }
     }
 }
 
-pub struct Fat32Dir {
+struct Fat32DirInner {
     sb: SuperBlockRef,
     start: Cluster,
 }
 
+#[derive(Clone)]
+pub struct Fat32Dir {
+    inner: Arc<Fat32DirInner>,
+}
+
+pub(super) struct Fat32DirRef {
+    dir: Fat32Dir,
+    offset: usize,
+}
+
 impl Fat32Dir {
     pub async fn new(sb: SuperBlockRef, start: Cluster) -> Result<Self, ErrorType> {
-        Ok(Self { sb, start })
+        Ok(Self {
+            inner: Arc::new(Fat32DirInner { sb, start }),
+        })
+    }
+
+    async fn for_each_dir_entry<F: FnMut(&mut FsDirEntry, usize) -> CallbackRes + Send + Sync>(
+        &self,
+        mut f: F,
+    ) -> Result<(), ErrorType> {
+        let mut cluster = alloc::vec![0; self.inner.sb.cluster_size()];
+        let mut idx = 0;
+
+        self.inner
+            .sb
+            .for_each_allocated_cluster_from(self.inner.start, &mut cluster, |data| {
+                let len = self.inner.sb.cluster_size() / core::mem::size_of::<FsDirEntry>();
+                let entries = unsafe {
+                    core::slice::from_raw_parts_mut(data.as_mut_ptr() as *mut FsDirEntry, len)
+                };
+                let mut res = CallbackRes::Continue;
+
+                for entry in entries {
+                    res |= f(entry, idx);
+
+                    if matches!(res, CallbackRes::Stop | CallbackRes::StopSync) {
+                        break;
+                    }
+
+                    idx += 1;
+                }
+
+                res
+            })
+            .await?;
+
+        Ok(())
     }
 }
 
 #[async_trait::async_trait]
 impl DirectoryOperations for Fat32Dir {
     async fn list(&self) -> Result<Vec<DirEntry>, ErrorType> {
-        let mut cluster = alloc::vec![0; self.sb.cluster_size()];
-        let mut res = vec![];
+        let mut res = alloc::vec![];
 
-        self.sb
-            .for_each_allocated_cluster_from(self.start, &mut cluster, |data| {
-                let len = self.sb.cluster_size() / core::mem::size_of::<FsDirEntry>();
-                let entries =
-                    unsafe { core::slice::from_raw_parts(data.as_ptr() as *const FsDirEntry, len) };
-
-                for entry in entries {
-                    if entry.is_used() {
-                        res.push(DirEntry {
-                            name: String::from_utf8((&entry.name[1..]).try_into().unwrap())
-                                .unwrap(),
-                            flags: if entry.attr == ATTR_DIRECTORY {
-                                DirEntryFlagsFlag::Directory
-                            } else {
-                                DirEntryFlagsFlag::File
-                            }
-                            .into(),
-                        });
+        self.for_each_dir_entry(|entry, idx| {
+            if !entry.is_free() {
+                res.push(DirEntry {
+                    name: String::from_utf8((&entry.name[1..]).try_into().unwrap()).unwrap(),
+                    flags: if entry.attr == ATTR_DIRECTORY {
+                        DirEntryFlagsFlag::Directory
+                    } else {
+                        DirEntryFlagsFlag::File
                     }
-                }
+                    .into(),
+                });
+            }
 
-                true
-            })
-            .await?;
+            CallbackRes::Continue
+        })
+        .await?;
 
         Ok(res)
+    }
+
+    async fn create_file(&self, name: &str) -> Result<OpenFile, ErrorType> {
+        let mut allocated_idx = 0;
+
+        self.for_each_dir_entry(|entry, idx| {
+            if entry.is_free() {
+                *entry = FsDirEntry::new_empty(name);
+                allocated_idx = idx;
+                return CallbackRes::StopSync;
+            }
+
+            CallbackRes::Continue
+        })
+        .await?;
+
+        FatFile::new(
+            None,
+            Fat32DirRef {
+                dir: self.clone(),
+                offset: allocated_idx,
+            },
+        )
     }
 }

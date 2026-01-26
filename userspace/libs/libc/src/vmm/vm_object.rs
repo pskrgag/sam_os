@@ -5,7 +5,7 @@ pub struct VmObject {
 }
 
 impl VmObject {
-    pub fn new(h: Handle) -> Self {
+    pub unsafe fn new(h: Handle) -> Self {
         Self { h }
     }
 

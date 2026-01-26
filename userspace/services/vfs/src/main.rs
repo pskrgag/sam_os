@@ -5,7 +5,6 @@ use alloc::sync::Arc;
 use bindings_BlkDev::BlkDev;
 use bindings_NameServer::NameServer;
 use bindings_Vfs::{Vfs, VfsRequest};
-use fs::Filesystem;
 use libc::handle::Handle;
 use rokio::port::Port;
 use rtl::error::ErrorType;

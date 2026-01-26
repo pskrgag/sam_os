@@ -10,5 +10,6 @@ struct BlockInfo {
 interface BlkDev {
 	GetInfo(out BlockInfo info);
 	ReadBlock(in U32 blockIdx, out Data data);
+	WriteBlock(in U32 blockIdx, in Data data);
 	SetBlockSize(in U16 blockSize);
 }

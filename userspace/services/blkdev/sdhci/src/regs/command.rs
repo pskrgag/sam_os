@@ -12,6 +12,7 @@ pub enum NormalOpcode {
     SelectCard = 7,
     VoltageCheck = 8,
     ReadOneBlock = 17,
+    WriteOneBlock = 24,
     AppCmd = 55,
 }
 

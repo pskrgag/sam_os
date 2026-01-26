@@ -1,7 +1,9 @@
 use super::bindings_Serial::Serial;
-use super::bindings_Vfs::{Vfs, Directory};
+use super::bindings_Vfs::{Directory, Vfs};
+use alloc::format;
 use alloc::{string::String, vec::Vec};
 use rokio::port::Port;
+use rtl::error::ErrorType;
 
 pub struct Console {
     backend: Serial,
@@ -40,12 +42,24 @@ impl Console {
         }
     }
 
-    async fn ls(&self, path: &str) -> String {
+    async fn ls(&self, _path: &str) -> String {
         let root = self.vfs.Root().await.unwrap().handle;
         let root = Directory::new(unsafe { Port::new(root) });
         let dir = root.List().await.unwrap();
 
-        String::new()
+        dir.entries
+            .into_iter()
+            .map(|x| format!("{}", x.name))
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
+    async fn create(&self, name: &str) -> Result<(), ErrorType> {
+        let root = self.vfs.Root().await.unwrap().handle;
+        let root = Directory::new(unsafe { Port::new(root) });
+
+        root.CreateFile(name.try_into().unwrap()).await?;
+        Ok(())
     }
 
     pub async fn serve(self) {
@@ -70,7 +84,15 @@ impl Console {
                         let dir = parts.next().unwrap_or("");
                         let res = self.ls(dir).await;
 
-                        self.put_str(res).await;
+                        self.put_str(alloc::format!("{res}\n")).await;
+                    }
+                    "create" => {
+                        if let Some(name) = parts.next() {
+                            self.create(name).await.unwrap();
+                        } else {
+                            self.put_str(alloc::format!("Please provide a name\n"))
+                                .await
+                        }
                     }
                     _ => {
                         self.put_str(alloc::format!("Unknown command '{cmd_name}'\n"))

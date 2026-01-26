@@ -26,6 +26,12 @@ pub async fn start_server(sdhci: Box<dyn Card>, ns: NameServer) -> Result<(), Er
 
                     responder.reply(data.into_iter().collect())?;
                 }
+                BlkDevRequest::WriteBlock { value, responder } => {
+                    let mut card = sdhci.lock();
+
+                    card.write_block(value.blockIdx, &value.data)?;
+                    responder.reply()?;
+                }
                 BlkDevRequest::GetInfo { responder, .. } => {
                     let card = sdhci.lock();
 

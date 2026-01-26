@@ -69,6 +69,13 @@ impl Card for SDCard {
             .with_selected_card(|mut card| card.read_block(block, block_size))
     }
 
+    fn write_block(&mut self, block: u32, data: &[u8]) -> Result<(), ErrorType> {
+        let block_size = self.block_size();
+
+        self.iface
+            .with_selected_card(|mut card| card.write_block(block, block_size, data))
+    }
+
     fn block_size(&self) -> u16 {
         self.block_size
     }

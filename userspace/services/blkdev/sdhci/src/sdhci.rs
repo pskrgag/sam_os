@@ -80,7 +80,58 @@ pub struct SelectedCard<'a> {
     sdhci: &'a mut SdhciIface,
 }
 
+fn spin_retry<F: FnMut() -> bool>(mut f: F, retries: usize) -> bool {
+    let mut retries = retries - 1;
+
+    while !f() && retries != 0 {
+        retries -= 1;
+        core::hint::spin_loop();
+    }
+
+    f()
+}
+
 impl SelectedCard<'_> {
+    pub fn write_block(
+        &mut self,
+        block_address: u32,
+        block_size: u16,
+        data: &[u8],
+    ) -> Result<(), ErrorType> {
+        // Setup block size
+        field!(self.sdhci.regs, block_size).write(block_size);
+
+        // Read one block
+        field!(self.sdhci.regs, block_count).write(1);
+
+        if field!(self.sdhci.regs, block_size).read() as u16 != block_size {
+            return Err(ErrorType::InvalidArgument);
+        }
+
+        // Set direction to write
+        field!(self.sdhci.regs, transfer_mode).write(0x0);
+
+        let addr = match self.sdhci.mode {
+            AddressingMode::Byte => block_address * block_size as u32,
+            AddressingMode::Block => block_address,
+        };
+
+        // Issue block write
+        self.sdhci
+            .send_command::<ResponseU128>(Command::new_normal(
+                NormalOpcode::WriteOneBlock,
+                addr,
+                CommandFlag::HasReponse | CommandFlag::DataPresent,
+            ))?;
+
+        for chunk in data.chunks(core::mem::size_of::<u32>()) {
+            field!(self.sdhci.regs, buffer_data)
+                .write(u32::from_ne_bytes(chunk.try_into().unwrap()));
+        }
+
+        Ok(())
+    }
+
     pub fn read_block(
         &mut self,
         block_address: u32,
@@ -106,11 +157,12 @@ impl SelectedCard<'_> {
         };
 
         // Issue block read
-        self.sdhci.send_command::<ResponseU128>(Command::new_normal(
-            NormalOpcode::ReadOneBlock,
-            addr,
-            CommandFlag::HasReponse | CommandFlag::DataPresent,
-        ))?;
+        self.sdhci
+            .send_command::<ResponseU128>(Command::new_normal(
+                NormalOpcode::ReadOneBlock,
+                addr,
+                CommandFlag::HasReponse | CommandFlag::DataPresent,
+            ))?;
 
         for chunk in data.chunks_mut(core::mem::size_of::<u32>()) {
             let ch = field!(self.sdhci.regs, buffer_data).read();
@@ -158,17 +210,6 @@ impl SdhciIface {
         res
     }
 
-    fn spin_retry<F: FnMut() -> bool>(mut f: F, retries: usize) -> bool {
-        let mut retries = retries - 1;
-
-        while !f() && retries != 0 {
-            retries -= 1;
-            core::hint::spin_loop();
-        }
-
-        f()
-    }
-
     /// Initializes the hw
     fn setup(regs: UniqueMmioPointer<'static, SdhciRegs>) -> Result<Box<dyn Card>, ErrorType> {
         let mut card = Self {
@@ -181,7 +222,7 @@ impl SdhciIface {
         field!(card.regs, clock_on).write(0b101);
 
         // Wait for clocks to stabilize
-        if !Self::spin_retry(|| field!(card.regs, clock_on).read() & 0b01 != 0, 100) {
+        if !spin_retry(|| field!(card.regs, clock_on).read() & 0b01 != 0, 100) {
             return Err(ErrorType::TryAgain);
         }
 
@@ -257,8 +298,11 @@ impl SdhciIface {
 
     fn send_command<R: Response>(&mut self, cmd: Command<R>) -> Result<Option<R>, SdhciError> {
         if cmd.is_application() {
-            let app =
-                Command::<ResponseU32>::new_normal(NormalOpcode::AppCmd, 0, CommandFlag::HasReponse);
+            let app = Command::<ResponseU32>::new_normal(
+                NormalOpcode::AppCmd,
+                0,
+                CommandFlag::HasReponse,
+            );
 
             self.send_one_command(app)?;
             self.send_one_command(cmd)
@@ -284,7 +328,7 @@ impl SdhciIface {
         field!(self.regs, cmdreg).write(raw_command);
 
         // Wait until operation is completed
-        if !Self::spin_retry(
+        if !spin_retry(
             || field!(self.regs, normal_interrupt_status).read() & *SdhciIrq::CommandCompleted != 0,
             100,
         ) {

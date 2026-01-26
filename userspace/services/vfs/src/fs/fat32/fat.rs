@@ -30,8 +30,3 @@ impl FatEntry {
         }
     }
 }
-
-// vfs :: ffffff8   0
-// vfs :: fffffff   1
-// vfs :: ffffff8   2
-// vfs :: 0

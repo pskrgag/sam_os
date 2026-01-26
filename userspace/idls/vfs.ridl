@@ -19,8 +19,10 @@ struct DirEntry {
 
 interface Directory {
 	List(out Sequence<DirEntry, 1000> entries);
+	CreateFile(in Name name, out Handle handle);
 }
 
 interface File {
-	Read(in USize offset, in USize size);
+	Read(in USize offset, in USize size, in Handle vmo);
+	Write(in USize offset, in USize size, in Handle vmo);
 }
