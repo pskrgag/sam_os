@@ -119,7 +119,7 @@ impl FreeList {
     pub fn new(size: usize) -> Option<Self> {
         assert!(size.is_power_of_two());
 
-        let pages = size.next_multiple_of(PAGE_SIZE) / PAGE_SIZE;
+        let pages = size.div_ceil(PAGE_SIZE);
         let mut va = VirtAddr::from(LinearAddr::from(page_allocator().alloc(pages)?));
         let block_count = size.next_multiple_of(PAGE_SIZE) / size;
         let mut list = Self::default();
@@ -155,7 +155,6 @@ impl FreeList {
         unsafe {
             let mut next = self.next.take()?;
 
-            // println!("{:p} {:p}", next, &self.next);
             self.next = next.as_mut().next.take();
             Some(next.as_ptr())
         }

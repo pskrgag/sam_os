@@ -32,7 +32,7 @@ fn map(node: &FdtNode, arg: &mut LoaderArg) {
         })
         .expect("Too many devices");
 
-    println!("Mapped pl011");
+    info!("Mapped pl011\n");
 }
 
 impl Write for Pl031 {

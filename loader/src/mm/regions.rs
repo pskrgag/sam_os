@@ -68,8 +68,8 @@ pub fn init(fdt: &Fdt, fdt_base: PhysAddr) {
     let image_size = linker_var!(__end) - image_start.bits();
 
     for reg in mem.regions() {
-        println!(
-            "Found free memory region [start: {:x}, size: {:x}]",
+        info!(
+            "Found free memory region [start: {:x}, size: {:x}]\n",
             reg.starting_address as usize,
             reg.size.unwrap()
         );

@@ -4,7 +4,7 @@ use aarch64_cpu::registers::{
 use core::arch::asm;
 
 pub fn boot(ep: usize, arg0: usize, tt: usize) {
-    crate::println!("Booting kernel at ep {:x} and arg0 {:x}", ep, arg0);
+    debug!("Booting kernel at ep {:x} and arg0 {:x}\n", ep, arg0);
 
     TCR_EL1.modify(
         TCR_EL1::T0SZ.val(16)

@@ -25,7 +25,7 @@ fn map(node: &FdtNode, arg: &mut LoaderArg) {
         })
         .expect("Too many devices");
 
-    println!("Mapped gic-v3");
+    info!("Mapped gic-v3\n");
 }
 
 #[distributed_slice(IRQS)]

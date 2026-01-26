@@ -35,7 +35,7 @@ pub fn probe(fdt: &Fdt) {
         {
             if let Some(uart) = (uart_drv.probe)(&node) {
                 register_logger(uart);
-                println!("Using {} as stdout", uart_drv.compatible);
+                info!("Using {} as stdout", uart_drv.compatible);
                 break;
             }
         }

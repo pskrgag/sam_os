@@ -15,12 +15,16 @@ mod kernel;
 mod mm;
 mod protocol;
 
+#[macro_use]
+extern crate log as log_other;
+
 #[unsafe(no_mangle)]
 extern "C" fn main(fdt_base: PhysAddr) {
     let mut protocol = LoaderArg::default();
     let fdt = unsafe { Fdt::from_ptr(fdt_base.bits() as *const _) }.unwrap();
 
     drivers::uart::probe(&fdt);
+    log::init();
 
     let mut tt = mm::init(&fdt, fdt_base);
     kernel::map_kernel(&mut tt);
@@ -38,7 +42,7 @@ extern "C" fn main(fdt_base: PhysAddr) {
 
 #[panic_handler]
 fn on_panic(info: &PanicInfo) -> ! {
-    println!("panic! {} {:?}", info.message(), info.location());
+    error!("panic! {} {:?}\n", info.message(), info.location());
 
     loop {
         unsafe {

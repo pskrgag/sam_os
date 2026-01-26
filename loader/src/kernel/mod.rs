@@ -65,7 +65,7 @@ pub fn map_kernel(tt: &mut PageTable) {
         tt.map_pages(virt_range, phys_range, perms, PageKind::Normal);
     }
 
-    println!("Mapped kernel image");
+    info!("Mapped kernel image\n");
 }
 
 pub fn kernel_ep() -> VirtAddr {
