@@ -9,3 +9,6 @@ pub mod vec;
 
 pub mod bitalloc;
 pub use bitalloc::*;
+
+pub mod bitalloc_growable;
+pub use bitalloc_growable::*;

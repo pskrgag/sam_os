@@ -1,23 +1,47 @@
 use alloc::string::{String, ToString};
 use core::convert::AsRef;
-use core::str::from_utf8;
 
-pub struct Path {
-    inner: [u8],
+#[repr(transparent)]
+pub struct Path<'a> {
+    inner: &'a str,
 }
 
-impl Path {
-    pub fn new<S: AsRef<str> + ?Sized>(s: &S) -> &Path {
-        unsafe { &*(s.as_ref() as *const _ as *const Path) }
+impl<'a> Path<'a> {
+    pub fn new<S: AsRef<str>>(s: &'a S) -> Path<'a> {
+        Self { inner: s.as_ref() }
     }
 
     pub fn into_owned(&self) -> String {
-        from_utf8(&self.inner).unwrap().to_string()
+        self.inner.to_string()
+    }
+
+    pub fn parent(&'a self) -> Option<&'a Path<'a>> {
+        self.inner
+            .as_bytes()
+            .iter()
+            .rposition(|x| *x == b'/')
+            .and_then(|idx| {
+                self.inner.get(..self.inner.len() - idx - 1).map(|inner| {
+                    // SAFETY
+                    //
+                    // seems sane, no?
+                    unsafe { core::mem::transmute(&inner) }
+                })
+            })
     }
 }
 
-impl AsRef<Path> for &str {
-    fn as_ref(&self) -> &Path {
-        Path::new(self)
+impl<'a> AsRef<str> for Path<'a> {
+    fn as_ref(&self) -> &'a str {
+        self.inner
+    }
+}
+
+impl<'a> AsRef<Path<'a>> for &'a str {
+    fn as_ref(&self) -> &Path<'a> {
+        // SAFETY
+        //
+        // seems sane, no?
+        unsafe { core::mem::transmute(self) }
     }
 }

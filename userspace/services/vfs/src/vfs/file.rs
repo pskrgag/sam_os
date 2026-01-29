@@ -1,0 +1,59 @@
+use crate::bindings_Vfs::{File, FileRequest};
+use crate::vfs::inode::{FileOperations, Inode, InodeKind};
+use alloc::sync::Arc;
+use libc::handle::Handle;
+use libc::vmm::vm_object::VmObject;
+use rokio::port::Port;
+use rtl::error::ErrorType;
+use libc::vmm::vms::vms;
+use rtl::vmm::MappingType;
+use hal::address::VirtualAddress;
+
+
+pub struct OpenFile {
+    inode: Arc<Inode>,
+    ops: Arc<dyn FileOperations>,
+}
+
+impl OpenFile {
+    pub fn new(
+        inode: Arc<Inode>,
+    ) -> Result<(impl Future<Output = Result<(), ErrorType>>, Handle), ErrorType> {
+        let port = Port::create()?;
+
+        let ops = match inode.kind() {
+            InodeKind::File(dir) => dir.clone(),
+            _ => return Err(ErrorType::InvalidArgument),
+        };
+
+        let raw_handle = port.handle().clone_handle()?;
+        let file = Arc::new(Self { inode, ops });
+
+        Ok((
+            File::for_each(port, move |req| {
+                let file = file.clone();
+
+                async move {
+                    match req {
+                        FileRequest::Read { value, responder } => {
+                            todo!()
+                        },
+                        FileRequest::Write { value, responder } => {
+                            let vmo = unsafe { VmObject::new(value.vmo) };
+                            let mut buf = vms().map_vm_object(&vmo, None, MappingType::RoData)?;
+                            // TODO: this is really unsafe and we should check the size of the VMO
+                            // and do not believe the user.
+                            let buf = unsafe { buf.as_slice_mut(value.size) };
+
+                            let res = file.ops.read(buf, value.offset).await?;
+                            responder.reply()?;
+                        },
+                    }
+
+                    Ok(())
+                }
+            }),
+            raw_handle,
+        ))
+    }
+}

@@ -2,7 +2,8 @@ use super::dir::Fat32Dir;
 use super::fat::FatEntry;
 use super::fat_alloc::FatAlloc;
 use crate::bindings_BlkDev::BlkDev;
-use crate::fs::inode::Inode;
+use crate::vfs::inode::{Inode, InodeKind};
+use crate::vfs::vfs;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::ops::Add;
@@ -419,15 +420,18 @@ impl SuperBlock {
         Ok(())
     }
 
-    pub async fn root(self: &Arc<Self>) -> Result<Arc<Inode>, ErrorType> {
+    pub async fn root(
+        self: &Arc<Self>,
+        parent: Option<Arc<Inode>>,
+    ) -> Result<Arc<Inode>, ErrorType> {
         Fat32Dir::new(self.clone(), self.root_cluster)
             .await
-            .map(|x| Arc::new(Inode::Directory(Arc::new(x))))
+            .map(|x| Inode::new(InodeKind::Directory(Arc::new(x)), parent))
     }
 
     /// Allocates clusters and links them to chain starting from start
     pub(super) async fn allocate_clusters(
-        &mut self,
+        &self,
         start: Option<Cluster>,
         num_clusters: usize,
     ) -> Result<Vec<Cluster>, ErrorType> {

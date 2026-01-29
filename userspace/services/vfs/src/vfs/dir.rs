@@ -1,12 +1,14 @@
 use crate::bindings_Vfs::{Directory, DirectoryRequest};
-use crate::fs::inode::{DirectoryOperations, Inode};
+use crate::vfs::inode::{DirectoryOperations, Inode, InodeKind};
+use crate::vfs::vfs;
 use alloc::sync::Arc;
 use libc::handle::Handle;
 use rokio::port::Port;
 use rtl::error::ErrorType;
 
 pub struct OpenDirectory {
-    inode: Arc<dyn DirectoryOperations>,
+    inode: Arc<Inode>,
+    ops: Arc<dyn DirectoryOperations>,
 }
 
 impl OpenDirectory {
@@ -15,12 +17,13 @@ impl OpenDirectory {
     ) -> Result<(impl Future<Output = Result<(), ErrorType>>, Handle), ErrorType> {
         let port = Port::create()?;
 
-        let inode = match &*inode {
-            Inode::Directory(v) => v.clone(),
-            _ => return Err(ErrorType::InvalidArgument)?,
+        let ops = match inode.kind() {
+            InodeKind::Directory(dir) => dir.clone(),
+            _ => return Err(ErrorType::InvalidArgument),
         };
+
         let raw_handle = port.handle().clone_handle()?;
-        let dir = Arc::new(Self { inode });
+        let dir = Arc::new(Self { inode, ops });
 
         Ok((
             Directory::for_each(port, move |req| {
@@ -29,17 +32,24 @@ impl OpenDirectory {
                 async move {
                     match req {
                         DirectoryRequest::List { responder, .. } => {
-                            let res = dir.inode.list().await?;
+                            let res = dir.ops.list().await?;
                             let mut wire_res = heapless::Vec::new();
 
                             wire_res.extend_from_slice(&res).unwrap();
                             responder.reply(wire_res)?;
                         }
                         DirectoryRequest::CreateFile { value, responder } => {
-                            let res = dir.inode.create_file(&value.name).await?;
+                            let file = if let Some(file) = vfs().dcache_lookup(&*value.name) {
+                                file
+                            } else {
+                                let file = dir.ops.create_file(&*value.name, &dir.inode).await?;
+                                vfs().dcache_store(&*value.name, file)
+                            };
 
-                            rokio::executor::spawn(res.handler);
-                            responder.reply(&res.handle)?;
+                            let (handler, handle) = super::file::OpenFile::new(file)?;
+
+                            rokio::executor::spawn(handler);
+                            responder.reply(&handle)?;
                         }
                     }
 

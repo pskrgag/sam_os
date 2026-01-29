@@ -1,21 +1,23 @@
 use super::file::FatFile;
 use super::sb::{CallbackRes, Cluster, SuperBlockRef};
 use crate::bindings_Vfs::{DirEntry, DirEntryFlagsFlag};
-use crate::fs::inode::{DirectoryOperations, OpenFile};
+use crate::vfs::inode::{DirectoryOperations, Inode, InodeKind};
+use crate::vfs::vfs;
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use fs::path::Path;
 use heapless::String;
 use rtl::error::ErrorType;
 
 pub const ATTR_NORMAL_FILE: u8 = 0b0000000;
-pub const ATTR_READ_ONLY: u8 = 0b00000001;
-pub const ATTR_HIDDEN: u8 = 0b00000010;
-pub const ATTR_SYSTEM: u8 = 0b00000100;
-pub const ATTR_VOLUME_ID: u8 = 0b00001000;
+// pub const ATTR_READ_ONLY: u8 = 0b00000001;
+// pub const ATTR_HIDDEN: u8 = 0b00000010;
+// pub const ATTR_SYSTEM: u8 = 0b00000100;
+// pub const ATTR_VOLUME_ID: u8 = 0b00001000;
 pub const ATTR_DIRECTORY: u8 = 0b00010000;
-pub const ATTR_ARCHIVE: u8 = 0b00100000;
-pub const ATTR_LONG_NAME: u8 = 0b00001111;
+// pub const ATTR_ARCHIVE: u8 = 0b00100000;
+// pub const ATTR_LONG_NAME: u8 = 0b00001111;
 
 // On disk representation
 #[repr(C)]
@@ -66,7 +68,30 @@ pub struct Fat32Dir {
 
 pub(super) struct Fat32DirRef {
     dir: Fat32Dir,
+    size: u32,
     offset: usize,
+}
+
+impl Fat32DirRef {
+    pub async fn allocate_clusters(
+        &mut self,
+        start: Option<Cluster>,
+        num: usize,
+    ) -> Result<Vec<Cluster>, ErrorType> {
+        let res = self.dir.super_block().allocate_clusters(start, num).await?;
+
+        self.size += (num * self.dir.super_block().cluster_size()) as u32;
+
+        self.dir.update_entry(self.offset, |entry| {
+            entry.size = self.size;
+        }).await?;
+
+        Ok(res)
+    }
+
+    pub fn super_block(&self) -> SuperBlockRef {
+        self.dir.super_block()
+    }
 }
 
 impl Fat32Dir {
@@ -74,6 +99,50 @@ impl Fat32Dir {
         Ok(Self {
             inner: Arc::new(Fat32DirInner { sb, start }),
         })
+    }
+
+    pub fn super_block(&self) -> SuperBlockRef {
+        self.inner.sb.clone()
+    }
+
+    // TODO: directory should cache allocated clusters. Doing a linked list walk is a shitty
+    // solution. But it's just fine for testing
+    async fn update_entry<F: FnMut(&mut FsDirEntry) + Send + Sync>(
+        &self,
+        idx: usize,
+        mut f: F,
+    ) -> Result<(), ErrorType> {
+        let mut cluster = alloc::vec![0; self.super_block().cluster_size()];
+
+        let entries_per_cluster =
+            self.super_block().cluster_size() / core::mem::size_of::<FsDirEntry>();
+        let cl_idx = idx / entries_per_cluster;
+        let cl_offset = idx % entries_per_cluster;
+        let mut idx = 0;
+
+        self.inner
+            .sb
+            .for_each_allocated_cluster_from(self.inner.start, &mut cluster, |data| {
+                let mut res = CallbackRes::Continue;
+
+                if idx == cl_idx {
+                    let entries = unsafe {
+                        core::slice::from_raw_parts_mut(
+                            data.as_mut_ptr() as *mut FsDirEntry,
+                            entries_per_cluster,
+                        )
+                    };
+
+                    f(&mut entries[cl_offset]);
+                    res = CallbackRes::StopSync;
+                }
+
+                idx += 1;
+                res
+            })
+            .await?;
+
+        Ok(())
     }
 
     async fn for_each_dir_entry<F: FnMut(&mut FsDirEntry, usize) -> CallbackRes + Send + Sync>(
@@ -135,7 +204,11 @@ impl DirectoryOperations for Fat32Dir {
         Ok(res)
     }
 
-    async fn create_file(&self, name: &str) -> Result<OpenFile, ErrorType> {
+    async fn lookup(&self, path: &Path) -> Result<Inode, ErrorType> {
+        todo!()
+    }
+
+    async fn create_file(&self, name: &str, parent: &Arc<Inode>) -> Result<Arc<Inode>, ErrorType> {
         let mut allocated_idx = 0;
 
         self.for_each_dir_entry(|entry, idx| {
@@ -149,12 +222,18 @@ impl DirectoryOperations for Fat32Dir {
         })
         .await?;
 
-        FatFile::new(
-            None,
+        let file = FatFile::new(
+            alloc::vec::Vec::new(),
             Fat32DirRef {
                 dir: self.clone(),
                 offset: allocated_idx,
+                size: 0,
             },
-        )
+        );
+
+        Ok(Inode::new(
+            InodeKind::File(Arc::new(file)),
+            Some(parent.clone()),
+        ))
     }
 }

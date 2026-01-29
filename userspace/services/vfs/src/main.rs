@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 
-use alloc::sync::Arc;
 use bindings_BlkDev::BlkDev;
 use bindings_NameServer::NameServer;
 use bindings_Vfs::{Vfs, VfsRequest};
@@ -18,7 +17,9 @@ async fn main(root: Option<Handle>) -> Result<(), ErrorType> {
     let root = ns.Get("blkdev".try_into().unwrap()).await?;
     let root = BlkDev::new(unsafe { Port::new(root.handle) });
 
-    let vfs = Arc::new(vfs::Vfs::new(root, "fat32").await.unwrap());
+    vfs::init(root, "fat32").await;
+
+    let vfs = vfs::vfs();
     let port = Port::create()?;
 
     ns.Register("vfs".try_into().unwrap(), port.handle())
@@ -31,7 +32,7 @@ async fn main(root: Option<Handle>) -> Result<(), ErrorType> {
         async move {
             match req {
                 VfsRequest::Root { responder, .. } => {
-                    let (disp, handle) = vfs.open_dir("/")?;
+                    let (disp, handle) = vfs.open_dir("/").await?;
 
                     println!("Open root");
                     rokio::executor::spawn(disp);

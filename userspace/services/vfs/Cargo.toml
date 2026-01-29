@@ -7,6 +7,7 @@ edition = "2024"
 libc = { path = "../../libs/libc/" }
 fs = { path = "../../libs/fs/" }
 rtl = { path = "../../../rtl/" }
+hal = { path = "../../../hal/" }
 postcard = { version = "1.1.3", features = ["alloc"] }
 serde = { version = "1", default-features = false  }
 cpio_reader = "0.1.2"
@@ -16,6 +17,7 @@ downcast-rs = { version = "2.0.1", default-features = false }
 bitmask = { path = "/home/paskripkin/Documents/git/bitmask", default-features = false }
 async-trait = "0.1.89"
 adt = { path = "../../../adt" }
+spin = "0.10.0"
 
 [build-dependencies]
 ridl = { path = "../../../tools/ridl/" }
