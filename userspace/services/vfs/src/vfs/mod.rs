@@ -49,13 +49,13 @@ impl Vfs {
 
         // We did not find any mount points during lookup, so ask root to lookup this for
         // us
-        let root = dcache.find("/").expect("Root should be present");
-        let root = root.as_dir().expect("Root must be directory").clone();
+        let root_inode = dcache.find("/").expect("Root should be present").clone();
+        let root = root_inode.as_dir().expect("Root must be directory").clone();
 
         // Drop dcache lock to allow fs to allocate new dcache entries while walking
         drop(dcache);
 
-        root.lookup(dir.as_ref()).await.and_then(|x| {
+        root.lookup(dir.as_ref(), &root_inode).await.and_then(|x| {
             let x = Arc::new(x);
 
             if x.is_dir() {

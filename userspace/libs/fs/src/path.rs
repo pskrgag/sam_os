@@ -6,9 +6,29 @@ pub struct Path<'a> {
     inner: &'a str,
 }
 
+pub struct Components<'a> {
+    inner: &'a str,
+}
+
+impl<'a> Iterator for Components<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let pos = self.inner.find('/')?;
+        let res = &self.inner[..pos];
+
+        self.inner = &self.inner[pos + 1..];
+        Some(res)
+    }
+}
+
 impl<'a> Path<'a> {
     pub fn new<S: AsRef<str>>(s: &'a S) -> Path<'a> {
         Self { inner: s.as_ref() }
+    }
+
+    pub fn components(&self) -> Components<'a> {
+        Components { inner: self.inner }
     }
 
     pub fn into_owned(&self) -> String {

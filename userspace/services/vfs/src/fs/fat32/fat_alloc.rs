@@ -55,7 +55,10 @@ impl FatAlloc {
 
             for (j, fat) in fats.iter().enumerate() {
                 if !fat.is_free() {
-                    new_cache.allocate_specific(512 * i + j).unwrap();
+                    println!("Allocated fat {}", Self::fats_per_sector() as usize * i + j);
+                    new_cache
+                        .allocate_specific(Self::fats_per_sector() as usize * i + j)
+                        .unwrap();
                 }
             }
         }

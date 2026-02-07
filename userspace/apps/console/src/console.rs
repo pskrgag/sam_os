@@ -1,9 +1,12 @@
 use super::bindings_Serial::Serial;
-use super::bindings_Vfs::{Directory, Vfs};
+use super::bindings_Vfs::{Directory, File, Vfs};
 use alloc::format;
 use alloc::{string::String, vec::Vec};
+use hal::address::VirtualAddress;
+use libc::vmm::vms::vms;
 use rokio::port::Port;
 use rtl::error::ErrorType;
+use rtl::vmm::MappingType;
 
 pub struct Console {
     backend: Serial,
@@ -62,6 +65,22 @@ impl Console {
         Ok(())
     }
 
+    async fn write(&self, name: &str, data: &str) -> Result<(), ErrorType> {
+        let root = self.vfs.Root().await.unwrap().handle;
+        let root = Directory::new(unsafe { Port::new(root) });
+
+        let res = root.CreateFile(name.try_into().unwrap()).await?;
+        let file = File::new(unsafe { Port::new(res.handle) });
+        let vmo = vms().create_vm_object(data.len(), MappingType::Data)?;
+        let mut buf = vms().map_vm_object(&vmo, None, MappingType::Data)?;
+        let buf = unsafe { buf.as_slice_mut(data.len()) };
+
+        buf.copy_from_slice(data.as_bytes());
+
+        file.Write(0, buf.len(), vmo.handle()).await?;
+        Ok(())
+    }
+
     pub async fn serve(self) {
         loop {
             self.put_str("> ").await;
@@ -86,9 +105,17 @@ impl Console {
 
                         self.put_str(alloc::format!("{res}\n")).await;
                     }
-                    "create" => {
+                    "file_create" => {
                         if let Some(name) = parts.next() {
                             self.create(name).await.unwrap();
+                        } else {
+                            self.put_str(alloc::format!("Please provide a name\n"))
+                                .await
+                        }
+                    }
+                    "append_write" => {
+                        if let Some(name) = parts.next() && let Some(text) = parts.next() {
+                            self.write(name, text).await.unwrap();
                         } else {
                             self.put_str(alloc::format!("Please provide a name\n"))
                                 .await

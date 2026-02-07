@@ -16,7 +16,7 @@ pub trait DirectoryOperations: Send + Sync {
     async fn list(&self) -> Result<Vec<DirEntry>, ErrorType>;
 
     /// Lookup the entry
-    async fn lookup(&self, path: &Path) -> Result<Inode, ErrorType>;
+    async fn lookup(&self, path: &Path, parent: &Arc<Inode>) -> Result<Inode, ErrorType>;
 
     /// Creates a new file in the directory. Returns a handle to file
     async fn create_file(&self, name: &str, parent: &Arc<Inode>) -> Result<Arc<Inode>, ErrorType>;

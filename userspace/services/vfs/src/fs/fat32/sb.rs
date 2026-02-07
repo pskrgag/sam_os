@@ -151,7 +151,7 @@ impl Add<u32> for Sector {
 }
 
 /// Cluster
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Cluster(pub(super) u32);
 
 impl Into<Cluster> for u32 {

@@ -6,6 +6,7 @@ use crate::vfs::vfs;
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use core::ffi::c_str::CStr;
 use fs::path::Path;
 use heapless::String;
 use rtl::error::ErrorType;
@@ -42,11 +43,18 @@ impl FsDirEntry {
         self.name[0] == 0 || self.name[0] == 0xe5
     }
 
-    pub fn new_empty(name: &str) -> Self {
+    pub fn first_cluster(&self) -> Cluster {
+        Cluster(self.start as u32 | (self.starthi as u32) << 16)
+    }
+
+    pub fn is_dir(&self) -> bool {
+        (self.attr & ATTR_DIRECTORY) != 0
+    }
+
+    pub fn new_empty_file(name: &str) -> Self {
         let mut real_name: [u8; 11] = [0; 11];
 
-        real_name[0] = 0xaa;
-        real_name[1..1 + name.len()].copy_from_slice(name.as_bytes());
+        real_name[..name.len()].copy_from_slice(name.as_bytes());
 
         Self {
             name: real_name,
@@ -80,13 +88,27 @@ impl Fat32DirRef {
     ) -> Result<Vec<Cluster>, ErrorType> {
         let res = self.dir.super_block().allocate_clusters(start, num).await?;
 
-        self.size += (num * self.dir.super_block().cluster_size()) as u32;
+        self.dir
+            .update_entry(self.offset, |entry| {
+                if entry.start == 0 {
+                    assert!(entry.starthi == 0);
 
-        self.dir.update_entry(self.offset, |entry| {
-            entry.size = self.size;
-        }).await?;
+                    entry.start = (res[0].0 & 0xFFFF) as u16;
+                    entry.starthi = ((res[0].0 >> 16) & 0xFFFF) as u16;
+                }
+            })
+            .await?;
 
         Ok(res)
+    }
+
+    pub async fn update_size(&mut self, size: usize) -> Result<(), ErrorType> {
+        self.dir
+            .update_entry(self.offset, |entry| {
+                entry.size += size as u32;
+            })
+            .await?;
+        Ok(())
     }
 
     pub fn super_block(&self) -> SuperBlockRef {
@@ -143,6 +165,33 @@ impl Fat32Dir {
             .await?;
 
         Ok(())
+    }
+
+    async fn lookup_dir(&self, name: &str) -> Result<Arc<Inode>, ErrorType> {
+        let mut res = Err(ErrorType::NotFound);
+
+        self.for_each_dir_entry(|entry, _| {
+            // if entry.is_dir() {
+            //     let cstr = unsafe { CStr::from_ptr(entry.name.as_ptr()) }
+            //         .to_str()
+            //         .expect("Invalid entry name on FS");
+            //     let dir = Self::new(self.super_block(), entry.first_cluster()).await?;
+            //
+            //     if cstr == first {
+            //         res = Ok(Inode::new(
+            //             InodeKind::Directory(Arc::new(dir)),
+            //             Some(parent.clone()),
+            //         ));
+            //
+            //         return CallbackRes::Stop;
+            //     }
+            // }
+
+            CallbackRes::Continue
+        })
+        .await?;
+
+        res
     }
 
     async fn for_each_dir_entry<F: FnMut(&mut FsDirEntry, usize) -> CallbackRes + Send + Sync>(
@@ -204,7 +253,11 @@ impl DirectoryOperations for Fat32Dir {
         Ok(res)
     }
 
-    async fn lookup(&self, path: &Path) -> Result<Inode, ErrorType> {
+    async fn lookup(&self, path: &Path, parent: &Arc<Inode>) -> Result<Inode, ErrorType> {
+        let components = path.components().collect::<Vec<_>>();
+
+        self.for_each_dir_entry(|entry, _| todo!()).await?;
+
         todo!()
     }
 
@@ -213,7 +266,7 @@ impl DirectoryOperations for Fat32Dir {
 
         self.for_each_dir_entry(|entry, idx| {
             if entry.is_free() {
-                *entry = FsDirEntry::new_empty(name);
+                *entry = FsDirEntry::new_empty_file(name);
                 allocated_idx = idx;
                 return CallbackRes::StopSync;
             }
