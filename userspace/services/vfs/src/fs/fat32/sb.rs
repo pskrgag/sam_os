@@ -248,6 +248,10 @@ impl SuperBlockInner {
             .allocate_clusters(start, num_clusters, &self.blk)
             .await
     }
+
+    pub async fn lookup_cluster_chain(&self, start: Cluster) -> Result<Vec<Cluster>, ErrorType> {
+        
+    }
 }
 
 /// Fat32 superblock structure

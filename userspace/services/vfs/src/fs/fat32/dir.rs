@@ -22,7 +22,7 @@ pub const ATTR_DIRECTORY: u8 = 0b00010000;
 
 // On disk representation
 #[repr(C)]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct FsDirEntry {
     name: [u8; 11], /* name and extension */
     attr: u8,       /* attribute bits */
@@ -49,6 +49,10 @@ impl FsDirEntry {
 
     pub fn is_dir(&self) -> bool {
         (self.attr & ATTR_DIRECTORY) != 0
+    }
+
+    pub fn is_file(&self) -> bool {
+        (self.attr & ATTR_NORMAL_FILE) != 0
     }
 
     pub fn new_empty_file(name: &str) -> Self {
@@ -167,31 +171,67 @@ impl Fat32Dir {
         Ok(())
     }
 
-    async fn lookup_dir(&self, name: &str) -> Result<Arc<Inode>, ErrorType> {
-        let mut res = Err(ErrorType::NotFound);
+    async fn lookup_file(&self, name: &str, parent: &Arc<Inode>) -> Result<Arc<Inode>, ErrorType> {
+        let mut ent = Err(ErrorType::NotFound);
 
-        self.for_each_dir_entry(|entry, _| {
-            // if entry.is_dir() {
-            //     let cstr = unsafe { CStr::from_ptr(entry.name.as_ptr()) }
-            //         .to_str()
-            //         .expect("Invalid entry name on FS");
-            //     let dir = Self::new(self.super_block(), entry.first_cluster()).await?;
-            //
-            //     if cstr == first {
-            //         res = Ok(Inode::new(
-            //             InodeKind::Directory(Arc::new(dir)),
-            //             Some(parent.clone()),
-            //         ));
-            //
-            //         return CallbackRes::Stop;
-            //     }
-            // }
+        self.for_each_dir_entry(|entry, idx| {
+            if entry.is_file() {
+                let cstr = unsafe { CStr::from_ptr(entry.name.as_ptr()) }
+                    .to_str()
+                    .expect("Invalid entry name on FS");
+
+                if cstr == name {
+                    ent = Ok((*entry, idx));
+                    return CallbackRes::Stop;
+                }
+            }
 
             CallbackRes::Continue
         })
         .await?;
 
-        res
+        let ent = ent?;
+
+        let file = FatFile::new(
+            alloc::vec::Vec::new(),
+            Fat32DirRef {
+                dir: self.clone(),
+                size: ent.clone().0.size,
+                offset: ent.1,
+            },
+        );
+
+        Ok(Inode::new(
+            InodeKind::File(Arc::new(file)),
+            Some(parent.clone()),
+        ))
+    }
+
+    async fn lookup_dir(&self, name: &str, parent: &Arc<Inode>) -> Result<Arc<Inode>, ErrorType> {
+        let mut ent = Err(ErrorType::NotFound);
+
+        self.for_each_dir_entry(|entry, _| {
+            if entry.is_dir() {
+                let cstr = unsafe { CStr::from_ptr(entry.name.as_ptr()) }
+                    .to_str()
+                    .expect("Invalid entry name on FS");
+
+                if cstr == name {
+                    ent = Ok(*entry);
+                    return CallbackRes::Stop;
+                }
+            }
+
+            CallbackRes::Continue
+        })
+        .await?;
+
+        let dir = Self::new(self.super_block(), ent?.first_cluster()).await?;
+
+        Ok(Inode::new(
+            InodeKind::Directory(Arc::new(dir)),
+            Some(parent.clone()),
+        ))
     }
 
     async fn for_each_dir_entry<F: FnMut(&mut FsDirEntry, usize) -> CallbackRes + Send + Sync>(
@@ -256,9 +296,13 @@ impl DirectoryOperations for Fat32Dir {
     async fn lookup(&self, path: &Path, parent: &Arc<Inode>) -> Result<Inode, ErrorType> {
         let components = path.components().collect::<Vec<_>>();
 
-        self.for_each_dir_entry(|entry, _| todo!()).await?;
+        if components.len() > 1 {
+            let dir = self.lookup_dir(components[0].as_ref(), parent).await?;
 
-        todo!()
+            dir.as_dir().unwrap().lookup(path.skip_dir(), &dir).await
+        } else {
+            todo!()
+        }
     }
 
     async fn create_file(&self, name: &str, parent: &Arc<Inode>) -> Result<Arc<Inode>, ErrorType> {

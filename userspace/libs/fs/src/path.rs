@@ -35,6 +35,16 @@ impl<'a> Path<'a> {
         self.inner.to_string()
     }
 
+    pub fn skip_dir(&'a self) -> &'a Path {
+        let pos = self.inner.find('/').unwrap();
+        let left = &&self.inner[pos + 1..];
+
+        // SAFETY
+        //
+        // seems sane, no?
+        unsafe { core::mem::transmute(left) }
+    }
+
     pub fn parent(&'a self) -> Option<&'a Path<'a>> {
         self.inner
             .as_bytes()
@@ -64,4 +74,4 @@ impl<'a> AsRef<Path<'a>> for &'a str {
         // seems sane, no?
         unsafe { core::mem::transmute(self) }
     }
-}
+
