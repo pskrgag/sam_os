@@ -57,14 +57,6 @@ impl Console {
             .join(" ")
     }
 
-    async fn create(&self, name: &str) -> Result<(), ErrorType> {
-        let root = self.vfs.Root().await.unwrap().handle;
-        let root = Directory::new(unsafe { Port::new(root) });
-
-        root.CreateFile(name.try_into().unwrap()).await?;
-        Ok(())
-    }
-
     async fn write(&self, name: &str, data: &str) -> Result<(), ErrorType> {
         let root = self.vfs.Root().await.unwrap().handle;
         let root = Directory::new(unsafe { Port::new(root) });
@@ -79,6 +71,21 @@ impl Console {
 
         file.Write(0, buf.len(), vmo.handle()).await?;
         Ok(())
+    }
+
+    async fn cat(&self, name: &str) -> Result<String, ErrorType> {
+        let root = self.vfs.Root().await.unwrap().handle;
+        let root = Directory::new(unsafe { Port::new(root) });
+
+        let res = root.OpenFile(name.try_into().unwrap()).await?;
+        let file = File::new(unsafe { Port::new(res.handle) });
+        let vmo = vms().create_vm_object(1 << 12, MappingType::Data)?;
+
+        let read = file.Read(0, 1 << 12, vmo.handle()).await?.read;
+
+        let buf = vms().map_vm_object(&vmo, None, MappingType::Data)?;
+        let buf = unsafe { buf.as_slice(read) };
+        Ok(String::from(core::str::from_utf8(buf).unwrap()))
     }
 
     pub async fn serve(self) {
@@ -105,17 +112,22 @@ impl Console {
 
                         self.put_str(alloc::format!("{res}\n")).await;
                     }
-                    "file_create" => {
-                        if let Some(name) = parts.next() {
-                            self.create(name).await.unwrap();
+                    "append_file" => {
+                        if let Some(name) = parts.next() && let Some(text) = parts.next() {
+                            self.write(name, text).await.unwrap();
                         } else {
                             self.put_str(alloc::format!("Please provide a name\n"))
                                 .await
                         }
                     }
-                    "append_write" => {
-                        if let Some(name) = parts.next() && let Some(text) = parts.next() {
-                            self.write(name, text).await.unwrap();
+                    "cat" => {
+                        if let Some(name) = parts.next()  {
+                            if let Ok(text) = self.cat(name).await {
+                                self.put_str(format!("{}\n", text)).await;
+                            } else {
+                                self.put_str(alloc::format!("Failed to open file\n"))
+                                    .await
+                            }
                         } else {
                             self.put_str(alloc::format!("Please provide a name\n"))
                                 .await

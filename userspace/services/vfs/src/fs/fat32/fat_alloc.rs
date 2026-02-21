@@ -10,6 +10,7 @@ pub(super) struct FatAlloc {
     /// Start of the FAT table
     fat_start: Sector,
     /// Fat lenght (in sectors)
+    #[allow(dead_code)]
     length: usize,
     /// Cache of FAT
     cache: BitAllocator,
@@ -102,8 +103,12 @@ impl FatAlloc {
             self.commit_chain(&chain, blk).await?;
         }
 
-        for cl in clusters.windows(2) {
-            self.commit_chain(cl, blk).await?;
+        if clusters.len() > 1 {
+            for cl in clusters.windows(2) {
+                self.commit_chain(cl, blk).await?;
+            }
+        } else {
+            self.commit_chain(&[clusters[0]], blk).await?;
         }
 
         Ok(())
@@ -131,6 +136,42 @@ impl FatAlloc {
                 return Err(e);
             }
         }
+
+        Ok(res)
+    }
+
+    pub async fn lookup_cluster_chain(
+        &self,
+        start: Cluster,
+        blk: &BlockDevice,
+    ) -> Result<Vec<Cluster>, ErrorType> {
+        let mut iter = start;
+        let mut res = Vec::new();
+
+        while {
+            let mut sector = alloc::vec![0; 512];
+            let fat_sector = self.fat_start + iter.0 / Self::fats_per_sector();
+            let fat_offset = (iter.0 % Self::fats_per_sector()) as usize;
+
+            blk.read_sector(fat_sector, &mut sector).await?;
+            let fats = unsafe {
+                core::slice::from_raw_parts::<FatEntry>(
+                    sector.as_ptr() as _,
+                    Self::fats_per_sector() as usize,
+                )
+            };
+
+            res.push(iter);
+            let fat = fats[fat_offset];
+            assert!(!fat.is_free());
+
+            if let Some(next) = fat.next() {
+                iter = next;
+                true
+            } else {
+                false
+            }
+        } {}
 
         Ok(res)
     }

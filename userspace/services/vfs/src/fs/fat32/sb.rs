@@ -3,7 +3,6 @@ use super::fat::FatEntry;
 use super::fat_alloc::FatAlloc;
 use crate::bindings_BlkDev::BlkDev;
 use crate::vfs::inode::{Inode, InodeKind};
-use crate::vfs::vfs;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::ops::Add;
@@ -250,7 +249,9 @@ impl SuperBlockInner {
     }
 
     pub async fn lookup_cluster_chain(&self, start: Cluster) -> Result<Vec<Cluster>, ErrorType> {
-        
+        self.free_clusters
+            .lookup_cluster_chain(start, &self.blk)
+            .await
     }
 }
 
@@ -443,5 +444,13 @@ impl SuperBlock {
             .lock()
             .allocate_clusters(start, num_clusters)
             .await
+    }
+
+    /// Looks up allocated cluster chain
+    pub(super) async fn lookup_cluster_chain(
+        &self,
+        start: Cluster,
+    ) -> Result<Vec<Cluster>, ErrorType> {
+        self.inner.lock().lookup_cluster_chain(start).await
     }
 }

@@ -1,15 +1,10 @@
 use super::dir::Fat32DirRef;
 use super::sb::Cluster;
-use crate::bindings_Vfs::{File, FileRequest};
 use crate::vfs::inode::FileOperations;
 use alloc::boxed::Box;
-use alloc::sync::Arc;
 use alloc::vec::Vec;
-use libc::vmm::{vm_object::VmObject, vms::vms};
-use rokio::port::Port;
 use rtl::error::ErrorType;
 use rtl::locking::spinlock::Spinlock;
-use rtl::vmm::MappingType;
 
 pub struct FatFileInner {
     allocated_clusters: Vec<Cluster>,
@@ -36,6 +31,39 @@ impl FatFileInner {
 
         Ok(())
     }
+
+    async fn for_file_range<F: FnMut(&mut [u8]) -> bool>(
+        &self,
+        start: usize,
+        size: usize,
+        mut f: F,
+    ) -> Result<usize, ErrorType> {
+        let sb = self.parent.super_block();
+        let cluster_size = sb.cluster_size();
+        let first_cluster_idx = start / cluster_size;
+        let last_cluster_idx = (start + size) / cluster_size;
+        let mut cluster_offset = start % cluster_size;
+        let mut processed = 0;
+        let mut size = size;
+
+        for cl in first_cluster_idx..=last_cluster_idx.min(self.allocated_clusters.len() - 1) {
+            let mut cluster = alloc::vec![0; cluster_size];
+            let cluster_range_size = (cluster_size - cluster_offset).min(size);
+            let cl = self.allocated_clusters[cl];
+
+            sb.read_cluster(cl, &mut cluster).await?;
+
+            if f(&mut cluster[cluster_offset..cluster_offset + cluster_range_size]) {
+                sb.write_cluster(cl, &cluster).await?;
+            }
+
+            cluster_offset = 0;
+            processed += cluster_range_size;
+            size -= cluster_range_size;
+        }
+
+        Ok(processed)
+    }
 }
 
 impl FatFile {
@@ -52,39 +80,41 @@ impl FatFile {
 #[async_trait::async_trait]
 impl FileOperations for FatFile {
     async fn read(&self, buf: &mut [u8], offset: usize) -> Result<usize, ErrorType> {
-        let mut file = self.inner.lock();
+        let file = self.inner.lock();
+        let mut processed = 0;
+        let max_read = file.parent.size() as usize - offset;
 
-        file.extend_to_size(offset + buf.len()).await?;
-        todo!()
+        let read = file
+            .for_file_range(offset, buf.len(), |cluster| {
+                let buf_len = cluster.len();
+
+                buf[processed..processed + buf_len].copy_from_slice(cluster);
+                processed += buf_len;
+                false
+            })
+            .await?;
+
+        Ok(read.min(max_read))
     }
 
     async fn write(&self, buf: &[u8], offset: usize) -> Result<usize, ErrorType> {
         let mut buf = buf;
         let mut file = self.inner.lock();
-        let sb = file.parent.super_block();
-        let cluster_size = sb.cluster_size();
 
         file.extend_to_size(offset + buf.len()).await?;
 
-        let first_cluster_idx = offset / cluster_size;
-        let last_cluster_idx = (offset + buf.len()) / cluster_size;
-        let mut cluster_offset = offset % cluster_size;
+        let processed = file
+            .for_file_range(offset, buf.len(), |cluster| {
+                let buf_len = cluster.len();
 
-        for cl in first_cluster_idx..=last_cluster_idx {
-            let mut cluster = alloc::vec![0; cluster_size];
-            let to_copy = (cluster_size - cluster_offset).min(buf.len());
-            let cl = Cluster(cl as _);
-
-            sb.read_cluster(cl, &mut cluster).await?;
-            cluster[cluster_offset..cluster_offset + to_copy].copy_from_slice(&buf[..to_copy]);
-
-            buf = &buf[to_copy..];
-            sb.write_cluster(cl, &cluster).await?;
-            cluster_offset = 0;
-        }
+                cluster.copy_from_slice(&buf[..buf_len]);
+                buf = &buf[buf_len..];
+                true
+            })
+            .await?;
 
         assert!(buf.len() == 0);
-        file.parent.update_size(buf.len()).await?;
-        Ok(buf.len())
+        file.parent.update_size(processed as isize).await?;
+        Ok(processed)
     }
 }

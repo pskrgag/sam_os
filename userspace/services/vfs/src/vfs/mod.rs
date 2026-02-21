@@ -1,6 +1,6 @@
 use crate::bindings_BlkDev::BlkDev;
 use crate::fs::Filesystem;
-use crate::vfs::inode::{Inode, InodeKind};
+use crate::vfs::inode::Inode;
 use alloc::sync::Arc;
 use dcache::Dcache;
 use fs::path::Path;
@@ -56,8 +56,6 @@ impl Vfs {
         drop(dcache);
 
         root.lookup(dir.as_ref(), &root_inode).await.and_then(|x| {
-            let x = Arc::new(x);
-
             if x.is_dir() {
                 // Try to insert the inode. It might has been allocated by another user, so lookup
                 // might be useless

@@ -2,7 +2,6 @@ use super::file::FatFile;
 use super::sb::{CallbackRes, Cluster, SuperBlockRef};
 use crate::bindings_Vfs::{DirEntry, DirEntryFlagsFlag};
 use crate::vfs::inode::{DirectoryOperations, Inode, InodeKind};
-use crate::vfs::vfs;
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
@@ -22,7 +21,7 @@ pub const ATTR_DIRECTORY: u8 = 0b00010000;
 
 // On disk representation
 #[repr(C)]
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, PartialEq)]
 pub struct FsDirEntry {
     name: [u8; 11], /* name and extension */
     attr: u8,       /* attribute bits */
@@ -43,8 +42,9 @@ impl FsDirEntry {
         self.name[0] == 0 || self.name[0] == 0xe5
     }
 
-    pub fn first_cluster(&self) -> Cluster {
-        Cluster(self.start as u32 | (self.starthi as u32) << 16)
+    pub fn first_cluster(&self) -> Option<Cluster> {
+        (self.start != 0 || self.starthi != 0)
+            .then(|| Cluster(self.start as u32 | (self.starthi as u32) << 16))
     }
 
     pub fn is_dir(&self) -> bool {
@@ -52,7 +52,7 @@ impl FsDirEntry {
     }
 
     pub fn is_file(&self) -> bool {
-        (self.attr & ATTR_NORMAL_FILE) != 0
+        !self.is_dir()
     }
 
     pub fn new_empty_file(name: &str) -> Self {
@@ -94,9 +94,7 @@ impl Fat32DirRef {
 
         self.dir
             .update_entry(self.offset, |entry| {
-                if entry.start == 0 {
-                    assert!(entry.starthi == 0);
-
+                if entry.start == 0 && entry.starthi == 0 {
                     entry.start = (res[0].0 & 0xFFFF) as u16;
                     entry.starthi = ((res[0].0 >> 16) & 0xFFFF) as u16;
                 }
@@ -106,7 +104,8 @@ impl Fat32DirRef {
         Ok(res)
     }
 
-    pub async fn update_size(&mut self, size: usize) -> Result<(), ErrorType> {
+    pub async fn update_size(&mut self, size: isize) -> Result<(), ErrorType> {
+        self.size += size as u32;
         self.dir
             .update_entry(self.offset, |entry| {
                 entry.size += size as u32;
@@ -117,6 +116,10 @@ impl Fat32DirRef {
 
     pub fn super_block(&self) -> SuperBlockRef {
         self.dir.super_block()
+    }
+
+    pub fn size(&self) -> u32 {
+        self.size
     }
 }
 
@@ -159,8 +162,14 @@ impl Fat32Dir {
                         )
                     };
 
+                    let copy = entries[cl_offset];
                     f(&mut entries[cl_offset]);
-                    res = CallbackRes::StopSync;
+
+                    res = if copy != entries[cl_offset] {
+                        CallbackRes::StopSync
+                    } else {
+                        CallbackRes::Stop
+                    };
                 }
 
                 idx += 1;
@@ -191,9 +200,14 @@ impl Fat32Dir {
         .await?;
 
         let ent = ent?;
+        let clusters = if let Some(first) = ent.0.first_cluster() {
+            self.inner.sb.lookup_cluster_chain(first).await?
+        } else {
+            Vec::new()
+        };
 
         let file = FatFile::new(
-            alloc::vec::Vec::new(),
+            clusters,
             Fat32DirRef {
                 dir: self.clone(),
                 size: ent.clone().0.size,
@@ -226,7 +240,7 @@ impl Fat32Dir {
         })
         .await?;
 
-        let dir = Self::new(self.super_block(), ent?.first_cluster()).await?;
+        let dir = Self::new(self.super_block(), ent?.first_cluster().unwrap()).await?;
 
         Ok(Inode::new(
             InodeKind::Directory(Arc::new(dir)),
@@ -276,7 +290,7 @@ impl DirectoryOperations for Fat32Dir {
         self.for_each_dir_entry(|entry, _| {
             if !entry.is_free() {
                 res.push(DirEntry {
-                    name: String::from_utf8((&entry.name[1..]).try_into().unwrap()).unwrap(),
+                    name: String::from_utf8(entry.name.try_into().unwrap()).unwrap(),
                     flags: if entry.attr == ATTR_DIRECTORY {
                         DirEntryFlagsFlag::Directory
                     } else {
@@ -293,7 +307,7 @@ impl DirectoryOperations for Fat32Dir {
         Ok(res)
     }
 
-    async fn lookup(&self, path: &Path, parent: &Arc<Inode>) -> Result<Inode, ErrorType> {
+    async fn lookup(&self, path: &Path, parent: &Arc<Inode>) -> Result<Arc<Inode>, ErrorType> {
         let components = path.components().collect::<Vec<_>>();
 
         if components.len() > 1 {
@@ -301,17 +315,34 @@ impl DirectoryOperations for Fat32Dir {
 
             dir.as_dir().unwrap().lookup(path.skip_dir(), &dir).await
         } else {
-            todo!()
+            self.lookup_file(components[0].as_ref(), parent).await
         }
     }
 
     async fn create_file(&self, name: &str, parent: &Arc<Inode>) -> Result<Arc<Inode>, ErrorType> {
-        let mut allocated_idx = 0;
+        let mut allocated_idx = None;
+        let mut exists = false;
+
+        self.for_each_dir_entry(|entry, _| {
+            let cstr = unsafe { CStr::from_ptr(entry.name.as_ptr()) };
+
+            if !entry.is_free() && cstr.to_str().unwrap() == name {
+                exists = true;
+                return CallbackRes::Stop;
+            }
+
+            CallbackRes::Continue
+        })
+        .await?;
+
+        if exists {
+            return Err(ErrorType::AlreadyExists);
+        }
 
         self.for_each_dir_entry(|entry, idx| {
             if entry.is_free() {
                 *entry = FsDirEntry::new_empty_file(name);
-                allocated_idx = idx;
+                allocated_idx = Some(idx);
                 return CallbackRes::StopSync;
             }
 
@@ -323,7 +354,7 @@ impl DirectoryOperations for Fat32Dir {
             alloc::vec::Vec::new(),
             Fat32DirRef {
                 dir: self.clone(),
-                offset: allocated_idx,
+                offset: allocated_idx.unwrap(),
                 size: 0,
             },
         );

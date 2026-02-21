@@ -9,7 +9,6 @@ mod dir;
 mod fat;
 mod fat_alloc;
 mod file;
-mod inode;
 mod sb;
 
 pub struct Fat32;

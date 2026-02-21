@@ -38,6 +38,26 @@ impl OpenDirectory {
                             wire_res.extend_from_slice(&res).unwrap();
                             responder.reply(wire_res)?;
                         }
+                        DirectoryRequest::OpenFile { value, responder } => {
+                            let file = if let Some(file) = vfs().dcache_lookup(&*value.name) {
+                                file
+                            } else {
+                                let file = dir
+                                    .ops
+                                    .lookup((&value.name.as_str()).as_ref(), &dir.inode)
+                                    .await?;
+                                vfs().dcache_store(&*value.name, file)
+                            };
+
+                            if !file.is_file() {
+                                return Err(ErrorType::InvalidArgument);
+                            }
+
+                            let (handler, handle) = super::file::OpenFile::new(file)?;
+
+                            rokio::executor::spawn(handler);
+                            responder.reply(&handle)?;
+                        }
                         DirectoryRequest::CreateFile { value, responder } => {
                             let file = if let Some(file) = vfs().dcache_lookup(&*value.name) {
                                 file

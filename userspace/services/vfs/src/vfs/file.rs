@@ -41,18 +41,28 @@ impl OpenFile {
                 async move {
                     match req {
                         FileRequest::Read { value, responder } => {
-                            todo!()
+                            let mut file = file.lock();
+                            let vmo = unsafe { VmObject::new(value.vmo) };
+                            let mut buf = vms().map_vm_object(&vmo, None, MappingType::Data)?;
+                            // TODO: this is really unsafe and we should check the size of the VMO
+                            // and do not believe the user.
+                            let buf = unsafe { buf.as_slice_mut(value.size) };
+
+                            let res = file.ops.read(buf, file.local_offset + value.offset).await?;
+                            println!("Read = {}", res);
+                            file.local_offset += value.size;
+                            responder.reply(res)?;
                         }
                         FileRequest::Write { value, responder } => {
                             let mut file = file.lock();
 
                             let vmo = unsafe { VmObject::new(value.vmo) };
-                            let mut buf = vms().map_vm_object(&vmo, None, MappingType::RoData)?;
+                            let buf = vms().map_vm_object(&vmo, None, MappingType::RoData)?;
                             // TODO: this is really unsafe and we should check the size of the VMO
                             // and do not believe the user.
-                            let buf = unsafe { buf.as_slice_mut(value.size) };
+                            let buf = unsafe { buf.as_slice(value.size) };
 
-                            let res = file
+                            let _res = file
                                 .ops
                                 .write(buf, file.local_offset + value.offset)
                                 .await?;

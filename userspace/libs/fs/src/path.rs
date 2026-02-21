@@ -7,17 +7,18 @@ pub struct Path<'a> {
 }
 
 pub struct Components<'a> {
-    inner: &'a str,
+    inner: Option<&'a str>,
 }
 
 impl<'a> Iterator for Components<'a> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let pos = self.inner.find('/')?;
-        let res = &self.inner[..pos];
+        let inner = &self.inner?;
+        let pos = inner.find('/').unwrap_or(inner.len());
+        let res = &inner[..pos];
 
-        self.inner = &self.inner[pos + 1..];
+        self.inner = inner.get(pos + 1..);
         Some(res)
     }
 }
@@ -28,14 +29,14 @@ impl<'a> Path<'a> {
     }
 
     pub fn components(&self) -> Components<'a> {
-        Components { inner: self.inner }
+        Components { inner: Some(self.inner) }
     }
 
     pub fn into_owned(&self) -> String {
         self.inner.to_string()
     }
 
-    pub fn skip_dir(&'a self) -> &'a Path {
+    pub fn skip_dir(&'a self) -> &'a Path<'a> {
         let pos = self.inner.find('/').unwrap();
         let left = &&self.inner[pos + 1..];
 
@@ -74,4 +75,4 @@ impl<'a> AsRef<Path<'a>> for &'a str {
         // seems sane, no?
         unsafe { core::mem::transmute(self) }
     }
-
+}
