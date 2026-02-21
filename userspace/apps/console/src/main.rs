@@ -5,6 +5,7 @@ use libc::handle::Handle;
 use rokio::port::Port;
 
 mod console;
+mod commands;
 
 #[rokio::main]
 async fn main(root: Option<Handle>) {

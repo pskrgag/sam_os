@@ -17,6 +17,19 @@ pub enum ErrorType {
     WouldBlock = 14,
 }
 
+impl From<ErrorType> for &str {
+    fn from(err: ErrorType) -> &'static str {
+        match err {
+            ErrorType::WouldBlock => "will block",
+            ErrorType::NoMemory => "out of memory",
+            ErrorType::Fault => "invalid address",
+            ErrorType::AlreadyExists => "already exists",
+            ErrorType::NotFound => "not found",
+            _ => todo!(),
+        }
+    }
+}
+
 impl From<ErrorType> for usize {
     fn from(value: ErrorType) -> Self {
         value as usize
