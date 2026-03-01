@@ -324,6 +324,7 @@ dependencies = [
 [[package]]
 name = "slab"
 version = "0.1.0"
+source = "git+https://github.com/pskrgag/slab.git#e0f3d6fce31061f3d02b9a5e30d3ef72564af6c6"
 
 [[package]]
 name = "spin"

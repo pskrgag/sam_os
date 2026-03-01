@@ -44,10 +44,6 @@ checksum = "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3"
 [[package]]
 name = "bitmask"
 version = "0.5.0"
-
-[[package]]
-name = "bitmask"
-version = "0.5.0"
 source = "git+https://github.com/pskrgag/bitmask.git#0bf57189b0ea9a362c8505b4b0ed3f8c26b8f320"
 
 [[package]]
@@ -377,7 +373,7 @@ dependencies = [
 name = "rtl"
 version = "0.1.0"
 dependencies = [
- "bitmask 0.5.0 (git+https://github.com/pskrgag/bitmask.git)",
+ "bitmask",
  "bytemuck",
  "hal",
  "static_assertions",
@@ -593,7 +589,7 @@ version = "0.1.0"
 dependencies = [
  "adt",
  "async-trait",
- "bitmask 0.5.0",
+ "bitmask",
  "cpio_reader",
  "downcast-rs",
  "fs",
