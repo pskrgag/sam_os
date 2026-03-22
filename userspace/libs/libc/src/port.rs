@@ -2,7 +2,7 @@ use super::handle::Handle;
 use crate::factory::factory;
 use crate::syscalls::Syscall;
 use rtl::error::ErrorType;
-use rtl::ipc::message::IpcMessage;
+use rtl::ipc::IpcMessage;
 use rtl::signal::Signal;
 
 pub struct Port {
