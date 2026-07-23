@@ -3,11 +3,11 @@ use crate::bindings_Vfs::{Directory, File};
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
+use hal::address::VirtualAddress;
 use libc::vmm::vms::vms;
 use rokio::port::Port;
 use rtl::error::ErrorType;
 use rtl::vmm::MappingType;
-use hal::address::VirtualAddress;
 
 struct Cat;
 
@@ -20,18 +20,24 @@ impl Cat {
         let root = env.vfs.Root().await.unwrap().handle;
         let root = Directory::new(unsafe { Port::new(root) });
 
+        if args.len() == 0 {
+            return Err(ErrorType::InvalidArgument);
+        }
+
         let file = root.OpenFile(args[0].try_into().unwrap()).await?;
         let file = File::new(unsafe { Port::new(file.handle) });
         let vmo = vms().create_vm_object(1 << 12, MappingType::Data)?;
 
         let mut resulting_data = String::new();
+        let mut offset = 0;
 
         loop {
-            let read = file.Read(0, 1 << 12, vmo.handle()).await?.read;
+            let read = file.Read(offset, 1 << 12, vmo.handle()).await?.read;
             let buf = vms().map_vm_object(&vmo, None, MappingType::Data)?;
             let buf = unsafe { buf.as_slice(read) };
 
             resulting_data.push_str(core::str::from_utf8(buf).unwrap());
+            offset += read;
             if read < 1 << 12 {
                 break;
             }

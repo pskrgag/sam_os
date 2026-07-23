@@ -25,6 +25,7 @@ impl From<ErrorType> for &str {
             ErrorType::Fault => "invalid address",
             ErrorType::AlreadyExists => "already exists",
             ErrorType::NotFound => "not found",
+            ErrorType::InvalidArgument => "invalid argument",
             _ => todo!(),
         }
     }

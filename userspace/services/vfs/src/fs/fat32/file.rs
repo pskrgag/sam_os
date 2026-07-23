@@ -38,10 +38,14 @@ impl FatFileInner {
         size: usize,
         mut f: F,
     ) -> Result<usize, ErrorType> {
+        if size == 0 || self.allocated_clusters.is_empty() {
+            return Ok(0);
+        }
+
         let sb = self.parent.super_block();
         let cluster_size = sb.cluster_size();
         let first_cluster_idx = start / cluster_size;
-        let last_cluster_idx = (start + size) / cluster_size;
+        let last_cluster_idx = (start + size - 1) / cluster_size;
         let mut cluster_offset = start % cluster_size;
         let mut processed = 0;
         let mut size = size;
@@ -82,10 +86,17 @@ impl FileOperations for FatFile {
     async fn read(&self, buf: &mut [u8], offset: usize) -> Result<usize, ErrorType> {
         let file = self.inner.lock();
         let mut processed = 0;
-        let max_read = file.parent.size() as usize - offset;
+        let file_size = file.parent.size() as usize;
+
+        if offset >= file_size {
+            return Ok(0);
+        }
+
+        let max_read = file_size - offset;
+        let read_len = buf.len().min(max_read);
 
         let read = file
-            .for_file_range(offset, buf.len(), |cluster| {
+            .for_file_range(offset, read_len, |cluster| {
                 let buf_len = cluster.len();
 
                 buf[processed..processed + buf_len].copy_from_slice(cluster);
@@ -100,6 +111,7 @@ impl FileOperations for FatFile {
     async fn write(&self, buf: &[u8], offset: usize) -> Result<usize, ErrorType> {
         let mut buf = buf;
         let mut file = self.inner.lock();
+        let old_size = file.parent.size();
 
         file.extend_to_size(offset + buf.len()).await?;
 
@@ -114,7 +126,8 @@ impl FileOperations for FatFile {
             .await?;
 
         assert!(buf.len() == 0);
-        file.parent.update_size(processed as isize).await?;
+        let new_size = old_size.max((offset + processed) as u32);
+        file.parent.update_size(new_size).await?;
         Ok(processed)
     }
 }

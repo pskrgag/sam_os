@@ -13,10 +13,10 @@ pub trait DirectoryOperations: Send + Sync {
     async fn list(&self) -> Result<Vec<DirEntry>, ErrorType>;
 
     /// Lookup the entry
-    async fn lookup(&self, path: &Path, parent: &Arc<Inode>) -> Result<Arc<Inode>, ErrorType>;
+    async fn lookup(&self, name: &str) -> Result<Arc<Inode>, ErrorType>;
 
     /// Creates a new file in the directory. Returns a handle to file
-    async fn create_file(&self, name: &str, parent: &Arc<Inode>) -> Result<Arc<Inode>, ErrorType>;
+    async fn create_file(&self, name: &str) -> Result<Arc<Inode>, ErrorType>;
 }
 
 #[async_trait::async_trait]
@@ -36,17 +36,15 @@ pub enum InodeKind {
 pub struct Inode {
     num: usize,
     kind: InodeKind,
-    parent: Option<Arc<Inode>>,
 }
 
 impl Inode {
-    pub fn new(kind: InodeKind, parent: Option<Arc<Inode>>) -> Arc<Self> {
+    pub fn new(kind: InodeKind) -> Arc<Self> {
         static ID_ALLOCATOR: Spinlock<GrowBitAllocator> = Spinlock::new(GrowBitAllocator::empty());
 
         Arc::new(Self {
             num: ID_ALLOCATOR.lock().allocate(),
             kind,
-            parent,
         })
     }
 

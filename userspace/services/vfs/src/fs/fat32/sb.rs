@@ -425,13 +425,10 @@ impl SuperBlock {
         Ok(())
     }
 
-    pub async fn root(
-        self: &Arc<Self>,
-        parent: Option<Arc<Inode>>,
-    ) -> Result<Arc<Inode>, ErrorType> {
+    pub async fn root(self: &Arc<Self>) -> Result<Arc<Inode>, ErrorType> {
         Fat32Dir::new(self.clone(), self.root_cluster)
             .await
-            .map(|x| Inode::new(InodeKind::Directory(Arc::new(x)), parent))
+            .map(|x| Inode::new(InodeKind::Directory(Arc::new(x))))
     }
 
     /// Allocates clusters and links them to chain starting from start

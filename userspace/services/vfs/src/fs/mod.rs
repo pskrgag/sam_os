@@ -7,5 +7,5 @@ pub mod fat32;
 
 pub trait Filesystem {
     /// Mounts device and return root directory inode
-    async fn try_mount(blk: BlkDev, parent: Option<Arc<Inode>>) -> Result<Arc<Inode>, ErrorType>;
+    async fn try_mount(blk: BlkDev) -> Result<Arc<Inode>, ErrorType>;
 }

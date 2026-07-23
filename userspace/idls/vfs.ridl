@@ -21,6 +21,7 @@ interface Directory {
 	List(out Sequence<DirEntry, 1000> entries);
 	CreateFile(in Name name, out Handle handle);
 	OpenFile(in Name name, out Handle handle);
+	CreateDir(in Name name, out Handle handle);
 }
 
 interface File {

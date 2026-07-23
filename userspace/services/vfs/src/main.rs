@@ -32,7 +32,7 @@ async fn main(root: Option<Handle>) -> Result<(), ErrorType> {
         async move {
             match req {
                 VfsRequest::Root { responder, .. } => {
-                    let (disp, handle) = vfs.open_dir("/").await?;
+                    let (disp, handle) = vfs.root().await?;
 
                     println!("Open root");
                     rokio::executor::spawn(disp);

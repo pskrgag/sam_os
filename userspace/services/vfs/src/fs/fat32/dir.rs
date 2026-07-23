@@ -3,9 +3,9 @@ use super::sb::{CallbackRes, Cluster, SuperBlockRef};
 use crate::bindings_Vfs::{DirEntry, DirEntryFlagsFlag};
 use crate::vfs::inode::{DirectoryOperations, Inode, InodeKind};
 use alloc::boxed::Box;
+use alloc::string::String as AllocString;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use core::ffi::c_str::CStr;
 use fs::path::Path;
 use heapless::String;
 use rtl::error::ErrorType;
@@ -55,16 +55,35 @@ impl FsDirEntry {
         !self.is_dir()
     }
 
-    pub fn new_empty_file(name: &str) -> Self {
+    fn decoded_name(&self) -> Result<AllocString, ErrorType> {
+        let end = self
+            .name
+            .iter()
+            .position(|x| *x == 0 || *x == b' ')
+            .unwrap_or(self.name.len());
+
+        core::str::from_utf8(&self.name[..end])
+            .map(AllocString::from)
+            .map_err(|_| ErrorType::InvalidArgument)
+    }
+
+    fn encode_name(name: &str) -> Result<[u8; 11], ErrorType> {
+        if name.is_empty() || name.len() > 11 {
+            return Err(ErrorType::InvalidArgument);
+        }
+
         let mut real_name: [u8; 11] = [0; 11];
 
         real_name[..name.len()].copy_from_slice(name.as_bytes());
+        Ok(real_name)
+    }
 
-        Self {
-            name: real_name,
+    pub fn new_empty_file(name: &str) -> Result<Self, ErrorType> {
+        Ok(Self {
+            name: Self::encode_name(name)?,
             attr: ATTR_NORMAL_FILE,
             ..Default::default()
-        }
+        })
     }
 }
 
@@ -104,11 +123,11 @@ impl Fat32DirRef {
         Ok(res)
     }
 
-    pub async fn update_size(&mut self, size: isize) -> Result<(), ErrorType> {
-        self.size += size as u32;
+    pub async fn update_size(&mut self, size: u32) -> Result<(), ErrorType> {
+        self.size = size;
         self.dir
             .update_entry(self.offset, |entry| {
-                entry.size += size as u32;
+                entry.size = size;
             })
             .await?;
         Ok(())
@@ -180,16 +199,12 @@ impl Fat32Dir {
         Ok(())
     }
 
-    async fn lookup_file(&self, name: &str, parent: &Arc<Inode>) -> Result<Arc<Inode>, ErrorType> {
+    async fn lookup_entry(&self, name: &str) -> Result<Arc<Inode>, ErrorType> {
         let mut ent = Err(ErrorType::NotFound);
 
         self.for_each_dir_entry(|entry, idx| {
-            if entry.is_file() {
-                let cstr = unsafe { CStr::from_ptr(entry.name.as_ptr()) }
-                    .to_str()
-                    .expect("Invalid entry name on FS");
-
-                if cstr == name {
+            if !entry.is_free() {
+                if matches!(entry.decoded_name().as_deref(), Ok(entry_name) if entry_name == name) {
                     ent = Ok((*entry, idx));
                     return CallbackRes::Stop;
                 }
@@ -215,22 +230,15 @@ impl Fat32Dir {
             },
         );
 
-        Ok(Inode::new(
-            InodeKind::File(Arc::new(file)),
-            Some(parent.clone()),
-        ))
+        Ok(Inode::new(InodeKind::File(Arc::new(file))))
     }
 
-    async fn lookup_dir(&self, name: &str, parent: &Arc<Inode>) -> Result<Arc<Inode>, ErrorType> {
+    async fn lookup_dir(&self, name: &str) -> Result<Arc<Inode>, ErrorType> {
         let mut ent = Err(ErrorType::NotFound);
 
         self.for_each_dir_entry(|entry, _| {
-            if entry.is_dir() {
-                let cstr = unsafe { CStr::from_ptr(entry.name.as_ptr()) }
-                    .to_str()
-                    .expect("Invalid entry name on FS");
-
-                if cstr == name {
+            if !entry.is_free() && entry.is_dir() {
+                if matches!(entry.decoded_name().as_deref(), Ok(entry_name) if entry_name == name) {
                     ent = Ok(*entry);
                     return CallbackRes::Stop;
                 }
@@ -242,10 +250,7 @@ impl Fat32Dir {
 
         let dir = Self::new(self.super_block(), ent?.first_cluster().unwrap()).await?;
 
-        Ok(Inode::new(
-            InodeKind::Directory(Arc::new(dir)),
-            Some(parent.clone()),
-        ))
+        Ok(Inode::new(InodeKind::Directory(Arc::new(dir))))
     }
 
     async fn for_each_dir_entry<F: FnMut(&mut FsDirEntry, usize) -> CallbackRes + Send + Sync>(
@@ -289,15 +294,17 @@ impl DirectoryOperations for Fat32Dir {
 
         self.for_each_dir_entry(|entry, _| {
             if !entry.is_free() {
-                res.push(DirEntry {
-                    name: String::from_utf8(entry.name.try_into().unwrap()).unwrap(),
-                    flags: if entry.attr == ATTR_DIRECTORY {
-                        DirEntryFlagsFlag::Directory
-                    } else {
-                        DirEntryFlagsFlag::File
-                    }
-                    .into(),
-                });
+                if let Ok(name) = entry.decoded_name() {
+                    res.push(DirEntry {
+                        name: String::try_from(name.as_str()).unwrap(),
+                        flags: if entry.attr == ATTR_DIRECTORY {
+                            DirEntryFlagsFlag::Directory
+                        } else {
+                            DirEntryFlagsFlag::File
+                        }
+                        .into(),
+                    });
+                }
             }
 
             CallbackRes::Continue
@@ -307,26 +314,18 @@ impl DirectoryOperations for Fat32Dir {
         Ok(res)
     }
 
-    async fn lookup(&self, path: &Path, parent: &Arc<Inode>) -> Result<Arc<Inode>, ErrorType> {
-        let components = path.components().collect::<Vec<_>>();
-
-        if components.len() > 1 {
-            let dir = self.lookup_dir(components[0].as_ref(), parent).await?;
-
-            dir.as_dir().unwrap().lookup(path.skip_dir(), &dir).await
-        } else {
-            self.lookup_file(components[0].as_ref(), parent).await
-        }
+    async fn lookup(&self, name: &str) -> Result<Arc<Inode>, ErrorType> {
+        self.lookup_entry(name).await
     }
 
-    async fn create_file(&self, name: &str, parent: &Arc<Inode>) -> Result<Arc<Inode>, ErrorType> {
+    async fn create_file(&self, name: &str) -> Result<Arc<Inode>, ErrorType> {
         let mut allocated_idx = None;
         let mut exists = false;
 
         self.for_each_dir_entry(|entry, _| {
-            let cstr = unsafe { CStr::from_ptr(entry.name.as_ptr()) };
-
-            if !entry.is_free() && cstr.to_str().unwrap() == name {
+            if !entry.is_free()
+                && matches!(entry.decoded_name().as_deref(), Ok(entry_name) if entry_name == name)
+            {
                 exists = true;
                 return CallbackRes::Stop;
             }
@@ -341,7 +340,10 @@ impl DirectoryOperations for Fat32Dir {
 
         self.for_each_dir_entry(|entry, idx| {
             if entry.is_free() {
-                *entry = FsDirEntry::new_empty_file(name);
+                match FsDirEntry::new_empty_file(name) {
+                    Ok(new_entry) => *entry = new_entry,
+                    Err(_) => return CallbackRes::Stop,
+                }
                 allocated_idx = Some(idx);
                 return CallbackRes::StopSync;
             }
@@ -350,18 +352,16 @@ impl DirectoryOperations for Fat32Dir {
         })
         .await?;
 
+        let offset = allocated_idx.ok_or(ErrorType::InvalidArgument)?;
         let file = FatFile::new(
             alloc::vec::Vec::new(),
             Fat32DirRef {
                 dir: self.clone(),
-                offset: allocated_idx.unwrap(),
+                offset,
                 size: 0,
             },
         );
 
-        Ok(Inode::new(
-            InodeKind::File(Arc::new(file)),
-            Some(parent.clone()),
-        ))
+        Ok(Inode::new(InodeKind::File(Arc::new(file))))
     }
 }
