@@ -426,8 +426,7 @@ impl SuperBlock {
     }
 
     pub async fn root(self: &Arc<Self>) -> Result<Arc<Inode>, ErrorType> {
-        Fat32Dir::new(self.clone(), self.root_cluster)
-            .await
+        Fat32Dir::new(self.clone(), Some(self.root_cluster), None)
             .map(|x| Inode::new(InodeKind::Directory(Arc::new(x))))
     }
 

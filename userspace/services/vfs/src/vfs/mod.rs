@@ -4,6 +4,7 @@ use crate::vfs::inode::DirectoryOperations;
 use crate::vfs::inode::Inode;
 use alloc::sync::Arc;
 use dcache::Dentry;
+use dcache::CreateType;
 use fs::path::Path;
 use libc::handle::Handle;
 use rtl::error::ErrorType;

@@ -8,6 +8,11 @@ use fs::path::{Components, Path};
 use rtl::error::ErrorType;
 use rtl::locking::spinlock::Spinlock;
 
+pub enum CreateType {
+    File,
+    Directory,
+}
+
 /// Cached file system entry
 pub struct Dentry {
     name: String,
@@ -75,6 +80,65 @@ impl Dentry {
         self.lookup_components(&components).await
     }
 
+    /// Looks up entry specified by path
+    pub async fn lookup_or_create<'a, P: Into<Path<'a>>>(
+        self: &Arc<Self>,
+        path: P,
+        kind: Option<CreateType>,
+    ) -> Result<Arc<Dentry>, ErrorType> {
+        let path = path.into();
+        let components = path.components().collect::<Vec<_>>();
+        let name = components.last().unwrap();
+
+        let dir = self
+            .lookup_components(&components[..components.len() - 1])
+            .await?;
+
+        let Some(dir_ops) = dir.inode.as_dir() else {
+            return Err(ErrorType::InvalidArgument);
+        };
+
+        let file = match dir.lookup_components(&[name]).await {
+            Err(ErrorType::NotFound) => {
+                // Dcache + disk lookup failed. We need to physically create smth
+                let inode = match kind {
+                    Some(CreateType::File) => dir_ops.create_file(name).await?,
+                    Some(CreateType::Directory) => dir_ops.create_directory(name).await?,
+                    _ => return Err(ErrorType::NotFound),
+                };
+
+                Dentry::insert_child(&dir, name, inode.clone())
+            }
+            e => e?,
+        };
+
+        Ok(file)
+    }
+
+    /// Creates new file
+    pub async fn create_file<'a, P: Into<Path<'a>>>(
+        self: &Arc<Self>,
+        path: P,
+    ) -> Result<Arc<Dentry>, ErrorType> {
+        let path = path.into();
+        let components = path.components().collect::<Vec<_>>();
+
+        let parent = self
+            .lookup_components(&components[..components.len() - 1])
+            .await?;
+
+        let name = components.last().unwrap();
+
+        let res = if let Some(dir) = parent.inode().as_dir() {
+            dir.create_file(name).await
+        } else {
+            Err(ErrorType::InvalidArgument)
+        }?;
+
+        Ok(Dentry::insert_child(self, name, res.clone()))
+    }
+
+    /// Creates new directory
     pub async fn create_dir<'a, P: Into<Path<'a>>>(
         self: &Arc<Self>,
         path: P,
@@ -86,14 +150,15 @@ impl Dentry {
             .lookup_components(&components[..components.len() - 1])
             .await?;
 
+        let name = components.last().unwrap();
+
         let res = if let Some(dir) = parent.inode().as_dir() {
-            todo!()
+            dir.create_directory(name).await
         } else {
             Err(ErrorType::InvalidArgument)
         }?;
 
-        Dentry::insert_child(res, components.last().unwrap(), res.inode.clone());
-        Ok(res.clone())
+        Ok(Dentry::insert_child(self, name, res.clone()))
     }
 
     fn insert_child(parent: &Arc<Self>, name: &str, inode: Arc<Inode>) -> Arc<Dentry> {

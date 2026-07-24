@@ -19,9 +19,8 @@ struct DirEntry {
 
 interface Directory {
 	List(out Sequence<DirEntry, 1000> entries);
-	CreateFile(in Name name, out Handle handle);
-	OpenFile(in Name name, out Handle handle);
-	CreateDir(in Name name, out Handle handle);
+	OpenFile(in Name name, in U8 create, out Handle handle);
+	OpenDir(in Name name, in U8 create, out Handle handle);
 }
 
 interface File {

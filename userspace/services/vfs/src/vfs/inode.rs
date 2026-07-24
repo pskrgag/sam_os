@@ -17,6 +17,9 @@ pub trait DirectoryOperations: Send + Sync {
 
     /// Creates a new file in the directory. Returns a handle to file
     async fn create_file(&self, name: &str) -> Result<Arc<Inode>, ErrorType>;
+
+    /// Creates a new directory in the directory. Returns a handle to directory
+    async fn create_directory(&self, name: &str) -> Result<Arc<Inode>, ErrorType>;
 }
 
 #[async_trait::async_trait]

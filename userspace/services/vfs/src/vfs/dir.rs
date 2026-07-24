@@ -1,7 +1,7 @@
 use crate::bindings_Vfs::{Directory, DirectoryRequest};
 use crate::vfs::inode::{DirectoryOperations, Inode, InodeKind};
 use crate::vfs::vfs;
-use crate::vfs::Dentry;
+use crate::vfs::{CreateType, Dentry};
 use alloc::sync::Arc;
 use libc::handle::Handle;
 use rokio::port::Port;
@@ -15,7 +15,7 @@ pub struct OpenDirectory {
 impl OpenDirectory {
     pub fn new(
         dentry: Arc<Dentry>,
-    ) -> Result<(impl Future<Output = Result<(), ErrorType>>, Handle), ErrorType> {
+    ) -> Result<(impl Future<Output = Result<(), ErrorType>> + Send, Handle), ErrorType> {
         let port = Port::create()?;
 
         let ops = match dentry.inode().kind() {
@@ -40,7 +40,13 @@ impl OpenDirectory {
                             responder.reply(wire_res)?;
                         }
                         DirectoryRequest::OpenFile { value, responder } => {
-                            let file = dir.dentry.lookup(&*value.name).await?;
+                            let file = dir
+                                .dentry
+                                .lookup_or_create(
+                                    &*value.name,
+                                    (value.create == 1).then_some(CreateType::File),
+                                )
+                                .await?;
 
                             if !file.inode().is_file() {
                                 return Err(ErrorType::InvalidArgument);
@@ -52,22 +58,24 @@ impl OpenDirectory {
                             rokio::executor::spawn(handler);
                             responder.reply(&handle)?;
                         }
-                        DirectoryRequest::CreateFile { value, responder } => {
-                            let file = dir.dentry.lookup(&*value.name).await?;
+                        DirectoryRequest::OpenDir { value, responder } => {
+                            let new_dir = dir
+                                .dentry
+                                .lookup_or_create(
+                                    &*value.name,
+                                    (value.create == 1).then_some(CreateType::Directory),
+                                )
+                                .await?;
 
-                            if !file.inode().is_dir() {
+                            if !new_dir.inode().is_dir() {
                                 return Err(ErrorType::InvalidArgument);
                             }
 
-                            let (handler, handle) =
-                                super::file::OpenFile::new(file.inode().clone())?;
+                            let (handler, handle) = OpenDirectory::new(new_dir)?;
 
                             rokio::executor::spawn(handler);
                             responder.reply(&handle)?;
                         }
-                        DirectoryRequest::CreateDir { value, responder } => {
-
-                        },
                     }
 
                     Ok(())

@@ -1,7 +1,9 @@
 use super::bindings_Serial::Serial;
 use super::bindings_Vfs::Vfs;
+use crate::bindings_Vfs::{Directory, File};
 use crate::commands::{commands, Enviroment};
 use alloc::{string::String, vec::Vec};
+use rokio::port::Port;
 
 pub struct Console {
     backend: Serial,
@@ -41,6 +43,9 @@ impl Console {
     }
 
     pub async fn serve(self) {
+        let cwd = self.vfs.Root().await.unwrap();
+        let cwd = Directory::new(unsafe { Port::new(cwd.handle) });
+
         loop {
             self.put_str("> ").await;
             let cmd = self.read_until_newline().await;
@@ -57,7 +62,7 @@ impl Console {
 
                 for cmd in commands() {
                     if cmd.name() == cmd_name {
-                        let res = match cmd.run(args, Enviroment { vfs: &self.vfs }).await {
+                        let res = match cmd.run(args, Enviroment { cwd: &cwd }).await {
                             Err(e) => e,
                             Ok(e) => e,
                         };

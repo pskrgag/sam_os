@@ -17,14 +17,11 @@ impl Cat {
         args: Vec<&str>,
         env: Enviroment<'async_trait>,
     ) -> Result<String, ErrorType> {
-        let root = env.vfs.Root().await.unwrap().handle;
-        let root = Directory::new(unsafe { Port::new(root) });
-
         if args.len() == 0 {
             return Err(ErrorType::InvalidArgument);
         }
 
-        let file = root.OpenFile(args[0].try_into().unwrap()).await?;
+        let file = env.cwd.OpenFile(args[0].try_into().unwrap(), 0).await?;
         let file = File::new(unsafe { Port::new(file.handle) });
         let vmo = vms().create_vm_object(1 << 12, MappingType::Data)?;
 
