@@ -1,5 +1,6 @@
 use super::bindings_Vfs::Vfs;
 use crate::bindings_Vfs::Directory;
+use crate::cwd::Cwd;
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -8,12 +9,13 @@ mod cat;
 mod echo;
 mod help;
 mod ls;
+mod mkdir;
 mod touch;
 mod write;
-mod mkdir;
+mod cd;
 
 pub struct Enviroment<'a> {
-    pub cwd: &'a Directory,
+    pub cwd: &'a mut Cwd,
 }
 
 #[async_trait::async_trait]

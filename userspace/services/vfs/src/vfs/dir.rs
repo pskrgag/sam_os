@@ -9,7 +9,6 @@ use rtl::error::ErrorType;
 
 pub struct OpenDirectory {
     dentry: Arc<Dentry>,
-    ops: Arc<dyn DirectoryOperations>,
 }
 
 impl OpenDirectory {
@@ -18,13 +17,12 @@ impl OpenDirectory {
     ) -> Result<(impl Future<Output = Result<(), ErrorType>> + Send, Handle), ErrorType> {
         let port = Port::create()?;
 
-        let ops = match dentry.inode().kind() {
-            InodeKind::Directory(dir) => dir.clone(),
-            _ => return Err(ErrorType::InvalidArgument),
-        };
+        if !dentry.is_dir() {
+            return Err(ErrorType::InvalidArgument);
+        }
 
         let raw_handle = port.handle().clone_handle()?;
-        let dir = Arc::new(Self { dentry, ops });
+        let dir = Arc::new(Self { dentry });
 
         Ok((
             Directory::for_each(port, move |req| {
@@ -33,7 +31,7 @@ impl OpenDirectory {
                 async move {
                     match req {
                         DirectoryRequest::List { responder, .. } => {
-                            let res = dir.ops.list().await?;
+                            let res = dir.dentry.list().await?;
                             let mut wire_res = heapless::Vec::new();
 
                             wire_res.extend_from_slice(&res).unwrap();

@@ -32,7 +32,9 @@ pub trait FileOperations: Send + Sync {
 }
 
 pub enum InodeKind {
+    /// Directory
     Directory(Arc<dyn DirectoryOperations>),
+    /// Regular file
     File(Arc<dyn FileOperations>),
 }
 

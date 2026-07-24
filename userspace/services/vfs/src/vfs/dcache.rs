@@ -1,4 +1,5 @@
 use super::inode::Inode;
+use crate::bindings_Vfs::{DirEntry, DirEntryFlagsFlag};
 use alloc::collections::btree_map::Entry;
 use alloc::collections::BTreeMap;
 use alloc::string::{String, ToString};
@@ -47,6 +48,11 @@ impl Dentry {
         &self.inode
     }
 
+    /// Checks if dentry points to directory
+    pub fn is_dir(&self) -> bool {
+        self.inode.is_dir()
+    }
+
     /// Looks up entry specified by path
     async fn lookup_components(
         self: &Arc<Self>,
@@ -55,15 +61,26 @@ impl Dentry {
         let mut current = self.clone();
 
         for comp in components {
-            if let Some(child) = current.lookup_child(comp) {
-                current = child;
-            } else if let Some(dir) = current.inode.as_dir() {
-                let file = dir.lookup(comp).await?;
+            match *comp {
+                ".." => {
+                    if let Some(parent) = current.parent() {
+                        current = parent;
+                    } else {
+                        return Err(ErrorType::InvalidArgument);
+                    }
+                }
+                comp => {
+                    if let Some(child) = current.lookup_child(comp) {
+                        current = child;
+                    } else if let Some(dir) = current.inode.as_dir() {
+                        let file = dir.lookup(comp).await?;
 
-                current = Dentry::insert_child(&current, comp, file);
-            } else {
-                return Err(ErrorType::InvalidArgument);
-            }
+                        current = Dentry::insert_child(&current, comp, file);
+                    } else {
+                        return Err(ErrorType::InvalidArgument);
+                    }
+                }
+            };
         }
 
         Ok(current)
@@ -143,6 +160,10 @@ impl Dentry {
         self: &Arc<Self>,
         path: P,
     ) -> Result<Arc<Dentry>, ErrorType> {
+        let Some(dir) = self.inode.as_dir() else {
+            return Err(ErrorType::InvalidArgument);
+        };
+
         let path = path.into();
         let components = path.components().collect::<Vec<_>>();
 
@@ -152,13 +173,26 @@ impl Dentry {
 
         let name = components.last().unwrap();
 
-        let res = if let Some(dir) = parent.inode().as_dir() {
-            dir.create_directory(name).await
-        } else {
-            Err(ErrorType::InvalidArgument)
-        }?;
+        let res = dir.create_directory(name).await?;
 
         Ok(Dentry::insert_child(self, name, res.clone()))
+    }
+
+    /// Lists directory content
+    pub async fn list(&self) -> Result<Vec<DirEntry>, ErrorType> {
+        let Some(dir) = self.inode.as_dir() else {
+            return Err(ErrorType::InvalidArgument);
+        };
+        let mut res = dir.list().await?;
+
+        if self.parent().is_some() {
+            res.push(DirEntry {
+                name: "..".try_into().unwrap(),
+                flags: DirEntryFlagsFlag::Directory.into(),
+            });
+        }
+
+        Ok(res)
     }
 
     fn insert_child(parent: &Arc<Self>, name: &str, inode: Arc<Inode>) -> Arc<Dentry> {

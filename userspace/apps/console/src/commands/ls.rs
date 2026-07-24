@@ -20,7 +20,7 @@ impl Ls {
         let dir = if args.is_empty() {
             env.cwd
         } else {
-            let mut iter = env.cwd;
+            let mut iter = &(**env.cwd);
             let path = Path::new(&args[0]);
 
             for comp in path.components() {

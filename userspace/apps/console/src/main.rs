@@ -6,6 +6,7 @@ use rokio::port::Port;
 
 mod console;
 mod commands;
+mod cwd;
 
 #[rokio::main]
 async fn main(root: Option<Handle>) {
