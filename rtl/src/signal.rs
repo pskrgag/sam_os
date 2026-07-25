@@ -13,7 +13,7 @@ impl TryFrom<usize> for Signals {
     type Error = ErrorType;
 
     fn try_from(value: usize) -> Result<Self, Self::Error> {
-        let max_set = 64 - value.leading_zeros();
+        let max_set = core::mem::size_of::<usize>() * 8 - value.leading_zeros() as usize;
 
         if max_set > 2 {
             Err(ErrorType::InvalidArgument)

@@ -36,6 +36,13 @@ impl<T> Vec<T> {
         }
     }
 
+    pub fn with_capacity(cap: usize) -> Result<Self, ErrorType> {
+        let mut res = alloc::vec::Vec::new();
+
+        res.try_reserve(cap).map_err(|_| ErrorType::NoMemory)?;
+        Ok(Self(res))
+    }
+
     pub fn new() -> Self {
         Self(alloc::vec::Vec::new())
     }
