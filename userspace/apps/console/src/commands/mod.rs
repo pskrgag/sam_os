@@ -1,5 +1,3 @@
-use super::bindings_Vfs::Vfs;
-use crate::bindings_Vfs::Directory;
 use crate::cwd::Cwd;
 use alloc::boxed::Box;
 use alloc::string::String;

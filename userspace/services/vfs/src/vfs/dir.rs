@@ -1,6 +1,4 @@
 use crate::bindings_Vfs::{Directory, DirectoryRequest};
-use crate::vfs::inode::{DirectoryOperations, Inode, InodeKind};
-use crate::vfs::vfs;
 use crate::vfs::{CreateType, Dentry};
 use alloc::sync::Arc;
 use libc::handle::Handle;

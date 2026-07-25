@@ -3,7 +3,6 @@ use adt::GrowBitAllocator;
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use fs::path::Path;
 use rtl::error::ErrorType;
 use rtl::locking::spinlock::Spinlock;
 

@@ -11,7 +11,7 @@ use rtl::locking::spinlock::Spinlock;
 use rtl::vmm::MappingType;
 
 pub struct OpenFile {
-    inode: Arc<Inode>,
+    // inode: Arc<Inode>,
     ops: Arc<dyn FileOperations>,
 }
 
@@ -27,7 +27,7 @@ impl OpenFile {
         };
 
         let raw_handle = port.handle().clone_handle()?;
-        let file = Arc::new(Spinlock::new(Self { inode, ops }));
+        let file = Arc::new(Spinlock::new(Self { ops }));
 
         Ok((
             File::for_each(port, move |req| {

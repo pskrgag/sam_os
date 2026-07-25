@@ -181,6 +181,8 @@ impl Vms {
     pub async fn vm_free(&self, base: VirtAddr, size: usize) -> Result<(), ErrorType> {
         let mut inner = self.inner.lock().await?;
 
+        info!("VmFree\n");
+
         inner
             .vm_free(MemRange::new(base, size))
             .map_err(|_| ErrorType::InvalidArgument)

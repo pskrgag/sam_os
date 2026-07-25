@@ -1,9 +1,7 @@
 use super::{Command, Enviroment, COMMANDS};
-use crate::bindings_Vfs::Directory;
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
-use rokio::port::Port;
 
 struct Help;
 

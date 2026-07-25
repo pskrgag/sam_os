@@ -164,6 +164,7 @@ impl Into<Cluster> for u32 {
 #[repr(u8)]
 pub enum CallbackRes {
     StopSync = 3,
+    #[allow(dead_code)]
     ContinueSync = 2,
     Stop = 1,
     Continue = 0,
@@ -331,7 +332,7 @@ impl SuperBlock {
     ) -> Result<FatEntry, ErrorType> {
         let fats_per_sector = (self.sector_size() / core::mem::size_of::<FatEntry>()) as u32;
         let offset = cluster.0 % fats_per_sector;
-        let sector = Sector(self.fat_start.0 + self.cluster_to_sector(cluster).0 / fats_per_sector);
+        let sector = Sector(self.fat_start.0 + cluster.0 / fats_per_sector);
         let mut sector_data = [0u8; 512];
 
         self.inner
@@ -425,9 +426,10 @@ impl SuperBlock {
         Ok(())
     }
 
-    pub async fn root(self: &Arc<Self>) -> Result<Arc<Inode>, ErrorType> {
-        Fat32Dir::new(self.clone(), Some(self.root_cluster), None)
-            .map(|x| Inode::new(InodeKind::Directory(Arc::new(x))))
+    pub fn root(self: &Arc<Self>) -> Arc<Inode> {
+        let res = Fat32Dir::new(self.clone(), Some(self.root_cluster));
+
+        Inode::new(InodeKind::Directory(Arc::new(res)))
     }
 
     /// Allocates clusters and links them to chain starting from start

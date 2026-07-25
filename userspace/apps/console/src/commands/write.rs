@@ -1,5 +1,5 @@
 use super::{Command, Enviroment, COMMANDS};
-use crate::bindings_Vfs::{Directory, File};
+use crate::bindings_Vfs::File;
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;

@@ -6,7 +6,6 @@ use alloc::boxed::Box;
 use alloc::string::String as AllocString;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use fs::path::Path;
 use heapless::String;
 use rtl::error::ErrorType;
 
@@ -98,7 +97,6 @@ impl FsDirEntry {
 struct Fat32DirInner {
     sb: SuperBlockRef,
     start: Option<Cluster>,
-    parent: Option<Fat32DirRef>,
 }
 
 #[derive(Clone)]
@@ -152,14 +150,10 @@ impl Fat32DirRef {
 }
 
 impl Fat32Dir {
-    pub fn new(
-        sb: SuperBlockRef,
-        start: Option<Cluster>,
-        parent: Option<Fat32DirRef>,
-    ) -> Result<Self, ErrorType> {
-        Ok(Self {
-            inner: Arc::new(Fat32DirInner { sb, start, parent }),
-        })
+    pub fn new(sb: SuperBlockRef, start: Option<Cluster>) -> Self {
+        Self {
+            inner: Arc::new(Fat32DirInner { sb, start }),
+        }
     }
 
     pub fn super_block(&self) -> SuperBlockRef {
@@ -251,8 +245,7 @@ impl Fat32Dir {
             Inode::new(InodeKind::Directory(Arc::new(Fat32Dir::new(
                 self.inner.sb.clone(),
                 ent.0.first_cluster(),
-                Some(parent),
-            )?)))
+            ))))
         })
     }
 
@@ -281,23 +274,35 @@ impl Fat32Dir {
     async fn allocate_entry(&self, new_entry: FsDirEntry) -> Result<usize, ErrorType> {
         let mut allocated_idx = None;
 
-        self.for_each_dir_entry(|entry, idx| {
-            if entry.is_free() {
-                *entry = new_entry;
-                allocated_idx = Some(idx);
+        loop {
+            self.for_each_dir_entry(|entry, idx| {
+                if entry.is_free() {
+                    *entry = new_entry;
+                    allocated_idx = Some(idx);
 
-                return CallbackRes::StopSync;
+                    return CallbackRes::StopSync;
+                }
+
+                CallbackRes::Continue
+            })
+            .await?;
+
+            if let Some(idx) = allocated_idx {
+                break Ok(idx);
+            } else {
+                let chain = self
+                    .inner
+                    .sb
+                    .lookup_cluster_chain(self.inner.start.unwrap())
+                    .await?;
+
+                assert!(!chain.is_empty());
+
+                self.inner
+                    .sb
+                    .allocate_clusters(chain.last().cloned(), 1)
+                    .await?;
             }
-
-            CallbackRes::Continue
-        })
-        .await?;
-
-        if let Some(idx) = allocated_idx {
-            Ok(idx)
-        } else {
-            // TODO
-            Err(ErrorType::NoMemory)
         }
     }
 
@@ -373,19 +378,18 @@ impl DirectoryOperations for Fat32Dir {
         // let mut allocated_idx = None;
         self.does_name_exists(name).await?;
 
-        let mut offset = self
+        let offset = self
             .allocate_entry(FsDirEntry::new_empty_directory(name)?)
             .await?;
 
-        let dir = Fat32Dir::new(
-            self.inner.sb.clone(),
-            None,
-            Some(Fat32DirRef {
-                dir: self.clone(),
-                offset,
-                size: 0,
-            }),
-        )?;
+        let mut parent_ref = Fat32DirRef {
+            dir: self.clone(),
+            offset,
+            size: 0,
+        };
+
+        let start = parent_ref.allocate_clusters(None, 1).await?;
+        let dir = Fat32Dir::new(self.inner.sb.clone(), Some(start[0]));
 
         Ok(Inode::new(InodeKind::Directory(Arc::new(dir))))
     }
@@ -393,7 +397,7 @@ impl DirectoryOperations for Fat32Dir {
     async fn create_file(&self, name: &str) -> Result<Arc<Inode>, ErrorType> {
         self.does_name_exists(name).await?;
 
-        let mut offset = self
+        let offset = self
             .allocate_entry(FsDirEntry::new_empty_file(name)?)
             .await?;
 

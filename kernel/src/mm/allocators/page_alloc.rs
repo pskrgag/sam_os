@@ -1,6 +1,6 @@
-use adt::Vec;
 use crate::mm::memset_pages;
-use crate::sync::{Spinlock, spinlock::SpinlockGuard};
+use crate::sync::{spinlock::SpinlockGuard, Spinlock};
+use adt::Vec;
 use bitmaps::Bitmap;
 use hal::address::*;
 use hal::arch::PAGE_SIZE;
@@ -43,13 +43,14 @@ impl PageAlloc {
     }
 
     pub fn free(&mut self, _start: PhysAddr, _num: usize) {
+        // info!("Free memory {_num}\n");
         // todo!()
     }
 }
 
 impl Region {
     fn new(start: PhysAddr, count: usize, virt_start: VirtAddr) -> Option<Self> {
-        let pool_size = count.next_multiple_of(64) / 64;
+        let pool_size = count.div_ceil(64);
         let mut pool = unsafe { Vec::from_raw_parts(virt_start.to_raw_mut(), 0, pool_size) };
 
         for _ in 0..pool_size {

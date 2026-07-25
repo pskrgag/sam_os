@@ -1,5 +1,5 @@
 use super::bindings_Vfs::Vfs;
-use crate::bindings_Vfs::{Directory, File};
+use crate::bindings_Vfs::Directory;
 use alloc::string::{String, ToString};
 use core::ops::Deref;
 use rokio::port::Port;

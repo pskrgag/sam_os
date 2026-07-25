@@ -18,8 +18,7 @@ impl Filesystem for Fat32 {
         blk.SetBlockSize(512).await?;
 
         let sb = Arc::new(SuperBlock::from_dev(blk).await?);
-        let root = sb.root().await?;
 
-        Ok(root)
+        Ok(sb.root())
     }
 }

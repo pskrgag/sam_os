@@ -1,4 +1,3 @@
-use adt::vec::Vec;
 use crate::drivers::fdt::fdt;
 use crate::logger::print_str;
 use crate::object::{
@@ -16,6 +15,7 @@ use crate::{
     sched::current_task,
     tasks::{task::Task, thread::Thread},
 };
+use adt::vec::Vec;
 use alloc::string::String;
 use alloc::string::ToString;
 use hal::address::*;

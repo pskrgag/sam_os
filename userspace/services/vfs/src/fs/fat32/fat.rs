@@ -15,6 +15,10 @@ impl FatEntry {
         self.0 == FAT_FREE
     }
 
+    pub fn is_tail(&self) -> bool {
+        self.0 == FAT_EOF_MAX
+    }
+
     pub fn next(&self) -> Option<Cluster> {
         let val = self.0;
 

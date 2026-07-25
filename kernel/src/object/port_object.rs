@@ -139,10 +139,9 @@ impl Port {
         &self,
         mut server_msg_uptr: UserPtr<IpcMessage<'static>>,
     ) -> Result<usize, ErrorType> {
-        let mut server_msg = copy_ipc_message_from_user(server_msg_uptr)?;
-        let mut arena_len = 0;
-
+        let mut server_msg = server_msg_uptr.read().ok_or(ErrorType::Fault)?;
         let mut client_msg = self.try_consume().ok_or(ErrorType::WouldBlock)?;
+        let mut arena_len = 0;
 
         // Copy arena data
         if let Some(d) = server_msg.in_arena() {

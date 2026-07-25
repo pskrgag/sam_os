@@ -80,7 +80,7 @@ impl FatAlloc {
             )
         };
 
-        assert!(fats[fat_offset].is_free());
+        // assert!(fats[fat_offset].is_tail());
 
         if cl.len() == 2 {
             fats[fat_offset] = FatEntry::new_chain(cl[1]);

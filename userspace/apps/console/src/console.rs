@@ -1,6 +1,5 @@
 use super::bindings_Serial::Serial;
 use super::bindings_Vfs::Vfs;
-use crate::bindings_Vfs::{Directory, File};
 use crate::commands::{commands, Enviroment};
 use crate::cwd::Cwd;
 use alloc::{string::String, vec::Vec};
@@ -47,7 +46,7 @@ impl Console {
 
         loop {
             self.put_str(cwd.name()).await;
-            self.put_str("\n> ").await;
+            self.put_str(" > ").await;
             let cmd = self.read_until_newline().await;
             if cmd.is_empty() {
                 continue;

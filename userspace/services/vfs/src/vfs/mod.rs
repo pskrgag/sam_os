@@ -1,14 +1,11 @@
 use crate::bindings_BlkDev::BlkDev;
 use crate::fs::Filesystem;
 use crate::vfs::inode::DirectoryOperations;
-use crate::vfs::inode::Inode;
 use alloc::sync::Arc;
 use dcache::Dentry;
 use dcache::CreateType;
-use fs::path::Path;
 use libc::handle::Handle;
 use rtl::error::ErrorType;
-use rtl::locking::spinlock::Spinlock;
 use spin::once::Once;
 
 mod dcache;
@@ -31,7 +28,7 @@ impl Vfs {
             "fat32" => crate::fs::fat32::Fat32::try_mount(blk).await?,
             _ => panic!("Unknown FS"),
         };
-        let mut s = Self {
+        let s = Self {
             root: Dentry::new_root(sb),
         };
 

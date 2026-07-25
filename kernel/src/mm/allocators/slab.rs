@@ -85,17 +85,10 @@ impl SlabAllocator {
         match self.freelist.alloc().map(|ptr| ptr as *mut u8) {
             Some(ptr) => Some(ptr),
             None => {
-                let new_list = FreeList::new(self.slab_size)?;
-
-                unsafe {
-                    self.freelist.add_to_freelist(
-                        new_list.next.expect("Next is null on newly allocated slab"),
-                    );
-
-                    self.freelist
-                        .alloc()
-                        .map(|ptr: *mut FreeList| ptr as *mut u8)
-                }
+                self.freelist = FreeList::new(self.slab_size)?;
+                self.freelist
+                    .alloc()
+                    .map(|ptr: *mut FreeList| ptr as *mut u8)
             }
         }
     }

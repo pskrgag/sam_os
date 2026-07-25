@@ -5,7 +5,7 @@ use alloc::collections::BTreeMap;
 use alloc::string::{String, ToString};
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
-use fs::path::{Components, Path};
+use fs::path::Path;
 use rtl::error::ErrorType;
 use rtl::locking::spinlock::Spinlock;
 
@@ -130,52 +130,6 @@ impl Dentry {
         };
 
         Ok(file)
-    }
-
-    /// Creates new file
-    pub async fn create_file<'a, P: Into<Path<'a>>>(
-        self: &Arc<Self>,
-        path: P,
-    ) -> Result<Arc<Dentry>, ErrorType> {
-        let path = path.into();
-        let components = path.components().collect::<Vec<_>>();
-
-        let parent = self
-            .lookup_components(&components[..components.len() - 1])
-            .await?;
-
-        let name = components.last().unwrap();
-
-        let res = if let Some(dir) = parent.inode().as_dir() {
-            dir.create_file(name).await
-        } else {
-            Err(ErrorType::InvalidArgument)
-        }?;
-
-        Ok(Dentry::insert_child(self, name, res.clone()))
-    }
-
-    /// Creates new directory
-    pub async fn create_dir<'a, P: Into<Path<'a>>>(
-        self: &Arc<Self>,
-        path: P,
-    ) -> Result<Arc<Dentry>, ErrorType> {
-        let Some(dir) = self.inode.as_dir() else {
-            return Err(ErrorType::InvalidArgument);
-        };
-
-        let path = path.into();
-        let components = path.components().collect::<Vec<_>>();
-
-        let parent = self
-            .lookup_components(&components[..components.len() - 1])
-            .await?;
-
-        let name = components.last().unwrap();
-
-        let res = dir.create_directory(name).await?;
-
-        Ok(Dentry::insert_child(self, name, res.clone()))
     }
 
     /// Lists directory content

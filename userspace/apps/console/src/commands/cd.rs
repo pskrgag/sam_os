@@ -1,4 +1,4 @@
-use super::{COMMANDS, Command, Enviroment};
+use super::{Command, Enviroment, COMMANDS};
 use crate::bindings_Vfs::Directory;
 use crate::cwd::Cwd;
 use alloc::boxed::Box;
@@ -11,6 +11,31 @@ use rtl::error::ErrorType;
 struct Cd;
 
 impl Cd {
+    fn updated_path(current: &str, requested: &str) -> String {
+        let current = Path::new(&current);
+        let mut components = current
+            .components()
+            .map(String::from)
+            .collect::<Vec<_>>();
+
+        let requested = Path::new(&requested);
+        for component in requested.components() {
+            match component {
+                "." => {}
+                ".." => {
+                    components.pop();
+                }
+                component => components.push(String::from(component)),
+            }
+        }
+
+        if components.is_empty() {
+            String::from("/")
+        } else {
+            alloc::format!("/{}", components.join("/"))
+        }
+    }
+
     async fn run_internal<'async_trait>(
         &self,
         args: Vec<&str>,
@@ -20,20 +45,13 @@ impl Cd {
             return Err(ErrorType::InvalidArgument);
         }
 
-        let path = Path::new(&args[0]);
-        let mut opened = None;
+        let path = Self::updated_path(env.cwd.name(), args[0]);
+        let current = &**env.cwd;
+        let dir = current
+            .OpenDir(args[0].try_into().map_err(|_| ErrorType::BufferTooBig)?, 0)
+            .await?;
 
-        for comp in path.components() {
-            let current = opened.as_ref().unwrap_or(&**env.cwd);
-            let dir = current
-                .OpenDir(comp.try_into().map_err(|_| ErrorType::BufferTooBig)?, 0)
-                .await?;
-
-            opened = Some(Directory::new(unsafe { Port::new(dir.handle) }));
-        }
-
-        let dir = opened.ok_or(ErrorType::InvalidArgument)?;
-        *env.cwd = Cwd::new(dir, args[0]);
+        *env.cwd = Cwd::new(Directory::new(unsafe { Port::new(dir.handle) }), path);
         Ok(String::new())
     }
 }

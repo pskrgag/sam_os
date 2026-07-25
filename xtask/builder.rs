@@ -339,7 +339,7 @@ fn run_impl(gdb: bool, c: Option<&BuildScript>) -> Result<(), String> {
         "-machine",
         "virt,gic-version=3",
         "-m",
-        "1G",
+        "2G",
         "-cpu",
         "cortex-a53",
         "-nographic",
