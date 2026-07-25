@@ -12,7 +12,7 @@ impl Touch {
         args: Vec<&str>,
         env: Enviroment<'async_trait>,
     ) -> Result<String, ErrorType> {
-        if args.len() == 0 {
+        if args.is_empty() {
             return Err(ErrorType::InvalidArgument);
         }
 

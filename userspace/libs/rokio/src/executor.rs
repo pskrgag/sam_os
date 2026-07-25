@@ -84,7 +84,7 @@ impl Runtime {
             forget(entry.waker);
         }
 
-        if wait_entries.len() == 0 {
+        if wait_entries.is_empty() {
             return Ok(0);
         }
 
@@ -130,7 +130,7 @@ pub(crate) fn current_runtime() -> &'static Runtime {
     &*CURRENT_RUNTIME
 }
 
-pub fn spawn<F: Future + Send>(f: F)
+pub fn spawn<F: Future + Send + 'static>(f: F)
 where
     F::Output: Send,
 {

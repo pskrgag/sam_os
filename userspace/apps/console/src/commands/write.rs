@@ -17,8 +17,12 @@ impl Write {
         args: Vec<&str>,
         env: Enviroment<'async_trait>,
     ) -> Result<String, ErrorType> {
-        let data = args[1];
-        let name = args[0];
+        if args.len() < 2 {
+            return Err(ErrorType::InvalidArgument);
+        }
+
+        let data = args[0];
+        let name = args[1];
 
         let res = env.cwd.OpenFile(name.try_into().unwrap(), 1).await?;
         let file = File::new(unsafe { Port::new(res.handle) });
@@ -39,7 +43,6 @@ impl Command for Write {
         "write"
     }
 
-    // TODO: actually walk the dir
     async fn run(&self, args: Vec<&str>, env: Enviroment<'async_trait>) -> Result<String, String> {
         match self.run_internal(args, env).await {
             Ok(s) => Ok(s),

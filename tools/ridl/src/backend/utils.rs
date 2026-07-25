@@ -386,6 +386,7 @@ pub fn produce_server_public_enum<W: Write>(
         buf,
         r#"
 impl Tx{iface_name} {{
+    #[allow(clippy::wrong_self_convention)]
     fn to_public(
         self,
         old_message: &IpcMessage,

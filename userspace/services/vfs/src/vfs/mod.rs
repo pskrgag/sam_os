@@ -38,8 +38,8 @@ impl Vfs {
     /// Opens a directory
     pub async fn root(
         &self,
-    ) -> Result<(impl Future<Output = Result<(), ErrorType>>, Handle), ErrorType> {
-        Ok(dir::OpenDirectory::new(self.root.clone())?)
+    ) -> Result<(impl Future<Output = Result<(), ErrorType>> + use<>, Handle), ErrorType> {
+        dir::OpenDirectory::new(self.root.clone())
     }
 }
 

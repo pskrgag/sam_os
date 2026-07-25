@@ -122,8 +122,8 @@ impl FatAlloc {
     ) -> Result<Vec<Cluster>, ErrorType> {
         let mut res = alloc::vec![Cluster::default(); num_clusters];
 
-        for i in 0..num_clusters {
-            res[i] = Cluster(self.cache.allocate().ok_or(ErrorType::NoMemory)? as _);
+        for i in &mut res {
+            *i = Cluster(self.cache.allocate().ok_or(ErrorType::NoMemory)? as _);
         }
 
         match self.commit_cluster_chain(start, &res, blk).await {

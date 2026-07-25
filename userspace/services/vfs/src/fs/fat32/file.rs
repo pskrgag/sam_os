@@ -19,7 +19,7 @@ impl FatFileInner {
     async fn extend_to_size(&mut self, size: usize) -> Result<(), ErrorType> {
         let sb = self.parent.super_block();
         let cluster_size = sb.cluster_size();
-        let last_cluster_idx = size.next_multiple_of(cluster_size) / cluster_size;
+        let last_cluster_idx = size.div_ceil(cluster_size);
 
         if self.allocated_clusters.len() < last_cluster_idx {
             let to_allocated = last_cluster_idx - self.allocated_clusters.len();
@@ -125,7 +125,7 @@ impl FileOperations for FatFile {
             })
             .await?;
 
-        assert!(buf.len() == 0);
+        assert!(buf.is_empty());
         let new_size = old_size.max((offset + processed) as u32);
         file.parent.update_size(new_size).await?;
         Ok(processed)

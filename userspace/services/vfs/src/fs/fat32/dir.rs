@@ -43,7 +43,7 @@ impl FsDirEntry {
 
     pub fn first_cluster(&self) -> Option<Cluster> {
         (self.start != 0 || self.starthi != 0)
-            .then(|| Cluster(self.start as u32 | (self.starthi as u32) << 16))
+            .then_some(Cluster(self.start as u32 | (self.starthi as u32) << 16))
     }
 
     pub fn is_dir(&self) -> bool {
@@ -213,11 +213,11 @@ impl Fat32Dir {
         let mut ent = Err(ErrorType::NotFound);
 
         self.for_each_dir_entry(|entry, idx| {
-            if !entry.is_free() {
-                if matches!(entry.decoded_name().as_deref(), Ok(entry_name) if entry_name == name) {
-                    ent = Ok((*entry, idx));
-                    return CallbackRes::Stop;
-                }
+            if !entry.is_free()
+                && matches!(entry.decoded_name().as_deref(), Ok(entry_name) if entry_name == name)
+            {
+                ent = Ok((*entry, idx));
+                return CallbackRes::Stop;
             }
 
             CallbackRes::Continue
@@ -233,7 +233,7 @@ impl Fat32Dir {
 
         let parent = Fat32DirRef {
             dir: self.clone(),
-            size: ent.clone().0.size,
+            size: ent.0.size,
             offset: ent.1,
         };
 
@@ -349,18 +349,16 @@ impl DirectoryOperations for Fat32Dir {
         let mut res = alloc::vec![];
 
         self.for_each_dir_entry(|entry, _| {
-            if !entry.is_free() {
-                if let Ok(name) = entry.decoded_name() {
-                    res.push(DirEntry {
-                        name: String::try_from(name.as_str()).unwrap(),
-                        flags: if entry.attr == ATTR_DIRECTORY {
-                            DirEntryFlagsFlag::Directory
-                        } else {
-                            DirEntryFlagsFlag::File
-                        }
-                        .into(),
-                    });
-                }
+            if !entry.is_free() && let Ok(name) = entry.decoded_name() {
+                res.push(DirEntry {
+                    name: String::try_from(name.as_str()).unwrap(),
+                    flags: if entry.attr == ATTR_DIRECTORY {
+                        DirEntryFlagsFlag::Directory
+                    } else {
+                        DirEntryFlagsFlag::File
+                    }
+                    .into(),
+                });
             }
 
             CallbackRes::Continue

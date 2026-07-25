@@ -225,7 +225,7 @@ impl VmaList {
             return Err(ErrorType::InvalidArgument);
         }
 
-        if self.tree.size() == 0 {
+        if self.tree.is_empty() {
             // If tree is empty just take the address from the beginning.
             let start = base.unwrap_or(self.start);
 

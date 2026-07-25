@@ -16,7 +16,7 @@ impl Command for Help {
 
         for command in COMMANDS {
             res.push_str(command.name());
-            res.push_str("\n");
+            res.push('\n');
         }
 
         Ok(res)

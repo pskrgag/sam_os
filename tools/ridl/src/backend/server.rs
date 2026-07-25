@@ -40,7 +40,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                 let handler = self.handler.clone();
                 let reply_port = in_msg.reply_port();
 
-                rokio::executor::spawn((async move || {{
+                rokio::executor::spawn(async move {{
                     match (handler)(public).await {{
                         Ok(_) => {{}}, // message has been sent by closure
                         Err(e) => {{
@@ -49,12 +49,12 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                             let mut msg = IpcMessage::new();
 
                             msg.set_out_arena(res.as_slice());
-                            port.reply(Handle::new(reply_port), &mut msg)?;
+                            port.reply(Handle::new(reply_port), &msg)?;
                         }},
                     }}
 
                     Ok::<(), ErrorType>(())
-                }})())
+                }})
             }}
         }}
     }}
