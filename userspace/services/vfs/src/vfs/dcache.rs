@@ -14,28 +14,58 @@ pub enum CreateType {
     Directory,
 }
 
+#[derive(Default)]
+pub struct Cache {
+    children: BTreeMap<String, Arc<Dentry>>,
+    uptodate: bool,
+}
+
 /// Cached file system entry
 pub struct Dentry {
-    name: String,
     parent: Option<Weak<Dentry>>,
     inode: Arc<Inode>,
-    children: Spinlock<BTreeMap<String, Arc<Dentry>>>,
+    cache: Spinlock<Cache>,
+}
+
+impl Cache {
+    fn to_direntry(&self) -> Vec<DirEntry> {
+        let mut res = Vec::new();
+
+        for (name, dentry) in self.children.iter() {
+            res.push(DirEntry {
+                name: name.as_str().try_into().unwrap(),
+                flags: if dentry.is_dir() {
+                    DirEntryFlagsFlag::Directory.into()
+                } else {
+                    DirEntryFlagsFlag::File.into()
+                },
+            });
+        }
+
+        res
+    }
+
+    fn insert_child(&mut self, parent: &Arc<Dentry>, name: &str, inode: Arc<Inode>) -> Arc<Dentry> {
+        match self.children.entry(name.to_string()) {
+            Entry::Occupied(entry) => entry.get().clone(),
+            Entry::Vacant(entry) => {
+                let child = Dentry::new_child(parent, inode);
+
+                entry.insert(child.clone());
+                child
+            }
+        }
+    }
 }
 
 impl Dentry {
     /// Creates root dentry
     pub fn new_root(inode: Arc<Inode>) -> Arc<Self> {
         Arc::new(Self {
-            name: String::from("/"),
             parent: None,
             inode,
-            children: Spinlock::new(BTreeMap::new()),
+            cache: Spinlock::new(Cache::default()),
         })
-    }
-
-    /// Returns dentry name
-    pub fn name(&self) -> &str {
-        &self.name
     }
 
     /// Returns dentry parent
@@ -133,11 +163,37 @@ impl Dentry {
     }
 
     /// Lists directory content
-    pub async fn list(&self) -> Result<Vec<DirEntry>, ErrorType> {
+    pub async fn list(self: &Arc<Self>) -> Result<Vec<DirEntry>, ErrorType> {
         let Some(dir) = self.inode.as_dir() else {
             return Err(ErrorType::InvalidArgument);
         };
-        let mut res = dir.list().await?;
+
+        let mut cache = self.cache.lock();
+
+        let mut res = if cache.uptodate {
+            cache.to_direntry()
+        } else {
+            let disk_content = {
+                drop(cache);
+
+                let disk_content = dir.list().await?;
+                cache = self.cache.lock();
+                disk_content
+            };
+
+            // TODO: actually it would be great to make list() return Inode... Need to refactor
+            // stuff here
+            for i in disk_content {
+                if !cache.children.contains_key(i.name.as_str()) {
+                    let inode = dir.lookup(&i.name).await?;
+
+                    cache.insert_child(self, &i.name, inode);
+                }
+            }
+
+            cache.uptodate = true;
+            cache.to_direntry()
+        };
 
         if self.parent().is_some() {
             res.push(DirEntry {
@@ -150,33 +206,24 @@ impl Dentry {
     }
 
     fn insert_child(parent: &Arc<Self>, name: &str, inode: Arc<Inode>) -> Arc<Dentry> {
-        let mut children = parent.children.lock();
+        let mut cache = parent.cache.lock();
 
-        match children.entry(name.to_string()) {
-            Entry::Occupied(entry) => entry.get().clone(),
-            Entry::Vacant(entry) => {
-                let child = Self::new_child(parent, entry.key().clone(), inode);
-
-                entry.insert(child.clone());
-                child
-            }
-        }
+        cache.insert_child(parent, name, inode)
     }
 
-    fn new_child(parent: &Arc<Self>, name: String, inode: Arc<Inode>) -> Arc<Self> {
+    fn new_child(parent: &Arc<Self>, inode: Arc<Inode>) -> Arc<Self> {
         Arc::new(Self {
-            name,
             parent: Some(Arc::downgrade(parent)),
             inode,
-            children: Spinlock::new(BTreeMap::new()),
+            cache: Spinlock::new(Cache::default()),
         })
     }
 
     fn remove_child(&self, name: &str) -> Option<Arc<Dentry>> {
-        self.children.lock().remove(name)
+        self.cache.lock().children.remove(name)
     }
 
     fn lookup_child(&self, name: &str) -> Option<Arc<Dentry>> {
-        self.children.lock().get(name).cloned()
+        self.cache.lock().children.get(name).cloned()
     }
 }
