@@ -308,20 +308,8 @@ impl Thread {
         }
     }
 
-    pub async fn self_yield() {
-        struct Yield;
-
-        impl Future for Yield {
-            type Output = ();
-
-            fn poll(self: Pin<&mut Self>, _cx: &mut PollContext) -> Poll<Self::Output> {
-                // Drop to the scheduler
-                // TODO: (reset ticks)
-                Poll::Ready(())
-            }
-        }
-
-        Yield.await
+    pub fn self_yield() {
+        crate::sched::current().request_resched();
     }
 
     pub fn state(self: &Arc<Thread>) -> ThreadState {

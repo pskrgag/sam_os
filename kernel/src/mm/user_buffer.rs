@@ -103,7 +103,7 @@ impl<T> UserPtr<T> {
         use core::mem::size_of_val;
 
         if self.count < t.len() {
-            info!("{} {}\n", self.count, t.len());
+            info!("hello {} {}\n", self.count, t.len());
             return Err(ErrorType::InvalidArgument);
         }
 

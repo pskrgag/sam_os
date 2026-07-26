@@ -343,6 +343,10 @@ fn run_impl(gdb: bool, c: Option<&BuildScript>) -> Result<(), String> {
         "-cpu",
         "cortex-a53",
         "-nographic",
+        "-device",
+        "e1000,netdev=net0",
+        "-netdev",
+        "user,id=net0",
         "-kernel",
         &bin,
     ];
@@ -359,7 +363,7 @@ fn run_impl(gdb: bool, c: Option<&BuildScript>) -> Result<(), String> {
 
     info!("qemu-system-aarch64 {}", args.join(" "));
     run_prog(
-        "qemu-system-aarch64",
+        "/home/paskripkin/Documents/git/qemu/build/qemu-system-aarch64",
         args.as_slice(),
         None,
         None,

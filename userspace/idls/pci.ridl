@@ -5,6 +5,7 @@ type PhysAddr = U64;
 struct PciMapping {
 	PhysAddr base;
 	U64 size;
+	U8 index;
 }
 
 type PciDeviceData = Sequence<PciMapping, 6>;

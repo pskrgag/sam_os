@@ -29,6 +29,11 @@ impl TryFrom<u8> for AddressSpace {
     }
 }
 
+pub struct MemBarMapping {
+    pub range: MemRange<PhysAddr>,
+    pub index: u8,
+}
+
 #[derive(Debug)]
 struct PciMemRange {
     kind: AddressSpace,
@@ -148,6 +153,7 @@ impl PciEcam {
                     continue;
                 }
 
+                println!("Found device {:x} {:x}", vendor, device);
                 self.devices.insert((vendor, device), (bus, dev));
                 self.for_each_bar(bus, dev, |endpoint, bar, slot, access| {
                     let addr = access.ranges.iter_mut().find_map(|x| match bar {
@@ -182,14 +188,21 @@ impl PciEcam {
         }
     }
 
-    pub fn mapping_address(&mut self, vendor: u16, device: u16) -> Option<Vec<MemRange<PhysAddr>>> {
+    pub fn mapping_address(&mut self, vendor: u16, device: u16) -> Option<Vec<MemBarMapping>> {
         let (bus, dev) = self.devices.get(&(vendor, device))?;
         let mut mappings = Vec::new();
 
-        self.for_each_bar(*bus, *dev, |_, bar, _, _| {
-            let (base, size) = bar.unwrap_mem();
+        self.for_each_bar(*bus, *dev, |_, bar, index, _| match bar {
+            Bar::Memory32 { .. } | Bar::Memory64 { .. } => {
+                let (base, size) = bar.unwrap_mem();
+                let map = MemBarMapping {
+                    range: MemRange::new(base.into(), size),
+                    index,
+                };
 
-            mappings.push(MemRange::new(base.into(), size));
+                mappings.push(map);
+            }
+            _ => {}
         });
 
         Some(mappings)

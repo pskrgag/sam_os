@@ -161,7 +161,7 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 .map(|x| x as usize)
         }
         SyscallList::Yield => {
-            Thread::self_yield().await;
+            Thread::self_yield();
             Ok(0)
         }
         SyscallList::TaskStart => {

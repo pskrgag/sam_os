@@ -45,8 +45,9 @@ impl PciDevice {
                                 .unwrap()
                                 .into_iter()
                                 .map(|x| PciMapping {
-                                    base: x.start().bits() as _,
-                                    size: x.size() as _,
+                                    base: x.range.start().bits() as _,
+                                    size: x.range.size() as _,
+                                    index: x.index,
                                 })
                                 .collect();
 
