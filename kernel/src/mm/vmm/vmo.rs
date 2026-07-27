@@ -36,6 +36,10 @@ impl VmObject {
         .ok()
     }
 
+    pub fn size(&self) -> usize {
+        self.list().pages() * PAGE_SIZE
+    }
+
     pub fn list(&self) -> &PageList {
         let inner = &self.inner;
 

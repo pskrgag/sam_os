@@ -1,4 +1,8 @@
+use crate::mm::pmm::page_list::PageList;
+
+use super::vmo::VmObject;
 use alloc::boxed::Box;
+use alloc::sync::Arc;
 use core::cmp::Ordering;
 use core::ops::Bound;
 use core::pin::Pin;
@@ -15,21 +19,28 @@ struct NodeState {
     max_gap: usize,
 }
 
-use bitmask::bitmask;
+pub enum VmaState {
+    Anonymous { list: PageList },
+    Vmo { object: Arc<VmObject> },
+    Mmio { range: MemRange<PhysAddr> },
+}
 
-bitmask! {
-    pub mask VmaFlags: u8 where flags VmaFlag {
-        None = 0,
-        ExternalPages = 1,
-    }
+pub enum VmaStateInner {
+    Valid(VmaState),
+    Invalid,
 }
 
 struct Vma {
     links: Links<Self>,
     range: MemRange<VirtAddr>,
     prot: MappingType,
-    flags: VmaFlags,
+    state: VmaStateInner,
     stats: NodeState,
+}
+
+pub struct VmaReservation<'a> {
+    range: MemRange<VirtAddr>,
+    list: &'a mut VmaList,
 }
 
 impl core::fmt::Debug for Vma {
@@ -99,17 +110,24 @@ unsafe impl Linked for Vma {
     }
 }
 
+impl VmaReservation<'_> {
+    pub fn commit(self, mt: MappingType, state: VmaState) -> Result<VirtAddr, ErrorType> {
+        self.list.new_vma_raw(self.range, mt, state)
+    }
+
+    pub fn range(&self) -> MemRange<VirtAddr> {
+        self.range
+    }
+}
+
 impl Vma {
-    pub fn new(start: VirtAddr, size: usize, prot: MappingType, flags: VmaFlags) -> Self {
+    pub fn new(range: MemRange<VirtAddr>, prot: MappingType, state: VmaState) -> Self {
         Self {
             links: Links::new(),
-            range: MemRange {
-                start: start.into(),
-                size,
-            },
+            range,
             stats: NodeState::default(),
             prot,
-            flags,
+            state: VmaStateInner::Valid(state),
         }
     }
 
@@ -361,16 +379,48 @@ impl VmaList {
         }
     }
 
-    pub fn vma_exists(&self, range: MemRange<VirtAddr>) -> Result<(), ErrorType> {
-        let cursor = self
-            .tree
-            .lower_bound(Bound::Included(&range.start()));
+    pub fn vma_protect(
+        &mut self,
+        range: MemRange<VirtAddr>,
+        mt: MappingType,
+    ) -> Result<(), ErrorType> {
+        let mut cursor = self.tree.lower_bound_mut(Bound::Included(&range.start()));
 
-        if let Some(vma) = cursor.get() && vma.range == range {
-            return Ok(())
+        if let Some(vma) = cursor.get_mut() && vma.range == range {
+            let vma = unsafe { Pin::into_inner_unchecked(vma) };
+
+            vma.prot = mt;
+           Ok(())
         } else {
-            return Err(ErrorType::NotFound)
+            Err(ErrorType::NotFound)
         }
+    }
+
+    pub fn reserve_space<'a>(
+        &'a mut self,
+        size: usize,
+        base: Option<usize>,
+    ) -> Option<VmaReservation<'a>> {
+        let start = self.find_free_space(size, base).ok()?;
+
+        Some(VmaReservation {
+            range: MemRange::new(start, size),
+            list: self,
+        })
+    }
+
+    fn new_vma_raw(
+        &mut self,
+        range: MemRange<VirtAddr>,
+        mt: MappingType,
+        state: VmaState,
+    ) -> Result<VirtAddr, ErrorType> {
+        debug_assert!(range.start().is_page_aligned());
+
+        let vma = Box::try_new(Vma::new(range, mt, state)).map_err(|_| ErrorType::NoMemory)?;
+
+        self.tree.insert(vma.into());
+        Ok(range.start())
     }
 
     pub fn new_vma(
@@ -378,24 +428,36 @@ impl VmaList {
         size: usize,
         base: Option<usize>,
         mt: MappingType,
-        flags: VmaFlags,
+        state: VmaState,
     ) -> Result<VirtAddr, ErrorType> {
         let start = self.find_free_space(size, base)?;
-        let vma =
-            Box::try_new(Vma::new(start, size, mt, flags)).map_err(|_| ErrorType::NoMemory)?;
-
-        debug_assert!(start.is_page_aligned());
-
-        self.tree.insert(vma.into());
-        Ok(start)
+        self.new_vma_raw(MemRange::new(start, size), mt, state)
     }
 
-    pub fn free(&mut self, _range: MemRange<VirtAddr>) -> Result<(), ErrorType> {
+    pub fn free<F: FnMut(VmaState, &MemRange<VirtAddr>)>(
+        &mut self,
+        range: MemRange<VirtAddr>,
+        mut cb: F,
+    ) -> Result<(), ErrorType> {
         if self.tree.size() == 0 {
             return Ok(());
         }
 
-        todo!()
+        let mut cursor = self.tree.lower_bound_mut(Bound::Included(&range.start()));
+        if let Some(vma) = cursor.get() && vma.range == range {
+            let mut vma = unsafe { Pin::into_inner_unchecked(cursor.remove().unwrap()) };
+
+            let VmaStateInner::Valid(state) =
+                core::mem::replace(&mut vma.state, VmaStateInner::Invalid)
+            else {
+                panic!("Invalid state");
+            };
+
+            cb(state, &vma.range);
+            Ok(())
+        } else {
+            Err(ErrorType::NotFound)
+        }
     }
 }
 

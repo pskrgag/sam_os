@@ -1,8 +1,7 @@
-use super::vma_list::{VmaFlag, VmaList};
+use super::vma_list::{VmaList, VmaState};
 use super::vmo::VmObject;
 use crate::arch::mm::page_table::switch_context;
 use crate::mm::paging::kernel_page_table::kernel_page_table;
-use crate::mm::pmm::page_list::PageListIterator;
 use crate::mm::{paging::page_table::PageTable, pmm::page_alloc::page_allocator};
 use crate::object::capabilities::{Capability, CapabilityMask};
 use crate::object::handle::Handle;
@@ -35,25 +34,25 @@ impl VmsInner {
         }
     }
 
-    pub fn vm_map_pagelist(
+    pub fn vm_map_vmo(
         &mut self,
         v: Option<MemRange<VirtAddr>>,
-        p: PageListIterator<'_>,
+        vmo: Arc<VmObject>,
         tp: MappingType,
     ) -> Result<VirtAddr, ErrorType> {
-        let size = p.pages() * PAGE_SIZE;
-
         let va = self.vmas.new_vma(
-            p.pages() * PAGE_SIZE,
+            vmo.size(),
             v.map(|x| x.start()).map(|x| x.bits()),
             tp,
-            VmaFlag::ExternalPages.into(),
+            VmaState::Vmo {
+                object: vmo.clone(),
+            },
         )?;
 
         self.ttbr0
             .as_mut()
             .unwrap()
-            .map(p, MemRange::new(va, size), tp)?;
+            .map(vmo.list().iter(), MemRange::new(va, vmo.size()), tp)?;
 
         Ok(va)
     }
@@ -73,7 +72,7 @@ impl VmsInner {
             size,
             v.map(|x| x.start()).map(|x| x.bits()),
             tp,
-            VmaFlag::ExternalPages.into(),
+            VmaState::Mmio { range: p },
         )?;
 
         self.ttbr0
@@ -97,7 +96,7 @@ impl VmsInner {
             return Err(ErrorType::InvalidArgument);
         }
 
-        self.vmas.vma_exists(range)?;
+        self.vmas.vma_protect(range, tp)?;
         self.ttbr0
             .as_mut()
             .unwrap_or(&mut kernel_page_table())
@@ -110,54 +109,50 @@ impl VmsInner {
     // ToDo: on-demand allocation of physical memory
     pub fn vm_allocate(
         &mut self,
-        mut size: usize,
+        size: usize,
         tp: MappingType,
         hint: Option<VirtAddr>,
     ) -> Result<VirtAddr, ErrorType> {
-        if !size.next_multiple_of(PAGE_SIZE) == size {
+        if size.next_multiple_of(PAGE_SIZE) != size {
             return Err(ErrorType::InvalidArgument);
         }
 
-        let mut new_va =
-            self.vmas
-                .new_vma(size, hint.map(|x| x.bits()), tp, VmaFlag::None.into())?;
-        let ret = new_va;
+        let reserve = self
+            .vmas
+            .reserve_space(size, hint.map(|x| x.bits()))
+            .ok_or(ErrorType::InvalidArgument)?;
 
-        while size != 0 {
-            let list = if let Some(list) = page_allocator().alloc_pages(1) {
-                list
-            } else {
-                return Err(ErrorType::NoMemory);
-            };
+        let list = page_allocator()
+            .alloc_pages(size / PAGE_SIZE)
+            .ok_or(ErrorType::NoMemory)?;
 
-            // ToDo: clean up in case of an error
-            self.ttbr0
-                .as_mut()
-                .unwrap_or(&mut kernel_page_table())
-                .map(list.iter(), MemRange::new(new_va, PAGE_SIZE), tp)
-                .map_err(|_| ErrorType::NoMemory)?;
+        // TODO: clean up in case of an error
+        self.ttbr0
+            .as_mut()
+            .unwrap_or(&mut kernel_page_table())
+            .map(list.iter(), reserve.range(), tp)
+            .map_err(|_| ErrorType::NoMemory)?;
 
-            size -= PAGE_SIZE;
-            new_va.add(PAGE_SIZE);
-        }
-
-        Ok(ret)
+        reserve.commit(tp, VmaState::Anonymous { list })
     }
 
     pub fn vm_free(&mut self, range: MemRange<VirtAddr>) -> Result<(), ErrorType> {
         debug_assert!(range.start().is_page_aligned());
         debug_assert_eq!(range.size().next_multiple_of(PAGE_SIZE), range.size());
 
-        self.vmas.free(range)?;
+        self.vmas
+            .free(range, |state, range| {
+                self.ttbr0
+                    .as_mut()
+                    .unwrap_or(&mut kernel_page_table())
+                    .free(*range, |_| {})
+                    .unwrap();
 
-        self.ttbr0
-            .as_mut()
-            .unwrap_or(&mut kernel_page_table())
-            .free(range, |pa| {
-                // TODO
+                if let VmaState::Anonymous { list } = state {
+                    page_allocator().free(list);
+                }
             })
-            .expect("Failed to free memory");
-
+            .unwrap();
         Ok(())
     }
 
@@ -205,15 +200,15 @@ impl Vms {
         CapabilityMask::from(Capability::MapPhys)
     }
 
-    pub async fn vm_map_pagelist(
+    pub async fn vm_map_vmo(
         &self,
         v: Option<MemRange<VirtAddr>>,
-        p: PageListIterator<'_>,
+        obj: Arc<VmObject>,
         tp: MappingType,
     ) -> Result<VirtAddr, ErrorType> {
         let mut inner = self.inner.lock().await?;
 
-        inner.vm_map_pagelist(v, p, tp)
+        inner.vm_map_vmo(v, obj, tp)
     }
 
     pub async fn vm_map(

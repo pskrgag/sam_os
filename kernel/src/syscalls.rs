@@ -23,7 +23,6 @@ use rtl::handle::{HandleBase, HANDLE_INVALID};
 use rtl::signal::{Signal, Signals, WaitEntry};
 use rtl::vmm::MappingType;
 use rtl::{error::ErrorType, ipc::IpcMessage, syscalls::SyscallList};
-use hal::arch::PAGE_SIZE;
 
 #[derive(Debug)]
 pub struct SyscallArgs {
@@ -143,16 +142,13 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 return Err(ErrorType::InvalidArgument);
             }
 
-            let list = vmo.list();
             let va_range = if to == VirtAddr::from_bits(0) {
                 None
             } else {
-                Some(MemRange::new(to, list.pages() * PAGE_SIZE))
+                Some(MemRange::new(to, vmo.size()))
             };
 
-            vms.vm_map_pagelist(va_range, list.iter(), tp)
-                .await
-                .map(|x| x.into())
+            vms.vm_map_vmo(va_range, vmo, tp).await.map(|x| x.into())
         }
         SyscallList::MapPhys => {
             let table = task.handle_table().await?;
