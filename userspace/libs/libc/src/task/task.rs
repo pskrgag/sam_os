@@ -3,8 +3,8 @@ use crate::elf::Elf;
 use crate::factory::factory;
 use crate::handle::Handle;
 use crate::syscalls::Syscall;
-use crate::vmm::vms::Vms;
 use crate::vmm::vms::vms;
+use crate::vmm::vms::Vms;
 use alloc::string::String;
 use alloc::vec::Vec;
 use hal::address::{Address, VirtAddr, VirtualAddress};
@@ -86,6 +86,10 @@ impl Task {
             load &= !PAGE_MASK;
             vms.map_vm_object(&vmo, Some(VirtAddr::from_bits(load)), tp)
                 .unwrap();
+
+            // TODO: dropping vmo would mean freeing pages. These pages are mapped to the new task,
+            // so here we leak VMO on purpose, keeping pages around.
+            core::mem::forget(vmo);
         }
 
         new_task.set_ep(elf.entry_point());

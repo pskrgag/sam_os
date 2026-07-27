@@ -352,12 +352,24 @@ impl VmaList {
                     return Ok(self.start.into());
                 }
 
-                if self.start + self.size - root.max_byte().bits() >= size + 1 {
+                if self.start + self.size - root.max_byte().bits() > size {
                     return Ok((root.max_byte() + 1).into());
                 }
 
                 Err(ErrorType::NoMemory)
             }
+        }
+    }
+
+    pub fn vma_exists(&self, range: MemRange<VirtAddr>) -> Result<(), ErrorType> {
+        let cursor = self
+            .tree
+            .lower_bound(Bound::Included(&range.start()));
+
+        if let Some(vma) = cursor.get() && vma.range == range {
+            return Ok(())
+        } else {
+            return Err(ErrorType::NotFound)
         }
     }
 

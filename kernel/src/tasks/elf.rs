@@ -1,29 +1,17 @@
-use crate::mm::allocators::page_alloc::page_allocator;
-use adt::Vec;
+use crate::mm::user_buffer::UserPtr;
+use crate::tasks::task::init_task;
 use elf::{
     abi::{PF_R, PF_W, PF_X, PT_LOAD},
     endian::LittleEndian,
     ElfBytes,
 };
 use hal::address::*;
-use hal::arch::PAGE_SIZE;
+use rtl::error::ErrorType;
 use rtl::vmm::MappingType;
 
-#[derive(Debug)]
-pub struct Segment {
-    pub va: MemRange<VirtAddr>,
-    pub pa: MemRange<PhysAddr>,
-    pub tp: MappingType,
-}
-
-#[derive(Debug)]
-pub struct ElfData {
-    pub regions: Vec<Segment>,
-    pub ep: VirtAddr,
-}
-
-#[cfg(not(test))]
-pub fn parse_initial_task(prot: &loader_protocol::LoaderArg) -> Option<ElfData> {
+pub async fn prepare_initial_task(
+    prot: &loader_protocol::LoaderArg,
+) -> Result<VirtAddr, ErrorType> {
     let elf_data = unsafe {
         core::slice::from_raw_parts(
             prot.init_virt_task_base.0 as *const u8,
@@ -32,7 +20,8 @@ pub fn parse_initial_task(prot: &loader_protocol::LoaderArg) -> Option<ElfData> 
     };
     let elf =
         ElfBytes::<LittleEndian>::minimal_parse(elf_data).expect("Failed to parse kernel elf");
-    let mut secs = Vec::new();
+    let task = init_task();
+    let vms = task.vms();
 
     for seg in elf
         .segments()
@@ -46,30 +35,6 @@ pub fn parse_initial_task(prot: &loader_protocol::LoaderArg) -> Option<ElfData> 
 
         virt_range.align_page();
 
-        let phys_range = {
-            let new_pages = MemRange::new(
-                page_allocator()
-                    .alloc(virt_range.size() / PAGE_SIZE)
-                    .unwrap(),
-                virt_range.size(),
-            );
-
-            if seg.p_memsz != 0 {
-                let mut va = LinearAddr::from(new_pages.start());
-
-                let start = unsafe { va.as_slice_mut::<u8>(virt_range.size()) };
-                let elf_range =
-                    seg.p_offset as usize..seg.p_offset as usize + seg.p_filesz as usize;
-                let slice_range = VirtAddr::from_bits(seg.p_vaddr as usize).page_offset()
-                    ..VirtAddr::from_bits(seg.p_vaddr as usize).page_offset()
-                        + seg.p_filesz as usize;
-
-                start[slice_range].copy_from_slice(&elf_data[elf_range])
-            }
-
-            new_pages
-        };
-
         let perms = if seg.p_flags == PF_W | PF_R {
             MappingType::Data
         } else if seg.p_flags == PF_X | PF_R {
@@ -80,16 +45,25 @@ pub fn parse_initial_task(prot: &loader_protocol::LoaderArg) -> Option<ElfData> 
             panic!("Unknown elf permissions");
         };
 
-        secs.try_push(Segment {
-            va: virt_range,
-            pa: phys_range,
-            tp: perms,
-        })
-        .expect("Failed to allocate memory for init task");
+        vms.vm_allocate(
+            virt_range.size(),
+            MappingType::Data,
+            Some(virt_range.start()),
+        )
+        .await?;
+
+        task.with_attached_task(|| {
+            if seg.p_filesz != 0 {
+                let mut uptr = UserPtr::<u8>::new_array(seg.p_vaddr as *const u8, seg.p_memsz as _);
+                let elf_range =
+                    seg.p_offset as usize..seg.p_offset as usize + seg.p_filesz as usize;
+
+                uptr.write_array(&elf_data[elf_range]).unwrap();
+            }
+        });
+
+        vms.vm_protect(virt_range, perms).await?;
     }
 
-    Some(ElfData {
-        regions: secs,
-        ep: (elf.ehdr.e_entry as usize).into(),
-    })
+    Ok(VirtAddr::from_bits(elf.ehdr.e_entry as usize))
 }

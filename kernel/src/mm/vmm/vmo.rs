@@ -1,15 +1,13 @@
-use crate::mm::allocators::page_alloc::page_allocator;
+use crate::mm::pmm::page_alloc::page_allocator;
+use crate::mm::pmm::page_list::PageList;
 use crate::object::KernelObjectBase;
 use alloc::sync::Arc;
-use hal::address::*;
 use hal::arch::PAGE_SIZE;
 use rtl::signal::Signal;
 use rtl::vmm::MappingType;
 
-#[derive(Debug)]
 struct VmObjectInner {
-    start: PhysAddr,
-    pages: usize,
+    list: PageList,
     mt: MappingType,
 }
 
@@ -21,15 +19,11 @@ pub struct VmObject {
 crate::kernel_object!(VmObject, Signal::None.into());
 
 impl VmObjectInner {
-    pub fn zeroed(size: usize, tp: MappingType) -> Option<Self> {
+    pub fn zeroed(size: usize, mt: MappingType) -> Option<Self> {
         let pages = size.div_ceil(PAGE_SIZE);
-        let p = page_allocator().alloc(pages)?;
+        let list = page_allocator().alloc_pages(pages)?;
 
-        Some(Self {
-            start: p,
-            pages,
-            mt: tp,
-        })
+        Some(Self { list, mt })
     }
 }
 
@@ -42,10 +36,10 @@ impl VmObject {
         .ok()
     }
 
-    pub fn range(&self) -> MemRange<PhysAddr> {
+    pub fn list(&self) -> &PageList {
         let inner = &self.inner;
 
-        MemRange::new(inner.start, inner.pages * PAGE_SIZE)
+        &inner.list
     }
 
     pub fn mapping_type(&self) -> MappingType {
@@ -55,12 +49,9 @@ impl VmObject {
 
 impl Drop for VmObjectInner {
     fn drop(&mut self) {
-        page_allocator().free(self.start, self.pages);
-    }
-}
+        let mut old = PageList::default();
 
-impl core::fmt::Debug for VmObject {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_fmt(format_args!("VmObject [ {:?} ]", self.inner))
+        core::mem::swap(&mut self.list, &mut old);
+        page_allocator().free(old);
     }
 }

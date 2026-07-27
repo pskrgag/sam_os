@@ -1,6 +1,6 @@
 use super::task::Task;
-use adt::Vec;
 use crate::object::handle::Handle;
+use adt::Vec;
 use alloc::sync::Arc;
 use hal::address::VirtualAddress;
 use hal::arch::PAGE_SIZE;
@@ -42,7 +42,7 @@ impl HandlePage {
         let mut ptr = self
             .task
             .vms()
-            .vm_allocate(full_size, MappingType::Data)
+            .vm_allocate(full_size, MappingType::Data, None)
             .await?;
 
         self.task.with_attached_task(|| unsafe {

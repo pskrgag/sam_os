@@ -126,7 +126,7 @@ impl Thread {
     pub async fn new_user(task: Arc<Task>, id: u16) -> Option<Arc<Thread>> {
         let kernel_stack = kernel_task()
             .vms()
-            .vm_allocate(KERNEL_STACK_PAGES * PAGE_SIZE, MappingType::Data)
+            .vm_allocate(KERNEL_STACK_PAGES * PAGE_SIZE, MappingType::Data, None)
             .await
             .expect("Failed to allocate kernel stack");
 
@@ -184,7 +184,7 @@ impl Thread {
         let task = self.task.upgrade().unwrap();
         let vms = task.vms();
         let user_stack = vms
-            .vm_allocate(USER_THREAD_STACK_PAGES * PAGE_SIZE, MappingType::Data)
+            .vm_allocate(USER_THREAD_STACK_PAGES * PAGE_SIZE, MappingType::Data, None)
             .await
             .expect("Failed to allocate user stack");
 

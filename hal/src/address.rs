@@ -9,8 +9,8 @@ use core::{
 pub struct PhysAddr(usize);
 
 impl PhysAddr {
-    pub const fn to_pfn(&self) -> usize {
-        self.0 >> arch::PAGE_SHIFT
+    pub const fn pfn(&self) -> Pfn {
+        Pfn(self.0 >> arch::PAGE_SHIFT)
     }
 }
 
@@ -76,6 +76,26 @@ pub struct Pfn(usize);
 pub struct MemRange<T: Address + core::fmt::Debug> {
     pub start: T,
     pub size: usize,
+}
+
+impl MemRange<PhysAddr> {
+    pub fn pfn_range(&self) -> impl Iterator<Item = Pfn> {
+        let pages = self.size / arch::PAGE_SIZE;
+        let first_pfn = self.start.pfn();
+        let end_ptr = first_pfn + pages;
+        let mut iter = first_pfn;
+
+        core::iter::from_fn(move || {
+            if iter.0 < end_ptr.0 {
+                let res = iter;
+
+                iter = iter + 1;
+                Some(res)
+            } else {
+                None
+            }
+        })
+    }
 }
 
 impl<T: Address + Debug> core::fmt::Debug for MemRange<T> {
@@ -271,11 +291,19 @@ impl From<usize> for VirtAddr {
     }
 }
 
-impl Add for PhysAddr {
+impl Add<usize> for PhysAddr {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self {
-        Self(self.0 + other.0)
+    fn add(self, other: usize) -> Self {
+        Self(self.0 + other)
+    }
+}
+
+impl Add<usize> for Pfn {
+    type Output = Self;
+
+    fn add(self, other: usize) -> Self {
+        Self(self.0 + other)
     }
 }
 
@@ -399,5 +427,11 @@ impl fmt::LowerHex for PhysAddr {
         let val = self.0;
 
         fmt::LowerHex::fmt(&val, f)
+    }
+}
+
+impl Pfn {
+    pub const unsafe fn new(raw: usize) -> Self {
+        Self(raw)
     }
 }

@@ -13,7 +13,7 @@
 #![reexport_test_harness_main = "test_main"]
 
 #[cfg(not(test))]
-use crate::{tasks::elf::parse_initial_task, tasks::task::init_task};
+use crate::{tasks::elf::prepare_initial_task, tasks::task::init_task};
 
 extern crate alloc;
 
@@ -50,22 +50,11 @@ static SAMOS_BANNER: &str = "
 
 #[cfg(not(test))]
 pub async fn init_userspace(prot: &loader_protocol::LoaderArg) {
-    let data = parse_initial_task(prot).unwrap();
+    let ep = prepare_initial_task(prot).await.unwrap();
     let init_task = init_task();
 
-    let init_vms = init_task.vms();
-
-    for mut i in data.regions {
-        i.va.align_page();
-        i.pa.align_page();
-        init_vms
-            .vm_map(Some(i.va), i.pa, i.tp)
-            .await
-            .expect("Failed to map");
-    }
-
     init_task
-        .start(data.ep, None)
+        .start(ep, None)
         .await
         .expect("Failed to start first task");
 }

@@ -1,4 +1,4 @@
-use crate::mm::allocators::page_alloc::page_allocator;
+use crate::mm::pmm::page_alloc::page_allocator;
 use crate::sync::Spinlock;
 use core::alloc::Layout;
 use core::ptr::NonNull;
@@ -113,7 +113,14 @@ impl FreeList {
         assert!(size.is_power_of_two());
 
         let pages = size.div_ceil(PAGE_SIZE);
-        let mut va = VirtAddr::from(LinearAddr::from(page_allocator().alloc(pages)?));
+        let pa = if pages > 1 {
+            page_allocator().alloc_contigious(pages)?
+        } else {
+            let mut list = page_allocator().alloc_pages(1)?;
+
+            list.pop_front().unwrap().pfn().into()
+        };
+        let mut va = VirtAddr::from(LinearAddr::from(pa));
         let block_count = size.next_multiple_of(PAGE_SIZE) / size;
         let mut list = Self::default();
 

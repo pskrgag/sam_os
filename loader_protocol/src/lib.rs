@@ -51,7 +51,7 @@ pub struct LoaderArg {
     pub init_virt_task_base: (usize, usize),
     pub devices: Vec<DeviceMapping, MAX_DEVICES>,
     pub vmm_layout: Vec<VmmLayoutEntry, MAX_VMM_REGIONS>,
-    pub pmm_layout: Vec<MemRange<PhysAddr>, MAX_VMM_REGIONS>,
+    pub pmm_layout: Vec<MemRange<PhysAddr>, MAX_PMM_REGIONS>,
 }
 
 impl LoaderArg {

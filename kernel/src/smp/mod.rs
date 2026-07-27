@@ -1,6 +1,6 @@
 use crate::{
     arch::cpuid::current_cpu,
-    mm::{allocators::page_alloc::page_allocator, vmm::layout::vmm_range},
+    mm::{pmm::page_alloc::page_allocator, vmm::layout::vmm_range},
 };
 use core::sync::atomic::{AtomicBool, Ordering};
 
@@ -145,8 +145,8 @@ pub fn init_percpu() -> Option<()> {
     assert!(per_cpu_size % PAGE_SIZE == 0);
 
     let pages = (per_cpu_size / PAGE_SIZE) * NUM_CPUS;
-    let pa: PhysAddr = page_allocator()
-        .alloc(pages)
+    let pa = page_allocator()
+        .alloc_contigious(pages)
         .expect("Failed to allocate memory for per-cpu");
 
     PER_CPU_BASE.call_once(|| LinearAddr::from(pa));

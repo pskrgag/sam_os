@@ -1,9 +1,11 @@
 use crate::{
     arch::mm::mmu::{self, *},
     arch::{self, mm::mmu_flags},
-    mm::allocators::page_alloc::page_allocator,
+    mm::pmm::page_alloc::page_allocator,
+    mm::pmm::page_list::PageListIterator,
 };
 use hal::address::*;
+use hal::arch::PAGE_SIZE;
 use rtl::error::ErrorType;
 use rtl::vmm::MappingType;
 
@@ -22,6 +24,10 @@ pub struct PageTableEntry(usize);
 pub struct PageTable {
     base: LinearAddr,
     is_user: bool,
+}
+
+fn empty_page_source() -> Option<&'static mut impl PageSource> {
+    None::<&mut MemRange<PhysAddr>>
 }
 
 impl PageTableBlock {
@@ -102,6 +108,30 @@ impl PageTableBlock {
     }
 }
 
+pub trait PageSource {
+    fn next_page(&mut self) -> Option<PhysAddr>;
+}
+
+impl PageSource for MemRange<PhysAddr> {
+    fn next_page(&mut self) -> Option<PhysAddr> {
+        if self.size != 0 {
+            let page = self.start;
+
+            self.size -= PAGE_SIZE;
+            self.start = self.start + PAGE_SIZE;
+            Some(page)
+        } else {
+            None
+        }
+    }
+}
+
+impl PageSource for PageListIterator<'_> {
+    fn next_page(&mut self) -> Option<PhysAddr> {
+        self.next().map(|x| x.into())
+    }
+}
+
 impl PageFlags {
     pub fn from_bits(bits: usize) -> Self {
         Self { flags: bits }
@@ -154,7 +184,12 @@ impl PageTable {
     }
 
     pub fn new() -> Option<Self> {
-        let base: PhysAddr = page_allocator().alloc(1)?;
+        let base: PhysAddr = page_allocator()
+            .alloc_pages(1)?
+            .pop_front()
+            .unwrap()
+            .pfn()
+            .into();
         let new_table = Self {
             base: LinearAddr::from(base),
             is_user: true,
@@ -163,13 +198,13 @@ impl PageTable {
         Some(new_table)
     }
 
-    fn set_leaf_tte(
+    fn set_leaf_pte(
         b: &mut PageTableBlock,
         index: usize,
         pa: PhysAddr,
         tp: MappingType,
         lvl: u8,
-        _v: VirtAddr,
+        v: VirtAddr,
         is_user: bool,
     ) {
         let flags = mmu::mapping_type_to_flags(tp, is_user);
@@ -191,6 +226,9 @@ impl PageTable {
                 index,
                 PageTableEntry::from_bits(control | flags | pa.bits()),
             );
+
+            // TODO: this is bad... Need to check if PTE was valid. Otherwise flush is redundant
+            flush_tlb_page_last(v);
         };
     }
 
@@ -199,7 +237,13 @@ impl PageTable {
         lvl: u8,
         index: usize,
     ) -> Result<PageTableBlock, ErrorType> {
-        let new_page = page_allocator().alloc(1).ok_or(ErrorType::NoMemory)?;
+        let new_page: PhysAddr = page_allocator()
+            .alloc_pages(1)
+            .ok_or(ErrorType::NoMemory)?
+            .pop_front()
+            .unwrap()
+            .pfn()
+            .into();
         let new_entry = PageTableEntry::from_bits(PageFlags::table().bits() | new_page.bits());
 
         unsafe { b.set_pte(index, new_entry) };
@@ -228,6 +272,33 @@ impl PageTable {
         };
     }
 
+    fn protect_leaf_pte(
+        b: &mut PageTableBlock,
+        index: usize,
+        pa: PhysAddr,
+        tp: MappingType,
+        lvl: u8,
+        v: VirtAddr,
+        is_user: bool,
+    ) {
+        let flags = mmu::mapping_type_to_flags(tp, is_user);
+        let control = if lvl != 3 {
+            PageFlags::block().bits()
+        } else {
+            PageFlags::page().bits()
+        };
+
+        assert!(b.is_valid_pte(index));
+
+        unsafe {
+            b.set_pte(
+                index,
+                PageTableEntry::from_bits(control | flags | pa.bits()),
+            );
+            flush_tlb_page_last(v);
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn op_lvl<
         F: FnMut(&mut PageTableBlock, usize, PhysAddr, MappingType, u8, VirtAddr, bool) + Copy, // Set leaf
@@ -236,7 +307,7 @@ impl PageTable {
         mut base: PageTableBlock,
         lvl: u8,
         v: &mut MemRange<VirtAddr>,
-        p: &mut MemRange<PhysAddr>,
+        mut p: Option<&mut impl PageSource>,
         map: MappingType,
         mut cb: F,
         mut cb_b: G,
@@ -252,8 +323,6 @@ impl PageTable {
         };
         let size = 1 << order;
         let res = v.start();
-
-        assert!(v.size() == p.size());
 
         while {
             let index = base.index_of(v.start());
@@ -272,7 +341,7 @@ impl PageTable {
                     next_block,
                     lvl + 1,
                     v,
-                    p,
+                    p.as_deref_mut(),
                     map,
                     cb,
                     cb_b,
@@ -280,12 +349,23 @@ impl PageTable {
                     is_user,
                 )?;
             } else {
-                debug_assert!(p.start().is_aligned(order));
                 debug_assert!(v.start().is_aligned(order));
 
-                cb(&mut base, index, p.start(), map, lvl, v.start(), is_user);
+                let pa = match p.as_deref_mut() {
+                    Some(source) => source.next_page().ok_or(ErrorType::InvalidArgument)?,
+                    None => base.get_pte(index).addr(),
+                };
 
-                p.truncate(size);
+                cb(
+                    &mut base,
+                    index,
+                    pa,
+                    map,
+                    lvl,
+                    v.start(),
+                    is_user,
+                );
+
                 v.truncate(size);
             }
 
@@ -297,7 +377,7 @@ impl PageTable {
 
     fn map_internal(
         &mut self,
-        mut p: MemRange<PhysAddr>,
+        mut p: impl PageSource,
         mut v: MemRange<VirtAddr>,
         m_type: MappingType,
         hp: bool,
@@ -306,9 +386,9 @@ impl PageTable {
             self.lvl0(),
             0,
             &mut v,
-            &mut p,
+            Some(&mut p),
             m_type,
-            Self::set_leaf_tte,
+            Self::set_leaf_pte,
             Self::allocate_new_block,
             hp,
             self.is_user,
@@ -317,11 +397,30 @@ impl PageTable {
 
     pub fn map(
         &mut self,
-        p: MemRange<PhysAddr>,
+        p: impl PageSource,
         v: MemRange<VirtAddr>,
         m_type: MappingType,
     ) -> Result<VirtAddr, ErrorType> {
         self.map_internal(p, v, m_type, false)
+    }
+
+    pub fn protect(
+        &mut self,
+        mut v: MemRange<VirtAddr>,
+        m_type: MappingType,
+    ) -> Result<(), ErrorType> {
+        Self::op_lvl(
+            self.lvl0(),
+            0,
+            &mut v,
+            empty_page_source(),
+            m_type,
+            Self::protect_leaf_pte,
+            Self::abort_walk,
+            true,
+            self.is_user,
+        )
+        .map(|_| ())
     }
 
     pub fn map_linear(
@@ -340,13 +439,11 @@ impl PageTable {
         mut v: MemRange<VirtAddr>,
         cb: F,
     ) -> Result<(), ErrorType> {
-        let mut p = MemRange::new(PhysAddr::from_bits(v.start().bits()), v.size());
-
         Self::op_lvl(
             self.lvl0(),
             0,
             &mut v,
-            &mut p,
+            empty_page_source(),
             MappingType::None,
             |base, index, pa, tp, lvl, v, _| {
                 let tte = base.get_pte(index);

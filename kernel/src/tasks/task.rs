@@ -155,7 +155,7 @@ impl Task {
         self.start_inner()
     }
 
-    pub fn with_attached_task<F: FnOnce()>(self: Arc<Self>, f: F) {
+    pub fn with_attached_task<F: FnOnce()>(self: &Arc<Self>, f: F) {
         current().with_disabled_preemption(|| {
             let cur_task = current_task();
 
