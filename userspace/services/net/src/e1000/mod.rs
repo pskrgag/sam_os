@@ -1,20 +1,25 @@
 use crate::bindings_NameServer::NameServer;
 use crate::bindings_Pci::{Device, Pci};
 use crate::net::eth::mac::Mac;
+use dma::DmaBuffer;
 use hal::address::MemRange;
 use hal::arch::PAGE_SIZE;
 use libc::vmm::vms::vms;
+use regs::E1000Error;
 use regs::E1000Regs;
 use rokio::port::Port;
 use rtl::error::ErrorType;
-use regs::E1000Error;
+use rx::RxBuffer;
 
 mod regs;
+mod rx;
 
 pub struct E1000 {
     device: Device,
     mac: Mac,
     regs: E1000Regs,
+    tx_ring: DmaBuffer<u8>,
+    rx_buffer: RxBuffer,
 }
 
 impl E1000 {
@@ -29,19 +34,28 @@ impl E1000 {
         let res = device.Map().await.unwrap();
         assert_eq!(res.data.len(), 1);
 
-        let va = vms()
+        let mmio = vms()
             .map_phys(MemRange::new(
                 (res.data[0].base as usize).into(),
                 (res.data[0].size as usize).next_multiple_of(PAGE_SIZE),
             ))
             .unwrap();
 
-        let mut regs = E1000Regs::new(va)?;
+        let rx_buffer = RxBuffer::new(1000, 11).map_err(|_| E1000Error::NoMemory)?;
+        let tx_ring = DmaBuffer::new(PAGE_SIZE * 10).map_err(|_| E1000Error::NoMemory)?;
+
+        let mut regs = E1000Regs::new(mmio, &tx_ring, &rx_buffer)?;
         let mac = regs.mac()?;
         let mac = Mac::from_raw(mac).expect("Invalid MAC? Don't think so...");
 
         println!("Mac {:?}", mac);
 
-        Ok(Self { device, regs, mac })
+        Ok(Self {
+            device,
+            regs,
+            mac,
+            rx_buffer,
+            tx_ring,
+        })
     }
 }

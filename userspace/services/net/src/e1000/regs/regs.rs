@@ -1,6 +1,9 @@
-use super::{Control, Rctl, Tctl};
+use super::rdesc::Rdesc;
+use super::{Control, Rctl, Status, Tctl};
+use crate::e1000::RxBuffer;
 use core::ptr::NonNull;
-use hal::address::{VirtAddr, VirtualAddress};
+use dma::DmaBuffer;
+use hal::address::{Address, VirtAddr, VirtualAddress};
 use rtl::error::ErrorType;
 use safe_mmio::UniqueMmioPointer;
 use safe_mmio::{
@@ -11,6 +14,7 @@ use safe_mmio::{
 pub enum E1000Error {
     MacInvalid,
     ResetTimeout,
+    NoMemory,
 }
 
 impl From<E1000Error> for ErrorType {
@@ -23,7 +27,7 @@ impl From<E1000Error> for ErrorType {
 struct E1000RegsRaw {
     pub ctrl: ReadWrite<Control>, // 0x0000
     pub _reserved_0004: [u8; 0x04],
-    pub status: ReadOnly<u32>, // 0x0008
+    pub status: ReadOnly<Status>, // 0x0008
     pub _reserved_000c: [u8; 0x04],
     pub eecd: ReadWrite<u32>,     // 0x0010
     pub eerd: ReadWrite<u32>,     // 0x0014
@@ -93,17 +97,21 @@ struct E1000RegsRaw {
 pub struct E1000Regs(UniqueMmioPointer<'static, E1000RegsRaw>);
 
 impl E1000Regs {
-    pub fn new(va: VirtAddr) -> Result<Self, E1000Error> {
+    pub fn new(
+        va: VirtAddr,
+        tx_ring: &DmaBuffer<u8>,
+        rx_buffer: &RxBuffer,
+    ) -> Result<Self, E1000Error> {
         let mut s =
             Self(unsafe { UniqueMmioPointer::new(NonNull::new_unchecked(va.to_raw_mut())) });
 
-        s.initialize().map(|_| s)
+        s.initialize(tx_ring, rx_buffer).map(|_| s)
     }
 
     fn reset(&mut self) -> Result<(), E1000Error> {
         let mut retries = 100;
 
-        field!(self.0, ctrl).modify_mut(|x| *x = x.set(Control::RESET, false));
+        field!(self.0, ctrl).modify_mut(|x| *x = x.set(Control::RESET, true));
 
         while {
             if field!(self.0, ctrl).read().is_set(Control::RESET) {
@@ -119,9 +127,24 @@ impl E1000Regs {
         Err(E1000Error::ResetTimeout)
     }
 
-    fn initialize(&mut self) -> Result<(), E1000Error> {
+    fn initialize(&mut self, tx: &DmaBuffer<u8>, rx: &RxBuffer) -> Result<(), E1000Error> {
+        // Things caller must ensure. This is invariant of DMA API anyway
+        assert!(tx.size() <= u32::MAX as usize);
+        assert!(rx.ring_size() <= u32::MAX as usize);
+        assert_eq!(
+            rx.ring_size()
+                .next_multiple_of(core::mem::size_of::<Rdesc>()),
+            rx.ring_size()
+        );
+        assert_eq!(
+            tx.size().next_multiple_of(core::mem::size_of::<Rdesc>()),
+            tx.size()
+        );
+
+        let rx_count = rx.ring_size() / core::mem::size_of::<Rdesc>() - 1;
+
         // Mask all IRQs
-        field!(self.0, ims).write(u32::MAX);
+        field!(self.0, imc).write(u32::MAX);
 
         // Ack pending IRQs
         field!(self.0, icr).read();
@@ -130,10 +153,43 @@ impl E1000Regs {
         field!(self.0, rctl).modify_mut(|x| *x = x.set(Rctl::ENABLE, false));
         field!(self.0, tctl).modify_mut(|x| *x = x.set(Tctl::ENABLE, false));
 
-        // Trigger auto-negotiation
-        field!(self.0, ctrl).modify_mut(|x| *x = x.set(Control::LINK_RESET, false));
-
         self.reset()?;
+
+        // Set RX buffers
+        field!(self.0, rdlen).modify_mut(|x| *x = rx.ring_size() as u32);
+        field!(self.0, rdbal).modify_mut(|x| *x = (rx.ring_pa().bits() & 0xFFFFFFFF) as u32);
+        field!(self.0, rdbah)
+            .modify_mut(|x| *x = ((rx.ring_pa().bits() >> 32) & 0xFFFFFFFF) as u32);
+        field!(self.0, rdh).modify_mut(|x| *x = 0);
+        field!(self.0, rdt).modify_mut(|x| *x = rx_count as u32);
+
+        // Set TX buffers
+        field!(self.0, tdlen).modify_mut(|x| *x = tx.size() as u32);
+        field!(self.0, tdbal).modify_mut(|x| *x = (tx.pa().bits() & 0xFFFFFFFF) as u32);
+        field!(self.0, tdbah).modify_mut(|x| *x = ((tx.pa().bits() >> 32) & 0xFFFFFFFF) as u32);
+        field!(self.0, tdh).modify_mut(|x| *x = 0);
+        field!(self.0, tdt).modify_mut(|x| *x = 0);
+
+        // Don't filter broadcast packets
+        field!(self.0, rctl).modify_mut(|x| *x = x.set(Rctl::BAM, true));
+        // Set RX buffer params
+        field!(self.0, rctl).modify_mut(|x| *x = x.set(Rctl::bsize(1 << rx.data_order()), true));
+        // Enable receive
+        field!(self.0, rctl).modify_mut(|x| *x = x.set(Rctl::ENABLE, true));
+
+        // Pad short packets. Makes parsing easier
+        field!(self.0, tctl).modify_mut(|x| *x = x.set(Tctl::PSP, true));
+        // Use recommended value for collision_threshold.
+        field!(self.0, tctl).modify_mut(|x| *x = x.set(Tctl::collision_threshold(0xf), true));
+        // Use recommended value for collision_distance.
+        field!(self.0, tctl).modify_mut(|x| *x = x.set(Tctl::collision_distance(0x40), true));
+        // Enable transmit
+        field!(self.0, tctl).modify_mut(|x| *x = x.set(Tctl::ENABLE, true));
+
+        // Configure link
+        field!(self.0, ctrl).modify_mut(|x| *x = x.set(Control::SLU, true));
+        assert!(field!(self.0, status).read().is_set(Status::LU));
+
         Ok(())
     }
 

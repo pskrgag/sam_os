@@ -8,6 +8,7 @@ pub struct Control(u32);
 impl Control {
     pub const LINK_RESET: u32 = 1 << 3;
     pub const RESET: u32 = 1 << 26;
+    pub const SLU: u32 = 1 << 6;
 
     pub fn set(self, mask: u32, enabled: bool) -> Self {
         if enabled {

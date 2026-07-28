@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 libc = { path = "../../libs/libc/" }
+dma = { path = "../../libs/dma/" }
 fs = { path = "../../libs/fs/" }
 rtl = { path = "../../../rtl/" }
 hal = { path = "../../../hal/" }

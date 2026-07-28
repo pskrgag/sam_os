@@ -1,0 +1,9 @@
+[package]
+name = "dma"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+libc = { path = "../libc" }
+hal = { path = "../../../hal" }
+rtl = { path = "../../../rtl/" }

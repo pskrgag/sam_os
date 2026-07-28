@@ -9,3 +9,5 @@ reg_mod!(ctrl);
 reg_mod!(regs);
 reg_mod!(rctl);
 reg_mod!(tctl);
+reg_mod!(status);
+reg_mod!(rdesc);
