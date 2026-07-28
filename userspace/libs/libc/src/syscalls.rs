@@ -20,7 +20,8 @@ pub enum Syscall<'a> {
     CreateTask(RawHandle, &'a str),
     VmAllocate(RawHandle, usize, MappingType),
     VmFree(RawHandle, *mut u8, usize),
-    VmCreateVmo(RawHandle, usize, MappingType),
+    CreateVmo(RawHandle, usize, MappingType),
+    CreateVmoContig(RawHandle, usize, MappingType),
     VmMapVmo(RawHandle, RawHandle, VirtAddr, MappingType),
     VmMapPhys(RawHandle, PhysAddr, usize),
     TaskStart(RawHandle, VirtAddr, RawHandle),
@@ -62,8 +63,16 @@ impl<'a> Syscall<'a> {
         unsafe { syscall(Self::VmFree(h.as_raw(), ptr, size).as_args()).map(|_| ()) }
     }
 
-    pub fn vm_create_vmo(h: &Handle, size: usize, tp: MappingType) -> Result<Handle, ErrorType> {
-        unsafe { syscall(Self::VmCreateVmo(h.as_raw(), size, tp).as_args()).map(Handle::new) }
+    pub fn create_vmo(h: &Handle, size: usize, tp: MappingType) -> Result<Handle, ErrorType> {
+        unsafe { syscall(Self::CreateVmo(h.as_raw(), size, tp).as_args()).map(Handle::new) }
+    }
+
+    pub fn create_vmo_contig(
+        h: &Handle,
+        size: usize,
+        tp: MappingType,
+    ) -> Result<Handle, ErrorType> {
+        unsafe { syscall(Self::CreateVmoContig(h.as_raw(), size, tp).as_args()).map(Handle::new) }
     }
 
     pub fn vm_map_vmo(
@@ -192,8 +201,18 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
-            Syscall::VmCreateVmo(handle, size, tp) => [
+            Syscall::CreateVmo(handle, size, tp) => [
                 SyscallList::CreateVmo.into(),
+                handle,
+                size,
+                tp as usize,
+                0,
+                0,
+                0,
+                0,
+            ],
+            Syscall::CreateVmoContig(handle, size, tp) => [
+                SyscallList::CreateVmoContig.into(),
                 handle,
                 size,
                 tp as usize,

@@ -4,6 +4,7 @@ use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
 use hal::address::VirtualAddress;
+use libc::factory::factory;
 use libc::vmm::vms::vms;
 use rokio::port::Port;
 use rtl::error::ErrorType;
@@ -26,7 +27,7 @@ impl Write {
 
         let res = env.cwd.OpenFile(name.try_into().unwrap(), 1).await?;
         let file = File::new(unsafe { Port::new(res.handle) });
-        let vmo = vms().create_vm_object(data.len(), MappingType::Data)?;
+        let vmo = factory().create_vm_object(data.len(), MappingType::Data)?;
         let mut buf = vms().map_vm_object(&vmo, None, MappingType::Data)?;
         let buf = unsafe { buf.as_slice_mut(data.len()) };
 

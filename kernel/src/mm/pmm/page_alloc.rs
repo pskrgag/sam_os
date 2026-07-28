@@ -102,6 +102,17 @@ impl PageAlloc {
         found_pfn.map(|x| x.into())
     }
 
+    pub fn free_contig(&mut self, pa: PhysAddr, count: usize) {
+        let pfn: Pfn = pa.into();
+
+        for i in 0..count {
+            self.list.push_back_with_cb(Page(pfn + i), |page| {
+                assert!(!page.is_free());
+                page.mark_free();
+            });
+        }
+    }
+
     pub fn free(&mut self, mut list: PageList) {
         while let Some(next) = list.pop_front() {
             self.list.push_front_with_cb(next, |page| {

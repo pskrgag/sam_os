@@ -118,11 +118,22 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
         }
         SyscallList::CreateVmo => {
             let mut table = task.handle_table().await?;
-            let vms = table
-                .find::<Vms>(args.arg(0), CapabilityMask::any())
+            let factory = table
+                .find::<Factory>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
 
-            Ok(table.add(vms.create_vmo(
+            Ok(table.add(factory.create_vmo(
+                args.arg(1),
+                args.try_arg(2).map_err(|_| ErrorType::InvalidArgument)?,
+            )?))
+        }
+        SyscallList::CreateVmoContig => {
+            let mut table = task.handle_table().await?;
+            let factory = table
+                .find::<Factory>(args.arg(0), CapabilityMask::any())
+                .ok_or(ErrorType::InvalidHandle)?;
+
+            Ok(table.add(factory.create_vmo_contig(
                 args.arg(1),
                 args.try_arg(2).map_err(|_| ErrorType::InvalidArgument)?,
             )?))

@@ -4,6 +4,7 @@ use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
 use hal::address::VirtualAddress;
+use libc::factory::factory;
 use libc::vmm::vms::vms;
 use rokio::port::Port;
 use rtl::error::ErrorType;
@@ -23,7 +24,7 @@ impl Cat {
 
         let file = env.cwd.OpenFile(args[0].try_into().unwrap(), 0).await?;
         let file = File::new(unsafe { Port::new(file.handle) });
-        let vmo = vms().create_vm_object(1 << 12, MappingType::Data)?;
+        let vmo = factory().create_vm_object(1 << 12, MappingType::Data)?;
 
         let mut resulting_data = String::new();
         let mut offset = 0;

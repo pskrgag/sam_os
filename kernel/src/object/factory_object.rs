@@ -1,12 +1,14 @@
 use super::port_object::Port;
-use crate::object::KernelObjectBase;
-use crate::object::capabilities::CapabilityMask;
+use crate::mm::vmm::vmo::VmObject;
+use crate::object::capabilities::{Capability, CapabilityMask};
 use crate::object::handle::Handle;
+use crate::object::KernelObjectBase;
 use crate::sched::current;
 use crate::tasks::task::{Task, TaskName};
 use alloc::sync::Arc;
 use rtl::error::ErrorType;
 use rtl::signal::Signal;
+use rtl::vmm::MappingType;
 use spin::Lazy;
 
 pub struct Factory {
@@ -38,6 +40,21 @@ impl Factory {
         let port = Port::new(task.clone()).ok_or(ErrorType::NoMemory)?;
 
         Ok(Handle::new(port, Port::full_caps()))
+    }
+
+    pub fn create_vmo(&self, size: usize, mt: MappingType) -> Result<Handle, ErrorType> {
+        let vmo = VmObject::new(size, mt).ok_or(ErrorType::NoMemory)?;
+
+        Ok(Handle::new(vmo, CapabilityMask::any()))
+    }
+
+    pub fn create_vmo_contig(&self, size: usize, mt: MappingType) -> Result<Handle, ErrorType> {
+        let vmo = VmObject::new_contig(size, mt).ok_or(ErrorType::NoMemory)?;
+
+        Ok(Handle::new(
+            vmo,
+            CapabilityMask::from(Capability::GetPhysInfo),
+        ))
     }
 }
 

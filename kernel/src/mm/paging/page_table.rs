@@ -108,6 +108,7 @@ impl PageTableBlock {
     }
 }
 
+/// Page source for the mapping
 pub trait PageSource {
     fn next_page(&mut self) -> Option<PhysAddr>;
 }
@@ -356,15 +357,7 @@ impl PageTable {
                     None => base.get_pte(index).addr(),
                 };
 
-                cb(
-                    &mut base,
-                    index,
-                    pa,
-                    map,
-                    lvl,
-                    v.start(),
-                    is_user,
-                );
+                cb(&mut base, index, pa, map, lvl, v.start(), is_user);
 
                 v.truncate(size);
             }
@@ -434,11 +427,7 @@ impl PageTable {
         self.map_internal(p, va_range, m_type, false)
     }
 
-    pub fn free<F: Fn(PhysAddr)>(
-        &mut self,
-        mut v: MemRange<VirtAddr>,
-        cb: F,
-    ) -> Result<(), ErrorType> {
+    pub fn unmap(&mut self, mut v: MemRange<VirtAddr>) -> Result<(), ErrorType> {
         Self::op_lvl(
             self.lvl0(),
             0,
@@ -446,9 +435,6 @@ impl PageTable {
             empty_page_source(),
             MappingType::None,
             |base, index, pa, tp, lvl, v, _| {
-                let tte = base.get_pte(index);
-
-                cb(tte.addr());
                 Self::clean_tte(base, index, pa, tp, lvl, v);
             },
             Self::abort_walk,

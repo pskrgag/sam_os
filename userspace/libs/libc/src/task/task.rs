@@ -56,7 +56,7 @@ impl Task {
                 - (load_addr.bits() & !PAGE_MASK);
 
             let vm = if phdr.p_filesz != 0 {
-                let res = vms().create_vm_object(to_allocate, MappingType::Rwx)?;
+                let res = factory().create_vm_object(to_allocate, MappingType::Rwx)?;
 
                 unsafe {
                     // TODO: unmap
@@ -71,7 +71,7 @@ impl Task {
 
                 res
             } else {
-                vms().create_vm_object(to_allocate, Elf::program_header_to_mapping_type(phdr))?
+                factory().create_vm_object(to_allocate, Elf::program_header_to_mapping_type(phdr))?
             };
 
             h.push((vm, load_addr, Elf::program_header_to_mapping_type(phdr)));

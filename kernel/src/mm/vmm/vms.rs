@@ -4,7 +4,6 @@ use crate::arch::mm::page_table::switch_context;
 use crate::mm::paging::kernel_page_table::kernel_page_table;
 use crate::mm::{paging::page_table::PageTable, pmm::page_alloc::page_allocator};
 use crate::object::capabilities::{Capability, CapabilityMask};
-use crate::object::handle::Handle;
 use crate::object::KernelObjectBase;
 use crate::sync::Mutex;
 use alloc::sync::Arc;
@@ -52,7 +51,7 @@ impl VmsInner {
         self.ttbr0
             .as_mut()
             .unwrap()
-            .map(vmo.list().iter(), MemRange::new(va, vmo.size()), tp)?;
+            .map(vmo.source(), MemRange::new(va, vmo.size()), tp)?;
 
         Ok(va)
     }
@@ -145,7 +144,7 @@ impl VmsInner {
                 self.ttbr0
                     .as_mut()
                     .unwrap_or(&mut kernel_page_table())
-                    .free(*range, |_| {})
+                    .unmap(*range)
                     .unwrap();
 
                 if let VmaState::Anonymous { list } = state {
@@ -258,12 +257,6 @@ impl Vms {
 
     pub fn base(&self) -> PhysAddr {
         self.tt_base
-    }
-
-    pub fn create_vmo(&self, size: usize, mt: MappingType) -> Result<Handle, ErrorType> {
-        let vmo = VmObject::zeroed(size, mt).ok_or(ErrorType::NoMemory)?;
-
-        Ok(Handle::new(vmo, CapabilityMask::any()))
     }
 
     pub async fn map_phys(&self, pa: PhysAddr, size: usize) -> Result<*mut u8, ErrorType> {

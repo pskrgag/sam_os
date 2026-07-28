@@ -14,6 +14,9 @@ bitmask! {
 
         // Wait
         Wait = (1 << 4),
+
+        // VMO
+        GetPhysInfo = (1 << 5),
     }
 }
 
