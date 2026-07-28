@@ -138,6 +138,19 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 args.try_arg(2).map_err(|_| ErrorType::InvalidArgument)?,
             )?))
         }
+        SyscallList::VmoGetPhysInfo => {
+            let table = task.handle_table().await?;
+            let vmo = table
+                .find::<VmObject>(
+                    args.arg(0),
+                    CapabilityMask::from(Capability::GetPhysInfo),
+                )
+                .ok_or(ErrorType::InvalidHandle)?;
+
+            vmo.get_phys_info()
+                .map(|pa| pa.bits())
+                .ok_or(ErrorType::InvalidArgument)
+        }
         SyscallList::MapVmo => {
             let table = task.handle_table().await?;
             let vms = table

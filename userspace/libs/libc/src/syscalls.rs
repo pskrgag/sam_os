@@ -22,6 +22,7 @@ pub enum Syscall<'a> {
     VmFree(RawHandle, *mut u8, usize),
     CreateVmo(RawHandle, usize, MappingType),
     CreateVmoContig(RawHandle, usize, MappingType),
+    VmoGetPhysInfo(RawHandle),
     VmMapVmo(RawHandle, RawHandle, VirtAddr, MappingType),
     VmMapPhys(RawHandle, PhysAddr, usize),
     TaskStart(RawHandle, VirtAddr, RawHandle),
@@ -73,6 +74,13 @@ impl<'a> Syscall<'a> {
         tp: MappingType,
     ) -> Result<Handle, ErrorType> {
         unsafe { syscall(Self::CreateVmoContig(h.as_raw(), size, tp).as_args()).map(Handle::new) }
+    }
+
+    pub fn vmo_get_phys_info(h: &Handle) -> Result<PhysAddr, ErrorType> {
+        unsafe {
+            syscall(Self::VmoGetPhysInfo(h.as_raw()).as_args())
+                .map(<PhysAddr as Address>::from_bits)
+        }
     }
 
     pub fn vm_map_vmo(
@@ -216,6 +224,16 @@ impl<'a> Syscall<'a> {
                 handle,
                 size,
                 tp as usize,
+                0,
+                0,
+                0,
+                0,
+            ],
+            Syscall::VmoGetPhysInfo(handle) => [
+                SyscallList::VmoGetPhysInfo.into(),
+                handle,
+                0,
+                0,
                 0,
                 0,
                 0,

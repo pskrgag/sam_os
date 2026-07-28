@@ -67,7 +67,7 @@ impl VmObjectInner {
     pub fn new_contig(size: usize, mt: MappingType) -> Option<Self> {
         let pages = size.div_ceil(PAGE_SIZE);
         let pa = page_allocator().alloc_contigious(pages)?;
-        let source = VmPageBacking::Contig(MemRange::new(pa, pages));
+        let source = VmPageBacking::Contig(MemRange::new(pa, pages * PAGE_SIZE));
 
         Some(Self { source, mt })
     }
@@ -84,7 +84,7 @@ impl VmObject {
 
     pub fn new_contig(size: usize, tp: MappingType) -> Option<Arc<Self>> {
         Arc::try_new(Self {
-            inner: VmObjectInner::new(size, tp)?,
+            inner: VmObjectInner::new_contig(size, tp)?,
             base: KernelObjectBase::new(),
         })
         .ok()
@@ -92,6 +92,13 @@ impl VmObject {
 
     pub fn size(&self) -> usize {
         self.inner.source.pages() * PAGE_SIZE
+    }
+
+    pub fn get_phys_info(&self) -> Option<PhysAddr> {
+        match self.inner.source {
+            VmPageBacking::Contig(range) => Some(range.start()),
+            VmPageBacking::List(_) => None,
+        }
     }
 
     pub fn source(&self) -> impl PageSource {

@@ -24,6 +24,7 @@ pub enum SyscallList {
     WaitObjectMany = 18,
     PortSend = 19,
     CreateVmoContig = 20,
+    VmoGetPhysInfo = 21,
 }
 
 impl TryFrom<usize> for SyscallList {
