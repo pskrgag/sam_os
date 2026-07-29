@@ -11,3 +11,4 @@ reg_mod!(rctl);
 reg_mod!(tctl);
 reg_mod!(status);
 reg_mod!(rdesc);
+reg_mod!(tdesc);

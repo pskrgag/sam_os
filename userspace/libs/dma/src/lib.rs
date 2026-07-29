@@ -4,7 +4,6 @@
 use core::marker::PhantomData;
 use core::mem::size_of;
 use hal::address::{MemRange, PhysAddr, VirtAddr, VirtualAddress};
-use hal::arch::PAGE_SIZE;
 use libc::factory::factory;
 use libc::vmm::vm_object::VmObject;
 use libc::vmm::vms::vms;

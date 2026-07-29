@@ -1,5 +1,4 @@
 use super::regs::rdesc::Rdesc;
-use core::mem::size_of;
 use dma::DmaBuffer;
 use hal::address::{Address, PhysAddr};
 use rtl::error::ErrorType;
