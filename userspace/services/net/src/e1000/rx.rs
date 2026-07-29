@@ -1,4 +1,6 @@
 use super::regs::rdesc::Rdesc;
+use crate::e1000::regs::E1000Regs;
+use alloc::vec::Vec;
 use core::mem::size_of;
 use dma::DmaBuffer;
 use hal::address::{Address, PhysAddr};
@@ -45,7 +47,10 @@ impl RxBuffer {
         })
     }
 
-    pub fn read_packet(&mut self) -> Option<(&[u8], u32)> {
+    pub fn read_packet(&mut self, regs: &mut E1000Regs) -> Option<Vec<u8>> {
+        let packet_size = 1 << self.data_order();
+        let mut packet = Vec::with_capacity(packet_size);
+
         let index = self.next_idx as usize;
         let mut desc = self.ring.read(index);
         let num_descriptors = self.num_descriptors() as u32;
@@ -58,14 +63,19 @@ impl RxBuffer {
 
         let data = self
             .data
-            .slice(index * (1 << self.entry_order), desc.length as usize);
+            .read_slice(index * (1 << self.entry_order), desc.length as usize);
+
+        packet.extend_from_slice(data);
 
         // Clear DD flag
         desc.ack();
         self.ring.write(index, desc);
 
+        // Update RDT after clearing DD
+        regs.set_rdt(index as u32);
+
         self.next_idx = (self.next_idx + 1) % num_descriptors;
-        Some((data, index as u32))
+        Some(packet)
     }
 
     pub fn num_descriptors(&self) -> usize {

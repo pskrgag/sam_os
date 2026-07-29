@@ -60,21 +60,11 @@ impl E1000 {
         })
     }
 
+    pub fn send_packet(&mut self, data: &[u8]) {
+        self.tx_buffer.send_packet(data, &mut self.regs)
+    }
+
     pub fn read_packet(&mut self) -> Option<Vec<u8>> {
-        let packet_size = 1 << self.rx_buffer.data_order();
-        let mut packet = Vec::with_capacity(packet_size);
-
-        let data = self.rx_buffer.read_packet();
-
-        if let Some((data, idx)) = data {
-            packet.extend_from_slice(data);
-
-            self.regs.set_rdt(idx);
-            println!("Received");
-
-            Some(packet)
-        } else {
-            None
-        }
+        self.rx_buffer.read_packet(&mut self.regs)
     }
 }

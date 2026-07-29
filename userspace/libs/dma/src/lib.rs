@@ -52,12 +52,26 @@ impl<T: Copy> DmaBuffer<T> {
         }
     }
 
-    pub fn slice(&mut self, idx: usize, length: usize) -> &[T] {
+    pub fn read_slice(&mut self, idx: usize, length: usize) -> &[T] {
         assert!(idx + length <= self.va.size() / size_of::<T>());
 
         unsafe {
             core::arch::asm!("dsb sy");
             core::slice::from_raw_parts(self.va.start().to_raw_mut::<T>().add(idx), length)
+        }
+    }
+
+    pub fn write_slice(&mut self, offset: usize, data: &[T]) {
+        assert!(offset + data.len() <= self.va.size() / size_of::<T>());
+
+        unsafe {
+            self.va
+                .start()
+                .to_raw_mut::<T>()
+                .add(offset)
+                .copy_from_nonoverlapping(data.as_ptr(), data.len() * size_of::<T>());
+
+            core::arch::asm!("dsb sy");
         }
     }
 

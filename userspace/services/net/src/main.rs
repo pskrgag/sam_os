@@ -18,7 +18,13 @@ async fn main(root: Option<Handle>) -> Result<(), ErrorType> {
     println!("Starting net...");
 
     loop {
-        let _packet = e1000.read_packet();
+        let packet = e1000.read_packet();
+
+        if let Some(packet) = packet {
+            println!("received");
+            e1000.send_packet(&packet);
+            println!("sent");
+        }
     }
 
     loop {

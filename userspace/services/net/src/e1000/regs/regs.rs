@@ -113,6 +113,10 @@ impl E1000Regs {
         field!(self.0, rdt).modify_mut(|x| *x = new);
     }
 
+    pub fn set_tdt(&mut self, new: u32) {
+        field!(self.0, tdt).modify_mut(|x| *x = new);
+    }
+
     fn reset(&mut self) -> Result<(), E1000Error> {
         let mut retries = 100;
 
