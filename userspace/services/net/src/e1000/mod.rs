@@ -1,6 +1,7 @@
 use crate::bindings_NameServer::NameServer;
 use crate::bindings_Pci::{Device, Pci};
 use crate::net::eth::mac::Mac;
+use alloc::vec::Vec;
 use hal::address::MemRange;
 use hal::arch::PAGE_SIZE;
 use libc::vmm::vms::vms;
@@ -57,5 +58,23 @@ impl E1000 {
             rx_buffer,
             tx_buffer,
         })
+    }
+
+    pub fn read_packet(&mut self) -> Option<Vec<u8>> {
+        let packet_size = 1 << self.rx_buffer.data_order();
+        let mut packet = Vec::with_capacity(packet_size);
+
+        let data = self.rx_buffer.read_packet();
+
+        if let Some((data, idx)) = data {
+            packet.extend_from_slice(data);
+
+            self.regs.set_rdt(idx);
+            println!("Received");
+
+            Some(packet)
+        } else {
+            None
+        }
     }
 }

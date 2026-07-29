@@ -13,9 +13,13 @@ mod net;
 async fn main(root: Option<Handle>) -> Result<(), ErrorType> {
     let ns = NameServer::new(unsafe { Port::new(root.unwrap()) });
 
-    let e1000 = e1000::E1000::new(ns).await?;
+    let mut e1000 = e1000::E1000::new(ns).await?;
 
     println!("Starting net...");
+
+    loop {
+        let _packet = e1000.read_packet();
+    }
 
     loop {
         libc::syscalls::Syscall::sys_yield();

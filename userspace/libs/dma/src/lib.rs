@@ -41,6 +41,26 @@ impl<T: Copy> DmaBuffer<T> {
         self.pa.start()
     }
 
+    pub fn read(&mut self, idx: usize) -> T {
+        assert!(idx < self.va.size() / size_of::<T>());
+
+        // TODO: here we rely on kernel mapping VMO as uncached NeReGe memory. In future it would be
+        // better to do cache maintance in the user-space
+        unsafe {
+            core::arch::asm!("dsb sy");
+            self.va.start().to_raw_mut::<T>().add(idx).read_volatile()
+        }
+    }
+
+    pub fn slice(&mut self, idx: usize, length: usize) -> &[T] {
+        assert!(idx + length <= self.va.size() / size_of::<T>());
+
+        unsafe {
+            core::arch::asm!("dsb sy");
+            core::slice::from_raw_parts(self.va.start().to_raw_mut::<T>().add(idx), length)
+        }
+    }
+
     pub fn write(&mut self, idx: usize, val: T) {
         assert!(idx < self.va.size() / size_of::<T>());
 

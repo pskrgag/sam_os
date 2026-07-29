@@ -109,6 +109,10 @@ impl E1000Regs {
         s.initialize(tx_buffer, rx_buffer).map(|_| s)
     }
 
+    pub fn set_rdt(&mut self, new: u32) {
+        field!(self.0, rdt).modify_mut(|x| *x = new);
+    }
+
     fn reset(&mut self) -> Result<(), E1000Error> {
         let mut retries = 100;
 
