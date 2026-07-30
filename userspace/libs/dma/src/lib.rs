@@ -13,7 +13,7 @@ use rtl::vmm::MappingType;
 pub struct DmaBuffer<T: Copy> {
     va: MemRange<VirtAddr>,
     pa: MemRange<PhysAddr>,
-    vmo: VmObject,
+    _vmo: VmObject,
     _pd: PhantomData<T>,
 }
 
@@ -28,7 +28,7 @@ impl<T: Copy> DmaBuffer<T> {
         Ok(Self {
             va: MemRange::new(va, num_bytes),
             pa: MemRange::new(pa, num_bytes),
-            vmo,
+            _vmo: vmo,
             _pd: PhantomData,
         })
     }

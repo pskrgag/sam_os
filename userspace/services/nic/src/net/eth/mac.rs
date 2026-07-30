@@ -2,6 +2,7 @@ use core::fmt::{self, Debug, Formatter};
 use rtl::error::ErrorType;
 
 /// Mac address
+#[derive(Clone, Copy)]
 pub struct Mac([u8; 6]);
 
 impl Mac {
@@ -15,6 +16,15 @@ impl Mac {
 
         res.copy_from_slice(&raw.to_le_bytes()[0..6]);
         Ok(Self(res))
+    }
+}
+
+impl Into<u64> for Mac {
+    fn into(self) -> u64 {
+        let mut bytes = [0u8; 8];
+
+        bytes[0..6].copy_from_slice(&self.0);
+        u64::from_ne_bytes(bytes)
     }
 }
 

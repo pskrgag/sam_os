@@ -1,5 +1,6 @@
 use crate::bindings_NameServer::NameServer;
 use crate::bindings_Pci::{Device, Pci};
+use crate::net::driver::Nic;
 use crate::net::eth::mac::Mac;
 use alloc::vec::Vec;
 use hal::address::MemRange;
@@ -10,6 +11,7 @@ use regs::E1000Regs;
 use rokio::port::Port;
 use rx::RxBuffer;
 use tx::TxBuffer;
+use rtl::error::ErrorType;
 
 mod regs;
 mod rx;
@@ -24,7 +26,7 @@ pub struct E1000 {
 }
 
 impl E1000 {
-    pub async fn new(ns: NameServer) -> Result<Self, E1000Error> {
+    pub async fn new(ns: &NameServer) -> Result<Self, E1000Error> {
         let pci = ns.Get("pci".try_into().unwrap()).await.unwrap();
         let pci = unsafe { Pci::new(Port::new(pci.handle)) };
 
@@ -66,5 +68,24 @@ impl E1000 {
 
     pub fn read_packet(&mut self) -> Option<Vec<u8>> {
         self.rx_buffer.read_packet(&mut self.regs)
+    }
+}
+
+impl Nic for E1000 {
+    fn receive_frame(&mut self) -> Result<Vec<u8>, ErrorType> {
+        loop {
+            if let Some(packet) = self.read_packet() {
+                break Ok(packet);
+            }
+        }
+    }
+
+    fn send_frame(&mut self, data: &[u8]) -> Result<(), ErrorType> {
+        self.send_packet(data);
+        Ok(())
+    }
+
+    fn mac(&self) -> Mac {
+        self.mac
     }
 }

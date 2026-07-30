@@ -1,0 +1,9 @@
+package Nic;
+
+type Frame = Sequence<U8, 1518>;
+
+interface Nic {
+	Receive(out Frame data);
+	Send(in Frame data);
+	Mac(out U64 mac);
+}

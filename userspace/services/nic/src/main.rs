@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+use alloc::boxed::Box;
 use bindings_NameServer::NameServer;
 use libc::handle::Handle;
 use rokio::port::Port;
@@ -8,28 +9,16 @@ use rtl::error::ErrorType;
 
 mod e1000;
 mod net;
+mod server;
 
 #[rokio::main]
 async fn main(root: Option<Handle>) -> Result<(), ErrorType> {
     let ns = NameServer::new(unsafe { Port::new(root.unwrap()) });
-
-    let mut e1000 = e1000::E1000::new(ns).await?;
+    let e1000 = e1000::E1000::new(&ns).await?;
 
     println!("Starting net...");
 
-    loop {
-        let packet = e1000.read_packet();
-
-        if let Some(packet) = packet {
-            println!("received");
-            e1000.send_packet(&packet);
-            println!("sent");
-        }
-    }
-
-    loop {
-        libc::syscalls::Syscall::sys_yield();
-    }
+    server::start_server(Box::new(e1000), ns).await
 }
 
 include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));
