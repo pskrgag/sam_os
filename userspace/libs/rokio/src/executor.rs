@@ -116,7 +116,7 @@ impl Runtime {
     }
 
     pub fn run(&'static self) {
-        loop {
+        while self.waiting.len() != 0 || self.runnable.len() != 0 {
             // Poll ready tasks
             self.poll_runnable();
 

@@ -343,10 +343,6 @@ fn run_impl(gdb: bool, c: Option<&BuildScript>) -> Result<(), String> {
         "-cpu",
         "cortex-a53",
         "-nographic",
-        "-device",
-        "e1000,netdev=net0",
-        "-netdev",
-        "user,id=net0",
         "-kernel",
         &bin,
     ];

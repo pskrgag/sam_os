@@ -3,7 +3,7 @@ board = "qemu"
 opt_level = "1"
 
 # Serial (2 UARTS: one for the kernel, one for the user-space)
-extra_qemu_args = "-drive file=sd.img,format=raw,if=none,id=mydrive -device sdhci-pci -device sd-card,drive=mydrive -serial mon:stdio -serial pty"
+extra_qemu_args = "-drive file=sd.img,format=raw,if=none,id=mydrive -device sdhci-pci -device sd-card,drive=mydrive -serial mon:stdio -serial pty -device e1000,netdev=net0 -netdev tap,id=net0,ifname=tap0,script=no,downscript=no"
 
 [[component]]
 name = "vfs"
@@ -22,3 +22,6 @@ name = "sdhci"
 
 [[component]]
 name = "nic"
+
+[[component]]
+name = "net"

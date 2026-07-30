@@ -32,7 +32,7 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
         #[panic_handler]
         fn panic(info: &core::panic::PanicInfo) -> ! {
             println!("PANIC!!! {}", info);
-            loop {}
+            loop { libc::syscalls::Syscall::sys_yield() }
         }
 
         #[macro_use]

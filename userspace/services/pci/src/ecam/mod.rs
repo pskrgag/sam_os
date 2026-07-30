@@ -53,10 +53,12 @@ impl PciMemRange {
         if size > self.size - self.offset {
             None
         } else {
-            let res = self.cpu_base + self.offset;
+            // BAR memory must be aligned to BAR size
+            let aligned = (self.cpu_base + self.offset).next_multiple_of(size);
+            let new_offset = aligned - self.cpu_base + size;
 
-            self.offset += size;
-            Some(res)
+            self.offset = new_offset;
+            Some(aligned)
         }
     }
 }

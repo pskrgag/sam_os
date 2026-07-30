@@ -35,7 +35,6 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
         #[libc::main]
         fn main(handle: Option<Handle>) {
             rokio::executor::block_on(real_main(handle));
-            panic!("return from main");
         }
 
         #old_func
