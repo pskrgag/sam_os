@@ -35,6 +35,36 @@ pub struct MemBarMapping {
 }
 
 #[derive(Debug)]
+enum PciIrqPin {
+    INTA,
+    INTB,
+    INTC,
+    INTD,
+}
+
+impl TryFrom<usize> for PciIrqPin {
+    type Error = ();
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(Self::INTA),
+            2 => Ok(Self::INTB),
+            3 => Ok(Self::INTC),
+            4 => Ok(Self::INTD),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct PciInterrupt {
+    address: PciAddress,
+    pin: PciIrqPin,
+    irq_num: u32,
+    flags: u32,
+}
+
+#[derive(Debug)]
 struct PciMemRange {
     kind: AddressSpace,
     cpu_base: usize,
@@ -45,6 +75,7 @@ struct PciMemRange {
 pub struct PciEcam {
     base: VirtAddr,
     ranges: Vec<PciMemRange>,
+    irqs: Vec<PciInterrupt>,
     devices: BTreeMap<(u16, u16), (u8, u8)>,
 }
 
@@ -102,6 +133,23 @@ impl PciEcam {
             })
             .collect();
 
+        let irqs: Vec<_> = node
+            .interrupt_map()
+            .ok_or(ErrorType::InvalidArgument)?
+            .map(|r| {
+                let bus = (r.child_unit_address_hi >> 16) & 0xff;
+                let device = (r.child_unit_address_hi >> 11) & 0x1f;
+                let function = (r.child_unit_address_hi >> 8) & 0x07;
+
+                PciInterrupt {
+                    address: PciAddress::new(0, bus as _, device as _, function as _),
+                    pin: PciIrqPin::try_from(r.child_interrupt_specifier).unwrap(),
+                    irq_num: r.parent_interrupt_specifier[1],
+                    flags: r.parent_interrupt_specifier[2],
+                }
+            })
+            .collect();
+
         let mut new = Self {
             base: vms().map_phys(MemRange::new(
                 (reg.starting_address as usize).into(),
@@ -109,6 +157,7 @@ impl PciEcam {
             ))?,
             ranges,
             devices: BTreeMap::new(),
+            irqs,
         };
 
         new.enumerate();
