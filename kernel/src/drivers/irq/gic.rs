@@ -1,16 +1,17 @@
-use crate::sync::Spinlock;
+use super::IrqController;
 use arm_gic::{
-    IntId, UniqueMmioPointer,
     gicv3::{GicCpuInterface, GicV3, Group, InterruptGroup},
+    IntId, UniqueMmioPointer,
 };
 use core::ptr::NonNull;
 use hal::address::VirtualAddress;
 use loader_protocol::{DeviceKind, LoaderArg};
+use rtl::irq::IrqTrigger;
+use rtl::locking::spinlock::Spinlock;
 use spin::Once;
 
 pub struct Gic(GicV3<'static>);
 
-pub static GIC: Once<Spinlock<Gic>> = Once::new();
 #[derive(Debug)]
 pub struct ClaimedIrq(pub IntId);
 
@@ -30,19 +31,6 @@ impl Gic {
         gic.setup(0);
         Self(gic)
     }
-
-    pub fn enable_irq(&mut self, num: IntId) {
-        self.0.set_interrupt_priority(num, Some(0), 0x80).unwrap();
-        self.0.set_group(num, Some(0), Group::Group1NS).unwrap();
-        self.0
-            .set_trigger(num, Some(0), arm_gic::Trigger::Level)
-            .unwrap();
-        self.0.enable_interrupt(num, Some(0), true).unwrap();
-    }
-
-    pub fn pending(&self) -> Option<ClaimedIrq> {
-        GicCpuInterface::get_pending_interrupt(InterruptGroup::Group1).map(ClaimedIrq)
-    }
 }
 
 impl Drop for ClaimedIrq {
@@ -51,13 +39,33 @@ impl Drop for ClaimedIrq {
     }
 }
 
+impl IrqController for Spinlock<Gic> {
+    fn enable_irq(&self, num: IntId, trigger: IrqTrigger) {
+        let trigger = match trigger {
+            IrqTrigger::Edge => arm_gic::Trigger::Edge,
+            IrqTrigger::Level => arm_gic::Trigger::Level,
+        };
+        let mut gic = self.lock();
+
+        gic.0.set_interrupt_priority(num, Some(0), 0x80).unwrap();
+        gic.0.set_group(num, Some(0), Group::Group1NS).unwrap();
+        gic.0.set_trigger(num, Some(0), trigger).unwrap();
+        gic.0.enable_interrupt(num, Some(0), true).unwrap();
+    }
+
+    fn pending(&self) -> Option<IntId> {
+        GicCpuInterface::get_pending_interrupt(InterruptGroup::Group1)
+    }
+
+    fn eoi(&self, int: IntId) {
+        GicCpuInterface::end_interrupt(int, InterruptGroup::Group1)
+    }
+}
+
 pub fn init(arg: &LoaderArg) {
-    GIC.call_once(|| {
-        let res = Spinlock::new(Gic::new(arg));
+    static GIC: Once<Spinlock<Gic>> = Once::new();
+    let gic = GIC.call_once(|| Spinlock::new(Gic::new(arg)));
 
-        arm_gic::irq_enable();
-        res
-    });
-
-    info!("Gic initalized\n");
+    super::register_controller(gic);
+    arm_gic::irq_enable();
 }

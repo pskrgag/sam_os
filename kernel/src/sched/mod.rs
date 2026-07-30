@@ -1,5 +1,5 @@
 use crate::arch::regs::{Context, TrapReason};
-use crate::drivers::irq::irq::irq_dispatch;
+use crate::drivers::irq::irq_dispatch;
 use crate::syscalls::do_syscall;
 use crate::tasks::task::Task;
 use crate::tasks::thread::Thread;

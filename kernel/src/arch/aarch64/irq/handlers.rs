@@ -1,6 +1,6 @@
 use crate::arch::backtrace::backtrace;
 use crate::arch::regs::{Context, TrapReason};
-use crate::drivers::irq::irq::irq_dispatch;
+use crate::drivers::irq::irq_dispatch;
 use aarch64_cpu::registers::{ELR_EL1, ESR_EL1, FAR_EL1, Readable, VBAR_EL1, Writeable};
 use core::arch::global_asm;
 use hal::address::*;

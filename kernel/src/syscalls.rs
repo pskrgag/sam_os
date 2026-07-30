@@ -141,10 +141,7 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
         SyscallList::VmoGetPhysInfo => {
             let table = task.handle_table().await?;
             let vmo = table
-                .find::<VmObject>(
-                    args.arg(0),
-                    CapabilityMask::from(Capability::GetPhysInfo),
-                )
+                .find::<VmObject>(args.arg(0), CapabilityMask::from(Capability::GetPhysInfo))
                 .ok_or(ErrorType::InvalidHandle)?;
 
             vmo.get_phys_info()
@@ -331,6 +328,11 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             }
 
             user_ptr.write_array(&user_wait_entries)?;
+            Ok(0)
+        }
+        SyscallList::AllocateIrq => {
+            let fdt_pa: PhysAddr = fdt().base.into();
+
             Ok(0)
         }
     }

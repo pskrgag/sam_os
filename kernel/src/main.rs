@@ -32,6 +32,7 @@ mod sched;
 mod sync;
 mod syscalls;
 mod tasks;
+mod irq;
 
 #[cfg(test)]
 #[macro_use]
