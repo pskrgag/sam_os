@@ -3,7 +3,7 @@
 #![allow(unexpected_cfgs)]
 
 use bindings_NameServer::NameServer;
-use bindings_Pci::{Pci, Device};
+use bindings_Pci::{Device, DeviceId, Pci};
 use hal::{address::MemRange, arch::PAGE_SIZE};
 use libc::{handle::Handle, vmm::vms::vms};
 use rokio::port::Port;
@@ -20,8 +20,16 @@ async fn main(nameserver: Option<Handle>) {
     let pci = unsafe { Pci::new(Port::new(pci.handle)) };
 
     // These IDS are from QEMU
+    let bfds = pci
+        .Find(DeviceId {
+            vendor: 0x1b36,
+            device: 0x7,
+        })
+        .await
+        .unwrap();
+
     let pci_handle =
-        Device::new(unsafe { Port::new(pci.Device(0x1b36, 0x7).await.unwrap().handle) });
+        Device::new(unsafe { Port::new(pci.Open(bfds.addresses[0].clone()).await.unwrap().device) });
 
     let res = pci_handle.Map().await.unwrap();
     assert_eq!(res.data.len(), 1);

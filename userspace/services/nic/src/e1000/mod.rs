@@ -1,5 +1,5 @@
 use crate::bindings_NameServer::NameServer;
-use crate::bindings_Pci::{Device, Pci};
+use crate::bindings_Pci::{Device, Pci, DeviceId};
 use crate::net::driver::Nic;
 use crate::net::eth::mac::Mac;
 use alloc::vec::Vec;
@@ -33,10 +33,19 @@ impl E1000 {
         let pci = unsafe { Pci::new(Port::new(pci.handle)) };
 
         // These IDS are from QEMU
-        let device =
-            Device::new(unsafe { Port::new(pci.Device(0x8086, 0x100e).await.unwrap().handle) });
+        let bfds = pci
+            .Find(DeviceId {
+                vendor: 0x8086,
+                device: 0x100e,
+            })
+            .await
+            .unwrap();
 
-        let irq = unsafe { Irq::new(device.AllocateIrq(0).await?.irq) };
+        let device = Device::new(unsafe {
+            Port::new(pci.Open(bfds.addresses[0].clone()).await.unwrap().device)
+        });
+
+        let irq = unsafe { Irq::new(device.AllocateIrq().await?.irq) };
 
         let res = device.Map().await.unwrap();
         assert_eq!(res.data.len(), 1);

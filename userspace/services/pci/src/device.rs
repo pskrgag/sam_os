@@ -1,32 +1,32 @@
-use super::ecam::{PciEcam, PciIrqPin};
+use super::ecam::{DeviceInfo, PciEcam, PciIrqPin};
 use crate::bindings_Pci::{Device, DeviceRequest, PciMapping};
 use alloc::sync::Arc;
 use core::future::Future;
 use hal::address::Address;
 use heapless::Vec;
 use libc::handle::Handle;
+use pci_types::PciAddress;
 use rokio::port::Port;
 use rtl::error::ErrorType;
 use rtl::locking::spinlock::Spinlock;
 
 pub struct PciDevice {
-    vendor: u16,
-    device: u16,
+    address: PciAddress,
     bus: Arc<Spinlock<PciEcam>>,
+    info: DeviceInfo,
 }
 
 impl PciDevice {
     pub fn new(
-        vendor: u16,
-        device: u16,
+        address: PciAddress,
         bus: Arc<Spinlock<PciEcam>>,
     ) -> Result<(impl Future<Output = Result<(), ErrorType>>, Handle), ErrorType> {
+        let info = bus
+            .lock()
+            .device_info(address)
+            .ok_or(ErrorType::InvalidArgument)?;
         let port = Port::create()?;
-        let device = Arc::new(Spinlock::new(Self {
-            vendor,
-            device,
-            bus,
-        }));
+        let device = Arc::new(Spinlock::new(Self { address, bus, info }));
         let raw_handle = port.handle().clone_handle()?;
 
         Ok((
@@ -41,7 +41,7 @@ impl PciDevice {
                             let mappings: Vec<PciMapping, 6> = device
                                 .bus
                                 .lock()
-                                .mapping_address(device.vendor, device.device)
+                                .mapping_address(device.address)
                                 .unwrap()
                                 .into_iter()
                                 .map(|x| PciMapping {
@@ -55,10 +55,7 @@ impl PciDevice {
                         }
                         DeviceRequest::AllocateIrq { responder, value } => {
                             let device = device.lock();
-                            let irq = device
-                                .bus
-                                .lock()
-                                .allocate_irq(device.vendor, device.device)?;
+                            let irq = device.bus.lock().allocate_irq(device.address)?;
 
                             responder.reply(irq.handle())?;
                         }

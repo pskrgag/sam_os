@@ -8,13 +8,26 @@ struct PciMapping {
 	U8 index;
 }
 
+struct PciAddress {
+	U16 segment;
+	U8 bus;
+	U8 device;
+	U8 function;
+}
+
+struct DeviceId {
+	U16 vendor;
+	U16 device;
+}
+
 type PciDeviceData = Sequence<PciMapping, 6>;
 
 interface Pci {
-	Device(in U16 vendor, in U16 device, out Handle handle);
+	Find(in DeviceId id, out Sequence<PciAddress, 32> addresses);
+	Open(in PciAddress address, out Handle device);
 }
 
 interface Device {
 	Map(out PciDeviceData data);
-	AllocateIrq(in U8 pin, out Handle irq);
+	AllocateIrq(out Handle irq);
 }

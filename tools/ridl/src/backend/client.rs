@@ -50,7 +50,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                         format!(
                             "{name}: {value}",
                             name = x.0,
-                            value = utils::type_public_to_wire(&x.1, &x.0),
+                            value = utils::type_public_to_wire(&x.1, &x.0, "&mut _message"),
                         )
                     })
                     .collect::<Vec<_>>()

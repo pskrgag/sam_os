@@ -8,6 +8,7 @@ use libc::irq::Irq;
 use libc::vmm::vms::vms;
 use pci_types::{Bar, CommandRegister, ConfigRegionAccess, EndpointHeader, PciAddress, PciHeader};
 use rtl::error::ErrorType;
+use rtl::irq::IrqTrigger;
 
 #[derive(Debug, PartialEq)]
 enum AddressSpace {
@@ -81,6 +82,16 @@ struct PciInterrupt {
     flags: u32,
 }
 
+impl PciInterrupt {
+    fn irq_trigger(&self) -> Result<IrqTrigger, ErrorType> {
+        match self.flags & 0xf {
+            1 | 2 => Ok(IrqTrigger::Edge),
+            4 | 8 => Ok(IrqTrigger::Level),
+            _ => Err(ErrorType::InvalidArgument),
+        }
+    }
+}
+
 #[derive(Debug)]
 struct PciMemRange {
     kind: AddressSpace,
@@ -89,11 +100,18 @@ struct PciMemRange {
     offset: usize,
 }
 
+// Inferred device info from BFD
+#[derive(Copy, Clone)]
+pub struct DeviceInfo {
+    vendor: u16,
+    device: u16,
+}
+
 pub struct PciEcam {
     base: VirtAddr,
     ranges: Vec<PciMemRange>,
     irqs: Vec<PciInterrupt>,
-    devices: BTreeMap<(u16, u16), (u8, u8)>,
+    devices: BTreeMap<PciAddress, DeviceInfo>,
     active_irqs: BTreeMap<u32, Irq>,
 }
 
@@ -183,12 +201,18 @@ impl PciEcam {
         Ok(new)
     }
 
-    pub fn allocate_irq(&mut self, vendor: u16, device: u16) -> Result<Irq, ErrorType> {
-        let (bus, dev) = self
-            .devices
-            .get(&(vendor, device))
-            .ok_or(ErrorType::NotFound)?;
-        let address = PciAddress::new(0, *bus, *dev, 0);
+    pub fn device_info(&self, address: PciAddress) -> Option<DeviceInfo> {
+        self.devices.get(&address).cloned()
+    }
+
+    pub fn list_bfds(&self, vendor: u16, device: u16) -> impl Iterator<Item = PciAddress> {
+        self.devices
+            .iter()
+            .filter(move |x| x.1.vendor == vendor && x.1.device == device)
+            .map(|x| *x.0)
+    }
+
+    pub fn allocate_irq(&mut self, address: PciAddress) -> Result<Irq, ErrorType> {
         let header = PciHeader::new(address);
 
         let Some(mut endpoint) = EndpointHeader::from_header(header, &*self) else {
@@ -204,7 +228,8 @@ impl PciEcam {
             .ok_or(ErrorType::NotFound)?;
 
         if !self.active_irqs.contains_key(&irq.irq_num) {
-            let irq_obj = factory().create_irq(irq.irq_num as usize, rtl::irq::IrqTrigger::Level)?;
+            let irq_obj =
+                factory().create_irq(irq.irq_num as usize, irq.irq_trigger()?)?;
 
             self.active_irqs.insert(irq.irq_num, irq_obj);
         }
@@ -251,13 +276,14 @@ impl PciEcam {
                 let address = PciAddress::new(0, bus, dev, 0);
                 let header = PciHeader::new(address);
                 let (vendor, device) = header.id(&*self);
+                let device_info = DeviceInfo { vendor, device };
 
                 if vendor == u16::MAX {
                     continue;
                 }
 
                 println!("Found device {:x} {:x}", vendor, device);
-                self.devices.insert((vendor, device), (bus, dev));
+                self.devices.insert(address, device_info);
                 self.for_each_bar(bus, dev, |endpoint, bar, slot, access| {
                     let addr = access.ranges.iter_mut().find_map(|x| match bar {
                         Bar::Memory64 { size, .. } => {
@@ -291,11 +317,12 @@ impl PciEcam {
         }
     }
 
-    pub fn mapping_address(&mut self, vendor: u16, device: u16) -> Option<Vec<MemBarMapping>> {
-        let (bus, dev) = self.devices.get(&(vendor, device))?;
+    pub fn mapping_address(&mut self, address: PciAddress) -> Option<Vec<MemBarMapping>> {
+        let bus = address.bus();
+        let dev = address.device();
         let mut mappings = Vec::new();
 
-        self.for_each_bar(*bus, *dev, |_, bar, index, _| match bar {
+        self.for_each_bar(bus, dev, |_, bar, index, _| match bar {
             Bar::Memory32 { .. } | Bar::Memory64 { .. } => {
                 let (base, size) = bar.unwrap_mem();
                 let map = MemBarMapping {

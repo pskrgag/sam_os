@@ -238,7 +238,11 @@ fn type_wire_to_public<S: AsRef<str>>(tp: &Type, var: S) -> String {
     }
 }
 
-pub(crate) fn type_public_to_wire<S: AsRef<str>>(tp: &Type, var: S) -> String {
+pub(crate) fn type_public_to_wire<S: AsRef<str>>(
+    tp: &Type,
+    var: S,
+    message: &str,
+) -> String {
     let name = var.as_ref();
 
     match tp {
@@ -246,7 +250,7 @@ pub(crate) fn type_public_to_wire<S: AsRef<str>>(tp: &Type, var: S) -> String {
             let f = match **inner {
                 Type::Builtin(_) => ".clone()",
                 Type::Struct(_) => &format!(
-                    ".iter().map(|x| x.clone().try_to_wire(_message).unwrap()).collect::<HLVec<_, {count}>>()"
+                    ".iter().map(|x| x.clone().try_to_wire({message}).unwrap()).collect::<HLVec<_, {count}>>()"
                 ),
                 _ => todo!(),
             };
@@ -254,9 +258,9 @@ pub(crate) fn type_public_to_wire<S: AsRef<str>>(tp: &Type, var: S) -> String {
             format!("{name}{f}.clone()",)
         }
         Type::Builtin(BuiltinTypes::Handle) => format!(
-            "_message.add_handle(unsafe {{ let res = {name}.as_raw(); core::mem::forget({name}); res }})",
+            "({message}).add_handle(unsafe {{ let res = {name}.as_raw(); core::mem::forget({name}); res }})",
         ),
-        Type::Struct(_) => format!("{name}.try_to_wire(_message).unwrap()"),
+        Type::Struct(_) => format!("{name}.try_to_wire({message}).unwrap()"),
         Type::Enum(_) => {
             format!("*{name}",)
         },
@@ -304,7 +308,11 @@ impl PublicToWire<{wire_name}> for {name} {{
         s.data
             .iter()
             .map(|x| {
-                let expr = type_public_to_wire(&x.1, format!("self.{name}", name = x.0));
+                let expr = type_public_to_wire(
+                    &x.1,
+                    format!("self.{name}", name = x.0),
+                    "_message",
+                );
                 format!("{name}: {expr}", name = x.0)
             })
             .collect::<Vec<_>>()
@@ -344,7 +352,7 @@ fn produce_send_struct<W: Write>(buf: &mut W, interface: &Interface, message: &M
             .data
             .iter()
             .map(|x| {
-                let expr = type_public_to_wire(&x.1, &x.0);
+                let expr = type_public_to_wire(&x.1, &x.0, "_message");
                 format!("{name}: {expr}", name = x.0)
             })
             .collect::<Vec<_>>()
