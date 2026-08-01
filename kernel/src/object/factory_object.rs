@@ -1,4 +1,6 @@
 use super::port_object::Port;
+use crate::drivers::irq::IntId;
+use crate::irq::IrqObject;
 use crate::mm::vmm::vmo::VmObject;
 use crate::object::capabilities::{Capability, CapabilityMask};
 use crate::object::handle::Handle;
@@ -9,6 +11,7 @@ use alloc::sync::Arc;
 use rtl::error::ErrorType;
 use rtl::signal::Signal;
 use rtl::vmm::MappingType;
+use rtl::irq::IrqTrigger;
 use spin::Lazy;
 
 pub struct Factory {
@@ -54,6 +57,19 @@ impl Factory {
         Ok(Handle::new(
             vmo,
             CapabilityMask::from(Capability::GetPhysInfo),
+        ))
+    }
+
+    pub fn create_irq(&self, num: usize, trigger: IrqTrigger) -> Result<Handle, ErrorType> {
+        let num = u32::try_from(num).map_err(|_| ErrorType::InvalidArgument)?;
+
+        if num >= IntId::MAX_SPI_COUNT {
+            return Err(ErrorType::InvalidArgument);
+        }
+
+        Ok(Handle::new(
+            IrqObject::new(IntId::spi(num), trigger)?,
+            CapabilityMask::from(Capability::Wait),
         ))
     }
 }

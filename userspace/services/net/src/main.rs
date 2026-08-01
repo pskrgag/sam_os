@@ -19,8 +19,6 @@ async fn main(root: Option<Handle>) -> Result<(), ErrorType> {
         let packet = nic.read_packet().await?;
         println!("received shit");
     }
-
-    Ok(())
 }
 
 include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));

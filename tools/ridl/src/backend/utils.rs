@@ -238,7 +238,7 @@ fn type_wire_to_public<S: AsRef<str>>(tp: &Type, var: S) -> String {
     }
 }
 
-fn type_public_to_wire<S: AsRef<str>>(tp: &Type, var: S) -> String {
+pub(crate) fn type_public_to_wire<S: AsRef<str>>(tp: &Type, var: S) -> String {
     let name = var.as_ref();
 
     match tp {

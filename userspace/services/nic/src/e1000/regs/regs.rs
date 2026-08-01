@@ -16,6 +16,13 @@ pub enum E1000Error {
     MacInvalid,
     ResetTimeout,
     NoMemory,
+    Generic,
+}
+
+impl From<ErrorType> for E1000Error {
+    fn from(_: ErrorType) -> Self {
+        Self::Generic
+    }
 }
 
 impl From<E1000Error> for ErrorType {
@@ -203,6 +210,9 @@ impl E1000Regs {
 
         // Something default... TODO: figure out wtf is going on here
         field!(self.0, tipg).write(0x0060200a);
+
+        // Enable RX irq
+        field!(self.0, ims).modify_mut(|x| *x |= 1 << 7);
 
         // Configure link
         field!(self.0, ctrl).modify_mut(|x| *x = x.set(Control::SLU, true));

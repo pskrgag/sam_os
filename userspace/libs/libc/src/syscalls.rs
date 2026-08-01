@@ -9,6 +9,7 @@ use hal::address::{Address, PhysAddr, VirtAddr};
 use rtl::error::ErrorType;
 use rtl::handle::Handle as RawHandle;
 use rtl::ipc::IpcMessage;
+use rtl::irq::IrqTrigger;
 use rtl::signal::{Signals, WaitEntry};
 use rtl::syscalls::SyscallList;
 use rtl::vmm::MappingType;
@@ -36,6 +37,8 @@ pub enum Syscall<'a> {
     GetFdt,
     ObjectWait(RawHandle, Signals),
     ObjectWaitMany(&'a mut [WaitEntry]),
+    CreateIrq(RawHandle, usize, IrqTrigger),
+    WaitIrq(RawHandle),
 }
 
 impl<'a> Syscall<'a> {
@@ -139,6 +142,20 @@ impl<'a> Syscall<'a> {
 
     pub fn object_wait_many(wait_entries: &'a mut [WaitEntry]) -> Result<(), ErrorType> {
         unsafe { syscall(Self::ObjectWaitMany(wait_entries).as_args()).map(|_| ()) }
+    }
+
+    pub fn create_irq(
+        factory: &Handle,
+        num: usize,
+        trigger: IrqTrigger,
+    ) -> Result<Handle, ErrorType> {
+        unsafe {
+            syscall(Self::CreateIrq(factory.as_raw(), num, trigger).as_args()).map(Handle::new)
+        }
+    }
+
+    pub fn wait_irq(h: &Handle) -> Result<(), ErrorType> {
+        unsafe { syscall(Self::WaitIrq(h.as_raw()).as_args()).map(|_| ()) }
     }
 
     pub fn port_reply(
@@ -330,6 +347,26 @@ impl<'a> Syscall<'a> {
                 SyscallList::WaitObjectMany.into(),
                 entries.as_mut_ptr() as usize,
                 entries.len(),
+                0,
+                0,
+                0,
+                0,
+                0,
+            ],
+            Syscall::CreateIrq(factory, num, trigger) => [
+                SyscallList::CreateIrq.into(),
+                factory,
+                num,
+                trigger as usize,
+                0,
+                0,
+                0,
+                0,
+            ],
+            Syscall::WaitIrq(handle) => [
+                SyscallList::WaitIrq.into(),
+                handle,
+                0,
                 0,
                 0,
                 0,

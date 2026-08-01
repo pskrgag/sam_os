@@ -3,6 +3,8 @@ use alloc::vec::Vec;
 use core::ptr;
 use fdt::Fdt;
 use hal::address::{MemRange, PhysAddr, VirtAddr, VirtualAddress};
+use libc::factory::factory;
+use libc::irq::Irq;
 use libc::vmm::vms::vms;
 use pci_types::{Bar, CommandRegister, ConfigRegionAccess, EndpointHeader, PciAddress, PciHeader};
 use rtl::error::ErrorType;
@@ -34,12 +36,27 @@ pub struct MemBarMapping {
     pub index: u8,
 }
 
-#[derive(Debug)]
-enum PciIrqPin {
-    INTA,
-    INTB,
-    INTC,
-    INTD,
+#[derive(Debug, Copy, Clone)]
+#[repr(u8)]
+pub enum PciIrqPin {
+    INTA = 1,
+    INTB = 2,
+    INTC = 3,
+    INTD = 4,
+}
+
+impl TryFrom<u8> for PciIrqPin {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::INTA),
+            1 => Ok(Self::INTB),
+            2 => Ok(Self::INTC),
+            3 => Ok(Self::INTD),
+            _ => Err(()),
+        }
+    }
 }
 
 impl TryFrom<usize> for PciIrqPin {
@@ -77,6 +94,7 @@ pub struct PciEcam {
     ranges: Vec<PciMemRange>,
     irqs: Vec<PciInterrupt>,
     devices: BTreeMap<(u16, u16), (u8, u8)>,
+    active_irqs: BTreeMap<u32, Irq>,
 }
 
 impl PciMemRange {
@@ -158,10 +176,44 @@ impl PciEcam {
             ranges,
             devices: BTreeMap::new(),
             irqs,
+            active_irqs: BTreeMap::new(),
         };
 
         new.enumerate();
         Ok(new)
+    }
+
+    pub fn allocate_irq(&mut self, vendor: u16, device: u16) -> Result<Irq, ErrorType> {
+        let (bus, dev) = self
+            .devices
+            .get(&(vendor, device))
+            .ok_or(ErrorType::NotFound)?;
+        let address = PciAddress::new(0, *bus, *dev, 0);
+        let header = PciHeader::new(address);
+
+        let Some(mut endpoint) = EndpointHeader::from_header(header, &*self) else {
+            return Err(ErrorType::InvalidArgument);
+        };
+
+        let (pin, _) = endpoint.interrupt(&*self);
+
+        let irq = self
+            .irqs
+            .iter()
+            .find(|x| x.address == address && x.pin as u8 == pin)
+            .ok_or(ErrorType::NotFound)?;
+
+        if !self.active_irqs.contains_key(&irq.irq_num) {
+            let irq_obj = factory().create_irq(irq.irq_num as usize, rtl::irq::IrqTrigger::Level)?;
+
+            self.active_irqs.insert(irq.irq_num, irq_obj);
+        }
+
+        unsafe {
+            let obj = self.active_irqs.get(&irq.irq_num).unwrap();
+
+            Ok(Irq::new(obj.handle().clone_handle()?))
+        }
     }
 
     fn for_each_bar<F: FnMut(&mut EndpointHeader, Bar, u8, &mut Self)>(

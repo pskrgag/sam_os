@@ -1,11 +1,6 @@
 use super::utils::{function_to_struct, Message};
 use crate::{
-    ast::{
-        argtype::{BuiltinTypes, Type},
-        function::Function,
-        interface::Interface,
-        module::Module,
-    },
+    ast::{function::Function, interface::Interface, module::Module},
     backend::utils,
 };
 use std::io::Write;
@@ -51,15 +46,12 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                 msg.tx
                     .data
                     .iter()
-                    .map(|x| match &x.1 {
-                        Type::Sequence { .. } => {
-                            format!("{name}: {name}.clone()", name = x.0)
-                        }
-                        Type::Builtin(BuiltinTypes::Handle) => format!(
-                            "{name}: _message.add_handle(unsafe {{ {name}.as_raw() }})",
-                            name = x.0
-                        ),
-                        _ => x.0.clone(),
+                    .map(|x| {
+                        format!(
+                            "{name}: {value}",
+                            name = x.0,
+                            value = utils::type_public_to_wire(&x.1, &x.0),
+                        )
                     })
                     .collect::<Vec<_>>()
                     .join(", "),

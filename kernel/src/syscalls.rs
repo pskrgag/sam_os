@@ -8,6 +8,7 @@ use crate::object::{
     {wait_many, WaitManyArg},
 };
 use crate::{
+    irq::IrqObject,
     mm::{
         user_buffer::UserPtr,
         vmm::{vmo::VmObject, vms::Vms},
@@ -330,10 +331,28 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
             user_ptr.write_array(&user_wait_entries)?;
             Ok(0)
         }
-        SyscallList::AllocateIrq => {
-            let fdt_pa: PhysAddr = fdt().base.into();
+        SyscallList::CreateIrq => {
+            let mut table = task.handle_table().await?;
+            let factory = table
+                .find::<Factory>(args.arg(0), CapabilityMask::any())
+                .ok_or(ErrorType::InvalidHandle)?;
 
-            Ok(0)
+            let trigger = args
+                .try_arg(2)
+                .map_err(|_| ErrorType::InvalidArgument)?;
+
+            Ok(table.add(factory.create_irq(args.arg(1), trigger)?))
+        }
+        SyscallList::WaitIrq => {
+            let irq = {
+                let table = task.handle_table().await?;
+
+                table
+                    .find::<IrqObject>(args.arg(0), CapabilityMask::from(Capability::Wait))
+                    .ok_or(ErrorType::InvalidHandle)?
+            };
+
+            irq.wait().await.map(|_| 0)
         }
     }
 }

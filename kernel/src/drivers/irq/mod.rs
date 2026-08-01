@@ -1,14 +1,17 @@
 use crate::sync::Spinlock;
+use alloc::boxed::Box;
 use alloc::collections::LinkedList;
-use arm_gic::IntId;
+use rtl::error::ErrorType;
 use rtl::irq::IrqTrigger;
 use spin::Once;
 
 pub mod gic;
 
+pub type IntId = arm_gic::IntId;
+
 pub struct IrqHandler {
     num: IntId,
-    dispatcher: fn(IntId),
+    dispatcher: Box<dyn Fn(IntId) + Send>,
 }
 
 pub static IRQS: Spinlock<LinkedList<IrqHandler>> = Spinlock::new(LinkedList::new());
@@ -21,11 +24,11 @@ pub(crate) fn register_controller(controller: &'static dyn IrqController) {
 }
 
 impl IrqHandler {
-    pub fn new(num: IntId, func: fn(IntId)) -> Self {
-        Self {
+    pub fn new<F: Fn(IntId) + Send + 'static>(num: IntId, func: F) -> Result<Self, ErrorType> {
+        Ok(Self {
             num,
-            dispatcher: func,
-        }
+            dispatcher: Box::try_new(func).map_err(|_| ErrorType::NoMemory)?,
+        })
     }
 
     pub fn num(&self) -> IntId {
@@ -33,11 +36,35 @@ impl IrqHandler {
     }
 }
 
-pub fn register_handler(irq: IntId, func: fn(IntId), trigger: IrqTrigger) {
-    let handler = IrqHandler::new(irq, func);
+pub fn register_handler<F: Fn(IntId) + Send + 'static>(
+    irq: IntId,
+    func: F,
+    trigger: IrqTrigger,
+) -> Result<(), ErrorType> {
+    let handler = IrqHandler::new(irq, func)?;
+    let mut handlers = IRQS.lock();
 
-    IRQS.lock().push_back(handler);
+    if handlers.iter().find(|x| x.num == irq).is_some() {
+        return Err(ErrorType::AlreadyExists);
+    }
+
+    handlers.push_back(handler);
     CONTROLLER.get().unwrap().enable_irq(irq, trigger);
+    Ok(())
+}
+
+pub fn mask(irq: IntId) {
+    CONTROLLER.get().unwrap().mask_irq(irq, true);
+}
+
+pub fn unmask(irq: IntId) {
+    CONTROLLER.get().unwrap().mask_irq(irq, false);
+}
+
+pub fn unregister_handler(irq: IntId) -> Result<(), ErrorType> {
+    CONTROLLER.get().unwrap().mask_irq(irq, true);
+    IRQS.lock().extract_if(|x| x.num == irq).next().unwrap();
+    Ok(())
 }
 
 pub fn irq_dispatch() {
@@ -53,6 +80,7 @@ pub fn irq_dispatch() {
 
 pub trait IrqController: Send + Sync {
     fn enable_irq(&self, num: IntId, trigger: IrqTrigger);
+    fn mask_irq(&self, num: IntId, mask: bool);
     fn pending(&self) -> Option<IntId>;
     fn eoi(&self, int: IntId);
 }

@@ -6,6 +6,7 @@
 extern crate static_assertions;
 
 pub mod error;
+pub mod irq;
 pub mod handle;
 pub mod ipc;
 pub mod locking;

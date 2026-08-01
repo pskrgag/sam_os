@@ -12,7 +12,7 @@ pub trait SystemTimer {
 }
 
 pub fn init() {
-    register_handler(TIMER_IRQ_NUM, timer_dispatch, IrqTrigger::Level);
+    register_handler(TIMER_IRQ_NUM, timer_dispatch, IrqTrigger::Level).unwrap();
 
     SYSTEM_TIMER.reprogram(SYSTEM_TICK);
     SYSTEM_TIMER.enable();

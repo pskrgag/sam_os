@@ -16,4 +16,5 @@ interface Pci {
 
 interface Device {
 	Map(out PciDeviceData data);
+	AllocateIrq(in U8 pin, out Handle irq);
 }

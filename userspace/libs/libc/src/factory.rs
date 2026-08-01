@@ -1,10 +1,12 @@
 use crate::handle::Handle;
+use crate::irq::Irq;
 use crate::port::Port;
 use crate::syscalls::Syscall;
 use crate::task::Task;
 use crate::vmm::vm_object::VmObject;
 use alloc::string::ToString;
 use rtl::error::ErrorType;
+use rtl::irq::IrqTrigger;
 use rtl::vmm::MappingType;
 
 pub static mut SELF_FACTORY: Option<Factory> = None;
@@ -27,6 +29,10 @@ impl Factory {
 
     pub fn create_port(&self) -> Result<Port, ErrorType> {
         Syscall::create_port(&self.h).map(|x| unsafe { Port::new(x) })
+    }
+
+    pub fn create_irq(&self, num: usize, trigger: IrqTrigger) -> Result<Irq, ErrorType> {
+        Syscall::create_irq(&self.h, num, trigger).map(|h| unsafe { Irq::new(h) })
     }
 
     pub fn create_vm_object(

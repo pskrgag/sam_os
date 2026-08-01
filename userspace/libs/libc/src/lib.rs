@@ -7,6 +7,7 @@ pub mod allocator;
 pub mod elf;
 pub mod factory;
 pub mod handle;
+pub mod irq;
 pub mod port;
 pub mod stdio;
 pub mod syscalls;

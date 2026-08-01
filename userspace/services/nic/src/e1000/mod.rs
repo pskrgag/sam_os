@@ -5,13 +5,14 @@ use crate::net::eth::mac::Mac;
 use alloc::vec::Vec;
 use hal::address::MemRange;
 use hal::arch::PAGE_SIZE;
+use libc::irq::Irq;
 use libc::vmm::vms::vms;
 use regs::E1000Error;
 use regs::E1000Regs;
 use rokio::port::Port;
+use rtl::error::ErrorType;
 use rx::RxBuffer;
 use tx::TxBuffer;
-use rtl::error::ErrorType;
 
 mod regs;
 mod rx;
@@ -23,6 +24,7 @@ pub struct E1000 {
     regs: E1000Regs,
     tx_buffer: TxBuffer,
     rx_buffer: RxBuffer,
+    irq: Irq,
 }
 
 impl E1000 {
@@ -34,6 +36,8 @@ impl E1000 {
         let device =
             Device::new(unsafe { Port::new(pci.Device(0x8086, 0x100e).await.unwrap().handle) });
 
+        let irq = unsafe { Irq::new(device.AllocateIrq(0).await?.irq) };
+
         let res = device.Map().await.unwrap();
         assert_eq!(res.data.len(), 1);
 
@@ -44,7 +48,8 @@ impl E1000 {
             ))
             .unwrap();
 
-        let rx_buffer = RxBuffer::new(1000, 11).map_err(|_| E1000Error::NoMemory)?;
+        let rx_buffer =
+            RxBuffer::new(1000, 11, irq.try_clone()?).map_err(|_| E1000Error::NoMemory)?;
         let tx_buffer = TxBuffer::new(1000).map_err(|_| E1000Error::NoMemory)?;
 
         let mut regs = E1000Regs::new(mmio, &tx_buffer, &rx_buffer)?;
@@ -59,6 +64,7 @@ impl E1000 {
             mac,
             rx_buffer,
             tx_buffer,
+            irq,
         })
     }
 
@@ -66,18 +72,14 @@ impl E1000 {
         self.tx_buffer.send_packet(data, &mut self.regs)
     }
 
-    pub fn read_packet(&mut self) -> Option<Vec<u8>> {
+    pub fn read_packet(&mut self) -> Result<Vec<u8>, ErrorType> {
         self.rx_buffer.read_packet(&mut self.regs)
     }
 }
 
 impl Nic for E1000 {
     fn receive_frame(&mut self) -> Result<Vec<u8>, ErrorType> {
-        loop {
-            if let Some(packet) = self.read_packet() {
-                break Ok(packet);
-            }
-        }
+        self.read_packet()
     }
 
     fn send_frame(&mut self, data: &[u8]) -> Result<(), ErrorType> {

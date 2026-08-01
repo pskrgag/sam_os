@@ -53,6 +53,12 @@ impl IrqController for Spinlock<Gic> {
         gic.0.enable_interrupt(num, Some(0), true).unwrap();
     }
 
+    fn mask_irq(&self, num: super::IntId, mask: bool) {
+        let mut gic = self.lock();
+
+        gic.0.enable_interrupt(num, Some(0), !mask).unwrap();
+    }
+
     fn pending(&self) -> Option<IntId> {
         GicCpuInterface::get_pending_interrupt(InterruptGroup::Group1)
     }

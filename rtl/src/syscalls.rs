@@ -25,6 +25,8 @@ pub enum SyscallList {
     PortSend = 19,
     CreateVmoContig = 20,
     VmoGetPhysInfo = 21,
+    CreateIrq = 22,
+    WaitIrq = 23,
 }
 
 impl TryFrom<usize> for SyscallList {
