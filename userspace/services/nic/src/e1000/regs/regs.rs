@@ -1,6 +1,5 @@
-use super::rdesc::Rdesc;
-use super::tdesc::Tdesc;
 use super::{Control, Rctl, Status, Tctl};
+use super::{Ims, Rdesc, Tdesc};
 use crate::e1000::RxBuffer;
 use crate::e1000::TxBuffer;
 use core::ptr::NonNull;
@@ -53,7 +52,7 @@ struct E1000RegsRaw {
     pub itr: ReadWrite<u32>, // 0x00c4
     pub ics: ReadWrite<u32>, // 0x00c8
     pub _reserved_00cc: [u8; 0x04],
-    pub ims: ReadWrite<u32>, // 0x00d0
+    pub ims: ReadWrite<Ims>, // 0x00d0
     pub _reserved_00d4: [u8; 0x04],
     pub imc: ReadWrite<u32>, // 0x00d8
     pub _reserved_00dc: [u8; 0x24],
@@ -212,7 +211,7 @@ impl E1000Regs {
         field!(self.0, tipg).write(0x0060200a);
 
         // Enable RX irq
-        field!(self.0, ims).modify_mut(|x| *x |= 1 << 7);
+        field!(self.0, ims).modify_mut(|x| *x = x.set(Ims::INT_RXT0, true));
 
         // Configure link
         field!(self.0, ctrl).modify_mut(|x| *x = x.set(Control::SLU, true));

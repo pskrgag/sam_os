@@ -6,6 +6,7 @@ macro_rules! reg_mod {
 }
 
 reg_mod!(ctrl);
+reg_mod!(ims);
 reg_mod!(regs);
 reg_mod!(rctl);
 reg_mod!(tctl);

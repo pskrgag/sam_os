@@ -24,4 +24,4 @@ name = "sdhci"
 name = "nic"
 
 [[component]]
-name = "net"
+name = "netstack"

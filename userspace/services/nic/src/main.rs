@@ -8,7 +8,7 @@ use rokio::port::Port;
 use rtl::error::ErrorType;
 
 mod e1000;
-mod net;
+mod driver;
 mod server;
 
 #[rokio::main]

@@ -5,8 +5,10 @@ use rtl::error::ErrorType;
 #[derive(Clone, Copy)]
 pub struct Mac([u8; 6]);
 
-impl Mac {
-    pub fn from_raw(raw: u64) -> Result<Self, ErrorType> {
+impl TryFrom<u64> for Mac {
+    type Error = ErrorType;
+
+    fn try_from(raw: u64) -> Result<Self, ErrorType> {
         let mask = ((1 << 16) - 1) << 48;
         let mut res = [0u8; 6];
 
@@ -19,12 +21,18 @@ impl Mac {
     }
 }
 
-impl Into<u64> for Mac {
-    fn into(self) -> u64 {
+impl From<Mac> for u64 {
+    fn from(mac: Mac) -> u64 {
         let mut bytes = [0u8; 8];
 
-        bytes[0..6].copy_from_slice(&self.0);
+        bytes[0..6].copy_from_slice(&mac.0);
         u64::from_ne_bytes(bytes)
+    }
+}
+
+impl From<[u8; 6]> for Mac {
+    fn from(raw: [u8; 6]) -> Mac {
+        Mac(raw)
     }
 }
 

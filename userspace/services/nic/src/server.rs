@@ -1,5 +1,5 @@
 use super::bindings_NameServer::NameServer;
-use crate::net::driver::Nic;
+use crate::driver::Nic;
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use bindings_Nic::{Nic as NicBindings, NicRequest};

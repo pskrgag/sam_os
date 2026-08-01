@@ -1,12 +1,12 @@
 use crate::bindings_NameServer::NameServer;
-use crate::bindings_Pci::{Device, Pci, DeviceId};
-use crate::net::driver::Nic;
-use crate::net::eth::mac::Mac;
+use crate::bindings_Pci::{Device, DeviceId, Pci};
+use crate::driver::Nic;
 use alloc::vec::Vec;
 use hal::address::MemRange;
 use hal::arch::PAGE_SIZE;
 use libc::irq::Irq;
 use libc::vmm::vms::vms;
+use net::eth::mac::Mac;
 use regs::E1000Error;
 use regs::E1000Regs;
 use rokio::port::Port;
@@ -63,7 +63,7 @@ impl E1000 {
 
         let mut regs = E1000Regs::new(mmio, &tx_buffer, &rx_buffer)?;
         let mac = regs.mac()?;
-        let mac = Mac::from_raw(mac).expect("Invalid MAC? Don't think so...");
+        let mac = mac.try_into().expect("Invalid MAC? Don't think so...");
 
         println!("Mac {:?}", mac);
 

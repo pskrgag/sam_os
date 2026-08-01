@@ -1,8 +1,9 @@
 use crate::bindings_NameServer::NameServer;
+use alloc::vec::Vec;
 use bindings_Nic::Nic as NicBindings;
+use net::eth::mac::Mac;
 use rokio::port::Port;
 use rtl::error::ErrorType;
-use alloc::vec::Vec;
 
 pub struct Nic {
     nic: NicBindings,
@@ -21,6 +22,20 @@ impl Nic {
         let res = self.nic.Receive().await?;
 
         Ok(Vec::from_iter(res.data.into_iter()))
+    }
+
+    pub async fn send_packet(&self, data: &[u8]) -> Result<(), ErrorType> {
+        self.nic
+            .Send(data.try_into().map_err(|_| ErrorType::BufferTooBig)?)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn mac(&self) -> Result<Mac, ErrorType> {
+        let res = self.nic.Mac().await?;
+
+        Mac::try_from(res.mac)
     }
 }
 
