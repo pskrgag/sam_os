@@ -2,6 +2,7 @@ use super::{Command, Enviroment, COMMANDS};
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
+use fs::{dir::OpenOptions, path::Path};
 use rtl::error::ErrorType;
 
 struct Touch;
@@ -10,13 +11,16 @@ impl Touch {
     async fn run_internal<'async_trait>(
         &self,
         args: Vec<&str>,
-        env: Enviroment<'async_trait>,
+        _env: Enviroment<'async_trait>,
     ) -> Result<String, ErrorType> {
         if args.is_empty() {
             return Err(ErrorType::InvalidArgument);
         }
 
-        env.cwd.OpenFile(args[0].try_into().unwrap(), 1).await?;
+        let path = Path::new(&args[0]);
+        fs::cwd()
+            .open_file(&path, OpenOptions { create: true })
+            .await?;
         Ok(String::new())
     }
 }

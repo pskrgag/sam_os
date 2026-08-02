@@ -72,6 +72,13 @@ impl<'a> AsRef<str> for Path<'a> {
     }
 }
 
+// WTF?
+impl<'a> AsRef<Path<'a>> for Path<'a> {
+    fn as_ref(&self) -> &Path<'a> {
+        self
+    }
+}
+
 impl<'a> From<&'a str> for Path<'a> {
     fn from(value: &'a str) -> Self {
         Self { inner: value }

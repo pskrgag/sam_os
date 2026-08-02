@@ -1,6 +1,7 @@
 #![no_main]
 #![no_std]
 
+use fs::init;
 use libc::handle::Handle;
 use rokio::port::Port;
 
@@ -23,10 +24,13 @@ async fn main(root: Option<Handle>) {
         .unwrap()
         .handle;
     let serial_backend = bindings_Serial::Serial::new(unsafe { Port::new(serial) });
-    let vfs = bindings_Vfs::Vfs::new(unsafe { Port::new(vfs) });
+
+    unsafe {
+        init(vfs).await.unwrap();
+    }
 
     println!("Starting console...");
-    console::Console::new(serial_backend, vfs).serve().await;
+    console::Console::new(serial_backend).serve().await;
 }
 
 include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));

@@ -85,6 +85,12 @@ impl {name} {{
     pub fn new(port: Port) -> Self {{
         Self {{ port }}
     }}
+
+    pub fn try_clone(&self) -> Result<Self, ErrorType> {{
+        let handle = self.port.handle().clone_handle()?;
+
+        Ok(Self::new(unsafe {{ Port::new(handle) }}))
+    }}
 "#
         )
         .unwrap()

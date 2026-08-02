@@ -1,5 +1,4 @@
 use super::bindings_Serial::Serial;
-use super::bindings_Vfs::Vfs;
 use crate::commands::{commands, Enviroment};
 use crate::cwd::Cwd;
 use alloc::{string::String, vec::Vec};
@@ -7,12 +6,11 @@ use heapless::String as HLString;
 
 pub struct Console {
     backend: Serial,
-    vfs: Vfs,
 }
 
 impl Console {
-    pub fn new(backend: Serial, vfs: Vfs) -> Self {
-        Self { backend, vfs }
+    pub fn new(backend: Serial) -> Self {
+        Self { backend }
     }
 
     async fn put_str<S: AsRef<str>>(&self, s: S) {
@@ -56,7 +54,7 @@ impl Console {
     }
 
     pub async fn serve(self) {
-        let mut cwd = Cwd::root(&self.vfs).await.unwrap();
+        let mut cwd = Cwd::root().await.unwrap();
 
         loop {
             self.put_str(alloc::format!("{} > ", cwd.name())).await;

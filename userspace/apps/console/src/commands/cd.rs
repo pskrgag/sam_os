@@ -1,11 +1,9 @@
 use super::{Command, Enviroment, COMMANDS};
-use crate::bindings_Vfs::Directory;
 use crate::cwd::Cwd;
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
-use fs::path::Path;
-use rokio::port::Port;
+use fs::{dir::OpenOptions, path::Path};
 use rtl::error::ErrorType;
 
 struct Cd;
@@ -46,12 +44,14 @@ impl Cd {
         }
 
         let path = Self::updated_path(env.cwd.name(), args[0]);
-        let current = &**env.cwd;
-        let dir = current
-            .OpenDir(args[0].try_into().map_err(|_| ErrorType::BufferTooBig)?, 0)
+        let requested = Path::new(&args[0]);
+        let dir = fs::cwd()
+            .open_dir(&requested, OpenOptions { create: false })
             .await?;
 
-        *env.cwd = Cwd::new(Directory::new(unsafe { Port::new(dir.handle) }), path);
+        fs::chdir(dir);
+
+        *env.cwd = Cwd::new(path);
         Ok(String::new())
     }
 }

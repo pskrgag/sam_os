@@ -23,7 +23,7 @@ impl Future for RecvFuture<'_> {
         let cur = self.get_mut();
         let msg = unsafe { &mut *(cur.msg as *mut IpcMessage) };
 
-        let res = match cur.port.receive(msg) {
+        match cur.port.receive(msg) {
             Ok(received) => Poll::Ready(Ok(received)),
             Err(ErrorType::WouldBlock) => {
                 let waiter = Waiter::new(
@@ -36,9 +36,7 @@ impl Future for RecvFuture<'_> {
                 Poll::Pending
             }
             Err(err) => Poll::Ready(Err(err)),
-        };
-
-        res
+        }
     }
 }
 

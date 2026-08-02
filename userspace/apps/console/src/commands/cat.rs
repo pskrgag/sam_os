@@ -1,14 +1,9 @@
 use super::{Command, Enviroment, COMMANDS};
-use crate::bindings_Vfs::File;
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
-use hal::address::VirtualAddress;
-use libc::factory::factory;
-use libc::vmm::vms::vms;
-use rokio::port::Port;
+use fs::{dir::OpenOptions, path::Path};
 use rtl::error::ErrorType;
-use rtl::vmm::MappingType;
 
 struct Cat;
 
@@ -16,32 +11,19 @@ impl Cat {
     async fn run_internal<'async_trait>(
         &self,
         args: Vec<&str>,
-        env: Enviroment<'async_trait>,
+        _env: Enviroment<'async_trait>,
     ) -> Result<String, ErrorType> {
         if args.is_empty() {
             return Err(ErrorType::InvalidArgument);
         }
 
-        let file = env.cwd.OpenFile(args[0].try_into().unwrap(), 0).await?;
-        let file = File::new(unsafe { Port::new(file.handle) });
-        let vmo = factory().create_vm_object(1 << 12, MappingType::Data)?;
+        let path = Path::new(&args[0]);
+        let file = fs::cwd()
+            .open_file(&path, OpenOptions { create: false })
+            .await?;
+        let data = file.read_to_end().await?;
 
-        let mut resulting_data = String::new();
-        let mut offset = 0;
-
-        loop {
-            let read = file.Read(offset, 1 << 12, vmo.handle()).await?.read;
-            let buf = vms().map_vm_object(&vmo, None, MappingType::Data)?;
-            let buf = unsafe { buf.as_slice(read) };
-
-            resulting_data.push_str(core::str::from_utf8(buf).unwrap());
-            offset += read;
-            if read < 1 << 12 {
-                break;
-            }
-        }
-
-        Ok(resulting_data)
+        Ok(String::from(core::str::from_utf8(&data).unwrap()))
     }
 }
 
