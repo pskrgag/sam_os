@@ -215,7 +215,7 @@ impl PciEcam {
     pub fn allocate_irq(&mut self, address: PciAddress) -> Result<Irq, ErrorType> {
         let header = PciHeader::new(address);
 
-        let Some(mut endpoint) = EndpointHeader::from_header(header, &*self) else {
+        let Some(endpoint) = EndpointHeader::from_header(header, &*self) else {
             return Err(ErrorType::InvalidArgument);
         };
 

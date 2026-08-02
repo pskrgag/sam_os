@@ -53,6 +53,7 @@ pub fn register_handler<F: Fn(IntId) + Send + 'static>(
     Ok(())
 }
 
+// TODO: better to return a struct from register_handler and make these function part of this struct
 pub fn mask(irq: IntId) {
     CONTROLLER.get().unwrap().mask_irq(irq, true);
 }

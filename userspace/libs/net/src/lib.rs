@@ -4,3 +4,4 @@
 extern crate alloc;
 
 pub mod eth;
+pub mod ip;

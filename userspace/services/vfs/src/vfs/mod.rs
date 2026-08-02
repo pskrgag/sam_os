@@ -1,6 +1,7 @@
 use crate::bindings_BlkDev::BlkDev;
 use crate::fs::Filesystem;
 use crate::vfs::inode::DirectoryOperations;
+use crate::vfs::inode::FileOperations;
 use alloc::sync::Arc;
 use dcache::Dentry;
 use dcache::CreateType;
@@ -20,6 +21,7 @@ pub struct Vfs {
 static VFS: Once<Arc<Vfs>> = Once::new();
 
 pub type Directory = Arc<dyn DirectoryOperations>;
+pub type File = Arc<dyn FileOperations>;
 
 impl Vfs {
     /// Creates new VFS with specified root device

@@ -24,7 +24,6 @@ pub struct E1000 {
     regs: E1000Regs,
     tx_buffer: TxBuffer,
     rx_buffer: RxBuffer,
-    irq: Irq,
 }
 
 impl E1000 {
@@ -73,7 +72,6 @@ impl E1000 {
             mac,
             rx_buffer,
             tx_buffer,
-            irq,
         })
     }
 

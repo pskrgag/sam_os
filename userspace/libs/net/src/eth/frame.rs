@@ -93,14 +93,14 @@ impl<'a> TryFrom<&'a [u8]> for Frame<'a> {
     fn try_from(frame: &'a [u8]) -> Result<Self, Self::Error> {
         let (dst, remaining): (Mac, _) = <[u8; 6]>::read_from_prefix(frame)
             .map(|x| (x.0.into(), x.1))
-            .map_err(|_| ErrorType::InvalidArgument)?;
+            .map_err(|_| ErrorType::BufferTooSmall)?;
 
         let (src, remaining): (Mac, _) = <[u8; 6]>::read_from_prefix(remaining)
             .map(|x| (x.0.into(), x.1))
-            .map_err(|_| ErrorType::InvalidArgument)?;
+            .map_err(|_| ErrorType::BufferTooSmall)?;
 
         let (tp, remaining) = <u16>::read_from_prefix(remaining)
-            .map_err(|_| ErrorType::InvalidArgument)
+            .map_err(|_| ErrorType::BufferTooSmall)
             .and_then(|(raw, remaining)| {
                 FrameType::try_from(u16::from_be(raw)).map(|tp| (tp, remaining))
             })?;

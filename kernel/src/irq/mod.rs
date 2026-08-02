@@ -40,7 +40,6 @@ impl IrqObject {
         })
         .map_err(|_| ErrorType::NoMemory)?;
 
-        info!("Allocating {:?}\n", num);
         let clone = res.clone();
 
         register_handler(

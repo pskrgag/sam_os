@@ -5,6 +5,7 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 use rtl::error::ErrorType;
 use rtl::locking::spinlock::Spinlock;
+use super::{Directory, File};
 
 #[async_trait::async_trait]
 pub trait DirectoryOperations: Send + Sync {
@@ -32,9 +33,9 @@ pub trait FileOperations: Send + Sync {
 
 pub enum InodeKind {
     /// Directory
-    Directory(Arc<dyn DirectoryOperations>),
+    Directory(Directory),
     /// Regular file
-    File(Arc<dyn FileOperations>),
+    File(File),
 }
 
 pub struct Inode {
@@ -52,7 +53,7 @@ impl Inode {
         })
     }
 
-    pub fn as_dir(&self) -> Option<&Arc<dyn DirectoryOperations>> {
+    pub fn as_dir(&self) -> Option<&Directory> {
         match &self.kind {
             InodeKind::Directory(d) => Some(d),
             _ => None,

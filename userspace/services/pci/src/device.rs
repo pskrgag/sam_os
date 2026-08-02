@@ -1,4 +1,4 @@
-use super::ecam::{DeviceInfo, PciEcam, PciIrqPin};
+use super::ecam::{DeviceInfo, PciEcam};
 use crate::bindings_Pci::{Device, DeviceRequest, PciMapping};
 use alloc::sync::Arc;
 use core::future::Future;
@@ -53,7 +53,7 @@ impl PciDevice {
 
                             responder.reply(mappings)?;
                         }
-                        DeviceRequest::AllocateIrq { responder, value } => {
+                        DeviceRequest::AllocateIrq { responder, .. } => {
                             let device = device.lock();
                             let irq = device.bus.lock().allocate_irq(device.address)?;
 
