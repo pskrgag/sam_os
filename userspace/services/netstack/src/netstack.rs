@@ -1,11 +1,12 @@
 use super::nic::Nic;
 use crate::arp::ArpCache;
-use alloc::vec::Vec;
 use net::eth::{
     arp::{Arp, ArpOperation},
     frame::{Frame, FrameType},
+    ipv4::{IPv4, IPv4Out, Protocol},
     mac::Mac,
 };
+use net::ip::icmp::Icmp;
 use net::ip::v4::Ipv4Config;
 use rtl::error::ErrorType;
 
@@ -28,7 +29,7 @@ impl Interface {
         })
     }
 
-    pub fn handle_arp(&mut self, frame: Frame) -> Result<Option<Vec<u8>>, ErrorType> {
+    pub fn handle_arp<'a>(&mut self, frame: &'a Frame) -> Result<Option<Arp>, ErrorType> {
         let arp = frame.payload::<Arp>()?;
 
         self.arp_cache.insert(arp.sender_ip(), arp.sender_mac());
@@ -42,20 +43,56 @@ impl Interface {
                 arp.sender_ip(),
             );
 
-            Ok(Some(Frame::serialize(frame.source(), self.mac, arp_reply)))
+            Ok(Some(arp_reply))
         } else {
             Ok(None)
         }
+    }
+
+    pub fn handle_icmp<'a>(&mut self, packet: &IPv4<'a>) -> Result<Option<Icmp<'a>>, ErrorType> {
+        let icmp = packet.payload::<Icmp>()?;
+
+        match icmp {
+            Icmp::EchoRequest { id, seq, payload } => {
+                Ok(Some(Icmp::EchoReply { id, seq, payload }))
+            }
+            e => todo!("{e:?}"),
+        }
+    }
+
+    pub fn handle_ipv4<'a>(
+        &mut self,
+        frame: &'a Frame,
+    ) -> Result<Option<IPv4Out<Icmp<'a>>>, ErrorType> {
+        let ipv4 = frame.payload::<IPv4>()?;
+        let my_ip = self.config.address;
+
+        if ipv4.destination() != my_ip {
+            return Ok(None);
+        }
+
+        let reply = match ipv4.protocol() {
+            Protocol::ICMP => self.handle_icmp(&ipv4),
+        }?;
+
+        Ok(reply.map(|payload| IPv4Out::new(ipv4.source(), my_ip, payload)))
     }
 
     pub async fn serve(mut self) -> Result<(), ErrorType> {
         loop {
             let packet = self.nic.read_packet().await?;
             let frame: Frame = packet.as_slice().try_into().unwrap();
+            let source = frame.source();
+            let mac = self.mac;
 
             let reply = match frame.frame_type() {
-                FrameType::ARP => self.handle_arp(frame)?,
-                _ => todo!(),
+                FrameType::ARP => self
+                    .handle_arp(&frame)?
+                    .map(|reply| Frame::serialize(source, mac, reply)),
+                FrameType::IPv4 => self
+                    .handle_ipv4(&frame)?
+                    .map(|reply| Frame::serialize(source, mac, reply)),
+                e => todo!("{e:?}"),
             };
 
             if let Some(reply) = reply {

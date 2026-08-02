@@ -4,9 +4,11 @@ use alloc::vec::Vec;
 use rtl::error::ErrorType;
 use zerocopy::FromBytes;
 
-pub trait EthFrame<'a>: TryFrom<&'a [u8], Error = ErrorType> {
+pub trait EthFrameType {
     const TYPE: FrameType;
+}
 
+pub trait EthFrame: EthFrameType {
     fn serialize(&self, output: &mut [u8]) -> Result<usize, ErrorType>;
     fn serialize_len(&self) -> usize;
 }
@@ -45,7 +47,7 @@ pub struct Frame<'a> {
 }
 
 impl Frame<'_> {
-    pub fn serialize<'a, T: EthFrame<'a>>(dst: Mac, src: Mac, payload: T) -> Vec<u8> {
+    pub fn serialize<T: EthFrame>(dst: Mac, src: Mac, payload: T) -> Vec<u8> {
         let mut data = vec![0; 6 + 6 + 2 + payload.serialize_len()];
 
         let dst = u64::from(dst).to_ne_bytes();
@@ -78,7 +80,10 @@ impl Frame<'_> {
         self.payload
     }
 
-    pub fn payload<'a, T: EthFrame<'a>>(&'a self) -> Result<T, ErrorType> {
+    pub fn payload<'a, T>(&'a self) -> Result<T, ErrorType>
+    where
+        T: EthFrameType + TryFrom<&'a [u8], Error = ErrorType>,
+    {
         if self.tp == T::TYPE {
             T::try_from(self.raw_payload())
         } else {

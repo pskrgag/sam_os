@@ -1,4 +1,4 @@
-use super::frame::{EthFrame, FrameType};
+use super::frame::{EthFrame, EthFrameType, FrameType};
 use super::mac::Mac;
 use crate::ip::v4::IPv4;
 use rtl::error::ErrorType;
@@ -148,9 +148,11 @@ impl<'a> TryFrom<&'a [u8]> for Arp {
     }
 }
 
-impl EthFrame<'_> for Arp {
+impl EthFrameType for Arp {
     const TYPE: FrameType = FrameType::ARP;
+}
 
+impl EthFrame for Arp {
     fn serialize(&self, output: &mut [u8]) -> Result<usize, ErrorType> {
         if output.len() < ARP_PACKET_SIZE {
             return Err(ErrorType::BufferTooSmall);

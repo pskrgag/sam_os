@@ -3,5 +3,6 @@
 
 extern crate alloc;
 
+mod crc;
 pub mod eth;
 pub mod ip;
