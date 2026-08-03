@@ -39,5 +39,4 @@ pub fn chdir(dir: dir::Directory) {
     *CURRENT_DIR.lock() = Some(Arc::new(dir))
 }
 
-include!(concat!(env!("OUT_DIR"), "/nameserver.rs"));
 include!(concat!(env!("OUT_DIR"), "/vfs.rs"));

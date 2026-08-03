@@ -28,8 +28,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                 let mut receive_buffer: Vec<u8> = Vec::new();
                 let mut in_msg = IpcMessage::new();
 
-                // TODO: fix it
-                receive_buffer.resize(1000, 0);
+                receive_buffer.resize(Tx{iface_name}::POSTCARD_MAX_SIZE, 0);
 
                 in_msg.set_in_arena(receive_buffer.as_mut_slice());
                 let size = self.port.receive(&mut in_msg).await?;

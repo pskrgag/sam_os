@@ -28,7 +28,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
         let mut _message = IpcMessage::new();
         let data = Tx{iface_name}::{name}({wire_name_tx} {{ {} }});
         let data_vec = to_allocvec(&data).unwrap();
-        let mut receive_buffer = [0u8; core::mem::size_of::<RxMessage{iface_name}>()];
+        let mut receive_buffer = alloc::vec![0; RxMessage{iface_name}::POSTCARD_MAX_SIZE];
 
         _message.set_out_arena(data_vec.as_slice());
         _message.set_in_arena(receive_buffer.as_mut_slice());

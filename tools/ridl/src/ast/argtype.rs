@@ -27,12 +27,14 @@ pub enum BuiltinTypes {
     Char,
     Handle,
     USize,
+    Bool,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum Type {
     Builtin(BuiltinTypes),
     Sequence { inner: Box<Type>, count: usize },
+    Array { inner: Box<Type>, count: usize },
     Struct(Struct),
     Enum(Enum),
 }
@@ -51,6 +53,7 @@ lazy_static::lazy_static! {
             ("Char", BuiltinTypes::Char),
             ("Handle", BuiltinTypes::Handle),
             ("USize", BuiltinTypes::USize),
+            ("Bool", BuiltinTypes::Bool),
             ("IFace", BuiltinTypes::USize),
         ]);
 }
@@ -82,10 +85,12 @@ impl Type {
                     BuiltinTypes::USize => "usize",
                     BuiltinTypes::Char => "u8",
                     BuiltinTypes::Handle => "Handle",
+                    BuiltinTypes::Bool => "bool",
                 };
 
                 s.to_string()
             }
+            Self::Array { inner, count } => format!("[{}; {count}]", inner.as_rust()),
             Self::Sequence { inner, count } => {
                 if **inner != Self::Builtin(BuiltinTypes::Char) {
                     format!("HLVec<{inner}, {count}>", inner = inner.as_rust())
@@ -103,6 +108,7 @@ impl Type {
             Self::Builtin(BuiltinTypes::Handle) => "usize".to_string(),
             Self::Struct(s) => format!("{}Wire", s.name.clone()),
             Self::Enum(s) => s.inner.as_wire(),
+            Self::Array { inner, count } => format!("[{}; {count}]", inner.as_wire()),
             Self::Sequence { inner, count } => {
                 if **inner != Self::Builtin(BuiltinTypes::Char) {
                     format!("HLVec<{inner}, {count}>", inner = inner.as_wire())

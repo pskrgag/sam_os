@@ -91,10 +91,10 @@ impl<'a> Parser<'a> {
                     .get(&name)
                     .or(Type::new(name.clone()).as_ref()))
                 .cloned()
-        } else if self
-            .lookahead_token_type(TokenType::TokenId(IdType::Sequence))
-            .is_some()
-        {
+        } else if let Some(seq) = self.lookahead_token_pred(|x| {
+            x.get_type() == TokenType::TokenId(IdType::Sequence)
+                || x.get_type() == TokenType::TokenId(IdType::Array)
+        }) {
             self.consume_token_type(TokenType::Less)?;
 
             let inner = Box::new(self.parse_type()?);
@@ -109,7 +109,11 @@ impl<'a> Parser<'a> {
             .unwrap();
             self.consume_token_type(TokenType::Greater)?;
 
-            Some(Type::Sequence { inner, count })
+            if seq.get_type() == TokenType::TokenId(IdType::Sequence) {
+                Some(Type::Sequence { inner, count })
+            } else {
+                Some(Type::Array { inner, count })
+            }
         } else {
             println!("Failed to parse type!");
             None

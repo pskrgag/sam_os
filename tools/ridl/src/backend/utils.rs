@@ -53,6 +53,7 @@ pub fn includes<W: Write>(buf: &mut W) {
     writeln!(buf, "use rtl::error::ErrorType;").unwrap();
     writeln!(buf, "use serde::{{Deserialize, Serialize}};").unwrap();
     writeln!(buf, "use alloc::boxed::Box;").unwrap();
+    writeln!(buf, "use postcard::experimental::max_size::MaxSize;").unwrap();
     writeln!(
         buf,
         "use postcard::{{to_vec, to_allocvec, from_bytes, to_slice}};"
@@ -83,7 +84,7 @@ fn produce_wire_type<W: Write>(buf: &mut W, s: &Struct, name: &str, tx: bool) {
 
     writeln!(
         buf,
-        "#[derive(Serialize, Deserialize, Debug, Clone)]\nstruct {name} {{",
+        "#[derive(Serialize, Deserialize, Debug, Clone, MaxSize)]\nstruct {name} {{",
     )
     .unwrap();
 
@@ -205,7 +206,7 @@ fn produce_final_enum<W: Write>(buf: &mut W, data: &Vec<Message>, iface_name: &s
 
     writeln!(
         buf,
-        "#[derive(Serialize, Deserialize, Debug, Clone)]\nenum {name}{iface_name} {{"
+        "#[derive(Serialize, Deserialize, Debug, Clone, MaxSize)]\nenum {name}{iface_name} {{"
     )
     .unwrap();
 
@@ -460,7 +461,7 @@ pub fn produce_enums<W: Write>(buf: &mut W, messages: &Vec<Message>, name: &str)
     writeln!(
         buf,
         r#"
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, MaxSize)]
 enum RxMessage{name} {{
     Ok(Rx{name}),
     Err(usize),
@@ -508,7 +509,7 @@ pub fn produce_struct<W: Write>(buf: &mut W, s: &Struct) {
     writeln!(
         buf,
         r#"
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, MaxSize)]
 struct {name}Wire {{
     {}
 }}

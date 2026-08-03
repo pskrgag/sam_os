@@ -40,7 +40,7 @@ impl OpenDirectory {
                                 .dentry
                                 .lookup_or_create(
                                     &*value.name,
-                                    (value.create == 1).then_some(CreateType::File),
+                                    value.create.then_some(CreateType::File),
                                 )
                                 .await?;
 
@@ -59,7 +59,7 @@ impl OpenDirectory {
                                 .dentry
                                 .lookup_or_create(
                                     &*value.name,
-                                    (value.create == 1).then_some(CreateType::Directory),
+                                    value.create.then_some(CreateType::Directory),
                                 )
                                 .await?;
 
