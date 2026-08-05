@@ -1,6 +1,6 @@
 use super::file::FatFile;
 use super::sb::{CallbackRes, Cluster, SuperBlockRef};
-use crate::bindings_Vfs::{DirEntry, DirEntryFlagsFlag};
+use crate::bindings_Vfs::{DirEntry, DirEntryKind};
 use crate::vfs::inode::{DirectoryOperations, Inode, InodeKind};
 use alloc::boxed::Box;
 use alloc::string::String as AllocString;
@@ -353,9 +353,9 @@ impl DirectoryOperations for Fat32Dir {
                 res.push(DirEntry {
                     name: String::try_from(name.as_str()).unwrap(),
                     flags: if entry.attr == ATTR_DIRECTORY {
-                        DirEntryFlagsFlag::Directory
+                        DirEntryKind::Directory
                     } else {
-                        DirEntryFlagsFlag::File
+                        DirEntryKind::File
                     }
                     .into(),
                 });

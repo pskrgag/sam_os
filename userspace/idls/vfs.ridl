@@ -7,14 +7,14 @@ interface Vfs {
 	Root(out Handle handle);
 }
 
-enum DirEntryFlags : U8 {
+enum DirEntryKind : U8 {
 	File,
 	Directory,
 }
 
 struct DirEntry {
 	Name name;
-	DirEntryFlags flags;
+	DirEntryKind flags;
 }
 
 interface Directory {

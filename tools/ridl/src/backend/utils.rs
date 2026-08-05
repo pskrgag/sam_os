@@ -232,18 +232,12 @@ fn type_wire_to_public<S: AsRef<str>>(tp: &Type, var: S) -> String {
         }
         Type::Builtin(BuiltinTypes::Handle) => format!("Handle::new(_message.handles()[{name}])"),
         Type::Struct(_) => format!("{name}.try_to_public(_message).unwrap()"),
-        Type::Enum(s) => {
-            format!("{enum_name} {{ mask: {name} }}", enum_name = s.name)
-        }
+        Type::Enum(_) => format!("unsafe {{ core::mem::transmute({name}) }}"),
         _ => name.to_string(),
     }
 }
 
-pub(crate) fn type_public_to_wire<S: AsRef<str>>(
-    tp: &Type,
-    var: S,
-    message: &str,
-) -> String {
+pub(crate) fn type_public_to_wire<S: AsRef<str>>(tp: &Type, var: S, message: &str) -> String {
     let name = var.as_ref();
 
     match tp {
@@ -263,7 +257,7 @@ pub(crate) fn type_public_to_wire<S: AsRef<str>>(
         ),
         Type::Struct(_) => format!("{name}.try_to_wire({message}).unwrap()"),
         Type::Enum(_) => {
-            format!("*{name}",)
+            format!("{name} as _",)
         },
         _ => name.to_string(),
     }
@@ -309,11 +303,8 @@ impl PublicToWire<{wire_name}> for {name} {{
         s.data
             .iter()
             .map(|x| {
-                let expr = type_public_to_wire(
-                    &x.1,
-                    format!("self.{name}", name = x.0),
-                    "_message",
-                );
+                let expr =
+                    type_public_to_wire(&x.1, format!("self.{name}", name = x.0), "_message");
                 format!("{name}: {expr}", name = x.0)
             })
             .collect::<Vec<_>>()
@@ -540,11 +531,11 @@ pub fn produce_enum<W: Write>(buf: &mut W, s: &Enum) {
     writeln!(
         buf,
         r#"
-bitmask! {{
-    pub mask {name}: {inner} where flags {name}Flag {{
+    #[repr({inner})]
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    pub enum {name} {{
         {flags}
     }}
-}}
 "#,
         name = s.name,
         inner = s.inner.as_rust(),
@@ -552,7 +543,7 @@ bitmask! {{
             .entries
             .iter()
             .enumerate()
-            .map(|(i, e)| { format!("{e} = {},", 1 << i) })
+            .map(|(i, e)| { format!("{e} = {},", i) })
             .collect::<Vec<_>>()
             .join("\n"),
     )

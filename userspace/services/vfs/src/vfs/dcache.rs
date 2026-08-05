@@ -1,5 +1,5 @@
 use super::inode::Inode;
-use crate::bindings_Vfs::{DirEntry, DirEntryFlagsFlag};
+use crate::bindings_Vfs::{DirEntry, DirEntryKind};
 use alloc::collections::btree_map::Entry;
 use alloc::collections::BTreeMap;
 use alloc::string::{String, ToString};
@@ -35,9 +35,9 @@ impl Cache {
             res.push(DirEntry {
                 name: name.as_str().try_into().unwrap(),
                 flags: if dentry.is_dir() {
-                    DirEntryFlagsFlag::Directory.into()
+                    DirEntryKind::Directory
                 } else {
-                    DirEntryFlagsFlag::File.into()
+                    DirEntryKind::File
                 },
             });
         }
@@ -198,7 +198,7 @@ impl Dentry {
         if self.parent().is_some() {
             res.push(DirEntry {
                 name: "..".try_into().unwrap(),
-                flags: DirEntryFlagsFlag::Directory.into(),
+                flags: DirEntryKind::Directory,
             });
         }
 

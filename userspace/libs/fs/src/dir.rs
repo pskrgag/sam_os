@@ -2,9 +2,7 @@
 
 use super::file::File;
 use super::path::Path;
-use crate::bindings_Vfs::{
-    DirEntryFlagsFlag, Directory as BindingDirectory,
-};
+use crate::bindings_Vfs::{DirEntryKind, Directory as BindingDirectory};
 use alloc::{string::String, vec::Vec};
 use libc::handle::Handle;
 use rokio::port::Port;
@@ -49,7 +47,7 @@ impl Directory {
             .into_iter()
             .map(|entry| DirEntry {
                 name: String::from(entry.name.as_str()),
-                is_directory: entry.flags == DirEntryFlagsFlag::Directory.into(),
+                is_directory: entry.flags == DirEntryKind::Directory,
             })
             .collect())
     }
