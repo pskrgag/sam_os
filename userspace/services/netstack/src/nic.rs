@@ -1,7 +1,7 @@
 use crate::bindings_NameServer::NameServer;
 use alloc::vec::Vec;
 use bindings_Nic::Nic as NicBindings;
-use net::eth::mac::Mac;
+use net::ethernet::Mac;
 use rokio::port::Port;
 use rtl::error::ErrorType;
 

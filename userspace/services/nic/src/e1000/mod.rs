@@ -6,7 +6,7 @@ use hal::address::MemRange;
 use hal::arch::PAGE_SIZE;
 use libc::irq::Irq;
 use libc::vmm::vms::vms;
-use net::eth::mac::Mac;
+use net::ethernet::Mac;
 use regs::E1000Error;
 use regs::E1000Regs;
 use rokio::port::Port;

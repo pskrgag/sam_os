@@ -1,10 +1,22 @@
 use core::fmt::{self, Debug, Formatter};
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
-/// IPv4 address
-#[derive(Copy, Clone, Ord, Eq, PartialEq, PartialOrd)]
+#[derive(
+    Copy,
+    Clone,
+    Ord,
+    Eq,
+    PartialEq,
+    PartialOrd,
+    FromBytes,
+    Immutable,
+    KnownLayout,
+    Unaligned,
+    IntoBytes,
+)]
+#[repr(C)]
 pub struct IPv4([u8; 4]);
 
-/// IPv4 config
 pub struct Ipv4Config {
     pub address: IPv4,
     pub prefix_len: u8,
@@ -15,11 +27,9 @@ impl IPv4 {
     pub fn new(first: u8, second: u8, third: u8, forth: u8) -> Self {
         Self([first, second, third, forth])
     }
-
     pub fn as_slice(&self) -> &[u8] {
         &self.0
     }
-
     pub fn is_anycast(&self) -> bool {
         self.0 == [0xff, 0xff, 0xff, 0xff]
     }

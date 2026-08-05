@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
+use net::ethernet::Mac;
 use rtl::error::ErrorType;
-use net::eth::mac::Mac;
 
 pub trait Nic: Send {
     // Receives one frame to the NIC

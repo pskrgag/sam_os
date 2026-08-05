@@ -1,7 +1,15 @@
 /// ARP handler
+use super::netstack::{Interface, PacketDecision};
+use super::packet::Packet;
 use alloc::collections::BTreeMap;
-use net::eth::mac::Mac;
-use net::ip::v4::IPv4;
+use alloc::sync::Arc;
+use net::ethernet::{
+    Mac,
+    arp::{ArpOperation, ArpPayload},
+};
+use net::ipv4::IPv4;
+use rtl::error::ErrorType;
+use zerocopy::FromBytes;
 
 #[derive(Default)]
 pub struct ArpCache {
@@ -11,5 +19,38 @@ pub struct ArpCache {
 impl ArpCache {
     pub fn insert(&mut self, ip: IPv4, mac: Mac) {
         self.cache.insert(ip, mac);
+    }
+
+    pub fn handle(
+        &mut self,
+        iface: Arc<Interface>,
+        mut packet: Packet,
+    ) -> Result<PacketDecision, ErrorType> {
+        let header = packet.parse_network_header_mut::<net::ethernet::arp::ArpHeader>()?;
+
+        match header.operation()? {
+            ArpOperation::Request => {}
+            ArpOperation::Reply => todo!(),
+        }
+
+        header.set_operation(ArpOperation::Reply);
+
+        let arp = ArpPayload::mut_from_prefix(packet.payload_mut())
+            .map_err(|_| ErrorType::BufferTooSmall)?
+            .0;
+
+        self.cache.insert(arp.sender_ip, arp.sender_mac);
+
+        if arp.target_ip.is_anycast() || arp.target_ip == iface.ip_address() {
+            arp.target_ip = arp.sender_ip;
+            arp.target_mac = arp.sender_mac;
+
+            arp.sender_ip = iface.ip_address();
+            arp.sender_mac = iface.mac_address();
+
+            Ok(PacketDecision::Reply(packet))
+        } else {
+            Ok(PacketDecision::Drop)
+        }
     }
 }

@@ -1,20 +1,23 @@
 use super::nic::Nic;
+use super::packet::Packet;
 use crate::arp::ArpCache;
-use net::eth::{
-    arp::{Arp, ArpOperation},
-    frame::{Frame, FrameType},
-    ipv4::{IPv4, IPv4Out, Protocol},
-    mac::Mac,
-};
-use net::ip::icmp::Icmp;
-use net::ip::v4::Ipv4Config;
+use alloc::sync::Arc;
+use net::ethernet::{EthHeader, FrameType, Mac};
+use net::ipv4::{IPv4, Ipv4Config};
 use rtl::error::ErrorType;
+use spin::Mutex;
 
 pub struct Interface {
     nic: Nic,
     mac: Mac,
     config: Ipv4Config,
-    arp_cache: ArpCache,
+    arp_cache: Mutex<ArpCache>,
+}
+
+#[derive(Debug)]
+pub enum PacketDecision {
+    Reply(Packet),
+    Drop,
 }
 
 impl Interface {
@@ -25,78 +28,40 @@ impl Interface {
             nic,
             mac,
             config,
-            arp_cache: ArpCache::default(),
+            arp_cache: Mutex::new(ArpCache::default()),
         })
     }
 
-    pub fn handle_arp<'a>(&mut self, frame: &'a Frame) -> Result<Option<Arp>, ErrorType> {
-        let arp = frame.payload::<Arp>()?;
-
-        self.arp_cache.insert(arp.sender_ip(), arp.sender_mac());
-
-        if arp.target_ip().is_anycast() || arp.target_ip() == self.config.address {
-            let arp_reply = Arp::new(
-                ArpOperation::Reply,
-                self.mac,
-                self.config.address,
-                arp.sender_mac(),
-                arp.sender_ip(),
-            );
-
-            Ok(Some(arp_reply))
-        } else {
-            Ok(None)
-        }
+    pub fn ip_address(&self) -> IPv4 {
+        self.config.address
     }
 
-    pub fn handle_icmp<'a>(&mut self, packet: &IPv4<'a>) -> Result<Option<Icmp<'a>>, ErrorType> {
-        let icmp = packet.payload::<Icmp>()?;
-
-        match icmp {
-            Icmp::EchoRequest { id, seq, payload } => {
-                Ok(Some(Icmp::EchoReply { id, seq, payload }))
-            }
-            e => todo!("{e:?}"),
-        }
+    pub fn mac_address(&self) -> Mac {
+        self.mac
     }
 
-    pub fn handle_ipv4<'a>(
-        &mut self,
-        frame: &'a Frame,
-    ) -> Result<Option<IPv4Out<Icmp<'a>>>, ErrorType> {
-        let ipv4 = frame.payload::<IPv4>()?;
-        let my_ip = self.config.address;
-
-        if ipv4.destination() != my_ip {
-            return Ok(None);
-        }
-
-        let reply = match ipv4.protocol() {
-            Protocol::ICMP => self.handle_icmp(&ipv4),
-        }?;
-
-        Ok(reply.map(|payload| IPv4Out::new(ipv4.source(), my_ip, payload)))
-    }
-
-    pub async fn serve(mut self) -> Result<(), ErrorType> {
+    pub async fn serve(self: Arc<Self>) -> Result<(), ErrorType> {
         loop {
             let packet = self.nic.read_packet().await?;
-            let frame: Frame = packet.as_slice().try_into().unwrap();
-            let source = frame.source();
-            let mac = self.mac;
+            let mut packet = Packet::new(packet);
+            let frame_type = packet.parse_mac_header::<EthHeader>()?.frame_type()?;
 
-            let reply = match frame.frame_type() {
-                FrameType::ARP => self
-                    .handle_arp(&frame)?
-                    .map(|reply| Frame::serialize(source, mac, reply)),
-                FrameType::IPv4 => self
-                    .handle_ipv4(&frame)?
-                    .map(|reply| Frame::serialize(source, mac, reply)),
-                e => todo!("{e:?}"),
-            };
+            let res = match frame_type {
+                FrameType::ARP => self.arp_cache.lock().handle(self.clone(), packet),
+                FrameType::IPv4 => super::inet::handle(self.clone(), packet).await,
+                FrameType::IPv6 => todo!(""),
+            }?;
 
-            if let Some(reply) = reply {
-                self.nic.send_packet(&reply).await?;
+            match res {
+                PacketDecision::Reply(mut packet) => {
+                    let header = packet.mac_header_mut::<EthHeader>();
+
+                    header.swap_macs();
+                    self.nic.send_packet(&packet.into_data()).await?
+                }
+                _ => {
+                    println!("Packet drop!");
+                }
             }
         }
     }

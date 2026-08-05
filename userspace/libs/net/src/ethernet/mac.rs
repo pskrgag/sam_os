@@ -1,8 +1,10 @@
 use core::fmt::{self, Debug, Formatter};
 use rtl::error::ErrorType;
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
-/// Mac address
-#[derive(Clone, Copy)]
+/// MAC address.
+#[derive(FromBytes, Immutable, KnownLayout, Unaligned, Copy, Clone, IntoBytes)]
+#[repr(transparent)]
 pub struct Mac([u8; 6]);
 
 impl TryFrom<u64> for Mac {
@@ -36,13 +38,18 @@ impl From<[u8; 6]> for Mac {
     }
 }
 
+impl From<Mac> for [u8; 6] {
+    fn from(mac: Mac) -> Self {
+        mac.0
+    }
+}
+
 impl Debug for Mac {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{:02x}:", self.0[0])?;
-        write!(f, "{:02x}:", self.0[1])?;
-        write!(f, "{:02x}:", self.0[2])?;
-        write!(f, "{:02x}:", self.0[3])?;
-        write!(f, "{:02x}:", self.0[4])?;
-        write!(f, "{:02x}", self.0[5])
+        write!(
+            f,
+            "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
+            self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5]
+        )
     }
 }

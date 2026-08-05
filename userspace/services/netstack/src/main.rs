@@ -1,16 +1,20 @@
 #![no_std]
 #![no_main]
+#![feature(variant_count)]
 
+use alloc::sync::Arc;
 use bindings_NameServer::NameServer;
 use libc::handle::Handle;
-use net::ip::v4::{IPv4, Ipv4Config};
+use net::ipv4::{IPv4, Ipv4Config};
 use netstack::Interface;
 use rokio::port::Port;
 use rtl::error::ErrorType;
 
 mod arp;
+mod inet;
 mod netstack;
 mod nic;
+mod packet;
 
 #[rokio::main]
 async fn main(root: Option<Handle>) -> Result<(), ErrorType> {
@@ -29,7 +33,9 @@ async fn main(root: Option<Handle>) -> Result<(), ErrorType> {
     )
     .await?;
 
-    iface.serve().await?;
+    inet::init();
+
+    Arc::new(iface).serve().await?;
     Ok(())
 }
 

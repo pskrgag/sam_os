@@ -1,0 +1,5 @@
+package NetStack;
+
+interface NetStack {
+	Find(in DeviceId id, out Sequence<PciAddress, 32> addresses);
+}

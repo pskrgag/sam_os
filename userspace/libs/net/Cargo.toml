@@ -5,4 +5,4 @@ edition = "2024"
 
 [dependencies]
 rtl = { path = "../../../rtl" }
-zerocopy = "0.8.55"
+zerocopy = { version = "0.8.55", features = ["derive"] }

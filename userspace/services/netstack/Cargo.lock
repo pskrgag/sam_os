@@ -308,7 +308,6 @@ dependencies = [
  "ridl",
  "rokio",
  "rtl",
- "safe-mmio",
  "serde",
  "spin 0.10.1",
  "zerocopy",
@@ -441,15 +440,6 @@ name = "rustversion"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
-
-[[package]]
-name = "safe-mmio"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce5e4ed477d6ebc07e01ce97b87fe319e6b62d0ab2564594db6a8c4cdc29ffd9"
-dependencies = [
- "zerocopy",
-]
 
 [[package]]
 name = "scopeguard"

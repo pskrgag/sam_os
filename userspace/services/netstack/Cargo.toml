@@ -19,7 +19,6 @@ bitmask = { git = "https://github.com/pskrgag/bitmask.git", default-features = f
 async-trait = "0.1.89"
 adt = { path = "../../../adt" }
 spin = "0.10.0"
-safe-mmio = "0.3.1"
 zerocopy = "0.8.55"
 
 [build-dependencies]

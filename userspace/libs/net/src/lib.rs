@@ -1,8 +1,7 @@
 //! Low level networking library
 #![no_std]
 
-extern crate alloc;
-
-mod crc;
-pub mod eth;
-pub mod ip;
+pub mod checksum;
+pub mod ethernet;
+pub mod header;
+pub mod ipv4;
