@@ -6,24 +6,24 @@ use alloc::sync::Arc;
 use bindings_NameServer::NameServer;
 use libc::handle::Handle;
 use net::ipv4::{IPv4, Ipv4Config};
-use netstack::Interface;
+use netdev::{Netdev, Nic};
+use netstack::NetStack;
 use rokio::port::Port;
 use rtl::error::ErrorType;
 
-mod arp;
-mod inet;
+mod netdev;
 mod netstack;
-mod nic;
 mod packet;
+mod socket;
 
 #[rokio::main]
 async fn main(root: Option<Handle>) -> Result<(), ErrorType> {
     let ns = NameServer::new(unsafe { Port::new(root.unwrap()) });
-    let nic = nic::Nic::new(&ns).await?;
+    let nic = Nic::new(&ns).await?;
 
     println!("Hello, net!");
 
-    let iface = Interface::new(
+    let netdev = Netdev::new(
         nic,
         Ipv4Config {
             address: IPv4::new(192, 168, 100, 2),
@@ -33,9 +33,13 @@ async fn main(root: Option<Handle>) -> Result<(), ErrorType> {
     )
     .await?;
 
-    inet::init();
+    let netdev = Arc::new(netdev);
+    let netstack = Arc::new(NetStack::new(netdev));
 
-    Arc::new(iface).serve().await?;
+    netstack::init();
+    rokio::executor::spawn(netstack.clone().serve());
+    netstack::serve(netstack, ns).await?;
+
     Ok(())
 }
 

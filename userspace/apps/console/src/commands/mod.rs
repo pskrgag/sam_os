@@ -4,6 +4,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 mod cat;
+mod ping;
 mod echo;
 mod help;
 mod ls;

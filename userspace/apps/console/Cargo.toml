@@ -12,6 +12,8 @@ serde = { version = "1", default-features = false  }
 serde_bytes = { version = "0.11", default-features = false }
 rokio = { path = "../../libs/rokio" }
 fs = { path = "../../libs/fs" }
+socket = { path = "../../libs/socket/" }
+net = { path = "../../libs/net/" }
 heapless = "0.7"
 bitmask = { git = "https://github.com/pskrgag/bitmask.git", default-features = false }
 linkme = "0.3.35"

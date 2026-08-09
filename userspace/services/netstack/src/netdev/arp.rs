@@ -1,6 +1,6 @@
 /// ARP handler
-use super::netstack::{Interface, PacketDecision};
-use super::packet::Packet;
+use crate::netstack::{NetStack, PacketDecision};
+use crate::packet::Packet;
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 use net::ethernet::{
@@ -23,7 +23,7 @@ impl ArpCache {
 
     pub fn handle(
         &mut self,
-        iface: Arc<Interface>,
+        netstack: Arc<NetStack>,
         mut packet: Packet,
     ) -> Result<PacketDecision, ErrorType> {
         let header = packet.parse_network_header_mut::<net::ethernet::arp::ArpHeader>()?;
@@ -41,12 +41,12 @@ impl ArpCache {
 
         self.cache.insert(arp.sender_ip, arp.sender_mac);
 
-        if arp.target_ip.is_anycast() || arp.target_ip == iface.ip_address() {
+        if arp.target_ip.is_anycast() || arp.target_ip == netstack.ip_address() {
             arp.target_ip = arp.sender_ip;
             arp.target_mac = arp.sender_mac;
 
-            arp.sender_ip = iface.ip_address();
-            arp.sender_mac = iface.mac_address();
+            arp.sender_ip = netstack.ip_address();
+            arp.sender_mac = netstack.mac_address();
 
             Ok(PacketDecision::Reply(packet))
         } else {

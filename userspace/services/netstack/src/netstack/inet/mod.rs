@@ -1,5 +1,5 @@
-use super::netstack::{Interface, PacketDecision};
-use super::packet::Packet;
+use super::{NetStack, PacketDecision};
+use crate::packet::Packet;
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use net::ipv4::{IPv4Header, Protocol};
@@ -24,12 +24,12 @@ pub(crate) fn register_proto(proto_handler: &'static dyn InetProtocol, proto: Pr
 }
 
 pub async fn handle(
-    iface: Arc<Interface>,
+    netstack: Arc<NetStack>,
     mut packet: Packet,
 ) -> Result<PacketDecision, ErrorType> {
     let ipv4 = packet.parse_network_header_mut::<IPv4Header>()?;
 
-    if ipv4.destination() != iface.ip_address() {
+    if ipv4.destination() != netstack.ip_address() {
         return Ok(PacketDecision::Drop);
     }
 

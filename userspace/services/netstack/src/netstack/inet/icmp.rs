@@ -1,7 +1,10 @@
 use super::{InetProtocol, register_proto};
-use crate::netstack::PacketDecision;
+use crate::netstack::{NetStack, PacketDecision};
 use crate::packet::Packet;
+use crate::socket::Socket;
+use crate::socket::SocketOps;
 use alloc::boxed::Box;
+use alloc::sync::Arc;
 use net::checksum::checksum;
 use net::ipv4::{
     Protocol,
@@ -39,5 +42,29 @@ impl InetProtocol for ICMP {
             }
             e => todo!("{e:?}"),
         }
+    }
+}
+
+pub struct IcmpSocket;
+
+#[async_trait::async_trait]
+impl SocketOps for IcmpSocket {
+    async fn send_to(
+        &self,
+        sock: &Arc<Socket<Self>>,
+        netstack: &Arc<NetStack>,
+        address: net::ipv4::IPv4,
+        data: &[u8],
+    ) -> Result<(), ErrorType> {
+        todo!()
+    }
+
+    async fn receive(
+        &self,
+        sock: &Arc<Socket<Self>>,
+        netstack: &Arc<NetStack>,
+        data: &mut [u8],
+    ) -> Result<(), ErrorType> {
+        todo!()
     }
 }

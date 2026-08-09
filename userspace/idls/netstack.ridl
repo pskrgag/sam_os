@@ -1,5 +1,20 @@
 package NetStack;
 
+type Data = Sequence<U8, 4096>;
+
+enum Proto : U8 {
+	ICMP,
+}
+
+struct Address {
+	U32 ipv4;
+}
+
 interface NetStack {
-	Find(in DeviceId id, out Sequence<PciAddress, 32> addresses);
+	Socket(in Proto proto, out Handle socket);
+}
+
+interface Socket {
+	SendTo(in Address address, in Data data, out USize sent);
+	Receive(in USize size, out Data data);
 }

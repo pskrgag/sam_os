@@ -19,6 +19,15 @@ pub struct IcmpHeader {
 }
 
 impl IcmpHeader {
+    pub fn new(packet_type: u8, code: u8) -> Self {
+        Self {
+            packet_type,
+            code,
+            checksum: [0; 2],
+            rest: [0; 4],
+        }
+    }
+
     pub fn packet_type(&self) -> Result<PacketType, ErrorType> {
         match self.packet_type {
             x if x == PacketType::EchoRequest as u8 => Ok(PacketType::EchoRequest),
@@ -26,20 +35,13 @@ impl IcmpHeader {
             _ => Err(ErrorType::InvalidArgument),
         }
     }
+
     pub fn set_packet_type(&mut self, tp: PacketType) {
         self.packet_type = tp as _;
     }
+
     pub fn set_checksum(&mut self, checksum: u16) {
         self.checksum = checksum.to_be_bytes();
-    }
-    pub fn code(&self) -> u8 {
-        self.code
-    }
-    pub fn echo_id(&self) -> u16 {
-        u16::from_be_bytes([self.rest[0], self.rest[1]])
-    }
-    pub fn echo_sequence(&self) -> u16 {
-        u16::from_be_bytes([self.rest[2], self.rest[3]])
     }
 }
 

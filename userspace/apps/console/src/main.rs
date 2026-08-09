@@ -1,12 +1,11 @@
 #![no_main]
 #![no_std]
 
-use fs::init;
 use libc::handle::Handle;
 use rokio::port::Port;
 
-mod console;
 mod commands;
+mod console;
 mod cwd;
 
 #[rokio::main]
@@ -23,10 +22,16 @@ async fn main(root: Option<Handle>) {
         .await
         .unwrap()
         .handle;
+    let netstack = nameserver
+        .Get("netstack".try_into().unwrap())
+        .await
+        .unwrap()
+        .handle;
     let serial_backend = bindings_Serial::Serial::new(unsafe { Port::new(serial) });
 
     unsafe {
-        init(vfs).await.unwrap();
+        fs::init(vfs).await.unwrap();
+        socket::init(netstack);
     }
 
     println!("Starting console...");
