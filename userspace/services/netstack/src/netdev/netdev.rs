@@ -1,6 +1,7 @@
 use super::nic::Nic;
+use crate::packet::Packet;
 use alloc::vec::Vec;
-use net::ethernet::Mac;
+use net::ethernet::{EthHeader, FrameType, Mac};
 use net::ipv4::{IPv4, Ipv4Config};
 use rtl::error::ErrorType;
 
@@ -29,7 +30,23 @@ impl Netdev {
         self.nic.read_packet().await
     }
 
-    pub async fn send_packet(&self, packet: &[u8]) -> Result<(), ErrorType> {
-        self.nic.send_packet(packet).await
+    pub async fn send_packet(
+        &self,
+        to: Mac,
+        protocol: FrameType,
+        mut packet: Packet,
+    ) -> Result<(), ErrorType> {
+        match packet.mac_header_mut::<EthHeader>() {
+            Some(header) => {
+                header.set_destination(to);
+                header.set_source(self.mac);
+            }
+            None => {
+                let header = EthHeader::new(to, self.mac, protocol);
+                packet.push_header(&header);
+            }
+        };
+
+        self.nic.send_packet(&packet.into_data()).await
     }
 }

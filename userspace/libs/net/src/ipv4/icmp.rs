@@ -15,7 +15,13 @@ pub struct IcmpHeader {
     packet_type: u8,
     code: u8,
     checksum: [u8; 2],
-    rest: [u8; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, FromBytes, Immutable, KnownLayout, Unaligned, IntoBytes)]
+pub struct IcmpEchoHeader {
+    identifier: [u8; 2],
+    sequence: [u8; 2],
 }
 
 impl IcmpHeader {
@@ -24,7 +30,6 @@ impl IcmpHeader {
             packet_type,
             code,
             checksum: [0; 2],
-            rest: [0; 4],
         }
     }
 
@@ -45,13 +50,35 @@ impl IcmpHeader {
     }
 }
 
-impl Header for IcmpHeader {
+impl IcmpEchoHeader {
+    pub fn new(identifier: u16, sequence: u16) -> Self {
+        Self {
+            identifier: identifier.to_be_bytes(),
+            sequence: sequence.to_be_bytes(),
+        }
+    }
+}
+
+impl Header for IcmpEchoHeader {
     type Error = ErrorType;
+
     fn header_len(data: &[u8]) -> Result<usize, Self::Error> {
         Self::ref_from_prefix(data).map_err(|_| ErrorType::BufferTooSmall)?;
+
+        Ok(Self::fixed_len())
+    }
+}
+
+impl Header for IcmpHeader {
+    type Error = ErrorType;
+
+    fn header_len(data: &[u8]) -> Result<usize, Self::Error> {
+        Self::ref_from_prefix(data).map_err(|_| ErrorType::BufferTooSmall)?;
+
         if checksum(data) != 0 {
             return Err(ErrorType::InvalidArgument);
         }
+
         Ok(Self::fixed_len())
     }
 }

@@ -51,7 +51,7 @@ impl FatFileInner {
         let mut size = size;
 
         for cl in first_cluster_idx..=last_cluster_idx.min(self.allocated_clusters.len() - 1) {
-            let mut cluster = alloc::vec![0; cluster_size];
+            let mut cluster = vec![0; cluster_size];
             let cluster_range_size = (cluster_size - cluster_offset).min(size);
             let cl = self.allocated_clusters[cl];
 

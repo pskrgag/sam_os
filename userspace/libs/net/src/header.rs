@@ -15,14 +15,6 @@ pub trait Header: FromBytes + Immutable + KnownLayout + Unaligned + Sized + Into
             .map_err(|_| ErrorType::BufferTooSmall.into())
     }
 
-    fn parse_mut(data: &mut [u8]) -> Result<&mut Self, Self::Error> {
-        Self::header_len(data)?;
-
-        Self::mut_from_prefix(data)
-            .map(|(header, _)| header)
-            .map_err(|_| ErrorType::BufferTooSmall.into())
-    }
-
     fn fixed_len() -> usize {
         size_of::<Self>()
     }

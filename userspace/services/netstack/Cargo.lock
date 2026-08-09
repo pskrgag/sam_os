@@ -304,12 +304,20 @@ dependencies = [
  "heapless 0.7.17",
  "libc 0.1.0",
  "net",
+ "netstack-types",
  "postcard",
  "ridl",
  "rokio",
  "rtl",
  "serde",
  "spin 0.10.1",
+ "zerocopy",
+]
+
+[[package]]
+name = "netstack-types"
+version = "0.1.0"
+dependencies = [
  "zerocopy",
 ]
 

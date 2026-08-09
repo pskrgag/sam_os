@@ -45,12 +45,15 @@ impl ArpHeader {
     pub fn hardware_type(&self) -> Result<ArpHardware, ErrorType> {
         u16::from_be_bytes(self.hardware_type).try_into()
     }
+
     pub fn protocol_type(&self) -> Result<ArpProtocol, ErrorType> {
         u16::from_be_bytes(self.protocol_type).try_into()
     }
+
     pub fn set_operation(&mut self, op: ArpOperation) {
         self.operation = (op as u16).to_be_bytes();
     }
+
     pub fn operation(&self) -> Result<ArpOperation, ErrorType> {
         match u16::from_be_bytes(self.operation) {
             1 => Ok(ArpOperation::Request),
@@ -58,9 +61,11 @@ impl ArpHeader {
             _ => Err(ErrorType::InvalidArgument),
         }
     }
+
     pub fn hardware_address_len(&self) -> usize {
         self.hw_address_length as usize
     }
+
     pub fn protocol_address_len(&self) -> usize {
         self.protocol_length as usize
     }
@@ -68,6 +73,7 @@ impl ArpHeader {
 
 impl TryFrom<u16> for ArpHardware {
     type Error = ErrorType;
+
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value {
             _ if value == Self::Ethernet as u16 => Ok(Self::Ethernet),
@@ -78,6 +84,7 @@ impl TryFrom<u16> for ArpHardware {
 
 impl TryFrom<u16> for ArpProtocol {
     type Error = ErrorType;
+
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value {
             _ if value == Self::IPv4 as u16 => Ok(Self::IPv4),
@@ -88,17 +95,22 @@ impl TryFrom<u16> for ArpProtocol {
 
 impl Header for ArpHeader {
     type Error = ErrorType;
+
     fn header_len(data: &[u8]) -> Result<usize, Self::Error> {
         let header = Self::ref_from_prefix(data)
             .map(|(header, _)| header)
             .map_err(|_| ErrorType::BufferTooSmall)?;
+
         header.hardware_type()?;
         header.protocol_type()?;
         header.operation()?;
+
         let addresses_len = 2 * (header.hardware_address_len() + header.protocol_address_len());
+
         if data.len() < Self::fixed_len() + addresses_len {
             return Err(ErrorType::BufferTooSmall);
         }
+
         Ok(Self::fixed_len())
     }
 }

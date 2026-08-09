@@ -23,8 +23,10 @@ pub fn new<S: SocketOps + Sync + 'static>(
             async move {
                 match req {
                     SocketRequest::SendTo { value, responder } => {
-                        let _ = (socket, value, responder);
-                        pending()
+                        socket
+                            .send_to(value.address.ipv4.into(), &value.data)
+                            .await?;
+                        responder.reply(0)
                     }
                     SocketRequest::Receive { value, responder } => {
                         let _ = (socket, value, responder);

@@ -21,6 +21,7 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let expanded = quote! {
         #input_fn
 
+        #[macro_use]
         extern crate alloc;
 
         #[no_mangle]

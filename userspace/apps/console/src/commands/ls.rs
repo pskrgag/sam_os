@@ -1,4 +1,4 @@
-use super::{Command, Enviroment, COMMANDS};
+use super::{COMMANDS, Command, Enviroment};
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -26,13 +26,7 @@ impl Ls {
 
         Ok(entries
             .into_iter()
-            .map(|x| {
-                alloc::format!(
-                    "{}{}",
-                    x.name,
-                    if x.is_directory { "/" } else { "" }
-                )
-            })
+            .map(|x| alloc::format!("{}{}", x.name, if x.is_directory { "/" } else { "" }))
             .collect::<Vec<_>>()
             .join(" "))
     }

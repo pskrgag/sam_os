@@ -44,7 +44,7 @@ impl FatAlloc {
         let mut new_cache = BitAllocator::new(512 / core::mem::size_of::<FatEntry>() * fat_length);
 
         for i in 0..fat_length {
-            let mut sector = alloc::vec![0; 512];
+            let mut sector = vec![0; 512];
 
             blk.read_sector(fat_start + i as _, &mut sector).await?;
             let fats = unsafe {
@@ -67,7 +67,7 @@ impl FatAlloc {
     }
 
     async fn commit_chain(&mut self, cl: &[Cluster], blk: &BlockDevice) -> Result<(), ErrorType> {
-        let mut sector = alloc::vec![0; 512];
+        let mut sector = vec![0; 512];
         let fat_sector = self.fat_start + cl[0].0 / Self::fats_per_sector();
         let fat_offset = (cl[0].0 % Self::fats_per_sector()) as usize;
 
@@ -120,7 +120,7 @@ impl FatAlloc {
         num_clusters: usize,
         blk: &BlockDevice,
     ) -> Result<Vec<Cluster>, ErrorType> {
-        let mut res = alloc::vec![Cluster::default(); num_clusters];
+        let mut res = vec![Cluster::default(); num_clusters];
 
         for i in &mut res {
             *i = Cluster(self.cache.allocate().ok_or(ErrorType::NoMemory)? as _);
@@ -149,7 +149,7 @@ impl FatAlloc {
         let mut res = Vec::new();
 
         while {
-            let mut sector = alloc::vec![0; 512];
+            let mut sector = vec![0; 512];
             let fat_sector = self.fat_start + iter.0 / Self::fats_per_sector();
             let fat_offset = (iter.0 % Self::fats_per_sector()) as usize;
 

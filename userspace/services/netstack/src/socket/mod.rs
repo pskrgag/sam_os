@@ -40,4 +40,8 @@ impl<S: SocketOps> Socket<S> {
             rx: VecDeque::new(),
         })
     }
+
+    pub async fn send_to(self: Arc<Self>, address: IPv4, data: &[u8]) -> Result<(), ErrorType> {
+        self.ops.send_to(&self, &self.netstack, address, data).await
+    }
 }

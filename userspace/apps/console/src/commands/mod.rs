@@ -4,14 +4,14 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 mod cat;
-mod ping;
+mod cd;
 mod echo;
 mod help;
 mod ls;
 mod mkdir;
+mod ping;
 mod touch;
 mod write;
-mod cd;
 
 pub struct Enviroment<'a> {
     pub cwd: &'a mut Cwd,

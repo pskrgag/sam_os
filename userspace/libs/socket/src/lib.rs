@@ -3,10 +3,9 @@
 
 extern crate alloc;
 
-mod icmp;
+pub mod icmp;
 mod socket;
 
-pub use icmp::Icmp;
 pub use socket::{Socket, SocketProtocol};
 
 use bindings_NetStack::NetStack as BindingNetStack;

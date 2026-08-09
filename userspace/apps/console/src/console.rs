@@ -1,5 +1,5 @@
 use super::bindings_Serial::Serial;
-use crate::commands::{commands, Enviroment};
+use crate::commands::{Enviroment, commands};
 use crate::cwd::Cwd;
 use alloc::{string::String, vec::Vec};
 use heapless::String as HLString;

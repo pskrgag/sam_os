@@ -2,10 +2,10 @@ use super::{COMMANDS, Command, Enviroment};
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
-use rtl::error::ErrorType;
-use socket::{Icmp, socket};
 use net::ipv4::IPv4;
-use net::ipv4::icmp::IcmpHeader;
+use rtl::error::ErrorType;
+use socket::icmp::{EchoRequest, Icmp};
+use socket::socket;
 
 struct Ping;
 
@@ -21,7 +21,12 @@ impl Ping {
 
         let sock = socket::<Icmp>().await?;
 
-        sock.send_to(IPv4::new(1, 2, 3, 4), &IcmpHeader::new(0, 1), &[]).await?;
+        let request = EchoRequest::new(1, 1);
+
+        sock.send_to(IPv4::new(192, 168, 100, 1), &request, &[])
+            .await
+            .unwrap();
+
         todo!()
     }
 }

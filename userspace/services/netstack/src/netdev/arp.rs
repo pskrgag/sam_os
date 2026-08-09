@@ -21,6 +21,10 @@ impl ArpCache {
         self.cache.insert(ip, mac);
     }
 
+    pub fn lookup(&mut self, ip: IPv4) -> Option<Mac> {
+        self.cache.get(&ip).cloned()
+    }
+
     pub fn handle(
         &mut self,
         netstack: Arc<NetStack>,

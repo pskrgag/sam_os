@@ -1,4 +1,4 @@
-use super::{Command, Enviroment, COMMANDS};
+use super::{COMMANDS, Command, Enviroment};
 use crate::cwd::Cwd;
 use alloc::boxed::Box;
 use alloc::string::String;
@@ -11,10 +11,7 @@ struct Cd;
 impl Cd {
     fn updated_path(current: &str, requested: &str) -> String {
         let current = Path::new(&current);
-        let mut components = current
-            .components()
-            .map(String::from)
-            .collect::<Vec<_>>();
+        let mut components = current.components().map(String::from).collect::<Vec<_>>();
 
         let requested = Path::new(&requested);
         for component in requested.components() {

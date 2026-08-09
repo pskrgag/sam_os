@@ -167,7 +167,7 @@ impl Fat32Dir {
         idx: usize,
         mut f: F,
     ) -> Result<(), ErrorType> {
-        let mut cluster = alloc::vec![0; self.super_block().cluster_size()];
+        let mut cluster = vec![0; self.super_block().cluster_size()];
 
         let entries_per_cluster =
             self.super_block().cluster_size() / core::mem::size_of::<FsDirEntry>();
@@ -310,7 +310,7 @@ impl Fat32Dir {
         &self,
         mut f: F,
     ) -> Result<(), ErrorType> {
-        let mut cluster = alloc::vec![0; self.inner.sb.cluster_size()];
+        let mut cluster = vec![0; self.inner.sb.cluster_size()];
         let mut idx = 0;
         let Some(first_cluster) = self.inner.start else {
             return Ok(());
@@ -346,7 +346,7 @@ impl Fat32Dir {
 #[async_trait::async_trait]
 impl DirectoryOperations for Fat32Dir {
     async fn list(&self) -> Result<Vec<DirEntry>, ErrorType> {
-        let mut res = alloc::vec![];
+        let mut res = vec![];
 
         self.for_each_dir_entry(|entry, _| {
             if !entry.is_free() && let Ok(name) = entry.decoded_name() {

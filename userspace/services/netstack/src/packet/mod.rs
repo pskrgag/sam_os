@@ -28,6 +28,56 @@ impl Packet {
         }
     }
 
+    pub fn with_capacity(headroom: usize, payload: usize) -> Self {
+        Self {
+            data: vec![0; headroom + payload],
+            start: headroom,
+            end: headroom,
+            mac_header: None,
+            network_header: None,
+            transport_header: None,
+        }
+    }
+
+    fn head_room(&self) -> usize {
+        self.start
+    }
+
+    pub fn push_header<T>(&mut self, header: &T)
+    where
+        T: Header<Error = ErrorType>,
+    {
+        let len = header.as_bytes().len();
+        let old_head = self.head_room();
+
+        let (new_head, overflow) = self.head_room().overflowing_sub(len);
+
+        if overflow {
+            panic!("todo");
+        }
+
+        self.data[new_head..old_head].copy_from_slice(header.as_bytes());
+        self.start = new_head;
+    }
+
+    pub fn push_payload(&mut self, payload: &[u8]) {
+        let new_end = self
+            .end
+            .checked_add(payload.len())
+            .expect("packet payload length overflow");
+
+        if new_end > self.data.len() {
+            panic!("packet tailroom exhausted");
+        }
+
+        self.data[self.end..new_end].copy_from_slice(payload);
+        self.end = new_end;
+    }
+
+    pub fn payload_len(&self) -> usize {
+        self.end - self.start
+    }
+
     pub fn parse_mac_header<T>(&mut self) -> Result<&T, ErrorType>
     where
         T: Header<Error = ErrorType>,
@@ -80,11 +130,11 @@ impl Packet {
         self.header(self.mac_header.expect("MAC header was not parsed"))
     }
 
-    pub fn mac_header_mut<T>(&mut self) -> &mut T
+    pub fn mac_header_mut<T>(&mut self) -> Option<&mut T>
     where
         T: FromBytes + IntoBytes + KnownLayout + Immutable,
     {
-        self.header_mut(self.mac_header.expect("MAC header was not parsed"))
+        self.mac_header.map(|x| self.header_mut(x))
     }
 
     pub fn network_header<T>(&self) -> &T
@@ -121,7 +171,6 @@ impl Packet {
         )
     }
 
-    /// Restrict the packet to `len` bytes starting at its network header.
     pub fn trim_network(&mut self, len: usize) -> Result<(), ErrorType> {
         let network = self.network_header.ok_or(ErrorType::NotFound)?;
         let end = network.checked_add(len).ok_or(ErrorType::BufferTooBig)?;
@@ -144,6 +193,7 @@ impl Packet {
 
     pub fn into_data(mut self) -> Vec<u8> {
         self.data.truncate(self.end);
+        self.data.drain(..self.start);
         self.data
     }
 

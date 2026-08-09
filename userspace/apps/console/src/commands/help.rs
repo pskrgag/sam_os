@@ -1,4 +1,4 @@
-use super::{Command, Enviroment, COMMANDS};
+use super::{COMMANDS, Command, Enviroment};
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -11,7 +11,11 @@ impl Command for Help {
         "help"
     }
 
-    async fn run(&self, _args: Vec<&str>, _env: Enviroment<'async_trait>) -> Result<String, String> {
+    async fn run(
+        &self,
+        _args: Vec<&str>,
+        _env: Enviroment<'async_trait>,
+    ) -> Result<String, String> {
         let mut res = String::new();
 
         for command in COMMANDS {

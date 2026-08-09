@@ -33,21 +33,34 @@ pub struct EthHeader {
 }
 
 impl EthHeader {
+    pub fn new(dst: Mac, src: Mac, protocol: FrameType) -> Self {
+        Self {
+            dst: dst.into(),
+            src: src.into(),
+            tp: (protocol as u16).to_be_bytes(),
+        }
+    }
+
     pub fn destination(&self) -> Mac {
         self.dst.into()
     }
+
     pub fn source(&self) -> Mac {
         self.src.into()
     }
+
     pub fn swap_macs(&mut self) {
         core::mem::swap(&mut self.dst, &mut self.src);
     }
+
     pub fn set_source(&mut self, mac: Mac) {
         self.src = mac.into();
     }
+
     pub fn set_destination(&mut self, mac: Mac) {
         self.dst = mac.into();
     }
+
     pub fn frame_type(&self) -> Result<FrameType, ErrorType> {
         FrameType::try_from(u16::from_be_bytes(self.tp))
     }

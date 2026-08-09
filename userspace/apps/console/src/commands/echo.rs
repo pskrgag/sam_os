@@ -1,7 +1,7 @@
-use super::{Command, COMMANDS, Enviroment};
+use super::{COMMANDS, Command, Enviroment};
+use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
-use alloc::boxed::Box;
 
 struct Echo;
 

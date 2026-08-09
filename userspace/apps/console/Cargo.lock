@@ -320,6 +320,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "netstack-types"
+version = "0.1.0"
+dependencies = [
+ "zerocopy",
+]
+
+[[package]]
 name = "num-conv"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -518,6 +525,7 @@ dependencies = [
  "heapless 0.7.17",
  "libc 0.1.0",
  "net",
+ "netstack-types",
  "postcard",
  "ridl",
  "rokio",
