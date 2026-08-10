@@ -13,6 +13,7 @@ pub mod current;
 pub mod runtime;
 pub mod ticks;
 pub mod timer;
+pub mod timer_object;
 
 unsafe extern "C" {
     fn switch_to(from: *mut Context, to: *const Context);
