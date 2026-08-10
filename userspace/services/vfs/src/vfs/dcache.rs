@@ -117,17 +117,6 @@ impl Dentry {
     }
 
     /// Looks up entry specified by path
-    pub async fn lookup<'a, P: Into<Path<'a>>>(
-        self: &Arc<Self>,
-        path: P,
-    ) -> Result<Arc<Dentry>, ErrorType> {
-        let path = path.into();
-        let components = path.components().collect::<Vec<_>>();
-
-        self.lookup_components(&components).await
-    }
-
-    /// Looks up entry specified by path
     pub async fn lookup_or_create<'a, P: Into<Path<'a>>>(
         self: &Arc<Self>,
         path: P,
@@ -217,10 +206,6 @@ impl Dentry {
             inode,
             cache: Spinlock::new(Cache::default()),
         })
-    }
-
-    fn remove_child(&self, name: &str) -> Option<Arc<Dentry>> {
-        self.cache.lock().children.remove(name)
     }
 
     fn lookup_child(&self, name: &str) -> Option<Arc<Dentry>> {

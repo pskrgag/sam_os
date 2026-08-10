@@ -1,4 +1,4 @@
-use crate::drivers::irq::{mask, register_handler, unmask, unregister_handler, IntId};
+use crate::drivers::irq::{IntId, mask, register_handler, unmask, unregister_handler};
 use crate::object::KernelObjectBase;
 use crate::sync::Event;
 use alloc::sync::Arc;

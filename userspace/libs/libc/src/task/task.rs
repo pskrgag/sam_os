@@ -3,8 +3,8 @@ use crate::elf::Elf;
 use crate::factory::factory;
 use crate::handle::Handle;
 use crate::syscalls::Syscall;
-use crate::vmm::vms::vms;
 use crate::vmm::vms::Vms;
+use crate::vmm::vms::vms;
 use alloc::string::String;
 use alloc::vec::Vec;
 use hal::address::{Address, VirtAddr, VirtualAddress};
@@ -71,7 +71,8 @@ impl Task {
 
                 res
             } else {
-                factory().create_vm_object(to_allocate, Elf::program_header_to_mapping_type(phdr))?
+                factory()
+                    .create_vm_object(to_allocate, Elf::program_header_to_mapping_type(phdr))?
             };
 
             h.push((vm, load_addr, Elf::program_header_to_mapping_type(phdr)));

@@ -1,8 +1,9 @@
+use alloc::sync::Arc;
 use alloc::vec::Vec;
 use async_task::Runnable;
 use core::future::Future;
-use core::mem::forget;
-use core::task::{RawWakerVTable, Waker};
+use core::sync::atomic::{AtomicBool, Ordering};
+use core::task::Waker;
 use crossbeam::queue::SegQueue;
 use libc::syscalls::Syscall;
 use rtl::error::ErrorType;
@@ -10,28 +11,45 @@ use rtl::handle::Handle as RawHandle;
 use rtl::signal::{Signal, Signals, WaitEntry};
 use spin::lazy::Lazy;
 
-extern crate alloc;
+static CURRENT_RUNTIME: Lazy<Runtime> = Lazy::new(Runtime::new);
 
-static CURRENT_RUNTIME: Lazy<Runtime> = Lazy::new(|| Runtime::new());
-
-/// Async runtime on top of SAMOS ports
+/// Async runtime on top of SAMOS objects
+#[derive(Default)]
 pub struct Runtime {
     runnable: SegQueue<Runnable>,
     waiting: SegQueue<Waiter>,
 }
 
-pub(crate) struct Waiter {
-    handle: RawHandle,
-    waitfor: Signals,
+pub(crate) struct WaiterState {
+    completed: AtomicBool,
     waker: Waker,
 }
 
+pub(crate) struct Waiter {
+    handle: RawHandle,
+    waitfor: Signals,
+    state: Arc<WaiterState>,
+}
+
+impl WaiterState {
+    pub fn new(waker: Waker) -> Arc<Self> {
+        Arc::new(Self {
+            completed: false.into(),
+            waker,
+        })
+    }
+
+    pub fn completed(&self) -> bool {
+        self.completed.load(Ordering::Acquire)
+    }
+}
+
 impl Waiter {
-    pub fn new(handle: RawHandle, waitfor: Signals, waker: Waker) -> Self {
+    pub fn new(handle: RawHandle, waitfor: Signals, state: Arc<WaiterState>) -> Self {
         Self {
             handle,
-            waker,
             waitfor,
+            state,
         }
     }
 }
@@ -39,10 +57,7 @@ impl Waiter {
 impl Runtime {
     /// Constructs new runtime
     pub fn new() -> Self {
-        Self {
-            runnable: SegQueue::new(),
-            waiting: SegQueue::new(),
-        }
+        Self::default()
     }
 
     pub fn spawn<F: Future>(&'static self, f: F)
@@ -75,13 +90,10 @@ impl Runtime {
                 handle: entry.handle,
                 waitfor: entry.waitfor,
                 pendind: Signal::None.into(),
-                context: entry.waker.data() as usize,
-                context1: entry.waker.vtable() as *const _ as usize,
+                context: Arc::into_raw(entry.state) as usize,
+                context1: 0,
             };
             wait_entries.push(we);
-
-            // Waker was disassembled. Don't drop the reference here
-            forget(entry.waker);
         }
 
         if wait_entries.is_empty() {
@@ -93,19 +105,15 @@ impl Runtime {
         let mut waked = 0;
 
         for entry in wait_entries {
-            let waker = unsafe {
-                Waker::new(
-                    entry.context as _,
-                    &*(entry.context1 as *const RawWakerVTable),
-                )
-            };
+            let state: Arc<WaiterState> = unsafe { Arc::from_raw(entry.context as *const _) };
 
             if *(entry.pendind & entry.waitfor) != 0 {
-                waker.wake_by_ref();
+                state.completed.store(true, Ordering::Release);
+                state.waker.wake_by_ref();
                 waked += 1;
             } else {
                 self.waiting.push(Waiter {
-                    waker,
+                    state,
                     waitfor: entry.waitfor,
                     handle: entry.handle,
                 });
@@ -116,7 +124,7 @@ impl Runtime {
     }
 
     pub fn run(&'static self) {
-        while self.waiting.len() != 0 || self.runnable.len() != 0 {
+        while !self.waiting.is_empty() || !self.runnable.is_empty() {
             // Poll ready tasks
             self.poll_runnable();
 
@@ -127,7 +135,7 @@ impl Runtime {
 }
 
 pub(crate) fn current_runtime() -> &'static Runtime {
-    &*CURRENT_RUNTIME
+    &CURRENT_RUNTIME
 }
 
 pub fn spawn<F: Future + Send + 'static>(f: F)

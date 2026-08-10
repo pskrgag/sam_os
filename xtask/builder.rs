@@ -154,14 +154,32 @@ fn build_component_with_manifest(
     )
 }
 
-fn build_component(name: &str, b: &BuildScript, command: &str) -> Result<(), String> {
-    info!("[INFO]     Building {:?}...", name);
+fn absolutize_rust_error(line: &str, cwd: &str) -> Option<String> {
+    const MARKER: &str = "--> ";
 
-    let opt_level = if let Some(ref lvl) = b.opt_level {
-        format!("-C opt-level={}", lvl)
-    } else {
-        String::new()
-    };
+    let marker_pos = line.find(MARKER)?;
+    let location = &line[marker_pos + MARKER.len()..];
+
+    let (path_and_line, column) = location.rsplit_once(':')?;
+    let (path, row) = path_and_line.rsplit_once(':')?;
+
+    // Ensure the final two components really are line and column numbers.
+    row.parse::<usize>().ok()?;
+    column.parse::<usize>().ok()?;
+
+    let absolute = format!("{cwd}/{path}");
+    let prefix = &line[..marker_pos + MARKER.len()];
+
+    Some(format!("{prefix}{absolute}:{row}:{column}"))
+}
+
+pub fn run_cargo_build(
+    command: &str,
+    name: &str,
+    opt_level: &str,
+    board: &str,
+) -> Result<(), String> {
+    let mut local_stderr = vec![];
 
     run_prog(
         "cargo",
@@ -176,16 +194,42 @@ fn build_component(name: &str, b: &BuildScript, command: &str) -> Result<(), Str
         ],
         None,
         None,
-        None,
+        Some(&mut local_stderr),
         Some(&[
-            ("BOARD_TYPE", b.board.as_str()),
+            ("BOARD_TYPE", board),
             (
                 "RUSTFLAGS",
                 &format!("-C force-frame-pointers {opt_level} -C debug-assertions"),
             ),
             ("CARGO_TARGET_DIR", env!("CARGO_TARGET_DIR")),
         ]),
-    )
+    )?;
+
+    // Cargo prints a lot of stuff to stderr for some reason, but I like to perverse warnings
+    // during build
+    let err = String::from_utf8(local_stderr.clone()).unwrap();
+    let cwd = find_root_of(name);
+
+    for line in err.lines() {
+        eprintln!(
+            "{}",
+            absolutize_rust_error(line, &cwd).unwrap_or(line.to_string())
+        );
+    }
+
+    Ok(())
+}
+
+fn build_component(name: &str, b: &BuildScript, command: &str) -> Result<(), String> {
+    info!("[INFO]     Building {:?}...", name);
+
+    let opt_level = if let Some(ref lvl) = b.opt_level {
+        format!("-C opt-level={}", lvl)
+    } else {
+        String::new()
+    };
+
+    run_cargo_build(command, name, &opt_level, &b.board)
 }
 
 // Returns path to kernel

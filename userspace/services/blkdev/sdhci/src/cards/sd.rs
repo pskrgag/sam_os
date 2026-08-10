@@ -8,12 +8,12 @@ use core::ops::Deref;
 use rtl::error::ErrorType;
 
 #[derive(Default)]
-struct CSD {
-    csd_structure: u8,
+struct Csd {
+    _csd_structure: u8,
     device_size: usize,
 }
 
-impl From<ResponseU128> for CSD {
+impl From<ResponseU128> for Csd {
     fn from(value: ResponseU128) -> Self {
         let csd_structure: u8 = value.range(126..128).load_le();
 
@@ -24,8 +24,8 @@ impl From<ResponseU128> for CSD {
                 let read_blk_len: u32 = value.range(80..84).load_le();
 
                 let tmp_blk_count = (device_size + 1) << (dev_size_mul + 2);
-                CSD {
-                    csd_structure,
+                Csd {
+                    _csd_structure: csd_structure,
                     device_size: (tmp_blk_count * (1 << read_blk_len)) as _,
                 }
             }
@@ -39,7 +39,7 @@ impl From<ResponseU128> for CSD {
 
 pub struct SDCard {
     iface: SdhciIface,
-    csd: CSD,
+    csd: Csd,
     block_size: u16,
 }
 

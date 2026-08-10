@@ -3,6 +3,7 @@ use crate::irq::Irq;
 use crate::port::Port;
 use crate::syscalls::Syscall;
 use crate::task::Task;
+use crate::timer::Timer;
 use crate::vmm::vm_object::VmObject;
 use alloc::string::ToString;
 use rtl::error::ErrorType;
@@ -35,11 +36,11 @@ impl Factory {
         Syscall::create_irq(&self.h, num, trigger).map(|h| unsafe { Irq::new(h) })
     }
 
-    pub fn create_vm_object(
-        &self,
-        size: usize,
-        tp: MappingType,
-    ) -> Result<VmObject, ErrorType> {
+    pub fn create_timer(&self) -> Result<Timer, ErrorType> {
+        Syscall::create_timer(&self.h).map(|h| unsafe { Timer::new(h) })
+    }
+
+    pub fn create_vm_object(&self, size: usize, tp: MappingType) -> Result<VmObject, ErrorType> {
         let handle = Syscall::create_vmo(&self.h, size, tp)?;
 
         Ok(unsafe { VmObject::new(handle) })

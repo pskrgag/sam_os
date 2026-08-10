@@ -12,6 +12,7 @@ pub mod port;
 pub mod stdio;
 pub mod syscalls;
 pub mod task;
+pub mod timer;
 pub mod vmm;
 
 pub use rustrt::*;

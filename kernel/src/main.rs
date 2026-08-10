@@ -24,6 +24,7 @@ mod arch;
 #[macro_use]
 mod smp;
 mod drivers;
+mod irq;
 mod logger;
 mod mm;
 mod object;
@@ -32,7 +33,6 @@ mod sched;
 mod sync;
 mod syscalls;
 mod tasks;
-mod irq;
 
 #[cfg(test)]
 #[macro_use]

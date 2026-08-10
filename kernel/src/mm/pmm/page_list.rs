@@ -1,7 +1,7 @@
 //! Page list
 
-use super::page::page_array_base;
 use super::page::Page;
+use super::page::page_array_base;
 use super::phys_layout::phys_info;
 use core::marker::PhantomData;
 use core::ptr::NonNull;

@@ -5,7 +5,7 @@ use crate::object::{
     factory_object::Factory,
     handle::Handle,
     port_object::Port,
-    {wait_many, WaitManyArg},
+    {WaitManyArg, wait_many},
 };
 use crate::{
     irq::IrqObject,
@@ -13,14 +13,14 @@ use crate::{
         user_buffer::UserPtr,
         vmm::{vmo::VmObject, vms::Vms},
     },
-    sched::current_task,
+    sched::{current_task, timer_object::TimerObject},
     tasks::{task::Task, thread::Thread},
 };
 use adt::vec::Vec;
 use alloc::string::String;
 use alloc::string::ToString;
 use hal::address::*;
-use rtl::handle::{HandleBase, HANDLE_INVALID};
+use rtl::handle::{HANDLE_INVALID, HandleBase};
 use rtl::signal::{Signal, Signals, WaitEntry};
 use rtl::vmm::MappingType;
 use rtl::{error::ErrorType, ipc::IpcMessage, syscalls::SyscallList};
@@ -337,11 +337,29 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
                 .find::<Factory>(args.arg(0), CapabilityMask::any())
                 .ok_or(ErrorType::InvalidHandle)?;
 
-            let trigger = args
-                .try_arg(2)
-                .map_err(|_| ErrorType::InvalidArgument)?;
+            let trigger = args.try_arg(2).map_err(|_| ErrorType::InvalidArgument)?;
 
             Ok(table.add(factory.create_irq(args.arg(1), trigger)?))
+        }
+        SyscallList::CreateTimer => {
+            let mut table = task.handle_table().await?;
+            let factory = table
+                .find::<Factory>(args.arg(0), CapabilityMask::any())
+                .ok_or(ErrorType::InvalidHandle)?;
+
+            Ok(table.add(factory.create_timer()?))
+        }
+        SyscallList::TimerArm => {
+            let timer = {
+                let table = task.handle_table().await?;
+
+                table
+                    .find::<TimerObject>(args.arg(0), CapabilityMask::from(Capability::Wait))
+                    .ok_or(ErrorType::InvalidHandle)?
+            };
+            let deadline = core::time::Duration::from_nanos(args.arg::<usize>(1) as u64);
+
+            timer.arm(deadline).map(|_| 0)
         }
         SyscallList::WaitIrq => {
             let irq = {

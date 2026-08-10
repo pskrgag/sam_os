@@ -45,8 +45,8 @@ impl Vfs {
     }
 }
 
-pub fn vfs() -> &'static Arc<Vfs> {
-    unsafe { VFS.get_unchecked() }
+pub fn vfs() -> Arc<Vfs> {
+    Arc::clone(unsafe { VFS.get_unchecked() })
 }
 
 pub async fn init<S: AsRef<str>>(blk: BlkDev, fs: S) {

@@ -6,7 +6,7 @@ use core::any::Any;
 use core::future::Future;
 use core::ops::Deref;
 use core::pin::Pin;
-use core::sync::atomic::{AtomicU64, AtomicU8, Ordering};
+use core::sync::atomic::{AtomicU8, AtomicU64, Ordering};
 use core::task::{Context, Poll};
 use rtl::error::ErrorType;
 use rtl::signal::Signals;

@@ -294,11 +294,7 @@ impl Thread {
         let old = self
             .ticks
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |x| {
-                if x == 0 {
-                    None
-                } else {
-                    Some(x - 1)
-                }
+                if x == 0 { None } else { Some(x - 1) }
             });
 
         // old.is_err() means thread run out of quantum. When it will be re-enabled thread
@@ -322,22 +318,27 @@ impl Thread {
         struct Sleep {
             dl: Duration,
             diff: Duration,
+            polled: bool,
         }
 
         impl Future for Sleep {
             type Output = Result<(), ErrorType>;
 
-            fn poll(self: Pin<&mut Self>, cx: &mut PollContext) -> Poll<Self::Output> {
+            fn poll(mut self: Pin<&mut Self>, cx: &mut PollContext) -> Poll<Self::Output> {
                 let waker = cx.waker().clone();
 
                 if time_since_start() >= self.dl {
                     Poll::Ready(Ok(()))
-                } else {
+                } else if !self.polled {
                     set_timer(
                         self.diff,
                         alloc::boxed::Box::try_new(move || waker.wake_by_ref())
                             .map_err(|_| ErrorType::NoMemory)?,
                     );
+
+                    self.polled = true;
+                    Poll::Pending
+                } else {
                     Poll::Pending
                 }
             }
@@ -346,6 +347,7 @@ impl Thread {
         Sleep {
             dl: time_since_start() + dl,
             diff: dl,
+            polled: false,
         }
         .await
     }

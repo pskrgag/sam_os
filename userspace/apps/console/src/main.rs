@@ -12,21 +12,9 @@ mod cwd;
 async fn main(root: Option<Handle>) {
     let nameserver = bindings_NameServer::NameServer::new(unsafe { Port::new(root.unwrap()) });
 
-    let serial = nameserver
-        .Get("serial".try_into().unwrap())
-        .await
-        .unwrap()
-        .handle;
-    let vfs = nameserver
-        .Get("vfs".try_into().unwrap())
-        .await
-        .unwrap()
-        .handle;
-    let netstack = nameserver
-        .Get("netstack".try_into().unwrap())
-        .await
-        .unwrap()
-        .handle;
+    let serial = nameserver.Get("serial".into()).await.unwrap().handle;
+    let vfs = nameserver.Get("vfs".into()).await.unwrap().handle;
+    let netstack = nameserver.Get("netstack".into()).await.unwrap().handle;
     let serial_backend = bindings_Serial::Serial::new(unsafe { Port::new(serial) });
 
     unsafe {

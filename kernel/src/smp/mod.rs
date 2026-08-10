@@ -157,7 +157,7 @@ pub fn init_percpu() -> Option<()> {
     debug_assert!(range.size() >= per_cpu_size);
 
     for i in 0..NUM_CPUS {
-        let p = pa + (per_cpu_size * i).into();
+        let p = pa + per_cpu_size * i;
 
         unsafe {
             let va = LinearAddr::from(p);

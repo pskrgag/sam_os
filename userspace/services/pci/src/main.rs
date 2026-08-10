@@ -24,7 +24,7 @@ async fn main(nameserver: Option<Handle>) {
 
     let ns = NameServer::new(unsafe { Port::new(nameserver.unwrap()) });
 
-    ns.Register("pci".try_into().unwrap(), port.handle())
+    ns.Register("pci".into(), port.handle())
         .await
         .expect("Failed to register PCI handle");
 

@@ -4,6 +4,7 @@
 use alloc::string::ToString;
 use libc::{handle::Handle, task::Task};
 use rokio::port::Port;
+use rtl::error::ErrorType;
 
 static CPIO: &[u8] = include_bytes!("/tmp/archive.cpio");
 
@@ -11,7 +12,7 @@ mod handle_table;
 mod roottask;
 
 #[rokio::main]
-async fn main(_: Option<Handle>) {
+async fn main(_: Option<Handle>) -> Result<(), ErrorType> {
     let p = Port::create().unwrap();
 
     for i in cpio_reader::iter_files(CPIO) {
@@ -32,6 +33,7 @@ async fn main(_: Option<Handle>) {
     }
 
     roottask::start(p).await;
+    Ok(())
 }
 
 include!(concat!(env!("OUT_DIR"), "/hello.rs"));

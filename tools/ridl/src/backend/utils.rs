@@ -40,6 +40,7 @@ pub fn start_mod<W: Write>(buf: &mut W, suffix: &str) {
     writeln!(buf, "#[allow(clippy::missing_transmute_annotations)]").unwrap();
     writeln!(buf, "#[allow(clippy::large_enum_variant)]").unwrap();
     writeln!(buf, "#[allow(forgetting_references)]").unwrap();
+    writeln!(buf, "#[allow(clippy::redundant_field_names)]").unwrap();
     writeln!(buf, "mod bindings_{suffix} {{").unwrap();
 }
 

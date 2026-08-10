@@ -356,8 +356,7 @@ impl DirectoryOperations for Fat32Dir {
                         DirEntryKind::Directory
                     } else {
                         DirEntryKind::File
-                    }
-                    .into(),
+                    },
                 });
             }
 

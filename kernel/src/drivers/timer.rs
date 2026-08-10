@@ -1,6 +1,6 @@
 use crate::arch::timer::{SYSTEM_TIMER, TIMER_IRQ_NUM};
 use crate::drivers::irq::register_handler;
-use crate::sched::{current, ticks::SYSTEM_TICK};
+use crate::sched::ticks::SYSTEM_TICK;
 use arm_gic::IntId;
 use core::time::Duration;
 use rtl::irq::IrqTrigger;
@@ -19,8 +19,6 @@ pub fn init() {
 }
 
 pub fn timer_dispatch(_: IntId) {
-    current().tick();
-
     crate::sched::ticks::tick();
     SYSTEM_TIMER.reprogram(SYSTEM_TICK);
 }

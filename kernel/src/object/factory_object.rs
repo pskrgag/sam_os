@@ -2,16 +2,17 @@ use super::port_object::Port;
 use crate::drivers::irq::IntId;
 use crate::irq::IrqObject;
 use crate::mm::vmm::vmo::VmObject;
+use crate::object::KernelObjectBase;
 use crate::object::capabilities::{Capability, CapabilityMask};
 use crate::object::handle::Handle;
-use crate::object::KernelObjectBase;
 use crate::sched::current;
+use crate::sched::timer_object::TimerObject;
 use crate::tasks::task::{Task, TaskName};
 use alloc::sync::Arc;
 use rtl::error::ErrorType;
+use rtl::irq::IrqTrigger;
 use rtl::signal::Signal;
 use rtl::vmm::MappingType;
-use rtl::irq::IrqTrigger;
 use spin::Lazy;
 
 pub struct Factory {
@@ -58,6 +59,12 @@ impl Factory {
             vmo,
             CapabilityMask::from(Capability::GetPhysInfo),
         ))
+    }
+
+    pub fn create_timer(&self) -> Result<Handle, ErrorType> {
+        let timer = TimerObject::new()?;
+
+        Ok(Handle::new(timer, CapabilityMask::from(Capability::Wait)))
     }
 
     pub fn create_irq(&self, num: usize, trigger: IrqTrigger) -> Result<Handle, ErrorType> {

@@ -62,14 +62,10 @@ pub fn run_prog(
         .read_to_end(&mut err)
         .map_err(|_| "Failed to read stderr of a process")?;
 
-    std::io::stderr().write_all(err.as_slice()).unwrap();
-
     if let Some(stderr) = stderr {
         *stderr = err;
     }
 
-    // Cargo prints a lot of stuff to stderr for some reason, but I like to perverse warnings
-    // during build
     if !exit.success() {
         return Err(format!("{name} failed with: {exit}"));
     }

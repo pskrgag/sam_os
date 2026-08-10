@@ -27,6 +27,8 @@ pub enum SyscallList {
     VmoGetPhysInfo = 21,
     CreateIrq = 22,
     WaitIrq = 23,
+    CreateTimer = 24,
+    TimerArm = 25,
 }
 
 impl TryFrom<usize> for SyscallList {

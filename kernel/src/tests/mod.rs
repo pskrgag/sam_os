@@ -69,13 +69,15 @@ pub fn test_runner(_tests: &[&dyn Fn()]) {
 
         (test.test_fn)();
 
-        info!("\nResult {}::{} ", test.module, test.name);
-        if TEST_FAIL.load(core::sync::atomic::Ordering::Relaxed) {
-            error!("[FAIL]\n");
-        } else {
-            info!("[SUCCESS]\n");
-        }
-
-        crate::tests::TEST_FAIL.store(false, core::sync::atomic::Ordering::Relaxed)
+        info!(
+            "{}::{} [{}]\n",
+            test.module,
+            test.name,
+            if TEST_FAIL.swap(false, core::sync::atomic::Ordering::Relaxed) {
+                "FAIL"
+            } else {
+                "SUCCESS"
+            }
+        );
     }
 }

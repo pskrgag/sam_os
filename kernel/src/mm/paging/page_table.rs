@@ -170,18 +170,13 @@ impl PageTable {
             let index = base.index_of(va);
 
             if lvl != arch::PAGE_TABLE_LVLS {
-                let next_block = match base.next(index) {
-                    Some(e) => e,
-                    None => return None,
-                };
-
-                base = next_block;
+                base = base.next(index)?;
             } else {
                 return Some(base.get_pte(index).addr());
             }
         }
 
-        panic!("")
+        panic!("Invalid page SW page table walk")
     }
 
     pub fn new() -> Option<Self> {

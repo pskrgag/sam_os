@@ -2,7 +2,7 @@ use crate::mm::memset_pages;
 use crate::mm::pmm::page::Page;
 use crate::mm::pmm::page_list::PageList;
 use crate::mm::pmm::phys_layout::phys_info;
-use crate::sync::{spinlock::SpinlockGuard, Spinlock};
+use crate::sync::{Spinlock, spinlock::SpinlockGuard};
 use hal::address::*;
 
 pub struct PageAlloc {

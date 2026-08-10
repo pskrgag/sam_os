@@ -5,6 +5,7 @@ use crate::syscalls_aarch64::*;
 use crate::syscalls_x86_64::*;
 
 use super::handle::Handle;
+use core::time::Duration;
 use hal::address::{Address, PhysAddr, VirtAddr};
 use rtl::error::ErrorType;
 use rtl::handle::Handle as RawHandle;
@@ -38,6 +39,8 @@ pub enum Syscall<'a> {
     ObjectWait(RawHandle, Signals),
     ObjectWaitMany(&'a mut [WaitEntry]),
     CreateIrq(RawHandle, usize, IrqTrigger),
+    CreateTimer(RawHandle),
+    TimerArm(RawHandle, Duration),
     WaitIrq(RawHandle),
 }
 
@@ -154,6 +157,14 @@ impl<'a> Syscall<'a> {
         }
     }
 
+    pub fn create_timer(factory: &Handle) -> Result<Handle, ErrorType> {
+        unsafe { syscall(Self::CreateTimer(factory.as_raw()).as_args()).map(Handle::new) }
+    }
+
+    pub fn timer_arm(timer: &Handle, deadline: Duration) -> Result<(), ErrorType> {
+        unsafe { syscall(Self::TimerArm(timer.as_raw(), deadline).as_args()).map(|_| ()) }
+    }
+
     pub fn wait_irq(h: &Handle) -> Result<(), ErrorType> {
         unsafe { syscall(Self::WaitIrq(h.as_raw()).as_args()).map(|_| ()) }
     }
@@ -246,16 +257,9 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
-            Syscall::VmoGetPhysInfo(handle) => [
-                SyscallList::VmoGetPhysInfo.into(),
-                handle,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-            ],
+            Syscall::VmoGetPhysInfo(handle) => {
+                [SyscallList::VmoGetPhysInfo.into(), handle, 0, 0, 0, 0, 0, 0]
+            }
             Syscall::VmMapVmo(vms, vmo, to, tp) => [
                 SyscallList::MapVmo.into(),
                 vms,
@@ -363,16 +367,20 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
-            Syscall::WaitIrq(handle) => [
-                SyscallList::WaitIrq.into(),
-                handle,
-                0,
+            Syscall::CreateTimer(factory) => {
+                [SyscallList::CreateTimer.into(), factory, 0, 0, 0, 0, 0, 0]
+            }
+            Syscall::TimerArm(timer, deadline) => [
+                SyscallList::TimerArm.into(),
+                timer,
+                usize::try_from(deadline.as_nanos()).unwrap(),
                 0,
                 0,
                 0,
                 0,
                 0,
             ],
+            Syscall::WaitIrq(handle) => [SyscallList::WaitIrq.into(), handle, 0, 0, 0, 0, 0, 0],
         }
     }
 }

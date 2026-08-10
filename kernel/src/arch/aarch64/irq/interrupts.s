@@ -107,7 +107,9 @@ user_trap:
 	mov	fp, x5
 	add	sp, sp, 0x78
 
-	// return to the previous kernel frame
+	// return to the previous kernel frame. I.e userspace_loop()
+	// NOTE: on entry DAIF.I was set, so we need to restore it back
+	msr daifclr, #2
 	ret
 
 .align 11

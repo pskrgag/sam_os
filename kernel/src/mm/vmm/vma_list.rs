@@ -23,6 +23,7 @@ pub enum VmaState {
     Anonymous { list: PageList },
     Vmo { object: Arc<VmObject> },
     Mmio { range: MemRange<PhysAddr> },
+    Reserved,
 }
 
 pub enum VmaStateInner {
@@ -386,11 +387,13 @@ impl VmaList {
     ) -> Result<(), ErrorType> {
         let mut cursor = self.tree.lower_bound_mut(Bound::Included(&range.start()));
 
-        if let Some(vma) = cursor.get_mut() && vma.range == range {
+        if let Some(vma) = cursor.get_mut()
+            && vma.range == range
+        {
             let vma = unsafe { Pin::into_inner_unchecked(vma) };
 
             vma.prot = mt;
-           Ok(())
+            Ok(())
         } else {
             Err(ErrorType::NotFound)
         }
@@ -444,7 +447,9 @@ impl VmaList {
         }
 
         let mut cursor = self.tree.lower_bound_mut(Bound::Included(&range.start()));
-        if let Some(vma) = cursor.get() && vma.range == range {
+        if let Some(vma) = cursor.get()
+            && vma.range == range
+        {
             let mut vma = unsafe { Pin::into_inner_unchecked(cursor.remove().unwrap()) };
 
             let VmaStateInner::Valid(state) =
@@ -492,34 +497,20 @@ mod test {
         let mut list = VmaList::new_user();
 
         let new_vma = list
-            .new_vma(
-                0x1000,
-                Some(0x20000),
-                MappingType::None,
-                VmaFlag::None.into(),
-            )
+            .new_vma(0x1000, Some(0x20000), MappingType::None, VmaState::Reserved)
             .unwrap();
-        test_assert_eq!(new_vma, VirtAddr::new(0x20000));
+
+        test_assert_eq!(new_vma, VirtAddr::from_bits(0x20000));
 
         let new_vma = list
-            .new_vma(
-                0x1000,
-                Some(0x30000),
-                MappingType::None,
-                VmaFlag::None.into(),
-            )
+            .new_vma(0x1000, Some(0x30000), MappingType::None, VmaState::Reserved)
             .unwrap();
-        test_assert_eq!(new_vma, VirtAddr::new(0x30000));
+        test_assert_eq!(new_vma, VirtAddr::from_bits(0x30000));
 
-        let new_vma = list.new_vma(
-            0x1000,
-            Some(0x1000),
-            MappingType::None,
-            VmaFlag::None.into(),
-        );
+        let new_vma = list.new_vma(0x1000, Some(0x1000), MappingType::None, VmaState::Reserved);
         test_assert!(new_vma.is_err());
 
-        let new_vma = list.new_vma(0x1000, Some(0x0), MappingType::None, VmaFlag::None.into());
+        let new_vma = list.new_vma(0x1000, Some(0x0), MappingType::None, VmaState::Reserved);
         test_assert!(new_vma.is_err());
     }
 }

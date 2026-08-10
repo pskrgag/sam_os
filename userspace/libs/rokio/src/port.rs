@@ -1,4 +1,5 @@
-use super::executor::Waiter;
+use super::executor::{Waiter, WaiterState};
+use alloc::sync::Arc;
 use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll};
@@ -14,6 +15,7 @@ pub struct Port {
 struct RecvFuture<'a> {
     port: &'a LibcPort,
     msg: usize,
+    state: Option<Arc<WaiterState>>,
 }
 
 impl Future for RecvFuture<'_> {
@@ -26,10 +28,12 @@ impl Future for RecvFuture<'_> {
         match cur.port.receive(msg) {
             Ok(received) => Poll::Ready(Ok(received)),
             Err(ErrorType::WouldBlock) => {
+                let state = WaiterState::new(cx.waker().clone());
+
                 let waiter = Waiter::new(
                     unsafe { cur.port.handle().as_raw() },
                     rtl::signal::Signal::MessageReady.into(),
-                    cx.waker().clone(),
+                    state.clone(),
                 );
 
                 super::executor::current_runtime().add_wait(waiter);
@@ -61,6 +65,7 @@ impl Port {
         RecvFuture {
             port: &reply_port,
             msg: msg as *mut _ as usize,
+            state: None,
         }
         .await
     }
@@ -73,6 +78,7 @@ impl Port {
         RecvFuture {
             port: &self.port,
             msg: msg as *mut _ as usize,
+            state: None,
         }
         .await
     }

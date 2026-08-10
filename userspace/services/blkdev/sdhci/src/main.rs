@@ -16,7 +16,7 @@ mod server;
 #[rokio::main]
 async fn main(nameserver: Option<Handle>) {
     let ns = NameServer::new(unsafe { Port::new(nameserver.unwrap()) });
-    let pci = ns.Get("pci".try_into().unwrap()).await.unwrap();
+    let pci = ns.Get("pci".into()).await.unwrap();
     let pci = unsafe { Pci::new(Port::new(pci.handle)) };
 
     // These IDS are from QEMU
@@ -28,8 +28,9 @@ async fn main(nameserver: Option<Handle>) {
         .await
         .unwrap();
 
-    let pci_handle =
-        Device::new(unsafe { Port::new(pci.Open(bfds.addresses[0].clone()).await.unwrap().device) });
+    let pci_handle = Device::new(unsafe {
+        Port::new(pci.Open(bfds.addresses[0].clone()).await.unwrap().device)
+    });
 
     let res = pci_handle.Map().await.unwrap();
     assert_eq!(res.data.len(), 1);

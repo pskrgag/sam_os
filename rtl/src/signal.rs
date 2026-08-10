@@ -6,6 +6,7 @@ bitmask! {
     pub mask Signals: u8 where flags Signal {
         None = 0,
         MessageReady = (1 << 0),
+        TimerReady = (1 << 1),
     }
 }
 
