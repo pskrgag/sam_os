@@ -137,7 +137,7 @@ fn build_component_with_manifest(
     to_io(comp, tmpfile).unwrap();
 
     // Add to to section
-    run_prog(
+    let exit = run_prog(
         "llvm-objcopy",
         &[
             "--add-section",
@@ -151,7 +151,13 @@ fn build_component_with_manifest(
         None,
         None,
         None,
-    )
+    )?;
+
+    if exit.success() {
+        Ok(())
+    } else {
+        Err(String::from("Command failed"))
+    }
 }
 
 fn absolutize_rust_error(line: &str, cwd: &str) -> Option<String> {
@@ -181,7 +187,7 @@ pub fn run_cargo_build(
 ) -> Result<(), String> {
     let mut local_stderr = vec![];
 
-    run_prog(
+    let exit = run_prog(
         "cargo",
         &[
             command,
@@ -217,7 +223,11 @@ pub fn run_cargo_build(
         );
     }
 
-    Ok(())
+    if exit.success() {
+        Ok(())
+    } else {
+        Err(String::from("Command failed"))
+    }
 }
 
 fn build_component(name: &str, b: &BuildScript, command: &str) -> Result<(), String> {
@@ -273,7 +283,7 @@ fn build_loader(kernel: String) -> Result<(), String> {
 
     // Do not raise opt level here, since for some reason rust generates weird ASM for linker var
     // access
-    run_prog(
+    let err = run_prog(
         "cargo",
         &[
             "build",
@@ -299,7 +309,11 @@ fn build_loader(kernel: String) -> Result<(), String> {
         ]),
     )?;
 
-    run_prog(
+    if !err.success() {
+        return Err(String::from("Command failed"));
+    }
+
+    let err = run_prog(
         "llvm-objcopy",
         &[
             "-O",
@@ -311,7 +325,13 @@ fn build_loader(kernel: String) -> Result<(), String> {
         None,
         None,
         None,
-    )
+    )?;
+
+    if err.success() {
+        Ok(())
+    } else {
+        Err(String::from("Command failed"))
+    }
 }
 
 pub fn prepare_cpio(b: &Vec<Component>, to: &str) -> Result<(), String> {
@@ -402,14 +422,20 @@ fn run_impl(gdb: bool, c: Option<&BuildScript>) -> Result<(), String> {
     }
 
     info!("qemu-system-aarch64 {}", args.join(" "));
-    run_prog(
+    let exit = run_prog(
         "/home/paskripkin/Documents/git/qemu/build/qemu-system-aarch64",
         args.as_slice(),
         None,
         None,
         None,
         None,
-    )
+    )?;
+
+    if exit.success() {
+        Ok(())
+    } else {
+        Err(String::from("Command failed"))
+    }
 }
 
 pub fn run(c: BuildScript, gdb: bool) -> Result<(), String> {
@@ -423,7 +449,7 @@ pub fn clippy(c: BuildScript) -> Result<(), String> {
 
 pub fn fmt() -> Result<(), ()> {
     for_each_manifest(|path| {
-        run_prog(
+        let exit = run_prog(
             "cargo",
             &["fmt", "--manifest-path", path.as_os_str().to_str().unwrap()],
             None,
@@ -431,7 +457,9 @@ pub fn fmt() -> Result<(), ()> {
             None,
             None,
         )
-        .unwrap()
+        .unwrap();
+
+        assert!(exit.success());
     })
     .map_err(|_| ())
 }

@@ -41,6 +41,7 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
                 let reply_port = in_msg.reply_port();
 
                 rokio::executor::spawn(async move {{
+                    // println!("{{:?}}", public);
                     match (handler)(public).await {{
                         Ok(_) => {{}}, // message has been sent by closure
                         Err(e) => {{
@@ -100,6 +101,12 @@ impl<'a, W: Write> InterfaceCompiler<'a, W> {
 pub struct {name}<{traits}>{{
     port: Arc<Port>,
     handler: Arc<F>,
+}}
+
+impl<{traits}> core::fmt::Debug for {name}<F, Fut> {{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {{
+        f.debug_struct("{name}").finish_non_exhaustive()
+    }}
 }}
 
 unsafe impl<{traits}> Send for {name}<F, Fut> {{ }}

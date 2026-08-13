@@ -1,6 +1,6 @@
 use std::{
     io::{Read, Write},
-    process::{Command, Stdio},
+    process::{Command, ExitStatus, Stdio},
 };
 
 pub fn run_prog(
@@ -10,7 +10,7 @@ pub fn run_prog(
     stdout: Option<&mut Vec<u8>>,
     stderr: Option<&mut Vec<u8>>,
     env: Option<&[(&str, &str)]>,
-) -> Result<(), String> {
+) -> Result<ExitStatus, String> {
     let mut child = Command::new(name);
     let mut child = child.args(args).stderr(Stdio::piped());
 
@@ -50,10 +50,6 @@ pub fn run_prog(
             .map_err(|x| format!("Failed to read cpio output {x}"))?;
     }
 
-    let exit = child
-        .wait()
-        .map_err(|x| format!("Failed to run {name} {x}"))?;
-
     let mut err = Vec::new();
     child
         .stderr
@@ -66,9 +62,6 @@ pub fn run_prog(
         *stderr = err;
     }
 
-    if !exit.success() {
-        return Err(format!("{name} failed with: {exit}"));
-    }
-
-    Ok(())
+    let error = child.wait().unwrap();
+    Ok(error)
 }

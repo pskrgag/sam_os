@@ -7,6 +7,7 @@ bitmask! {
         None = 0,
         MessageReady = (1 << 0),
         TimerReady = (1 << 1),
+        IrqReady = (1 << 2),
     }
 }
 
@@ -16,7 +17,7 @@ impl TryFrom<usize> for Signals {
     fn try_from(value: usize) -> Result<Self, Self::Error> {
         let max_set = core::mem::size_of::<usize>() * 8 - value.leading_zeros() as usize;
 
-        if max_set > 2 {
+        if max_set > 3 {
             Err(ErrorType::InvalidArgument)
         } else {
             Ok(Signals { mask: value as u8 })

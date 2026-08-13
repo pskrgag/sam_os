@@ -44,19 +44,6 @@ impl<T> Spinlock<T> {
             data: unsafe { &mut *self.val.get() },
         }
     }
-
-    pub fn lock_irqsave<'a>(&'a self) -> SpinlockGuard<'a, T> {
-        let my = self.inner.next.fetch_add(1, Ordering::Acquire);
-
-        while self.inner.current.load(Ordering::Relaxed) != my {
-            core::hint::spin_loop();
-        }
-
-        SpinlockGuard {
-            lock: &self.inner,
-            data: unsafe { &mut *self.val.get() },
-        }
-    }
 }
 
 impl SpinLockInner {

@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 rtl = { path = "../../../rtl" }
+libc = { path = "../libc" }
 zerocopy = { version = "0.8.55", features = ["derive"] }

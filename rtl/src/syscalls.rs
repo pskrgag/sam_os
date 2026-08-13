@@ -26,7 +26,7 @@ pub enum SyscallList {
     CreateVmoContig = 20,
     VmoGetPhysInfo = 21,
     CreateIrq = 22,
-    WaitIrq = 23,
+    AckIrq = 23,
     CreateTimer = 24,
     TimerArm = 25,
 }

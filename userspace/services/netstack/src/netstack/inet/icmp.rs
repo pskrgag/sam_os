@@ -1,4 +1,4 @@
-use super::{InetProtocol, register_proto};
+use super::{register_proto, InetProtocol};
 use crate::netstack::{NetStack, PacketDecision};
 use crate::packet::Packet;
 use crate::socket::Socket;
@@ -7,8 +7,8 @@ use alloc::boxed::Box;
 use alloc::sync::Arc;
 use net::checksum::checksum;
 use net::ipv4::{
-    Protocol,
     icmp::{IcmpEchoHeader, IcmpHeader, PacketType},
+    Protocol,
 };
 use netstack_types::icmp::EchoRequest;
 use rtl::error::ErrorType;
@@ -23,6 +23,7 @@ pub fn init() {
 #[async_trait::async_trait]
 impl InetProtocol for ICMP {
     async fn handle(&self, mut packet: Packet) -> Result<PacketDecision, ErrorType> {
+        let destination = packet.network_header::<net::ipv4::IPv4Header>().source();
         let icmp = IcmpHeader::mut_from_prefix(packet.payload_mut())
             .map_err(|_| ErrorType::BufferTooSmall)?
             .0;
@@ -39,7 +40,10 @@ impl InetProtocol for ICMP {
                     .0;
                 icmp.set_checksum(crc);
 
-                Ok(PacketDecision::Reply(packet))
+                Ok(PacketDecision::TransmitIp {
+                    destination,
+                    packets: vec![packet],
+                })
             }
             e => todo!("{e:?}"),
         }

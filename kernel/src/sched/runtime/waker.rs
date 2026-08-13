@@ -33,14 +33,16 @@ unsafe fn drop_waker(data: *const ()) {
     }
 }
 
-pub struct Waker<'a> {
-    bit: &'a AtomicU64,
+pub struct Waker {
+    page: Arc<WakerPage>,
     index: u8,
 }
 
-impl Waker<'_> {
+impl Waker {
     fn wake(&self) {
-        self.bit.fetch_or(1u64 << self.index, Ordering::Relaxed);
+        self.page
+            .notified
+            .fetch_or(1u64 << self.index, Ordering::Relaxed);
     }
 }
 
@@ -69,7 +71,7 @@ impl WakerPage {
     }
 
     pub fn notified(&self) -> impl Iterator<Item = u8> {
-        let mask = self.notified.load(Ordering::Acquire);
+        let mask = self.notified.swap(0, Ordering::Acquire);
         let mut bit = 0;
 
         core::iter::from_fn(move || {
@@ -80,7 +82,6 @@ impl WakerPage {
             if bit < Self::num_entries() {
                 let res = bit;
 
-                self.notified.fetch_and(!(1 << res), Ordering::Relaxed);
                 bit += 1;
                 Some(res as u8)
             } else {
@@ -89,9 +90,9 @@ impl WakerPage {
         })
     }
 
-    pub fn waker(&self, index: u8) -> CoreWaker {
+    pub fn waker(self: &Arc<Self>, index: u8) -> CoreWaker {
         let arc = Arc::new(Waker {
-            bit: &self.notified,
+            page: self.clone(),
             index,
         });
 

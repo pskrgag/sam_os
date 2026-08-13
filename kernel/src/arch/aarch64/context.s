@@ -24,6 +24,10 @@ switch_to_user:
 	ldp	x1, x2, [x0, #240]
 	ldp	x3, x30, [x0, #256]
 
+	// Disable IRQ so that it won't overwrite *_EL1 registers. IRQ must be enabled in pstate,
+	// so eret will enable them
+	msr	daifset, #2
+
 	msr	ELR_EL1, x1
 	msr	SPSR_EL1, x2
 	msr	SP_EL0, x3

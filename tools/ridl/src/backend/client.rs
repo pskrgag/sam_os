@@ -81,6 +81,12 @@ pub struct {name} {{
     port: Port,
 }}
 
+impl core::fmt::Debug for {name} {{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {{
+        f.debug_struct("{name}").finish_non_exhaustive()
+    }}
+}}
+
 impl {name} {{
     pub fn new(port: Port) -> Self {{
         Self {{ port }}

@@ -5,11 +5,10 @@ use alloc::sync::Arc;
 use bindings_Nic::{Nic as NicBindings, NicRequest};
 use rokio::port::Port;
 use rtl::error::ErrorType;
-use rtl::locking::spinlock::Spinlock;
 
 pub async fn start_server(nic: Box<dyn Nic>, ns: NameServer) -> Result<(), ErrorType> {
     let port = Port::create()?;
-    let nic = Arc::new(Spinlock::new(nic));
+    let nic = Arc::new(nic);
 
     ns.Register("nic".try_into().unwrap(), port.handle())
         .await
@@ -21,19 +20,15 @@ pub async fn start_server(nic: Box<dyn Nic>, ns: NameServer) -> Result<(), Error
         async move {
             match req {
                 NicRequest::Receive { responder, .. } => {
-                    let mut nic = nic.lock();
-                    let data = nic.receive_frame()?;
+                    let data = nic.receive_frame().await?;
 
                     responder.reply(data.into_iter().collect())?;
                 }
                 NicRequest::Send { value, responder } => {
-                    let mut nic = nic.lock();
-
                     nic.send_frame(&value.data)?;
                     responder.reply()?;
                 }
                 NicRequest::Mac { responder, .. } => {
-                    let nic = nic.lock();
                     let mac = nic.mac();
 
                     responder.reply(mac.into())?;

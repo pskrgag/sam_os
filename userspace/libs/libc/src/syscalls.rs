@@ -39,9 +39,9 @@ pub enum Syscall<'a> {
     ObjectWait(RawHandle, Signals),
     ObjectWaitMany(&'a mut [WaitEntry]),
     CreateIrq(RawHandle, usize, IrqTrigger),
+    AckIrq(RawHandle),
     CreateTimer(RawHandle),
     TimerArm(RawHandle, Duration),
-    WaitIrq(RawHandle),
 }
 
 impl<'a> Syscall<'a> {
@@ -157,16 +157,16 @@ impl<'a> Syscall<'a> {
         }
     }
 
+    pub fn ack_irq(h: &Handle) -> Result<(), ErrorType> {
+        unsafe { syscall(Self::AckIrq(h.as_raw()).as_args()).map(|_| ()) }
+    }
+
     pub fn create_timer(factory: &Handle) -> Result<Handle, ErrorType> {
         unsafe { syscall(Self::CreateTimer(factory.as_raw()).as_args()).map(Handle::new) }
     }
 
     pub fn timer_arm(timer: &Handle, deadline: Duration) -> Result<(), ErrorType> {
         unsafe { syscall(Self::TimerArm(timer.as_raw(), deadline).as_args()).map(|_| ()) }
-    }
-
-    pub fn wait_irq(h: &Handle) -> Result<(), ErrorType> {
-        unsafe { syscall(Self::WaitIrq(h.as_raw()).as_args()).map(|_| ()) }
     }
 
     pub fn port_reply(
@@ -367,6 +367,9 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
+            Syscall::AckIrq(handle) => {
+                [SyscallList::AckIrq.into(), handle, 0, 0, 0, 0, 0, 0]
+            }
             Syscall::CreateTimer(factory) => {
                 [SyscallList::CreateTimer.into(), factory, 0, 0, 0, 0, 0, 0]
             }
@@ -380,7 +383,6 @@ impl<'a> Syscall<'a> {
                 0,
                 0,
             ],
-            Syscall::WaitIrq(handle) => [SyscallList::WaitIrq.into(), handle, 0, 0, 0, 0, 0, 0],
         }
     }
 }

@@ -15,7 +15,7 @@ pub struct Port {
 struct RecvFuture<'a> {
     port: &'a LibcPort,
     msg: usize,
-    state: Option<Arc<WaiterState>>,
+    _state: Option<Arc<WaiterState>>,
 }
 
 impl Future for RecvFuture<'_> {
@@ -65,7 +65,7 @@ impl Port {
         RecvFuture {
             port: &reply_port,
             msg: msg as *mut _ as usize,
-            state: None,
+            _state: None,
         }
         .await
     }
@@ -78,7 +78,7 @@ impl Port {
         RecvFuture {
             port: &self.port,
             msg: msg as *mut _ as usize,
-            state: None,
+            _state: None,
         }
         .await
     }

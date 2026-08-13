@@ -320,6 +320,7 @@ fn produce_send_struct<W: Write>(buf: &mut W, interface: &Interface, message: &M
     writeln!(
         buf,
         r#"
+    #[derive(Debug)]
     pub struct {int_name}{message_name}Reply {{
         port: RawHandle,
         reply_port: RawHandle,
@@ -375,7 +376,7 @@ pub fn produce_server_public_enum<W: Write>(
         produce_send_struct(buf, interface, msg);
     }
 
-    writeln!(buf, "pub enum {int_name}Request {{").unwrap();
+    writeln!(buf, "#[derive(Debug)]\npub enum {int_name}Request {{").unwrap();
     for msg in messages {
         let message_name = &msg.name;
 

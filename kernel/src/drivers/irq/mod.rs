@@ -42,7 +42,7 @@ pub fn register_handler<F: Fn(IntId) + Send + 'static>(
     trigger: IrqTrigger,
 ) -> Result<(), ErrorType> {
     let handler = IrqHandler::new(irq, func)?;
-    let mut handlers = IRQS.lock();
+    let mut handlers = IRQS.lock_irqsave();
 
     if handlers.iter().find(|x| x.num == irq).is_some() {
         return Err(ErrorType::AlreadyExists);
@@ -64,7 +64,11 @@ pub fn unmask(irq: IntId) {
 
 pub fn unregister_handler(irq: IntId) -> Result<(), ErrorType> {
     CONTROLLER.get().unwrap().mask_irq(irq, true);
-    IRQS.lock().extract_if(|x| x.num == irq).next().unwrap();
+    IRQS.lock_irqsave()
+        .extract_if(|x| x.num == irq)
+        .next()
+        .unwrap();
+
     Ok(())
 }
 
@@ -72,7 +76,7 @@ pub fn irq_dispatch() {
     let controller = CONTROLLER.get().unwrap();
 
     if let Some(pending) = controller.pending()
-        && let Some(x) = IRQS.lock().iter().find(|x| x.num() == pending)
+        && let Some(x) = IRQS.lock_irqsave().iter().find(|x| x.num() == pending)
     {
         (x.dispatcher)(pending);
         controller.eoi(pending);

@@ -1,10 +1,10 @@
-use crate::drivers::irq::{IntId, mask, register_handler, unmask, unregister_handler};
+use crate::drivers::irq::{mask, register_handler, unmask, unregister_handler, IntId};
 use crate::object::KernelObjectBase;
 use crate::sync::Event;
 use alloc::sync::Arc;
 use rtl::error::ErrorType;
 use rtl::irq::IrqTrigger;
-use rtl::locking::spinlock::Spinlock;
+use crate::sync::Spinlock;
 use rtl::signal::Signal;
 
 enum State {
@@ -25,7 +25,7 @@ pub struct IrqObject {
     event: Event,
 }
 
-crate::kernel_object!(IrqObject, Signal::None.into());
+crate::kernel_object!(IrqObject, Signal::IrqReady.into());
 
 impl IrqObject {
     pub fn new(num: IntId, trigger: IrqTrigger) -> Result<Arc<Self>, ErrorType> {
@@ -48,8 +48,7 @@ impl IrqObject {
                 let mut inner = clone.inner.lock_irqsave();
 
                 inner.state = State::Signaled;
-                clone.event.broadcast();
-
+                clone.base.signal_fire(Signal::IrqReady.into());
                 mask(inner.num);
             },
             trigger,
@@ -58,34 +57,23 @@ impl IrqObject {
         Ok(res)
     }
 
-    pub async fn wait(&self) -> Result<(), ErrorType> {
-        loop {
-            let need_wait = {
-                let mut inner = self.inner.lock_irqsave();
+    pub fn ack(&self) -> Result<(), ErrorType> {
+        let mut inner = self.inner.lock_irqsave();
 
-                match inner.state {
-                    State::Pending => true,
-                    State::NeedAck => {
-                        inner.state = State::Pending;
-                        unmask(inner.num);
-                        true
-                    }
-                    State::Signaled => {
-                        inner.state = State::NeedAck;
-                        self.event.clear();
-                        false
-                    }
-                }
-            };
+        match inner.state {
+            State::Pending => Err(ErrorType::WouldBlock),
+            State::NeedAck => {
+                inner.state = State::Pending;
 
-            if need_wait {
-                self.event.wait().await?;
-            } else {
-                break;
+                self.base.signal_clear(Signal::IrqReady.into());
+                unmask(inner.num);
+                Ok(())
+            }
+            State::Signaled => {
+                inner.state = State::NeedAck;
+                Ok(())
             }
         }
-
-        Ok(())
     }
 }
 

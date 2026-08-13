@@ -4,19 +4,32 @@ use alloc::vec::Vec;
 use core::mem::size_of;
 use dma::DmaBuffer;
 use hal::address::{Address, PhysAddr};
-use libc::irq::Irq;
+use rokio::irq::Irq;
 use rtl::error::ErrorType;
+use spin::Mutex;
 
 // 16384 is the max size
 const MAX_ORDER: usize = 13;
 const MIN_ORDER: usize = 7;
 
-pub struct RxBuffer {
+struct RxBufferInner {
     ring: DmaBuffer<Rdesc>,
     data: DmaBuffer<u8>,
-    entry_order: u8,
     next_idx: u32,
+}
+
+pub struct RxBuffer {
+    entry_order: u8,
     irq: Irq,
+    inner: Mutex<RxBufferInner>,
+}
+
+impl RxBufferInner {
+    fn num_descriptors(&self) -> usize {
+        assert_eq!(self.ring.size() % size_of::<Rdesc>(), 0);
+
+        return self.ring.size() / size_of::<Rdesc>();
+    }
 }
 
 impl RxBuffer {
@@ -42,30 +55,50 @@ impl RxBuffer {
         }
 
         Ok(Self {
-            ring,
-            data,
+            inner: Mutex::new(RxBufferInner {
+                ring,
+                data,
+                next_idx: 0,
+            }),
             entry_order: entry_order as u8,
-            next_idx: 0,
             irq,
         })
     }
 
-    pub fn read_packet(&mut self, regs: &mut E1000Regs) -> Result<Vec<u8>, ErrorType> {
+    pub async fn read_packet(&self, regs: &Mutex<E1000Regs>) -> Result<Vec<u8>, ErrorType> {
         let packet_size = 1 << self.data_order();
         let mut packet = Vec::with_capacity(packet_size);
 
-        let index = self.next_idx as usize;
-        let mut desc = self.ring.read(index);
-        let num_descriptors = self.num_descriptors() as u32;
+        // TODO: we need to check for idx overflow
+
+        let (mut desc, index) = {
+            let mut inner = self.inner.lock();
+            let index = inner.next_idx as usize;
+            let num_descriptors = inner.num_descriptors() as u32;
+
+            // We are going to unlock the lock while waiting for the IRQ. Other threads must observe
+            // different idx.
+            inner.next_idx = (inner.next_idx + 1) % num_descriptors;
+
+            (inner.ring.read(index), index)
+        };
 
         while !desc.is_ready() {
-            self.irq.wait()?;
-            desc = self.ring.read(index);
+            self.irq.wait().await?;
+
+            let mut inner = self.inner.lock();
+            desc = inner.ring.read(index);
         }
+
+        let mut inner = self.inner.lock();
+        let mut regs = regs.lock();
+
+        self.irq.ack();
+        regs.ack_irq();
 
         // TODO: check errors and EOP
 
-        let data = self
+        let data = inner
             .data
             .read_slice(index * (1 << self.entry_order), desc.length as usize);
 
@@ -73,19 +106,15 @@ impl RxBuffer {
 
         // Clear DD flag
         desc.ack();
-        self.ring.write(index, desc);
+        inner.ring.write(index, desc);
 
         // Update RDT after clearing DD
         regs.set_rdt(index as u32);
-
-        self.next_idx = (self.next_idx + 1) % num_descriptors;
         Ok(packet)
     }
 
     pub fn num_descriptors(&self) -> usize {
-        assert_eq!(self.ring.size() % size_of::<Rdesc>(), 0);
-
-        return self.ring.size() / size_of::<Rdesc>();
+        self.inner.lock().num_descriptors()
     }
 
     pub fn data_order(&self) -> u8 {
@@ -93,10 +122,14 @@ impl RxBuffer {
     }
 
     pub fn ring_pa(&self) -> PhysAddr {
-        self.ring.pa()
+        let inner = self.inner.lock();
+
+        inner.ring.pa()
     }
 
     pub fn ring_size(&self) -> usize {
-        self.ring.size()
+        let inner = self.inner.lock();
+
+        inner.ring.size()
     }
 }

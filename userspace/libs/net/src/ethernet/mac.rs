@@ -3,9 +3,15 @@ use rtl::error::ErrorType;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
 /// MAC address.
-#[derive(FromBytes, Immutable, KnownLayout, Unaligned, Copy, Clone, IntoBytes)]
+#[derive(FromBytes, Immutable, KnownLayout, Unaligned, Copy, Clone, IntoBytes, PartialEq)]
 #[repr(transparent)]
 pub struct Mac([u8; 6]);
+
+impl Mac {
+    pub const fn broadcast() -> Self {
+        Self([0xff, 0xff, 0xff, 0xff, 0xff, 0xff])
+    }
+}
 
 impl TryFrom<u64> for Mac {
     type Error = ErrorType;

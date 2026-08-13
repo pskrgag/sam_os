@@ -20,14 +20,13 @@ impl Ping {
         }
 
         let sock = socket::<Icmp>().await?;
-
         let request = EchoRequest::new(1, 1);
 
         sock.send_to(IPv4::new(192, 168, 100, 1), &request, &[])
             .await
             .unwrap();
 
-        todo!()
+        Ok(String::new())
     }
 }
 

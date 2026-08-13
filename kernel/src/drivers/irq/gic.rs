@@ -7,7 +7,7 @@ use core::ptr::NonNull;
 use hal::address::VirtualAddress;
 use loader_protocol::{DeviceKind, LoaderArg};
 use rtl::irq::IrqTrigger;
-use rtl::locking::spinlock::Spinlock;
+use crate::sync::spinlock::Spinlock;
 use spin::Once;
 
 pub struct Gic(GicV3<'static>);
@@ -45,7 +45,7 @@ impl IrqController for Spinlock<Gic> {
             IrqTrigger::Edge => arm_gic::Trigger::Edge,
             IrqTrigger::Level => arm_gic::Trigger::Level,
         };
-        let mut gic = self.lock();
+        let mut gic = self.lock_irqsave();
 
         gic.0.set_interrupt_priority(num, Some(0), 0x80).unwrap();
         gic.0.set_group(num, Some(0), Group::Group1NS).unwrap();
@@ -54,7 +54,7 @@ impl IrqController for Spinlock<Gic> {
     }
 
     fn mask_irq(&self, num: super::IntId, mask: bool) {
-        let mut gic = self.lock();
+        let mut gic = self.lock_irqsave();
 
         gic.0.enable_interrupt(num, Some(0), !mask).unwrap();
     }

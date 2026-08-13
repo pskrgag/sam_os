@@ -39,13 +39,21 @@ pub async fn handle(
     drop(arr);
 
     match func.handle(packet).await? {
-        PacketDecision::Reply(mut packet) => {
-            let ipv4_mut = packet.network_header_mut::<IPv4Header>();
+        PacketDecision::TransmitIp {
+            destination,
+            mut packets,
+        } => {
+            for packet in &mut packets {
+                let ipv4 = packet.network_header_mut::<IPv4Header>();
 
-            ipv4_mut.swap_ips();
-            ipv4_mut.checksum();
+                ipv4.swap_ips();
+                ipv4.checksum();
+            }
 
-            Ok(PacketDecision::Reply(packet))
+            Ok(PacketDecision::TransmitIp {
+                destination,
+                packets,
+            })
         }
         e => Ok(e),
     }

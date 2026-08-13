@@ -9,7 +9,7 @@ use slab::{Key as SlabKey, Slab};
 
 pub struct RunQueue {
     slab: Slab<Arc<Task>>,
-    wakers: Vec<WakerPage>,
+    wakers: Vec<Arc<WakerPage>>,
 }
 
 pub struct TaskRef {
@@ -32,7 +32,8 @@ impl RunQueue {
         let key = RQKey(unsafe { new.into_inner().into() });
 
         if key.0 as usize >= self.wakers.len() * WakerPage::num_entries() {
-            self.wakers.try_push(WakerPage::new())?;
+            self.wakers
+                .try_push(Arc::try_new(WakerPage::new()).map_err(|_| ErrorType::NoMemory)?)?;
         }
 
         self.wakers[key.waker() as usize].initialize(key.waker_index());

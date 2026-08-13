@@ -1,4 +1,4 @@
-use crate::arch::irq::interrupts::{IrqFlags, get_flags, set_flags};
+use crate::arch::irq::interrupts::{get_flags, set_flags, IrqFlags};
 use crate::tasks::thread::Thread;
 use core::{
     cell::UnsafeCell,
@@ -81,14 +81,13 @@ impl<T> Spinlock<T> {
     }
 
     pub fn lock_irqsave<'a>(&'a self) -> SpinlockGuard<'a, T> {
-        let my = self.inner.next.fetch_add(1, Ordering::Acquire);
+        let flags = Some(get_flags());
+        arm_gic::irq_disable();
 
+        let my = self.inner.next.fetch_add(1, Ordering::Acquire);
         while self.inner.current.load(Ordering::Relaxed) != my {
             core::hint::spin_loop();
         }
-
-        let flags = Some(get_flags());
-        arm_gic::irq_disable();
 
         SpinlockGuard {
             lock: &self.inner,
@@ -106,11 +105,11 @@ impl SpinLockInner {
     }
 
     pub fn unlock_irqrestore(&self, flags: IrqFlags) {
+        self.unlock();
+
         unsafe {
             set_flags(flags);
         }
-
-        self.unlock();
     }
 }
 

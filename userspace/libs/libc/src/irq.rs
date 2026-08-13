@@ -1,6 +1,7 @@
+use crate::factory::factory;
 use crate::handle::Handle;
-use crate::syscalls::Syscall;
 use rtl::error::ErrorType;
+use rtl::irq::IrqTrigger;
 
 pub struct Irq {
     h: Handle,
@@ -11,12 +12,16 @@ impl Irq {
         Self { h }
     }
 
-    pub fn wait(&self) -> Result<(), ErrorType> {
-        Syscall::wait_irq(&self.h)
+    pub fn create(num: usize, trigger: IrqTrigger) -> Result<Self, ErrorType> {
+        factory().create_irq(num, trigger)
     }
 
     pub fn handle(&self) -> &Handle {
         &self.h
+    }
+
+    pub fn ack(&self) -> Result<(), ErrorType> {
+        crate::syscalls::Syscall::ack_irq(&self.h)
     }
 
     pub fn try_clone(&self) -> Result<Self, ErrorType> {

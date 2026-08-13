@@ -1,7 +1,11 @@
 use super::inet;
-use crate::netdev::{arp::ArpCache, Netdev};
+use crate::netdev::{
+    neighbor::{NeighborCache, NeighborResult},
+    Netdev,
+};
 use crate::packet::Packet;
 use alloc::sync::Arc;
+use alloc::vec::Vec;
 use net::ethernet::{EthHeader, FrameType, Mac};
 use net::ipv4::{IPv4, IPv4Header, Protocol};
 use rtl::error::ErrorType;
@@ -9,20 +13,29 @@ use spin::Mutex;
 
 #[derive(Debug)]
 pub enum PacketDecision {
-    Reply(Packet),
+    TransmitIp {
+        destination: IPv4,
+        packets: Vec<Packet>,
+    },
+    TransmitEthernet {
+        destination: Mac,
+        frame_type: FrameType,
+        packets: Vec<Packet>,
+    },
+    Handled,
     Drop,
 }
 
 pub struct NetStack {
     netdev: Arc<Netdev>,
-    arp_cache: Mutex<ArpCache>,
+    neighbor_cache: Mutex<NeighborCache>,
 }
 
 impl NetStack {
     pub fn new(netdev: Arc<Netdev>) -> Self {
         Self {
             netdev,
-            arp_cache: Mutex::new(ArpCache::default()),
+            neighbor_cache: Mutex::new(NeighborCache::default()),
         }
     }
 
@@ -48,15 +61,29 @@ impl NetStack {
             packet.payload_len() as u16,
         );
 
+        // TODO: actually handle local sends.
+
         packet.push_header(&header);
 
-        self.netdev
-            .send_packet(
-                self.arp_cache.lock().lookup(address).unwrap(),
-                FrameType::IPv4,
-                packet,
-            )
-            .await
+        self.transmit_ip(address, packet).await
+    }
+
+    async fn transmit_ip(&self, destination: IPv4, packet: Packet) -> Result<(), ErrorType> {
+        let result = self
+            .neighbor_cache
+            .lock()
+            .send(&self.netdev, destination, packet)?;
+
+        match result {
+            NeighborResult::Send { mac, packet } => {
+                self.netdev.send_packet(mac, FrameType::IPv4, packet).await
+            }
+            NeighborResult::Resolve(packet) => {
+                self.netdev
+                    .send_packet(Mac::broadcast(), FrameType::ARP, packet)
+                    .await
+            }
+        }
     }
 
     pub async fn serve(self: Arc<Self>) -> Result<(), ErrorType> {
@@ -64,19 +91,35 @@ impl NetStack {
             let packet = self.netdev.read_packet().await?;
             let mut packet = Packet::new(packet);
             let eth = packet.parse_mac_header::<EthHeader>()?;
-            let source = eth.source();
             let frame_type = eth.frame_type()?;
 
             let decision = match frame_type {
-                FrameType::ARP => self.arp_cache.lock().handle(self.clone(), packet),
+                FrameType::ARP => self.neighbor_cache.lock().handle(self.clone(), packet),
                 FrameType::IPv4 => inet::handle(self.clone(), packet).await,
                 FrameType::IPv6 => todo!(),
             }?;
 
             match decision {
-                PacketDecision::Reply(packet) => {
-                    self.netdev.send_packet(source, frame_type, packet).await?;
+                PacketDecision::TransmitIp {
+                    destination,
+                    packets,
+                } => {
+                    for packet in packets {
+                        self.transmit_ip(destination, packet).await?;
+                    }
                 }
+                PacketDecision::TransmitEthernet {
+                    destination,
+                    frame_type,
+                    packets,
+                } => {
+                    for packet in packets {
+                        self.netdev
+                            .send_packet(destination, frame_type, packet)
+                            .await?;
+                    }
+                }
+                PacketDecision::Handled => {}
                 PacketDecision::Drop => println!("Packet drop!"),
             }
         }

@@ -41,7 +41,7 @@ pub struct IPv4Header {
 impl IPv4Header {
     pub fn new(dst: IPv4, src: IPv4, protocol: Protocol, payload_size: u16) -> Self {
         let mut res = Self {
-            version_ihl: (4 << 4) | Self::fixed_len() as u8,
+            version_ihl: (4 << 4) | Self::fixed_len() as u8 / 4,
             ds_fields: 0,
             total_length: (payload_size + Self::fixed_len() as u16).to_be_bytes(),
             id: [0; 2],

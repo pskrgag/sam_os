@@ -123,6 +123,10 @@ impl E1000Regs {
         field!(self.0, tdt).modify_mut(|x| *x = new);
     }
 
+    pub fn ack_irq(&mut self) {
+        field!(self.0, icr).read();
+    }
+
     fn reset(&mut self) -> Result<(), E1000Error> {
         let mut retries = 100;
 

@@ -31,7 +31,7 @@ impl Executor {
             let mut ctx = Context::from_waker(&task_ref.waker);
             let thread = task_ref.task.thread();
 
-            // info!("Switching to {}", thread.task().name())
+            // info!("Switching to '{}'\n", thread.task().name());
             set_current(thread.clone());
             thread.task().vms().switch_to();
 

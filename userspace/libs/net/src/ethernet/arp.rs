@@ -42,6 +42,16 @@ pub struct ArpPayload {
 }
 
 impl ArpHeader {
+    pub fn new(hw: ArpHardware, pt: ArpProtocol, op: ArpOperation) -> Self {
+        Self {
+            hardware_type: (hw as u16).to_be_bytes(),
+            protocol_type: (pt as u16).to_be_bytes(),
+            hw_address_length: 6,
+            protocol_length: 4,
+            operation: (op as u16).to_be_bytes(),
+        }
+    }
+
     pub fn hardware_type(&self) -> Result<ArpHardware, ErrorType> {
         u16::from_be_bytes(self.hardware_type).try_into()
     }

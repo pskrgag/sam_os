@@ -5,7 +5,7 @@ use crate::object::{
     factory_object::Factory,
     handle::Handle,
     port_object::Port,
-    {WaitManyArg, wait_many},
+    {wait_many, WaitManyArg},
 };
 use crate::{
     irq::IrqObject,
@@ -20,7 +20,7 @@ use adt::vec::Vec;
 use alloc::string::String;
 use alloc::string::ToString;
 use hal::address::*;
-use rtl::handle::{HANDLE_INVALID, HandleBase};
+use rtl::handle::{HandleBase, HANDLE_INVALID};
 use rtl::signal::{Signal, Signals, WaitEntry};
 use rtl::vmm::MappingType;
 use rtl::{error::ErrorType, ipc::IpcMessage, syscalls::SyscallList};
@@ -69,7 +69,9 @@ fn read_user_string(source: usize, size: usize) -> Result<String, ErrorType> {
 pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
     let task = current_task();
 
-    match args.number() {
+    // info!("{} --> {:?}\n", task.name(), args.number());
+
+    let res = match args.number() {
         SyscallList::Write => {
             let str = UserPtr::new_array(args.arg::<usize>(0) as *const u8, args.arg(1));
 
@@ -361,18 +363,21 @@ pub async fn do_syscall(args: SyscallArgs) -> Result<usize, ErrorType> {
 
             timer.arm(deadline).map(|_| 0)
         }
-        SyscallList::WaitIrq => {
+        SyscallList::AckIrq => {
             let irq = {
                 let table = task.handle_table().await?;
 
                 table
-                    .find::<IrqObject>(args.arg(0), CapabilityMask::from(Capability::Wait))
+                    .find::<IrqObject>(args.arg(0), CapabilityMask::any())
                     .ok_or(ErrorType::InvalidHandle)?
             };
 
-            irq.wait().await.map(|_| 0)
+            irq.ack().map(|_| 0)
         }
-    }
+    };
+
+    // info!("{} <-- {:?}\n", task.name(), args.number());
+    res
 }
 
 fn do_write(string: &[u8]) {
