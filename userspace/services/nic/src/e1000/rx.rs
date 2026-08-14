@@ -84,17 +84,19 @@ impl RxBuffer {
         };
 
         while !desc.is_ready() {
+            println!("Waiting for the IRQ");
             self.irq.wait().await?;
 
             let mut inner = self.inner.lock();
             desc = inner.ring.read(index);
         }
 
+        println!("Received packet");
         let mut inner = self.inner.lock();
         let mut regs = regs.lock();
 
-        self.irq.ack();
         regs.ack_irq();
+        self.irq.ack();
 
         // TODO: check errors and EOP
 
@@ -113,9 +115,9 @@ impl RxBuffer {
         Ok(packet)
     }
 
-    pub fn num_descriptors(&self) -> usize {
-        self.inner.lock().num_descriptors()
-    }
+    // pub fn num_descriptors(&self) -> usize {
+    //     self.inner.lock().num_descriptors()
+    // }
 
     pub fn data_order(&self) -> u8 {
         self.entry_order

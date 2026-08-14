@@ -15,6 +15,6 @@ interface NetStack {
 }
 
 interface Socket {
-	SendTo(in Address address, in Data data, out USize sent);
-	Receive(in USize size, out Data data);
+	SendTo(in Address address, in USize size, in Data data, out USize sent);
+	Receive(in USize size, out Data data, out USize read, out Address address);
 }

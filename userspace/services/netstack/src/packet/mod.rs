@@ -191,9 +191,11 @@ impl Packet {
         &mut self.data[self.start..self.end]
     }
 
-    pub fn into_data(mut self) -> Vec<u8> {
+    pub fn into_frame(mut self) -> Vec<u8> {
+        let start = self.mac_header.unwrap_or(self.start);
+
         self.data.truncate(self.end);
-        self.data.drain(..self.start);
+        self.data.drain(..start);
         self.data
     }
 

@@ -24,7 +24,7 @@ impl TryFrom<u8> for Protocol {
 }
 
 #[repr(C)]
-#[derive(Debug, FromBytes, Immutable, KnownLayout, Unaligned, IntoBytes)]
+#[derive(Debug, FromBytes, Immutable, KnownLayout, Unaligned, IntoBytes, Copy, Clone)]
 pub struct IPv4Header {
     version_ihl: u8,
     ds_fields: u8,

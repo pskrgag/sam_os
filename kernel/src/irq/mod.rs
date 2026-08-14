@@ -1,15 +1,14 @@
 use crate::drivers::irq::{mask, register_handler, unmask, unregister_handler, IntId};
 use crate::object::KernelObjectBase;
 use crate::sync::Event;
+use crate::sync::Spinlock;
 use alloc::sync::Arc;
 use rtl::error::ErrorType;
 use rtl::irq::IrqTrigger;
-use crate::sync::Spinlock;
 use rtl::signal::Signal;
 
 enum State {
     Pending,
-    Signaled,
     NeedAck,
 }
 
@@ -47,7 +46,7 @@ impl IrqObject {
             move |_| {
                 let mut inner = clone.inner.lock_irqsave();
 
-                inner.state = State::Signaled;
+                inner.state = State::NeedAck;
                 clone.base.signal_fire(Signal::IrqReady.into());
                 mask(inner.num);
             },
@@ -67,10 +66,6 @@ impl IrqObject {
 
                 self.base.signal_clear(Signal::IrqReady.into());
                 unmask(inner.num);
-                Ok(())
-            }
-            State::Signaled => {
-                inner.state = State::NeedAck;
                 Ok(())
             }
         }

@@ -1,9 +1,9 @@
 use super::NetStack as NetworkStack;
 use crate::bindings_NameServer::NameServer;
-use crate::socket::{Socket, server};
+use crate::socket::{server, Socket, SocketOps};
 use alloc::sync::Arc;
 use bindings_NetStack::{NetStack, NetStackRequest};
-pub(crate) use bindings_NetStack::{Socket as SocketBindings, SocketRequest};
+pub(crate) use bindings_NetStack::{Socket as SocketBindings, SocketRequest, Address};
 use rokio::port::Port;
 use rtl::error::ErrorType;
 
@@ -20,7 +20,7 @@ pub async fn serve(netstack: Arc<NetworkStack>, ns: NameServer) -> Result<(), Er
         async move {
             match req {
                 NetStackRequest::Socket { responder, .. } => {
-                    let sock = Socket::new(super::inet::icmp::IcmpSocket, netstack);
+                    let sock = Socket::new(super::inet::icmp::IcmpSocket::new(), netstack);
 
                     let (handler, handle) = server::new(sock)?;
 

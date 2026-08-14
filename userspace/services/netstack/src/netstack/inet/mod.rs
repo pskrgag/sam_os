@@ -10,7 +10,7 @@ pub mod icmp;
 
 #[async_trait::async_trait]
 pub trait InetProtocol: Send + Sync {
-    async fn handle(&self, packet: Packet) -> Result<PacketDecision, ErrorType>;
+    async fn receive(&self, packet: Packet) -> Result<PacketDecision, ErrorType>;
 }
 
 static PROTOCOLS: Mutex<[Option<Arc<&'static dyn InetProtocol>>; 1000]> =
@@ -38,7 +38,7 @@ pub async fn handle(
     let func = arr[ipv4.protocol()? as usize].as_ref().unwrap().clone();
     drop(arr);
 
-    match func.handle(packet).await? {
+    match func.receive(packet).await? {
         PacketDecision::TransmitIp {
             destination,
             mut packets,

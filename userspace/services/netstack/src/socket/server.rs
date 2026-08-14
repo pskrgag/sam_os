@@ -2,13 +2,11 @@ use super::{Socket as NetSocket, SocketOps};
 use crate::netstack::server::{SocketBindings, SocketRequest};
 use alloc::sync::Arc;
 use core::future::Future;
+use heapless::Vec;
 use libc::handle::Handle;
 use rokio::port::Port;
 use rtl::error::ErrorType;
-
-fn pending<T>() -> T {
-    todo!()
-}
+use crate::netstack::server::Address;
 
 pub fn new<S: SocketOps + Sync + 'static>(
     socket: Arc<NetSocket<S>>,
@@ -24,13 +22,23 @@ pub fn new<S: SocketOps + Sync + 'static>(
                 match req {
                     SocketRequest::SendTo { value, responder } => {
                         socket
-                            .send_to(value.address.ipv4.into(), &value.data)
+                            .send_to(value.address.ipv4.into(), &value.data[..value.size])
                             .await?;
                         responder.reply(0)
                     }
                     SocketRequest::Receive { value, responder } => {
-                        let _ = (socket, value, responder);
-                        pending()
+                        let mut data = Vec::new();
+
+                        data.resize(1024, 0).unwrap();
+                        let (size, address) = socket.recv_from(&mut data[..value.size]).await?;
+
+                        responder.reply(
+                            data,
+                            size,
+                            Address {
+                                ipv4: u32::from_ne_bytes(address.as_slice().try_into().unwrap()),
+                            },
+                        )
                     }
                 }
             }

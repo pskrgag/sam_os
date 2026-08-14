@@ -12,3 +12,9 @@ pub use bitalloc::*;
 
 pub mod bitalloc_growable;
 pub use bitalloc_growable::*;
+
+pub mod idalloc;
+pub use idalloc::*;
+
+pub mod async_deq;
+pub use async_deq::*;

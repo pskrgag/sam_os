@@ -47,6 +47,6 @@ impl Netdev {
             }
         };
 
-        self.nic.send_packet(&packet.into_data()).await
+        self.nic.send_packet(&packet.into_frame()).await
     }
 }

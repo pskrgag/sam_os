@@ -76,9 +76,11 @@ impl NetStack {
 
         match result {
             NeighborResult::Send { mac, packet } => {
+                // println!("Sent packet {:?}", FrameType::IPv4);
                 self.netdev.send_packet(mac, FrameType::IPv4, packet).await
             }
             NeighborResult::Resolve(packet) => {
+                // println!("Sent packet {:?}", FrameType::ARP);
                 self.netdev
                     .send_packet(Mac::broadcast(), FrameType::ARP, packet)
                     .await
@@ -92,6 +94,8 @@ impl NetStack {
             let mut packet = Packet::new(packet);
             let eth = packet.parse_mac_header::<EthHeader>()?;
             let frame_type = eth.frame_type()?;
+
+            // println!("Recv packet {:?}", frame_type);
 
             let decision = match frame_type {
                 FrameType::ARP => self.neighbor_cache.lock().handle(self.clone(), packet),

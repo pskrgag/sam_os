@@ -37,6 +37,24 @@ impl IPv4 {
     }
 }
 
+impl TryFrom<&str> for IPv4 {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let mut raw = [0; 4];
+
+        for (i, val) in value.split('.').enumerate() {
+            if i >= 4 {
+                return Err(());
+            }
+
+            raw[i] = val.parse::<u8>().map_err(|_| ())?;
+        }
+
+        Ok(Self(raw))
+    }
+}
+
 impl From<[u8; 4]> for IPv4 {
     fn from(value: [u8; 4]) -> Self {
         Self(value)

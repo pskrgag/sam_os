@@ -47,19 +47,21 @@ impl TxBuffer {
             Tdesc::new(buffer, data.len() as u16),
         );
 
+        println!("Sending packet...");
         regs.lock().set_tdt(slot as u32 + 1);
         while !inner.ring.read(slot).is_ready() {}
 
+        println!("Packet sent");
         let num_descriptors = inner.ring.size() / size_of::<Tdesc>();
         inner.next_idx = (inner.next_idx + 1) % num_descriptors;
     }
 
-    pub fn num_descriptors(&self) -> usize {
-        let inner = self.inner.lock();
-        assert_eq!(inner.ring.size() % size_of::<Tdesc>(), 0);
-
-        inner.ring.size() / size_of::<Tdesc>()
-    }
+    // pub fn num_descriptors(&self) -> usize {
+    //     let inner = self.inner.lock();
+    //     assert_eq!(inner.ring.size() % size_of::<Tdesc>(), 0);
+    //
+    //     inner.ring.size() / size_of::<Tdesc>()
+    // }
 
     pub fn ring_pa(&self) -> PhysAddr {
         let inner = self.inner.lock();

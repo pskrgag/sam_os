@@ -1,8 +1,7 @@
-use super::{COMMANDS, Command, Enviroment};
+use super::{Command, Enviroment, COMMANDS};
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
-use net::ipv4::IPv4;
 use rtl::error::ErrorType;
 use socket::icmp::{EchoRequest, Icmp};
 use socket::socket;
@@ -22,11 +21,18 @@ impl Ping {
         let sock = socket::<Icmp>().await?;
         let request = EchoRequest::new(1, 1);
 
-        sock.send_to(IPv4::new(192, 168, 100, 1), &request, &[])
-            .await
-            .unwrap();
+        sock.send_to(
+            args[0].try_into().map_err(|_| ErrorType::InvalidArgument)?,
+            &request,
+            &[],
+        )
+        .await
+        .unwrap();
 
-        Ok(String::new())
+        let mut req = EchoRequest::new(0, 0);
+        let (_, addr) = sock.recv_from(&mut req, &mut []).await?;
+
+        Ok(format!("Got reply from {:?}", addr))
     }
 }
 

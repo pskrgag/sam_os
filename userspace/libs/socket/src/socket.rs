@@ -34,6 +34,17 @@ impl<P: SocketProtocol> Socket<P> {
             ipv4: u32::from_ne_bytes(address.as_slice().try_into().unwrap()),
         };
 
-        Ok(self.socket.SendTo(address, data).await?.sent)
+        Ok(self.socket.SendTo(address, data.len(), data).await?.sent)
+    }
+
+    pub(crate) async fn recv_from_raw(
+        &self,
+        data: &mut Vec<u8, 4096>,
+        count: usize,
+    ) -> Result<(usize, IPv4), ErrorType> {
+        let res = self.socket.Receive(count).await?;
+
+        *data = res.data;
+        Ok((res.read, IPv4::from(res.address.ipv4)))
     }
 }

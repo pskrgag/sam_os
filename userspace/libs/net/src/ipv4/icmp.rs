@@ -57,6 +57,10 @@ impl IcmpEchoHeader {
             sequence: sequence.to_be_bytes(),
         }
     }
+
+    pub fn id(&self) -> u16 {
+        u16::from_be_bytes(self.identifier)
+    }
 }
 
 impl Header for IcmpEchoHeader {
